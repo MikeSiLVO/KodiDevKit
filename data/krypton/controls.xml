@@ -102,7 +102,7 @@
         <height>int</height>
         <include>common</include>
         <include>nav_common</include>
-        <hitrect x="int" y="int" w="int" h="int"></hitrect>
+        <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
         <onback condition="condition">builtin</onback>
         <texturesliderbackground colordiffuse="color" border="coords">path</texturesliderbackground>
@@ -294,6 +294,20 @@
         <righttexture border="coords" colordiffuse="color">path</righttexture>
         <overlaytexture colordiffuse="color" border="coords">path</overlaytexture>
         <info>info</info>
+        <info2>info</info2>
+    </control>
+    <control type="ranges" id="int">
+        <width>int</width>
+        <height>int</height>
+        <include>common</include>
+        <reveal>bool</reveal>
+        <texturebg colordiffuse="color" border="coords">path</texturebg>
+        <colordiffuse>color</colordiffuse>
+        <lefttexture border="coords" colordiffuse="color">path</lefttexture>
+        <midtexture border="coords" colordiffuse="color">path</midtexture>
+        <righttexture border="coords" colordiffuse="color">path</righttexture>
+        <overlaytexture colordiffuse="color" border="coords">path</overlaytexture>
+        <info>info</info>
     </control>
     <control type="textbox" id="int">
         <width>int</width>
@@ -324,7 +338,7 @@
         <title>xxx</title>
         <shadowcolor>color</shadowcolor>
         <urlset>int</urlset>
-        <hitrect x="int" y="int" w="int" h="int"></hitrect>
+        <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
     </control>
     <control type="renderaddon" id="int">
@@ -341,6 +355,14 @@
         <width>int</width>
         <height>int</height>
         <include>common</include>
+    </control>
+    <control type="gamewindow" id="int">
+        <width>int</width>
+        <height>int</height>
+        <include>common</include>
+        <videofilter>label</videofilter>
+        <stretchmode>label</stretchmode>
+        <rotation>label</rotation>
     </control>
     <control type="resize" id="int">
         <width>int</width>
@@ -369,10 +391,12 @@
         <scrolltime tween="tween" easing="easing">int</scrolltime>
         <timeblocks>int</timeblocks>
         <rulerunit>int</rulerunit>
+        <orientation>orientation</orientation>
         <onback condition="condition">builtin</onback>
         <viewtype label="label">viewtype</viewtype>
         <progresstexture colordiffuse="color" border="coords">path</progresstexture>
         <rulerlayout height="int" width="int" condition="condition"></rulerlayout>
+        <rulerdatelayout height="int" width="int" condition="condition"></rulerdatelayout>
         <channellayout height="int" width="int" condition="condition"></channellayout>
         <focusedchannellayout height="int" width="int" condition="condition"></focusedchannellayout>
         <itemlayout height="int" width="int" condition="condition"></itemlayout>
@@ -401,11 +425,11 @@
         <description>label</description>
         <camera x="int" y="int">int</camera>
         <depth>depth</depth>
-        <posx>int</posx>
-        <posy>int</posy>
-        <left>int</left>
-        <right>int</right>
-        <top>int</top>
+        <posx>position</posx>
+        <posy>position</posy>
+        <left>position</left>
+        <right>position</right>
+        <top>position</top>
         <animation effect="effect" type="effect" start="coords" end="coords" time="int" tween="tween" easing="easing" condition="condition" center="coords" delay="int" reversible="bool" loop="bool" pulse="bool" acceleration="int">xxx</animation>
         <centertop>int</centertop>
         <centerbottom>int</centerbottom>
@@ -436,7 +460,7 @@
         <pagecontrol>int</pagecontrol>
         <viewtype label="label">viewtype</viewtype>
         <autoscroll delay="int" time="int" repeat="int" reverse="bool">condition</autoscroll>
-        <hitrect x="int" y="int" w="int" h="int"></hitrect>
+        <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
         <itemlayout width="int" height="int" condition="condition"></itemlayout>
         <focusedlayout height="int" width="int" condition="condition"></focusedlayout>
@@ -453,7 +477,7 @@
         <colordiffuse>color</colordiffuse>
         <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords">path</texturefocus>
         <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords">path</texturenofocus>
-        <hitrect x="int" y="int" w="int" h="int"></hitrect>
+        <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
         <angle>int</angle>
         <font>font</font>

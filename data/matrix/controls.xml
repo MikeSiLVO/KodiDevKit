@@ -308,7 +308,6 @@
         <righttexture border="coords" colordiffuse="color">path</righttexture>
         <overlaytexture colordiffuse="color" border="coords">path</overlaytexture>
         <info>info</info>
-        <info2>info</info2>
     </control>
     <control type="textbox" id="int">
         <width>int</width>
@@ -361,6 +360,9 @@
         <width>int</width>
         <height>int</height>
         <include>common</include>
+        <videofilter>label</videofilter>
+        <stretchmode>label</stretchmode>
+        <rotation>label</rotation>
     </control>
     <control type="resize" id="int">
         <width>int</width>

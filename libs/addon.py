@@ -34,7 +34,7 @@ class Addon(object):
                  "python_version": "2.25.0",
                  "name": "krypton"},
                 {"gui_version": '5.14.0',
-                 "python_version": "2.27.0",
+                 "python_version": "2.26.0",
                  "name": "leia"}]
 
     LANG_START_ID = 32000
