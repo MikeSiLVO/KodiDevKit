@@ -76,7 +76,7 @@ class InfoProvider(object):
         self.settings = {}
         self.kodi_path = None
 
-    def load_data(self, kodi_version="krypton"):
+    def load_data(self, kodi_version="omega"):
         """
         loads the xml with control nodes for sanity checking (controls.xml)
         as well as builtins including their help string (data.xml)

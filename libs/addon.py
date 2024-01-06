@@ -35,7 +35,16 @@ class Addon(object):
                  "name": "krypton"},
                 {"gui_version": '5.14.0',
                  "python_version": "2.26.0",
-                 "name": "leia"}]
+                 "name": "leia"},
+                {"gui_version": '5.15.0',
+                 "python_version": "3.0.1",
+                 "name": "matrix"},
+                {"gui_version": '5.16.0',
+                 "python_version": "3.0.1",
+                 "name": "nexus"},
+                {"gui_version": '5.17.0',
+                 "python_version": "3.0.1",
+                 "name": "omega"}]
 
     LANG_START_ID = 32000
     LANG_OFFSET = 2
