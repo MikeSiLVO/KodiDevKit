@@ -131,6 +131,10 @@
     <control type="colorbutton" id="int">
         <width min="int" max="int">int</width>
         <height>int</height>
+        <colorwidth min="int" max="int">int</colorwidth>
+        <colorheight min="int" max="int">int</colorheight>
+        <texturecolormask border="coords" colordiffuse="color" infill="bool">path</texturecolormask>
+        <texturecolordisabledmask border="coords" colordiffuse="color" infill="bool">path</texturecolordisabledmask>
         <include>common</include>
         <include>button_common</include>
         <include>nav_common</include>
