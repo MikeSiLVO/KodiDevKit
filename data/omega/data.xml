@@ -579,18 +579,18 @@
             <help>Returns true if the control group with id “group” has control id “id” as it's focused item. If “id” is not present, or is 0, then it will return true if the currently focused control is in the control group with id “group”. Note that if the control group with id “group” does not have focus, then this will still return true if the last focused item in the group had control id “id”.</help>
         </item>
         <item>
-            <code>IntegerGreaterThan(InfoLabel,number)</code>
+            <code>Integer.IsGreater(InfoLabel,number)</code>
             <help>Returns true if the value of the InfoLabel is greater than the supplied number.
 
                 <br/>
-                Example: IntegerGreaterThan(ListItem.Year,2000)</help>
+                Example: Integer.IsGreater(ListItem.Year,2000)</help>
         </item>
         <item>
-            <code>IsEmpty(InfoLabel)</code>
+            <code>String.IsEmpty(InfoLabel)</code>
             <help>Returns true if the value of the InfoLabel is empty.
 
                 <br/>
-                Example: IsEmpty(ListItem.Plot)</help>
+                Example: String.IsEmpty(ListItem.Plot)</help>
         </item>
         <item>
             <code>Library.HasContent(string)</code>
@@ -877,16 +877,12 @@
             <help>Returns true if the picture slideshow is playing a video</help>
         </item>
         <item>
-            <code>StringCompare(InfoLabel,string)</code>
+            <code>String.IsEqual(InfoLabel,string)</code>
             <help>Returns true if the InfoLabel equals the string. example of info: ListItem.Title, ListItem.Genre. Please note that string can also be a $LOCALIZE[] or InfoLabels (without $INFO prefix). Also note that in a panelview or similar this only works on the focused item.</help>
         </item>
         <item>
-            <code>SubString(InfoLabel,string)</code>
+            <code>String.Contains(InfoLabel,string)</code>
             <help>Returns true if the string is found anywhere in the InfoLabel</help>
-        </item>
-        <item>
-            <code>SubString(InfoLabel,string,[Left or Right])</code>
-            <help>Returns true if the string is found from the start or the end.</help>
         </item>
         <item>
             <code>System.HasAddon(id)</code>
