@@ -858,7 +858,7 @@
         </item>
         <item>
             <code>Skin.String(string1,string2)</code>
-            <help>Same as stringcompare(Skin.String(string1),string2). Returns true if Skin.String(string1) equals string2.</help>
+            <help>Same as String.IsEqual(Skin.String(string1),string2). Returns true if Skin.String(string1) equals string2.</help>
         </item>
         <item>
             <code>Slideshow.IsActive</code>
@@ -883,6 +883,14 @@
         <item>
             <code>String.Contains(InfoLabel,string)</code>
             <help>Returns true if the string is found anywhere in the InfoLabel</help>
+        </item>
+        <item>
+            <code>String.StartsWith(InfoLabel,string)</code>
+            <help>Returns true if the info starts with the given string.</help>
+        </item>
+        <item>
+            <code>String.EndsWith(InfoLabel,string)</code>
+            <help>Returns true if the info ends with the given string.</help>
         </item>
         <item>
             <code>System.HasAddon(id)</code>
