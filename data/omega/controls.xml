@@ -173,7 +173,7 @@
         <pauseatend>int</pauseatend>
         <randomize>bool</randomize>
         <loop>bool</loop>
-        <aspectratio align="align" aligny="aligny">aspect</aspectratio>
+        <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
     </control>
     <control type="radiobutton" id="int">
         <width>int</width>

@@ -52,7 +52,7 @@ ALLOWED_VALUES = {"align": {"left", "center", "right", "justify"},
                   "orientation": {"horizontal", "vertical"},
                   "aspect": {"scale", "stretch", "center", "keep"},
                   "subtype": {"page", "int", "float", "text"},
-                  "action": {"volume", "seek"},
+                  "action": {"volume", "seek", "pvr.seek"},
                   "viewtype": {"list", "icon", "biglist", "bigicon", "wide", "bigwide", "wrap", "bigwrap", "info", "biginfo"},
                   "tween": {"quadratic", "linear", "sine", "cubic", "back", "bounce", "circle", "elastic"},
                   "easing": {"inout", "in", "out"}}
