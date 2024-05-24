@@ -33,6 +33,7 @@
         <width>int</width>
         <height>int</height>
         <include>common</include>
+        <include>nav_common</include>
         <defaultcontrol always="bool">int</defaultcontrol>
         <renderfocusedlast>bool</renderfocusedlast>
         <control type="controltype" id="int">controls</control>
@@ -350,6 +351,7 @@
     <control type="rss" id="int">
         <width min="int" max="int">int</width>
         <height>int</height>
+        <scrollspeed>int</scrollspeed>
         <include>common</include>
         <font>font</font>
         <textcolor>color</textcolor>
