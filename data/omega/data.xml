@@ -2,10 +2,6 @@
 <root>
     <builtins>
         <item>
-            <code>Help</code>
-            <help>This help message (??? probably broken)</help>
-        </item>
-        <item>
             <code>Reboot</code>
             <help>Cold reboots the system (power cycle)</help>
         </item>
