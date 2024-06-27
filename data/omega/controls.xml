@@ -336,6 +336,7 @@
         <include>common</include>
         <colordiffuse>color</colordiffuse>
         <font>font</font>
+        <monofont>font</monofont>
         <textcolor>color</textcolor>
         <shadowcolor>color</shadowcolor>
         <selectedcolor>color</selectedcolor>
