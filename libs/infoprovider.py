@@ -42,7 +42,7 @@ NOOP_TAGS = {"onclick", "onfocus", "onunfocus", "onup", "onleft", "onright", "on
 POS_TAGS = {"posx", "posy", "left", "right", "top", "bottom", "centerleft", "centerright", "centertop", "centerbottom"}
 # check that some nodes only exist once on each level
 # TODO: special cases: label for fadelabel
-DOUBLE_TAGS = {"visible", "label", "include", "onleft", "onup", "onright", "ondown", "onclick", "onfocus", "onunfocus", "onback", "oninfo", "animation"}
+DOUBLE_TAGS = {"visible", "label", "include", "onleft", "onup", "onright", "ondown", "onclick", "altclick", "onfocus", "onunfocus", "onback", "oninfo", "animation", "content"}
 # check that some nodes only contain specific text
 # check that some attributes may only contain specific values
 ALLOWED_VALUES = {"align": {"left", "center", "right", "justify"},

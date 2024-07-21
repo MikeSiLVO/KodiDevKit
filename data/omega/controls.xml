@@ -302,6 +302,7 @@
         <width>int</width>
         <height>int</height>
         <include>common</include>
+        <controllerid>label</controllerid>
     </control>
     <control type="progress" id="int">
         <width>int</width>
@@ -386,6 +387,7 @@
         <videofilter>label</videofilter>
         <stretchmode>label</stretchmode>
         <rotation>label</rotation>
+        <pixels>label</pixels>
     </control>
     <control type="resize" id="int">
         <width>int</width>
@@ -427,6 +429,10 @@
         <focusedlayout height="int" width="int" condition="condition"></focusedlayout>
     </control>
     <control type="list" id="int">
+        <include>common</include>
+        <include>list_common</include>
+    </control>
+    <control type="gamecontrollerlist" id="int">
         <include>common</include>
         <include>list_common</include>
     </control>

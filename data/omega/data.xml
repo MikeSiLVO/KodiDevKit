@@ -472,6 +472,10 @@
             <code>StereoModeToMono</code>
             <help>Toggle the stereoscopic mode to 2D.</help>
         </item>
+        <item>
+            <code>EnableAddon(id)</code>
+            <help>Will enable the addon with the given addon id.</help>
+        </item>
     </builtins>
     <conditions>
         <item>
