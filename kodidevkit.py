@@ -229,7 +229,8 @@ class KodiDevKit(sublime_plugin.EventListener):
             elif len(node_content) < 10000:
                 return mdpopups.syntax_highlight(view=view,
                                                  src=node_content,
-                                                 language="xml")
+                                                 language="xml",
+                                                 allow_code_wrap=True)
             else:
                 return "include too big for preview"
 
