@@ -1,0 +1,309 @@
+{
+    //=============================================================================
+    // Kodi Connection Settings
+    //=============================================================================
+
+    /*
+     * Kodi executable path
+     *
+     * Full path to your Kodi installation folder.
+     * Used to locate core language files, add-ons, and userdata.
+     * Backslashes must be escaped (\\) on Windows.
+     *
+     * Example (Windows): "C:\\Program Files\\Kodi"
+     * Example (Linux):   "/usr/share/kodi"
+     * Example (macOS):   "/Applications/Kodi.app/Contents/Resources/Kodi"
+     */
+    "kodi_path": "",
+
+    /*
+     * Portable mode
+     *
+     * Set to true if Kodi runs in portable mode (userdata in Kodi installation folder).
+     * When enabled, userdata is located relative to kodi_path instead of standard locations.
+     */
+    "portable_mode": false,
+
+    /*
+     * Userdata folder override (optional)
+     *
+     * Explicitly specify Kodi's userdata folder path.
+     * Leave empty to auto-detect based on kodi_path and portable_mode.
+     * Backslashes must be escaped (\\) on Windows.
+     */
+    "userdata_folder": "",
+
+    //=============================================================================
+    // JSON-RPC Connection Settings
+    //=============================================================================
+
+    /*
+     * JSON-RPC full address
+     *
+     * Complete base URL (including protocol and port) to your Kodi instance.
+     * If set, this overrides kodi_scheme, kodi_host, and kodi_port.
+     *
+     * Example: "http://192.168.1.100:8080"
+     */
+    "kodi_address": "http://192.168.1.100:8080",
+
+    /*
+     * JSON-RPC connection components (alternative to kodi_address)
+     *
+     * Used when kodi_address is not specified.
+     */
+    "kodi_scheme": "http",      // Protocol: "http" or "https"
+    "kodi_host": "localhost",   // Hostname or IP address
+    "kodi_port": 8080,          // JSON-RPC port (default: 8080)
+
+    /*
+     * JSON-RPC authentication
+     *
+     * Username and password for Kodi's JSON-RPC interface.
+     * Configure these in Kodi: Settings → Services → Control → Web Server
+     */
+    "kodi_username": "kodi",
+    "kodi_password": "",
+
+    /*
+     * JSON-RPC bearer token (alternative authentication)
+     *
+     * If set, bearer token authentication is used instead of username/password.
+     * Leave empty to use basic authentication.
+     */
+    "token": "",
+
+    //=============================================================================
+    // Language and Localization Settings
+    //=============================================================================
+
+    /*
+     * Core language preference
+     *
+     * Language code for Kodi's core strings (infobooleans, infolabels, etc.).
+     * Format: ISO 639-1 language code with optional region (e.g., "en_gb", "de_de")
+     * The plugin automatically prepends "resource.language." if not present.
+     *
+     * Examples: "en_gb", "de_de", "fr_fr", "es_es"
+     */
+    "language": "en_gb",
+
+    /*
+     * Language folder search paths
+     *
+     * Ordered list of language folders to search for .po files.
+     * First match is used. Useful for fallback languages or compatibility.
+     */
+    "language_folders": [
+        "resource.language.en_gb",
+        "English"
+    ],
+
+    //=============================================================================
+    // Validation Settings
+    //=============================================================================
+
+    /*
+     * Automatic skin validation on save
+     *
+     * When true, automatically runs validation checks when saving XML files.
+     * Results appear in a quick panel showing any issues found.
+     */
+    "auto_skin_check": true,
+
+    /*
+     * Minimum severity level for on-save validation phantoms
+     *
+     * Controls which issues are shown inline after saving an XML file.
+     * Experienced skinners can set this to "error" to hide warnings and info.
+     *
+     * Values: "error", "warning"
+     *   - "error":   Only show errors (broken brackets, invalid values)
+     *   - "warning": Show errors + warnings (invalid tags, duplicate tags)
+     *
+     * Note: Full reports (Run Checks) always show all severities regardless.
+     */
+    "phantom_severity_level": "warning",
+
+    /*
+     * Hide include-originated warnings in phantoms
+     *
+     * When true, warnings from include content (invalid tags, etc.) are
+     * suppressed in on-save phantoms since the include may be valid in
+     * other contexts. Errors from includes are always shown.
+     *
+     * Full reports always show all issues regardless of this setting.
+     */
+    "phantom_hide_include_warnings": true,
+
+    /*
+     * Exclude paths from XML validation
+     *
+     * List of folder or file names to skip during validation (on-save and reports).
+     * Matches any path component, so "shortcuts" skips any file inside a shortcuts/ folder.
+     *
+     * Example: ["shortcuts", "textures.xml", "experimental"]
+     */
+    "validation_exclude": ["shortcuts"],
+
+    /*
+     * Validation report directory
+     *
+     * Directory where HTML validation reports are saved.
+     * Leave empty to use the default location (Sublime's User/KodiDevKit/ValidationReports).
+     * Backslashes must be escaped (\\) on Windows.
+     *
+     * Default: Packages/User/KodiDevKit/ValidationReports/
+     *
+     * Alternative suggestions:
+     *   - User's temp directory: Use system temp (reports deleted on restart)
+     *   - Desktop: Easily accessible for quick review
+     *   - Custom project folder: Keep reports with project documentation
+     *
+     * Example (Windows): "C:\\Users\\YourName\\Documents\\KodiReports"
+     * Example (Linux):   "/home/yourname/kodi-validation-reports"
+     * Example (macOS):   "/Users/yourname/Documents/KodiReports"
+     */
+    "validation_report_directory": "",
+
+    //=============================================================================
+    // Tooltip Settings
+    //=============================================================================
+
+    /*
+     * Tooltip delay (milliseconds)
+     *
+     * Delay before showing hover tooltips with info labels, booleans, colors, etc.
+     * Set to -1 to disable tooltips entirely.
+     */
+    "tooltip_delay": 200,
+
+    /*
+     * Tooltip dimensions
+     *
+     * Maximum width and height for hover tooltips (in pixels).
+     */
+    "tooltip_width": 1000,
+    "tooltip_height": 400,
+
+    //=============================================================================
+    // Auto-Reload Settings
+    //=============================================================================
+
+    /*
+     * Auto-reload skin on save
+     *
+     * When true, automatically reloads the Kodi skin after saving window XML files
+     * or color files. Requires active JSON-RPC connection.
+     *
+     * Note: Only reloads when saving files in recognized skin folders.
+     */
+    "auto_reload_skin": false,
+
+    //=============================================================================
+    // JSON-RPC Display Settings
+    //=============================================================================
+
+    /*
+     * JSON-RPC output display mode
+     *
+     * Controls how JSON-RPC results are displayed for commands like
+     * "Display InfoLabels" and "Display Booleans".
+     *
+     * Options:
+     *   - "output_panel": Shows results in the output panel at the bottom
+     *                     with simple formatting (no headers or borders).
+     *                     Default and recommended for minimal UI clutter.
+     *
+     *   - "scratch_view": Opens results in a dedicated scratch buffer tab
+     *                     with formatted output (headers, borders, etc.)
+     *                     Useful for viewing multiple queries simultaneously.
+     *
+     * Default: "output_panel"
+     */
+    "json_rpc_output_mode": "output_panel",
+
+    //=============================================================================
+    // Build and Packaging Settings
+    //=============================================================================
+
+    /*
+     * TexturePacker executable path
+     *
+     * Full path to Kodi's TexturePacker utility for building .xbt texture files.
+     * Required for "Build Addon" and "Build Theme" commands.
+     * Backslashes must be escaped (\\) on Windows.
+     *
+     * Example (Windows): "C:\\Program Files\\Kodi\\TexturePacker.exe"
+     * Example (Linux):   "/usr/bin/TexturePacker"
+     */
+    "texturepacker_path": "",
+
+    //=============================================================================
+    // Android Debug Bridge (ADB) Settings
+    //=============================================================================
+
+    /*
+     * ADB executable path
+     *
+     * Full path to the Android Debug Bridge (adb) executable.
+     * Used for deploying to Android-based Kodi devices (Shield, Fire TV, etc.).
+     * Backslashes must be escaped (\\) on Windows.
+     */
+    "adb_path": "",
+
+    /*
+     * ADB connection settings
+     *
+     * Network connection details for Android device running Kodi.
+     */
+    "adb_ip": "",           // Android device IP address
+    "adb_port": 5555,       // ADB port (default: 5555)
+    "adb_serial": "",       // Device serial (optional, for multiple devices)
+
+    /*
+     * Remote device settings (for ADB deployment)
+     *
+     * Target paths on the Android device for file operations.
+     */
+    "remote_ip": "",                                    // Device IP for display/logs
+    "remote_userdata_folder": "",                       // Kodi userdata path on device
+
+    //=============================================================================
+    // Development and Debugging
+    //=============================================================================
+
+    /*
+     * Debug mode
+     *
+     * When true, enables verbose logging to Sublime's console.
+     * Useful for troubleshooting plugin issues or understanding internal behavior.
+     *
+     * View logs: View → Show Console (Ctrl+`)
+     */
+    "debug_mode": false,
+
+    /*
+     * File logging
+     *
+     * Enable logging to file for diagnosing freeze issues and long-running sessions.
+     * Logs are written to Sublime's cache directory with timestamps and detailed info.
+     *
+     * Features:
+     *   - Automatic rotation: 5MB per file, keeps 5 backups (30MB total)
+     *   - Multi-day retention: Typically 3-7 days of logs depending on activity
+     *   - Detailed timing: All operations logged with duration in milliseconds
+     *
+     * When enabled, log file location will be shown in console on startup.
+     * Useful for debugging display disconnection freezes or overnight issues.
+     *
+     * Log files:
+     *   Windows: %LOCALAPPDATA%\Sublime Text\Cache\KodiDevKit\logs\kodidevkit_debug.log
+     *            (Rotated files: kodidevkit_debug.log.1, .log.2, etc.)
+     *   Linux:   ~/.cache/sublime-text/Cache/KodiDevKit/logs/kodidevkit_debug.log
+     *   macOS:   ~/Library/Caches/Sublime Text/Cache/KodiDevKit/logs/kodidevkit_debug.log
+     *
+     * To delete all logs: Simply delete the entire "logs" folder
+     */
+    "enable_file_logging": false
+}

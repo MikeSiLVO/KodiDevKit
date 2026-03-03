@@ -1,0 +1,22 @@
+[
+    {
+        "command": "preview_image",
+        "caption": "KodiDevKit: Preview image",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    {
+        "command": "go_to_online_help",
+        "caption": "KodiDevKit: Show info from Kodi Wiki",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    {
+        "command": "move_to_language_file",
+        "caption": "KodiDevKit: Move to language file",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    {
+        "command": "open_skin_image",
+        "caption": "KodiDevKit: Open image",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    }
+]

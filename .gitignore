@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Sublime Text
+/KodiDevKit.sublime-project
+/KodiDevKit.sublime-workspace
+
+# Development
+/.claude
+/debug_scripts/
+/tests/scripts/
+/tests/debug_*.py
+/typings/
+CLAUDE.md
+pyrightconfig.json
+Debug JSON Health.txt
+.flake8
+.travis.yml
+
+# Testing
+/.pytest_cache
+/.coverage
+/htmlcov
+
+# Type checking
+/.mypy_cache
+/.pytype
+.ruff_cache/
+
+# Cache
+.kodidevkit/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*~

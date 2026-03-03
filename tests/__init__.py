@@ -1,0 +1,3 @@
+"""
+KodiDevKit test suite.
+"""

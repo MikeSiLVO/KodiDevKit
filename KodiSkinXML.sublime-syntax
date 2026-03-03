@@ -1,0 +1,246 @@
+%YAML 1.2
+---
+name: KodiSkinXML
+hidden: true
+scope: text.xml.kodi
+contexts:
+  main:
+    # xml header ?
+    - match: '(<\?)\s*([-_a-zA-Z0-9]+)'
+      captures:
+        1: punctuation.definition.tag.begin.xml
+        2: entity.name.tag.xml
+      push:
+        - meta_scope: meta.tag.preprocessor.xml
+        - match: (\?>)
+          pop: true
+        - match: " ([a-zA-Z-]+)"
+          scope: entity.other.attribute-name.xml
+        - include: doublequotedString
+    # comments
+    - match: "<!--"
+      captures:
+        0: punctuation.definition.comment.xml
+      push:
+        - meta_scope: comment.block.xml
+        - match: "-->"
+          pop: true
+    - match: '(<)?([-_a-zA-Z0-9:]+)(?=(\s[^>]*)?></\2>)'
+      captures:
+        1: punctuation.definition.tag.begin.xml
+        2: entity.name.tag.xml
+        3: punctuation.separator.namespace.xml
+        4: entity.name.tag.localname.xml
+      push:
+        - meta_scope: meta.tag.no-content.xml
+        - match: "(>)(<)(/)?([-_a-zA-Z0-9:]+)(>)"
+          captures:
+            1: punctuation.definition.tag.end.xml
+            2: punctuation.definition.tag.begin.xml meta.scope.between-tag-pair.xml
+            3: punctuation.definition.tag.begin.xml
+            4: entity.name.tag.xml
+            5: entity.name.tag.localname.xml
+            6: punctuation.definition.tag.end.xml
+          pop: true
+        - include: tagStuff
+
+    - match: '(</?)(include|variable|constant|color|expression) (name)="([-_a-zA-Z0-9]+)"'
+      captures:
+        1: punctuation.definition.tag.begin.xml
+        2: entity.name.tag.localname.xml
+        3: entity.other.attribute-name.localname.xml
+        4: entity.name.function string.quoted.double.xml
+      push:
+        - meta_scope: meta.tag.xml
+        - match: (/?>)
+          captures:
+            1: punctuation.definition.tag.end.xml.xxx
+          pop: true
+        - include: tagStuff
+    - include: entity
+    - include: bare-ampersand
+
+    # xml tags
+    - match: "(</?)([-_a-zA-Z0-9:]+)"
+      captures:
+        1: punctuation.definition.tag.begin.xml
+        2: entity.name.tag.xml
+      push:
+        - meta_scope: meta.tag.xml
+        - match: (/?>)
+          captures:
+            1: punctuation.definition.tag.end.xml
+          pop: true
+        - include: tagStuff
+    - include: entity
+    - include: bare-ampersand
+    - include: koditranslation
+    - include: kodiaddontranslation
+    - include: kodinumber
+    - include: kodiinfolabel
+    - include: kodiparam
+    - include: kodivariable
+    - include: kodiexpression
+    - include: kodiincludeparam
+    - include: brackets
+    - include: formatter
+
+  bare-ampersand:
+    - match: "&"
+      scope: invalid.illegal.bad-ampersand.xml
+
+  doublequotedString:
+    - match: '"'
+      captures:
+        0: punctuation.definition.string.begin.xml
+      push:
+        - meta_scope: string.quoted.double.xml
+        - match: '"'
+          captures:
+            0: punctuation.definition.string.end.xml
+          pop: true
+        - include: entity
+        - include: bare-ampersand
+        - include: koditranslation
+        - include: kodiaddontranslation
+        - include: kodiinfolabel
+        - include: kodiparam
+        - include: kodivariable
+        - include: kodiincludeparam
+        - include: brackets
+        - include: formatter
+  entity:
+    - match: "(&)([:a-zA-Z_][:a-zA-Z0-9_.-]*|#[0-9]+|#x[0-9a-fA-F]+)(;)"
+      scope: constant.character.entity.xml
+      captures:
+        1: punctuation.definition.constant.xml
+        3: punctuation.definition.constant.xml
+
+  tagStuff:
+    - match: " (?:([-_a-zA-Z0-9]+)((:)))?([-_a-zA-Z0-9]+)="
+      captures:
+        1: entity.other.attribute-name.namespace.xml
+        2: entity.other.attribute-name.xml
+        3: punctuation.separator.namespace.xml
+        4: entity.other.attribute-name.localname.xml
+    - include: doublequotedString
+
+  koditranslation:
+    - match: '(\$)(LOCALIZE)(\[)([0-9]+)(\])'
+      name: variable.parameter text.kodi.translation.xml
+      scope: variable.parameter entity.kodi.label
+
+
+  kodiaddontranslation:
+    - match: '(\$)(ADDON)(\[)(.*?)([0-9]+)(\])'
+      name: variable.parameter text.kodi.translation.xml
+      scope: variable.parameter entity.kodi.label
+
+  kodinumber:
+    - match: '(\$)(NUMBER)(\[)([0-9]+)(\])'
+      name: variable.parameter text.kodi.number.xml
+      scope: variable.parameter entity.kodi.number
+
+  kodiparam:
+    - match: '(\$)(PARAM)(\[)(.*?)(\])'
+      name: variable.parameter text.kodi.param.xml
+      scope: entity.kodi.param
+
+  kodiinfolabel:
+    - match: '(\$)((?:ESC)?INFO)(\[)'
+      name: variable.parameter text.kodi.infolabel.xml
+      captures:
+        1: entity.kodi.infolabel.dollar
+        2: entity.kodi.infolabel.info
+        3: entity.kodi.infolabel.begin
+      push:
+        - meta_scope: support.function kodi.infolabel
+        - match: '(\])'
+          captures:
+            1: entity.kodi.infolabel.end
+          pop: true
+        - include: koditranslation
+        - include: kodiparam
+        - include: kodiaddontranslation
+        - include: formatter
+        - include: brackets
+
+
+  kodiincludeparam:
+    - match: '(\$)(PARAM)(\[)'
+      name: variable.parameter text.kodi.includeparam.xml
+      captures:
+        1: entity.kodi.includeparam.dollar
+        2: entity.kodi.includeparam.param
+        3: entity.kodi.includeparam.begin
+      push:
+        - meta_scope: support.function kodi.includeparam
+        - match: '(\])'
+          captures:
+            1: entity.kodi.includeparam.end
+          pop: true
+
+
+  formatter:
+    - match: '(\[)([A-Za-z0-9\/= ]*?)(\])'
+      name: invalid.deprecated
+      captures:
+        '1': kodi.formatter.begin invalid.deprecated
+        '2': kodi.formatter.content invalid.deprecated
+        '3': kodi.formatter.end invalid.deprecated
+
+  kodivariable:
+    - match: '(\$)((?:ESC)?VAR)(\[)'
+      name: variable.parameter text.kodi.variable.xml
+      captures:
+        1: entity.kodi.variable.dollar
+        2: entity.kodi.variable.var
+        3: entity.kodi.variable.begin
+      push:
+        - meta_scope: storage.type kodi.variable
+        - match: '(\])'
+          captures:
+            1: entity.kodi.variable.end
+          pop: true
+        - include: formatter
+
+  kodiexpression:
+    - match: '(\$)(EXP)(\[)'
+      name: expression.parameter text.kodi.expression.xml
+      captures:
+        1: entity.kodi.expression.dollar
+        2: entity.kodi.expression.exp
+        3: entity.kodi.expression.begin
+      push:
+        - meta_scope: storage.type kodi.expression
+        - match: '(\])'
+          captures:
+            1: entity.kodi.expression.end
+          pop: true
+
+  brackets:
+    - match: '(\()'
+      name: constant.other.allcaps
+      captures:
+        1: constant.other.allcaps
+      push:
+        - meta_scope: constant.other.allcaps
+        - match: '(\))'
+          captures:
+            1: constant.other.allcaps
+          pop: true
+        - include: brackets
+        - include: koditranslation
+
+
+  # brackets:
+  #   - match: \(
+  #     push: closingbracket
+  #   - match: \)
+  #     scope: invalid.illegal.stray-bracket-end
+
+  # closingbracket:
+  #   - meta_content_scope: constant.other.allcaps
+  #   - match: \)
+  #     pop: true
+  #   - include: brackets

@@ -1,0 +1,15 @@
+{
+   "*": {
+      "*": [
+         "lxml",
+         "requests",
+         "pygments",
+         "python-markdown",
+         "mdpopups",
+         "python-jinja2",
+         "markupsafe",
+         "pymdownx",
+         "pyyaml"
+      ]
+   }
+}

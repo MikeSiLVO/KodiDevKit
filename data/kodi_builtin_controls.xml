@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Kodi Built-in Control IDs
+
+    Simple direct mapping: Window → Control IDs
+
+    Source: https://kodi.wiki/view/List_of_Built_In_Controls
+    Verified against: Kodi Omega (v21) source code
+
+    Last updated: 2025-01-21
+
+    HOW TO USE:
+    - Window names match Kodi's lowercase window identifiers
+    - Control IDs are those programmatically created by Kodi's C++ code
+    - Skins can reference these IDs without defining them
+-->
+<builtin_controls>
+
+    <!-- ================================================================ -->
+    <!-- DIALOG SELECT (Multiple Windows) -->
+    <!-- ================================================================ -->
+
+    <window name="selectdialog" id="12000" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items in the list" />
+        <control id="3" description="Simple list of available options" />
+        <control id="5" description="OK (on multiple selection) or Manual/Get More..." />
+        <control id="6" description="Detailed list of available add-ons" />
+        <control id="7" description="Cancel" />
+        <control id="8" description="Add/Get More..." />
+    </window>
+
+    <window name="gamepadinput" id="10110" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="visualisationpresetlist" id="10122" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="peripherals" id="10149" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="gamevideofilter" id="10823" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="gameviewmode" id="10824" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="gamevideorotation" id="10827" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="ingamesaves" id="10829" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <window name="gamesaves" id="10830" xml="DialogSelect.xml">
+        <control id="1" description="Heading label" />
+        <control id="2" description="Number of items" />
+        <control id="3" description="List" />
+        <control id="5" description="Extra button" />
+        <control id="6" description="Detailed list" />
+        <control id="7" description="Cancel button" />
+        <control id="8" description="Extra button 2" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- DIALOG CONFIRM (YesNo, Progress, OK) -->
+    <!-- ================================================================ -->
+
+    <window name="yesnodialog" id="10100" xml="DialogConfirm.xml">
+        <control id="1" description="Heading label" />
+        <control id="9" description="Message" />
+        <control id="10" description="No button" />
+        <control id="11" description="Yes button" />
+        <control id="12" description="Custom button (for future use)" />
+        <control id="20" description="Progress bar" />
+    </window>
+
+    <window name="progressdialog" id="10101" xml="DialogConfirm.xml">
+        <control id="1" description="Heading label" />
+        <control id="9" description="Message" />
+        <control id="10" description="No button" />
+        <control id="11" description="Yes button" />
+        <control id="12" description="Custom button" />
+        <control id="20" description="Progress bar" />
+    </window>
+
+    <window name="okdialog" id="12002" xml="DialogConfirm.xml">
+        <control id="1" description="Heading label" />
+        <control id="9" description="Message" />
+        <control id="10" description="No button" />
+        <control id="11" description="Yes button" />
+        <control id="12" description="Custom button" />
+        <control id="20" description="Progress bar" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- ADDON DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="addonbrowser" id="10040" xml="AddonBrowser.xml">
+        <control id="2" description="Select viewtype (list, thumbnail, media info, etc...)" />
+        <control id="3" description="Select sort method (sort by: name, date size, etc...)" />
+        <control id="4" description="Select sortmode (ascending or descending)" />
+        <control id="5" description="Enable auto-updating of the installed add-on's" />
+        <control id="6" description="Enable add-on notifications" />
+        <control id="7" description="Enable language filter" />
+        <control id="8" description="Hide broken addons" />
+        <control id="9" description="Check for repo updates" />
+    </window>
+
+    <window name="addoninformation" id="10146" xml="DialogAddonInfo.xml">
+        <control id="6" description="Install the selected add-on" />
+        <control id="7" description="Enable/Disable the selected add-on" />
+        <control id="8" description="Update the selected add-on" />
+        <control id="9" description="Show the settings of the selected add-on" />
+        <control id="10" description="Show the dependencies of the selected add-on" />
+        <control id="12" description="Run the selected add-on" />
+        <control id="13" description="Auto-update" />
+        <control id="14" description="Select add-on version" />
+        <control id="50" description="List of available screenshots" />
+    </window>
+
+    <window name="addonsettings" id="10140" xml="DialogAddonSettings.xml">
+        <control id="2" description="Heading label" />
+        <control id="3" description="Grouplist template" />
+        <control id="5" description="Grouplist template" />
+        <control id="6" description="Setting description help text" />
+        <control id="7" description="Button template" />
+        <control id="8" description="Radiobutton template" />
+        <control id="9" description="Spincontrolex template" />
+        <control id="10" description="Togglebutton template" />
+        <control id="11" description="Default separator image" />
+        <control id="12" description="Edit template" />
+        <control id="13" description="Slider template" />
+        <control id="14" description="Label template" />
+        <control id="15" description="Colour" />
+        <control id="20" description="Settings level change" />
+        <control id="28" description="OK" />
+        <control id="29" description="Cancel" />
+        <control id="30" description="unused" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- SYSTEM DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="busydialog" id="10138" xml="DialogBusy.xml">
+        <control id="10" description="Progress bar" />
+    </window>
+
+    <window name="buttonmenu" id="10111" xml="DialogButtonMenu.xml">
+        <control id="3100" description="Label of the focused button" />
+    </window>
+
+    <window name="colorpicker" id="10145" xml="DialogColorPicker.xml">
+        <control id="1" description="Heading label" />
+        <control id="6" description="List of colors" />
+        <control id="7" description="Cancel" />
+    </window>
+
+    <window name="contextmenu" id="10106" xml="DialogContextMenu.xml">
+        <control id="996" description="Grouplist template" />
+        <control id="999" description="Background image of the context menu" />
+        <control id="1000" description="Button template" />
+    </window>
+
+    <window name="extendedprogressdialog" id="10151" xml="DialogExtendedProgressBar.xml">
+        <control id="30" description="Heading label" />
+        <control id="31" description="Line 1" />
+        <control id="32" description="Scan progress bar" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- INPUT DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="keyboard" id="10103" xml="DialogKeyboard.xml">
+        <control id="304" description="Label reporting the input text" />
+        <control id="305" description="Label reporting the current input symbols" />
+        <control id="310" description="Backspace" />
+        <control id="311" description="Shift" />
+        <control id="312" description="Caps lock" />
+        <control id="313" description="Done" />
+        <control id="314" description="Layout switcher" />
+        <control id="315" description="Symbols switcher" />
+        <control id="316" description="Language switcher" />
+        <control id="317" description="Input mode switcher" />
+        <control id="319" description="Space" />
+    </window>
+
+    <window name="numericinput" id="10109" xml="DialogNumeric.xml">
+        <control id="1" description="Heading label" />
+        <control id="10" description="Enter" />
+        <control id="11" description="Input box" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- MEDIA INFO DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="movieinformation" id="12003" xml="DialogVideoInfo.xml">
+        <control id="3" description="Video thumb" />
+        <control id="4" description="Text area for displaying the video plot" />
+        <control id="6" description="Refresh video information" />
+        <control id="7" description="User rating" />
+        <control id="8" description="Play video" />
+        <control id="9" description="Resume video" />
+        <control id="10" description="Get video Fanart, Poster, Banner, or Thumb" />
+        <control id="11" description="Play movie trailer" />
+        <control id="13" description="Show all movies by the director" />
+        <control id="14" description="Manage versions" />
+        <control id="15" description="Manage extras" />
+        <control id="50" description="List of cast members" />
+    </window>
+
+    <window name="musicinformation" id="12001" xml="DialogMusicInfo.xml">
+        <control id="10" description="Get thumb" />
+        <control id="11" description="Get fanart" />
+        <control id="12" description="Play" />
+        <control id="13" description="Refresh" />
+    </window>
+
+    <window name="pictureinformation" id="12002" xml="DialogPictureInfo.xml">
+        <control id="1" description="Heading label" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- PVR DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="pvrchannelguide" id="10603" xml="DialogPVRChannelGuide.xml">
+        <control id="11" description="Timeline/EPG grid" />
+    </window>
+
+    <window name="pvrchannelmanager" id="10604" xml="DialogPVRChannelManager.xml">
+        <control id="4" description="OK" />
+        <control id="5" description="Apply" />
+        <control id="6" description="Cancel" />
+        <control id="7" description="Activate channel" />
+        <control id="8" description="Channel name" />
+        <control id="9" description="Channel logo" />
+        <control id="12" description="Activate EPG" />
+        <control id="13" description="Select EPG source" />
+        <control id="14" description="Parental lock" />
+        <control id="20" description="Channel list" />
+        <control id="30" description="Switch to group management" />
+        <control id="31" description="New channel" />
+        <control id="34" description="Toggle radio / tv channels" />
+    </window>
+
+    <window name="pvrchannelsosd" id="10602" xml="DialogPVRChannelsOSD.xml">
+        <control id="11" description="Channel list" />
+    </window>
+
+    <window name="pvrgroupmanager" id="10603" xml="DialogPVRGroupManager.xml">
+        <control id="11" description="Ungrouped channels" />
+        <control id="12" description="Grouped channels" />
+        <control id="13" description="Group list" />
+        <control id="25" description="Hide / Unhide" />
+        <control id="26" description="Add" />
+        <control id="27" description="Rename" />
+        <control id="28" description="Delete" />
+        <control id="29" description="OK" />
+        <control id="34" description="Switch between TV / Radio" />
+    </window>
+
+    <window name="pvrguidesearch" id="10606" xml="DialogPVRGuideSearch.xml">
+        <control id="9" description="Search button" />
+        <control id="10" description="Channel selection" />
+        <control id="11" description="Group selection" />
+        <control id="12" description="Genre selection" />
+        <control id="13" description="Search term input" />
+        <control id="14" description="Search in descriptions checkbox" />
+        <control id="15" description="Case sensitive checkbox" />
+        <control id="16" description="Min duration spincontrol" />
+        <control id="17" description="Max duration spincontrol" />
+        <control id="18" description="Start date" />
+        <control id="19" description="Stop date" />
+        <control id="20" description="Start time" />
+        <control id="21" description="Stop time" />
+        <control id="22" description="Ignore finished broadcasts checkbox" />
+        <control id="23" description="Ignore future broadcasts checkbox" />
+    </window>
+
+    <window name="pvrguideinfo" id="10601" xml="DialogPVRInfo.xml">
+        <control id="5" description="Record programme" />
+        <control id="6" description="Switch to channel" />
+        <control id="7" description="Find similar" />
+    </window>
+
+    <window name="pvrradiordsinfo" id="12006" xml="DialogPVRRadioRDSInfo.xml">
+        <control id="2" description="Info" />
+        <control id="3" description="Programme info" />
+        <control id="4" description="Radiotext" />
+        <control id="5" description="Radiotext+" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- PLAYBACK DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="seekbar" id="10115" xml="DialogSeekBar.xml">
+        <control id="10" description="Label showing the position the player will seek to" />
+        <control id="20" description="Label showing the current playing time" />
+        <control id="21" description="Label showing the end time" />
+        <control id="22" description="Label showing the end time" />
+        <control id="23" description="Progress bar showing the current playing position" />
+    </window>
+
+    <window name="subtitlesearch" id="10153" xml="DialogSubtitles.xml">
+        <control id="120" description="Subtitle list" />
+    </window>
+
+    <window name="videobookmarks" id="10125" xml="VideoOSDBookmarks.xml">
+        <control id="2" description="Heading label" />
+        <control id="11" description="Clear bookmarks" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- SETTINGS DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="dialogsettings" id="10140" xml="DialogSettings.xml">
+        <control id="2" description="Heading label" />
+        <control id="3" description="Grouplist template" />
+        <control id="5" description="Grouplist template" />
+        <control id="6" description="Setting description help text" />
+        <control id="7" description="Button template" />
+        <control id="8" description="Radiobutton template" />
+        <control id="9" description="Spincontrolex template" />
+        <control id="10" description="Togglebutton template" />
+        <control id="11" description="Default separator image" />
+        <control id="12" description="Edit template" />
+        <control id="13" description="Slider template" />
+        <control id="14" description="Label template" />
+        <control id="15" description="Colour" />
+        <control id="20" description="Settings level change" />
+        <control id="28" description="OK" />
+        <control id="29" description="Cancel" />
+    </window>
+
+    <window name="slider" id="10145" xml="DialogSlider.xml">
+        <control id="11" description="Slider control" />
+    </window>
+
+    <!-- ================================================================ -->
+    <!-- UTILITY DIALOGS -->
+    <!-- ================================================================ -->
+
+    <window name="filebrowser" id="10126" xml="FileBrowser.xml">
+        <control id="411" description="Heading label" />
+        <control id="412" description="Path label" />
+        <control id="440" description="List of files/directories" />
+        <control id="413" description="OK button" />
+        <control id="414" description="Cancel button" />
+    </window>
+
+    <window name="mediasource" id="10128" xml="DialogMediaSource.xml">
+        <control id="2" description="Heading" source="xbmc/dialogs/GUIDialogMediaSource.cpp:48" />
+        <control id="10" description="Path" source="xbmc/dialogs/GUIDialogMediaSource.cpp:49" />
+        <control id="11" description="Path browse" source="xbmc/dialogs/GUIDialogMediaSource.cpp:50" />
+        <control id="12" description="Name" source="xbmc/dialogs/GUIDialogMediaSource.cpp:51" />
+        <control id="13" description="Path add" source="xbmc/dialogs/GUIDialogMediaSource.cpp:52" />
+        <control id="14" description="Path remove" source="xbmc/dialogs/GUIDialogMediaSource.cpp:53" />
+        <control id="18" description="OK" source="xbmc/dialogs/GUIDialogMediaSource.cpp:54" />
+        <control id="19" description="Cancel" source="xbmc/dialogs/GUIDialogMediaSource.cpp:55" />
+        <control id="20" description="Content" source="xbmc/dialogs/GUIDialogMediaSource.cpp:56" />
+        <control id="1000" description="Media source name" />
+        <control id="1001" description="Media source path" />
+    </window>
+
+    <window name="notification" id="10107" xml="DialogNotification.xml">
+        <control id="1" description="Icon image" />
+        <control id="2" description="Heading label" />
+        <control id="3" description="Description text" />
+    </window>
+
+    <window name="textviewer" id="10147" xml="DialogTextViewer.xml">
+        <control id="1" description="Heading label" />
+        <control id="5" description="Text box" />
+    </window>
+
+    <window name="gamecontrollers" id="10157" xml="DialogGameControllers.xml">
+        <control id="3" description="List of controller types" />
+        <control id="5" description="List of feature types" />
+        <control id="7" description="Button template" />
+        <control id="8" description="Settings category label template" />
+    </window>
+
+</builtin_controls>

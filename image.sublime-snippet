@@ -1,0 +1,13 @@
+<snippet>
+	<content><![CDATA[
+<control type="image">
+	<left>${1:0}</left>
+	<top>${2:0}</top>
+	<aspectratio>${3:stretch}</aspectratio>
+	<texture>${4}</texture>
+	<visible>${5}</visible>
+</control>
+]]></content>
+	<tabTrigger>cimage</tabTrigger>
+	<scope>text.xml</scope>
+</snippet>

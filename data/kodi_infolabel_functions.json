@@ -1,0 +1,78 @@
+{
+  "_comment": "Kodi InfoLabel functions and boolean conditions that take numeric parameters that should NOT be validated as control/window IDs. See https://kodi.wiki/view/List_of_boolean_conditions and https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d5/d11/modules__infolabels_boolean_conditions.html",
+
+  "functions_with_integer_params": [
+    {
+      "function": "Container",
+      "params": ["Position", "SubItem", "CurrentItem", "SetViewMode", "Row", "Column"],
+      "description": "Position: focused position (integer index), SubItem: subitem offset, CurrentItem: current item offset, SetViewMode: view mode ID, Row: row index, Column: column index"
+    },
+    {
+      "function": "Player",
+      "params": ["offset", "position", "HasPerformedSeek"],
+      "description": "offset: offset from current item (integer), position: absolute position (integer), HasPerformedSeek: seconds elapsed (integer)"
+    },
+    {
+      "function": "MusicPlayer",
+      "params": ["Offset", "Position", "Exists"],
+      "description": "Offset/Position: song position in playlist (integer), Exists: position check (integer)"
+    },
+    {
+      "function": "VideoPlayer",
+      "params": ["offset", "position"],
+      "description": "offset/position: video position in playlist (integer)"
+    },
+    {
+      "function": "System",
+      "params": ["AlarmLessOrEqual", "IdleTime"],
+      "description": "AlarmLessOrEqual: seconds for comparison (integer), IdleTime: elapsed seconds (integer)"
+    },
+    {
+      "function": "Integer",
+      "params": ["IsEqual", "IsGreater", "IsGreaterOrEqual", "IsLess", "IsLessOrEqual"],
+      "description": "Comparison functions that take integer thresholds"
+    },
+    {
+      "function": "ListItem",
+      "params": ["offset"],
+      "description": "ListItem takes an optional offset integer (not a control ID). Note: ListItemAbsolute, ListItemPosition, ListItemNoWrap are handled separately."
+    },
+    {
+      "function": "Control",
+      "params": [],
+      "description": "Control.HasFocus/IsVisible/IsEnabled/GetLabel take control IDs and SHOULD be validated (removed from exclusion list)"
+    },
+    {
+      "function": "Window",
+      "params": ["Is", "IsActive", "IsVisible", "IsMedia", "IsDialogTopmost", "IsModalDialogTopmost", "Previous", "Next"],
+      "description": "Window query functions that take window IDs. Based on Kodi source: xbmc/GUIInfoManager.cpp lines 7971-7979 mapping to WINDOW_IS_MEDIA, WINDOW_IS, WINDOW_IS_ACTIVE, WINDOW_IS_VISIBLE, WINDOW_IS_DIALOG_TOPMOST, WINDOW_IS_MODAL_DIALOG_TOPMOST, WINDOW_PREVIOUS, WINDOW_NEXT"
+    }
+  ],
+
+  "standalone_functions_with_integers": [
+    {
+      "function": "ListItemAbsolute",
+      "description": "Takes absolute position integer, not control ID"
+    },
+    {
+      "function": "ListItemPosition",
+      "description": "Takes position integer, not control ID"
+    },
+    {
+      "function": "ListItemNoWrap",
+      "description": "Takes position integer, not control ID"
+    },
+    {
+      "function": "ActivateWindow",
+      "description": "Builtin action to activate a window (takes window ID, but validation is complex - exclude for now)"
+    },
+    {
+      "function": "ReplaceWindow",
+      "description": "Builtin action to replace current window (takes window ID, but validation is complex - exclude for now)"
+    },
+    {
+      "function": "Dialog.Close",
+      "description": "Builtin action to close a dialog window (takes window ID, not control ID)"
+    }
+  ]
+}

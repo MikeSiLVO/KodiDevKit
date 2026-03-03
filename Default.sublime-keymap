@@ -1,0 +1,39 @@
+[
+    { "keys": ["shift+enter"], "command": "open_source_from_log",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.kodi.traceback" }]
+    },
+    { "keys": ["ctrl+enter"], "command": "preview_image",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["ctrl+shift+m"], "command": "move_to_language_file",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["ctrl+shift+x"], "command": "create_element_row",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["ctrl+shift+y"], "command": "evaluate_math_expression_prompt",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["ctrl+shift+w"], "command": "go_to_online_help",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["shift+enter"], "command": "go_to_tag",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["shift+ctrl+enter"], "command": "switch_xml_folder",
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["ctrl+shift+o"], "command": "show_overlay",
+        "args": {"overlay": "command_palette", "text": "KodiDevKit"},
+        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+    },
+    { "keys": ["enter"], "command": "close_kodidevkit_completion_view",
+        "context": [{ "key": "setting.kodidevkit_completion_view", "operator": "equal", "operand": true }]
+    },
+    { "keys": ["="], "command": "insert_snippet", "args": {"contents": "=\"$0\""},
+        "context": [
+            { "key": "selector", "operator": "equal", "operand": "text.xml.kodi meta.tag" },
+            { "key": "auto_complete_visible", "operator": "equal", "operand": false }
+        ]
+    }
+]

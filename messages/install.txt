@@ -1,0 +1,19 @@
+  KodiDevKit 3.0 - https://github.com/MikeSiLVO/KodiDevKit
+  =================
+
+  A Sublime Text 4 plugin for Kodi skin and addon development.
+
+  Features:
+  - On-save validation for images, fonts, labels, includes, variables, IDs,
+    and XML structure — all rules verified against Kodi source code
+  - Inline error display with clickable links to the source of the issue
+  - Full-skin HTML reports with filtering by error type and severity
+  - Smart tooltips showing what variables, includes, and labels resolve to
+  - Auto-completion for Kodi XML tags, attributes, labels, fonts, and colors
+  - JSON-RPC integration with a running Kodi instance
+  - SkinShortcuts template support
+
+  To get started, set your kodi_path in:
+  Preferences > Package Settings > KodiDevKit > Settings
+
+  Documentation: https://github.com/MikeSiLVO/KodiDevKit#readme
