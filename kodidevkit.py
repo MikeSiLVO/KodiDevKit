@@ -256,7 +256,7 @@ def plugin_loaded():
 
 
 class KodiDevKit(sublime_plugin.EventListener):
-    settings = {}
+    settings = {}  # type: ignore[assignment]
     _phantom_sets = {}  # Track PhantomSets by view.id()
     _validation_issues = {}  # Track validation issues by view.id()
     _media_cache = {}  # Cache media file completions per addon path
@@ -267,7 +267,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._modified_files = set()
         self._last_phantom_cleanup = 0
 
-        self.settings = KodiDevKit.settings or sublime.load_settings(SETTINGS_FILE)
+        self.settings = KodiDevKit.settings
 
         self.timer = None
         self._prev_selections = {}  # per-view selection tracking: {view_id: Region}

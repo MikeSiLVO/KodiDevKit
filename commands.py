@@ -6,7 +6,6 @@ using Sublime Text 4
 import re
 import glob
 import webbrowser
-import platform
 import os
 import logging
 from lxml import etree as ET
@@ -66,7 +65,7 @@ class OpenAltKodiLogCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self):
         settings = sublime.load_settings(SETTINGS_FILE)
-        return platform.system() == "Windows" and settings.get("portable_mode")
+        return sublime.platform() == "windows" and settings.get("portable_mode")
 
     def run(self):
         filename = "%s.log" % APP_NAME.lower()
@@ -315,7 +314,7 @@ class SetKodiFolderCommand(sublime_plugin.WindowCommand):
             preset_path = "/usr/share/%s/" % APP_NAME.lower()
         elif sublime.platform() == "windows":
             preset_path = "C:/%s/" % APP_NAME.lower()
-        elif platform.system() == "Darwin":
+        elif sublime.platform() == "osx":
             preset_path = os.path.join(os.path.expanduser("~"),
                                        "Applications",
                                        "%s.app" % APP_NAME,
@@ -748,9 +747,9 @@ class OpenValidationReportCommand(sublime_plugin.WindowCommand):
         import sys
 
         try:
-            if sys.platform == 'win32':
+            if sublime.platform() == 'windows':
                 subprocess.Popen(['explorer', folder_path])
-            elif sys.platform == 'darwin':
+            elif sublime.platform() == 'osx':
                 subprocess.Popen(['open', folder_path])
             else:
                 subprocess.Popen(['xdg-open', folder_path])

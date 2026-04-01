@@ -7,7 +7,6 @@ from __future__ import annotations
 import codecs
 import logging
 import os
-import platform
 import re
 import time
 import zipfile
@@ -109,7 +108,13 @@ def save_xml(filename: str, root, tab_width: int = 4) -> None:
 
 def get_sublime_path() -> str | None:
     """Get command-line path to execute Sublime Text externally."""
-    if platform.system() in ['Darwin', 'Linux']:
+    try:
+        import sublime
+        plat = sublime.platform()
+    except ImportError:
+        import platform as _plat
+        plat = {"Darwin": "osx", "Linux": "linux"}.get(_plat.system(), "windows")
+    if plat in ("osx", "linux"):
         return "subl"
     elif os.path.exists(os.path.join(os.getcwd(), "sublime_text.exe")):
         return os.path.join(os.getcwd(), "sublime_text.exe")

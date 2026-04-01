@@ -1,5 +1,4 @@
 import os
-import platform
 from .. import utils
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -165,9 +164,15 @@ class KodiJsonrpc:
         """
         return userdata folder based on platform and portable setting
         """
-        if platform.system() == "Linux":
+        try:
+            import sublime
+            _plat = sublime.platform()
+        except ImportError:
+            import platform as _platform_mod
+            _plat = {"Linux": "linux", "Windows": "windows", "Darwin": "osx"}.get(_platform_mod.system(), "linux")
+        if _plat == "linux":
             return os.path.join(os.path.expanduser("~"), ".%s" % APP_NAME)
-        elif platform.system() == "Windows":
+        elif _plat == "windows":
             if self.settings.get("portable_mode"):
                 if self.kodi_path:
                     return os.path.join(self.kodi_path, "portable_data")
@@ -177,7 +182,7 @@ class KodiJsonrpc:
                 if appdata:
                     return os.path.join(appdata, APP_NAME)
                 return None
-        elif platform.system() == "Darwin":
+        elif _plat == "osx":
             return os.path.join(os.path.expanduser("~"), "Application Support", APP_NAME, "userdata")
         return None
 
