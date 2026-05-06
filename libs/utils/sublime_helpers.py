@@ -69,17 +69,3 @@ def prettyprint(obj) -> None:
     logger.debug(text)
 
 
-def debug_print(obj) -> None:
-    """Console print only when kodidevkit.sublime-settings has debug_mode=true."""
-    import sublime
-    try:
-        if isinstance(obj, (bytes, bytearray)):
-            obj = obj.decode("utf-8", "replace")
-        text = json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2)
-    except Exception:
-        try:
-            text = repr(obj)
-        except Exception:
-            text = "<unprintable>"
-    if bool(sublime.load_settings("kodidevkit.sublime-settings").get("debug_mode", False)):
-        print(text)

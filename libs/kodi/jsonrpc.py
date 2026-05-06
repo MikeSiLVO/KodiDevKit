@@ -13,16 +13,15 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = "kodi"
 
+_USER_VISIBLE_METHODS = frozenset({"XBMC.GetInfoBooleans", "XBMC.GetInfoLabels"})
+
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
 
 class KodiJsonrpc:
-    """
-    Class representing a kodi installation
-    delivers core language files / paths / JSON answers / installed add-ons
-    """
+    """JSON-RPC client for a Kodi install: core paths, languages, addons, queries."""
     def __init__(self, settings=None):
         try:
             import sublime
@@ -36,7 +35,7 @@ class KodiJsonrpc:
         self.json_url = None
         self.kodi_path = None
         self.userdata_folder = None
-        self._settings_loaded = False  # <- add this
+        self._settings_loaded = False
 
         try:
             self.load_settings(self.settings)
@@ -45,16 +44,12 @@ class KodiJsonrpc:
 
     @utils.run_async
     def request_async(self, method, params):
-        """
-        send JSON command *data to Kodi in separate thread,
-        also needs *settings for remote ip etc.
-        """
-        return self.request(method,
-                            params)
+        """Fire-and-forget version of `request()` (runs on a worker thread)."""
+        return self.request(method, params)
 
     def request(self, method, params=None):
-        """Send JSON-RPC request to Kodi. Returns dict or None."""
-        # Refresh connection info from live settings every call
+        """Send a JSON-RPC call to Kodi; return the parsed dict or None on failure."""
+        # Re-read connection settings each call so changes apply immediately.
         s = self.settings or {}
         addr = (s.get("kodi_address") or "").strip()
         if addr:
@@ -68,7 +63,8 @@ class KodiJsonrpc:
                 port = 8080
             self.json_url = f"{scheme}://{host}:{port}"
 
-        # Cooldown guard after a transport failure
+        # Stay quiet for a few seconds after a transport failure so we don't
+        # repeatedly freeze the UI when Kodi is unreachable.
         now = time.time()
         if now < getattr(self, "_cooldown_until", 0.0):
             logger.debug("Kodi request skipped (cooldown active): %s", method)
@@ -96,13 +92,12 @@ class KodiJsonrpc:
                       data=json.dumps(data).encode("utf-8"),
                       headers=headers)
 
-        # Detailed logging for freeze diagnosis
         request_start = time.time()
         logger.debug("Kodi request START: method=%s url=%s", method, self.json_url)
 
         try:
-            # Use 0.5s timeout to prevent UI freezing during network issues (e.g., display disconnection)
-            # This is critical for hover tooltips which run on the main thread
+            # Tight timeout: tooltips can fire from the main thread, so a long
+            # block here freezes the editor (e.g. when the display sleeps).
             raw = urlopen(req, timeout=0.5).read()
             request_duration = time.time() - request_start
             logger.debug("Kodi request SUCCESS: method=%s duration=%.3fs", method, request_duration)
@@ -120,6 +115,8 @@ class KodiJsonrpc:
                         logger.info("JSONRPC.Introspect error %s: %s", err.get("code"), err.get("message"))
                     else:
                         logger.info("JSONRPC.Introspect unexpected response; payload suppressed")
+            elif method in _USER_VISIBLE_METHODS:
+                print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
             elif debug:
                 utils.prettyprint(result)
 
@@ -135,16 +132,13 @@ class KodiJsonrpc:
             if bool(s.get("debug_mode", False)):
                 logger.info("RPC transport error for %s: %s", method, exc)
 
-            # After timeout/network error, prevent further requests for 2 seconds
-            # This prevents repeated freezing when Kodi is unreachable (e.g., during display disconnection)
+            # 2-second cooldown so repeated tooltips don't all hit the timeout in turn.
             self._cooldown_until = time.time() + 2.0
             logger.debug("Kodi cooldown set: next retry after %.1fs", 2.0)
             return None
 
     def get_colors(self):
-        """
-        create color list by parsing core color file
-        """
+        """Parse Kodi's core colors.xml into `self.colors` and `self.color_labels`."""
         self.colors = []
         if not self.color_file_path or not os.path.exists(self.color_file_path):
             return False
@@ -161,9 +155,7 @@ class KodiJsonrpc:
         self.color_labels = {i["name"] for i in self.colors}
 
     def get_userdata_folder(self):
-        """
-        return userdata folder based on platform and portable setting
-        """
+        """Detect Kodi's userdata folder for the current OS / portable mode."""
         try:
             import sublime
             _plat = sublime.platform()
@@ -188,50 +180,43 @@ class KodiJsonrpc:
 
     @property
     def user_addons_path(self):
-        """
-        get path to userdata addon dir
-        """
+        """`<userdata>/addons` if known, else None."""
         if self.userdata_folder:
             return os.path.join(self.userdata_folder, "addons")
         return None
 
     @property
     def core_addons_path(self):
-        """
-        get path to core addon dir
-        """
+        """`<kodi_path>/addons` if known, else None."""
         if self.kodi_path:
             return os.path.join(self.kodi_path, "addons")
         return None
 
     @property
     def color_file_path(self):
-        """
-        get path to core color xml
-        """
+        """Path to Kodi's core `system/colors.xml`."""
         if self.kodi_path:
             return os.path.join(self.kodi_path, "system", "colors.xml")
         return None
 
     @property
     def default_skin_path(self):
-        """
-        get path to userdata addon dir
-        """
+        """Path to Estuary's xml folder under user addons (used as a sample skin)."""
         if self.user_addons_path:
             return os.path.join(self.user_addons_path, "skin.estuary", "xml")
         return None
 
     def get_userdata_addons(self):
-        """
-        get list of folders from userdata addon dir
-        """
+        """List addon folder names under `<userdata>/addons`."""
         if not self.user_addons_path or not os.path.exists(self.user_addons_path):
             return []
         return [f for f in os.listdir(self.user_addons_path) if not os.path.isfile(f)]
 
     def load_settings(self, settings, force: bool = False):
-        """Apply settings; rebuild url/paths and sync log level. Idempotent."""
+        """Apply `settings`; rebuild url/paths and re-sync the log level.
+
+        Idempotent — returns immediately if already loaded unless `force=True`.
+        """
         if getattr(self, "_settings_loaded", False) and not force:
             return
         self._settings_loaded = True
@@ -240,9 +225,7 @@ class KodiJsonrpc:
 
         addr = (self.settings.get("kodi_address") or "").strip()
         if addr:
-            # normalize like 'http://host:port' without trailing slash
-            addr = addr.rstrip("/")
-            self.json_url = addr
+            self.json_url = addr.rstrip("/")
         else:
             scheme = (self.settings.get("kodi_scheme") or "http").strip()
             host = (self.settings.get("kodi_host") or "localhost").strip()
@@ -262,9 +245,7 @@ class KodiJsonrpc:
             pass
 
     def update_labels(self):
-        """
-        get core po files
-        """
+        """Reload PO files: prefer user-installed languages, fall back to core."""
         po_files = self.get_po_files(self.user_addons_path)
         languages = {i.language for i in po_files}
         core_po_files = self.get_po_files(self.core_addons_path)
@@ -272,15 +253,14 @@ class KodiJsonrpc:
         self.po_files = po_files + core_po_files
 
     def get_po_files(self, folder):
-        """
-        get list with pofile objects
-        """
+        """Return PO files for the configured languages under `folder`."""
         if not folder:
             return []
         po_files = []
         folders = self.settings.get("language_folders", ["resource.language.en_gb", "English"])
 
-        # Ensure core language is considered for the core addons tree even if settings omit it
+        # Always include en_gb when scanning core addons, even if the user's
+        # language settings don't list it — core has English regardless.
         if folder == self.core_addons_path:
             scan_folders = list(dict.fromkeys(folders + ["resource.language.en_gb"]))
         else:

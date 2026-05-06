@@ -1,7 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-"""
+"""KodiDevKit Sublime Text plugin — general commands."""
 
 import re
 import glob
@@ -27,10 +24,7 @@ TUPLE_ERROR_PATTERN = re.compile(r"', \('(.*?)', (\d+), (\d+), ")
 
 
 class OpenKodiLogCommand(sublime_plugin.WindowCommand):
-
-    """
-    open kodi log from its default location
-    """
+    """Open kodi.log from its default userdata location."""
 
     def run(self):
         filename = "%s.log" % APP_NAME.lower()
@@ -57,11 +51,7 @@ class OpenKodiLogCommand(sublime_plugin.WindowCommand):
 
 
 class OpenAltKodiLogCommand(sublime_plugin.WindowCommand):
-
-    """
-    open alternative kodi log from its default location
-    (visible for windows portable mode)
-    """
+    """Open kodi.log from %APPDATA%\\Kodi (Windows portable mode)."""
 
     def is_visible(self):
         settings = sublime.load_settings(SETTINGS_FILE)
@@ -87,10 +77,7 @@ class OpenAltKodiLogCommand(sublime_plugin.WindowCommand):
 
 
 class OpenSourceFromLog(sublime_plugin.TextCommand):
-
-    """
-    open file from exception description and jump to according place in code
-    """
+    """Jump from a Python traceback line in the log to the source file/line."""
 
     def run(self, edit):
         for region in self.view.sel():
@@ -114,10 +101,7 @@ class OpenSourceFromLog(sublime_plugin.TextCommand):
 
 
 class GoToOnlineHelpCommand(sublime_plugin.TextCommand):
-
-    """
-    open browser and go to doxygen page
-    """
+    """Open the Kodi doxygen page for the control under the cursor."""
 
     CONTROLS = {"renderaddon": "https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d4/d1e/_addon__rendering_control.html",
                 "button": "https://xbmc.github.io/docs.kodi.tv/master/kodi-base/dc/df7/skin__button_control.html",
@@ -172,27 +156,19 @@ class GoToOnlineHelpCommand(sublime_plugin.TextCommand):
             logging.info("error when trying to open from %s" % line_contents)
 
     def go_to_help(self, word):
-        """
-        open browser and go to wiki page for control with type *word
-        """
+        """Open the doxygen page for control type `word` in the browser."""
         webbrowser.open_new(self.CONTROLS[word])
 
 
 class AppendTextCommand(sublime_plugin.TextCommand):
-
-    """
-    append a line of text to the current view
-    """
+    """Append a label line to the end of the current view."""
 
     def run(self, edit, label):
         self.view.insert(edit, self.view.size(), label + "\n")
 
 
 class LogCommand(sublime_plugin.TextCommand):
-
-    """
-    log text into a text panel
-    """
+    """Append a line to a Sublime output panel."""
 
     def run(self, edit, label, panel_name='example'):
         window = self.view.window()
@@ -206,12 +182,8 @@ class LogCommand(sublime_plugin.TextCommand):
 
 
 class CreateElementRowCommand(sublime_plugin.WindowCommand):
-
-    """
-    Creates duplicates based on a template defined by current text selection
-    Show input panel for user to enter number of items to generate,
-    then execute ReplaceXmlElementsCommand
-    """
+    """Prompt for a count, then duplicate the selection that many times via
+    ReplaceXmlElementsCommand."""
 
     def run(self):
         self.window.show_input_panel("Enter number of items to generate",
@@ -225,10 +197,7 @@ class CreateElementRowCommand(sublime_plugin.WindowCommand):
 
 
 class ReplaceXmlElementsCommand(sublime_plugin.TextCommand):
-
-    """
-    Create *num_items duplicates based on template defined by current text selection
-    """
+    """Replace the selection with `num_items` copies, expanding any [n] placeholder."""
 
     def run(self, edit, num_items):
         if not num_items.isdigit():
@@ -246,11 +215,7 @@ class ReplaceXmlElementsCommand(sublime_plugin.TextCommand):
 
 
 class EvaluateMathExpressionPromptCommand(sublime_plugin.WindowCommand):
-
-    """
-    Allows calculations for currently selected regions
-    Shows an input panel so user can enter equation, then execute EvaluateMathExpressionCommand
-    """
+    """Prompt for an equation (with `x` = current selected int) and run it on each selection."""
 
     def run(self):
         self.window.show_input_panel("Write Equation (x = selected int)",
@@ -264,10 +229,7 @@ class EvaluateMathExpressionPromptCommand(sublime_plugin.WindowCommand):
 
 
 class EvaluateMathExpressionCommand(sublime_plugin.TextCommand):
-
-    """
-    Change currently selected regions based on *equation
-    """
+    """Evaluate `equation` per selection (substituting `x` and `i`) and replace it."""
 
     def run(self, edit, equation):
         for i, region in enumerate(self.view.sel()):
@@ -279,10 +241,7 @@ class EvaluateMathExpressionCommand(sublime_plugin.TextCommand):
 
 
 class ColorPickerCommand(sublime_plugin.WindowCommand):
-
-    """
-    Launch ColorPicker, return kodi-formatted color string
-    """
+    """Show ColorPicker and insert the chosen color in Kodi's AARRGGBB format."""
 
     def is_visible(self):
         settings = sublime.load_settings('KodiColorPicker.sublime-settings')
@@ -304,10 +263,7 @@ class ColorPickerCommand(sublime_plugin.WindowCommand):
 
 
 class SetKodiFolderCommand(sublime_plugin.WindowCommand):
-
-    """
-    Show input panel to set kodi folder, set default value according to OS
-    """
+    """Prompt for the Kodi installation folder and save it to settings."""
 
     def run(self):
         if sublime.platform() == "linux":
@@ -331,9 +287,7 @@ class SetKodiFolderCommand(sublime_plugin.WindowCommand):
 
     @staticmethod
     def set_kodi_folder(path):
-        """
-        Sets kodi path to *path and saves it if file exists.
-        """
+        """Save `path` as `kodi_path` if it exists; log an error otherwise."""
         if os.path.exists(path):
             sublime.load_settings(SETTINGS_FILE).set("kodi_path", path)
             sublime.save_settings(SETTINGS_FILE)
@@ -342,10 +296,7 @@ class SetKodiFolderCommand(sublime_plugin.WindowCommand):
 
 
 class ExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):
-
-    """
-    Shows an input dialog, then triggers ExecuteBuiltinCommand
-    """
+    """Prompt for a Kodi builtin and dispatch it via ExecuteBuiltinCommand."""
 
     def run(self):
         self.settings = sublime.load_settings(SETTINGS_FILE)
@@ -361,10 +312,7 @@ class ExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):
 
 
 class ExecuteBuiltinCommand(sublime_plugin.WindowCommand):
-
-    """
-    Sends json request to execute a builtin using script.toolbox
-    """
+    """Run a Kodi builtin via the script.toolbox JSON-RPC bridge."""
 
     def run(self, builtin):
         params = {"addonid": "script.toolbox",
@@ -397,7 +345,7 @@ class _KodiQueryPromptCommand(sublime_plugin.WindowCommand):
         from .libs.sublime.logging import ResultsDisplayPanel
 
         self.settings.set(self._settings_key, input_string)
-        words = [w.strip() for w in input_string.split(",")]
+        words = utils.split_top_level_commas(input_string)
 
         result = kodi.request(method=self._method,
                               params={self._param_key: words})
@@ -472,10 +420,7 @@ class GetInfoBooleansPromptCommand(_KodiQueryPromptCommand):
 
 
 class OpenKodiAddonCommand(sublime_plugin.WindowCommand):
-
-    """
-    Open another SublimeText instance containing the chosen addon
-    """
+    """Open a chosen Kodi addon folder in a new Sublime Text window."""
 
     def run(self):
         self.nodes = kodi.get_userdata_addons()
@@ -498,26 +443,13 @@ class ValidationRunner:
     """Encapsulates validation check execution with progress tracking."""
 
     def __init__(self, provider, update_progress):
-        """
-        Initialize the validation runner.
-
-        Args:
-            provider: InfoProvider instance with check methods
-            update_progress: Callback function(step, message) for progress updates
-        """
+        """`update_progress(step, message)` is called as each check runs."""
         self.provider = provider
         self.update_progress = update_progress
         self.all_issues = {}
 
     def _run_check(self, step, name, check_method):
-        """
-        Run a single validation check with progress tracking.
-
-        Args:
-            step: Progress step number (1-7)
-            name: Display name of the check
-            check_method: Provider method to call (e.g., provider.check_variables)
-        """
+        """Run one check, reporting progress with the given step/name."""
         def progress_callback(message):
             self.update_progress(step, f"{name}: {message}")
 
@@ -525,12 +457,7 @@ class ValidationRunner:
         self.all_issues[name] = check_method(progress_callback=progress_callback)
 
     def run_all(self):
-        """
-        Run all validation checks in sequence.
-
-        Returns:
-            dict: All issues collected from all checks
-        """
+        """Run every check in order and return {check_name: [issues]}."""
         self.update_progress(0, "Starting validation checks...")
 
         self._run_check(1, "Variables", self.provider.check_variables)
@@ -549,15 +476,7 @@ class ReportGenerator:
 
     @staticmethod
     def get_report_path(skin_name):
-        """
-        Determine report directory and filename.
-
-        Args:
-            skin_name: Name of the skin being validated
-
-        Returns:
-            tuple: (report_path, report_dir, safe_skin_name)
-        """
+        """Build the timestamped report path. Returns (path, dir, safe_skin_name)."""
         from datetime import datetime
 
         settings = sublime.load_settings('kodidevkit.sublime-settings')
@@ -577,13 +496,7 @@ class ReportGenerator:
 
     @staticmethod
     def cleanup_old_reports(report_dir, safe_skin_name):
-        """
-        Remove old reports for the same skin.
-
-        Args:
-            report_dir: Directory containing reports
-            safe_skin_name: Sanitized skin name for pattern matching
-        """
+        """Remove prior reports for the same skin so only the latest stays."""
         try:
             import glob
             old_reports = glob.glob(os.path.join(report_dir, f"{safe_skin_name}_*.html"))
@@ -591,16 +504,15 @@ class ReportGenerator:
                 try:
                     os.remove(old_report)
                 except OSError:
-                    pass  # Ignore if file can't be deleted
+                    pass
         except Exception:
-            pass  # Don't fail report generation if cleanup fails
+            pass
 
 
 class ShowValidationReportCommand(sublime_plugin.WindowCommand):
-    """Command to run all validation checks and display report in browser."""
+    """Run every validation check and open the HTML report in a browser."""
 
     def run(self):
-        """Run all checks, generate HTML report, and open in browser."""
         from .libs.infoprovider import InfoProvider
         from .libs.reporting import html as report_generator
         from .libs.reporting import server as report_server
@@ -614,8 +526,8 @@ class ShowValidationReportCommand(sublime_plugin.WindowCommand):
         except Exception:
             provider = InfoProvider()
 
-        # Always re-initialize for fresh state — stale include maps from
-        # previously-broken files would cause false positives otherwise.
+        # Re-init each run so previously-broken includes don't leave
+        # stale entries in the maps and trigger false positives.
         try:
             variables = self.window.extract_variables()
             project_folder = variables.get("folder")
@@ -638,11 +550,9 @@ class ShowValidationReportCommand(sublime_plugin.WindowCommand):
         progress.set_total_steps(8)
 
         def update_progress(step, message):
-            """Update progress display."""
             progress.update_step(step, message)
 
         def clear_progress():
-            """Close progress view."""
             progress.close()
 
         def run_checks():
@@ -671,7 +581,7 @@ class ShowValidationReportCommand(sublime_plugin.WindowCommand):
                 last_update = {'time': time.time(), 'stop_heartbeat': False}
 
                 def heartbeat_monitor():
-                    """Monitor for stuck report generation and show warnings."""
+                    """Warn the user if report generation seems stuck."""
                     while not last_update['stop_heartbeat']:
                         time.sleep(5)
                         if last_update['stop_heartbeat']:
@@ -692,7 +602,7 @@ class ShowValidationReportCommand(sublime_plugin.WindowCommand):
                 heartbeat_thread.start()
 
                 def report_progress(message):
-                    """Called by report generator with status updates."""
+                    """Status callback the report generator calls during build."""
                     last_update['time'] = time.time()
                     update_progress(8, f"Report: {message}")
 
@@ -739,12 +649,11 @@ class ShowValidationReportCommand(sublime_plugin.WindowCommand):
 
 
 class OpenValidationReportCommand(sublime_plugin.WindowCommand):
-    """Command to open an existing validation report from the report directory."""
+    """Open an existing validation report from the report directory."""
 
     def _open_folder_and_notify(self, folder_path, created=False):
-        """Open the folder in file manager and show a notification."""
+        """Open `folder_path` in the OS file manager and notify the user."""
         import subprocess
-        import sys
 
         try:
             if sublime.platform() == 'windows':
@@ -777,7 +686,7 @@ class OpenValidationReportCommand(sublime_plugin.WindowCommand):
             )
 
     def run(self):
-        """Show list of existing reports and open the selected one."""
+        """Show a quick panel of existing reports and open the chosen one."""
         import glob
         from datetime import datetime
         import pathlib

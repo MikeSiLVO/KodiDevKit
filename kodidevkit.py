@@ -1,7 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-"""
+"""KodiDevKit Sublime Text plugin — entry point and event handlers."""
 
 from __future__ import annotations
 
@@ -87,11 +84,51 @@ html, body {
 """
 
 
+POPUP_WRAP_COLUMN = 100
+
+
+_WRAP_BREAK_CHARS = ",|+"
+
+
+def _soft_wrap_source(text, max_col):
+    """Hard-wrap long lines at `,`, `|`, `+` so minihtml has break points.
+
+    minihtml only wraps on whitespace; long comma chains like
+    `RunScript(a,b,c,...)` would otherwise overflow the popup edge. Walks
+    each over-long line backward from `max_col` to the latest separator
+    and splits there.
+    """
+    if max_col <= 0:
+        return text
+    out = []
+    for line in text.splitlines():
+        if len(line) <= max_col:
+            out.append(line)
+            continue
+        m = re.match(r"^[\t ]*", line)
+        indent = m.group(0) if m else ""
+        cont = indent + "    "
+        floor = len(indent) + 1  # don't break inside leading whitespace
+
+        remaining = line
+        while len(remaining) > max_col:
+            cut = -1
+            search_to = min(max_col, len(remaining) - 1)
+            for i in range(search_to, floor - 1, -1):
+                if remaining[i] in _WRAP_BREAK_CHARS:
+                    cut = i + 1  # break AFTER the separator
+                    break
+            if cut < 0:
+                break  # no breakable char before max_col
+            out.append(remaining[:cut])
+            remaining = cont + remaining[cut:].lstrip()
+            floor = len(cont) + 1
+        out.append(remaining)
+    return "\n".join(out)
+
+
 def _setup_logging_once():
-    """
-    Single root StreamHandler. Package loggers propagate to root.
-    Idempotent across Sublime plugin reloads.
-    """
+    """Install one root StreamHandler; safe to call after plugin reloads."""
     root = logging.getLogger()
     if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
         h = logging.StreamHandler()
@@ -115,7 +152,8 @@ _setup_logging_once()
 
 logger = logging.getLogger("KodiDevKit.kodidevkit")
 
-# Global storage for validation commands to enable Enter key handler to access callbacks
+# Active validation commands keyed by view id, so the Enter-handler can
+# reach their callbacks.
 _validation_commands = {}
 
 
@@ -186,16 +224,12 @@ def _show_fatal_xml_phantom():
 
 
 def plugin_loaded():
-    """
-    Sublime entrypoint. Ensure settings are loaded, INFOS exists, and
-    register live-reload hooks. Also populate Kodi core language pool.
-    """
+    """Sublime entry point: load settings, init INFOS, wire reload hooks."""
     import sublime
     from importlib import import_module
 
     settings = sublime.load_settings('kodidevkit.sublime-settings')
 
-    # Enable file logging if requested (for freeze diagnosis)
     if settings.get("enable_file_logging", False):
         try:
             from .libs.sublime import logging as sublimelogger
@@ -209,7 +243,6 @@ def plugin_loaded():
     except Exception:
         pass
 
-    # Ensure global INFOS exists (do not clobber if already created elsewhere)
     global INFOS
     if 'INFOS' not in globals():
         try:
@@ -232,7 +265,6 @@ def plugin_loaded():
         pass
 
     try:
-        # full settings reload (logger levels, client, etc.)
         settings.add_on_change('kdk_settings_reload', _on_settings_changed)
     except Exception:
         pass
@@ -267,7 +299,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._modified_files = set()
         self._last_phantom_cleanup = 0
 
-        self.settings = KodiDevKit.settings
+        self.settings = sublime.load_settings(SETTINGS_FILE)
 
         self.timer = None
         self._prev_selections = {}  # per-view selection tracking: {view_id: Region}
@@ -300,12 +332,10 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def _issue_in_file(issue: dict, file_path: str) -> bool:
-        """Check if issue's call site is in the given file (or not from an include)."""
+        """True if `issue`'s call site is in `file_path` (or it has no call site)."""
         call_file = issue.get("call_file")
         if not call_file:
-            # No call_file = direct issue or direct include in this file
             return True
-        # Normalize for comparison (Windows backslash vs forward slash)
         return os.path.normpath(call_file) == os.path.normpath(file_path)
 
     @staticmethod
@@ -321,7 +351,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def _show_validation_phantoms(view, issues):
-        """Display validation issues as inline phantoms - groups all issues per line."""
+        """Render validation issues as inline phantoms, grouped by source line."""
         if not issues:
             return
 
@@ -432,7 +462,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def _on_phantom_navigate(href, view):
-        """Handle phantom navigation (dismiss and next line with issues)."""
+        """Phantom link handler — dismiss the phantoms or jump to the next issue line."""
         view_id = view.id()
 
         if href == "hide":
@@ -464,16 +494,13 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def _get_media_completions(media_path):
-        """
-        Get media file completions with caching to prevent UI freezes.
-        Cache expires after 30 seconds or when media files are saved.
-        """
+        """Cached list of media files for autocomplete (TTL 30s)."""
         if not media_path or not os.path.exists(media_path):
             return []
 
         cache_key = media_path
         current_time = time.time()
-        cache_ttl = 30  # seconds
+        cache_ttl = 30
 
         if cache_key in KodiDevKit._media_cache:
             cache_age = current_time - KodiDevKit._media_cache_timestamp.get(cache_key, 0)
@@ -505,13 +532,11 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def _tag_from_buffer(line_text, view, point):
-        """Extract the enclosing tag name from the live buffer text."""
+        """Find the enclosing tag name by scanning the live buffer (no parsed tree needed)."""
         row, _ = view.rowcol(point)
-        # Check current line for <tagname>...|... or <tagname ...>...|...
         m = re.match(r'\s*<(\w+)[\s>]', line_text)
         if m:
             return m.group(1)
-        # Scan upward for the opening tag
         for i in range(row - 1, max(row - 20, -1), -1):
             prev_line = view.substr(view.line(view.text_point(i, 0)))
             m = re.match(r'\s*<(\w+)[\s>]', prev_line)
@@ -520,15 +545,13 @@ class KodiDevKit(sublime_plugin.EventListener):
         return None
 
     def _get_completion_context(self, view, point):
-        """
-        Determine what kind of completion is needed at `point`.
+        """Classify the completion site at `point`.
 
-        Returns (context_type, detail) where context_type is one of:
-            "tag_value"  — inside <tag>|</tag>, detail = value type string
-            "attr_value" — inside attr="|", detail = value type string
-            "attr_name"  — inside a tag definition, detail = control type
-            "tag_name"   — after <, detail = control type
-            None         — unknown / no useful context
+        Returns (kind, detail) where kind is one of:
+          "tag_value"  inside <tag>|</tag>; detail = value-type string
+          "attr_value" inside attr="|"; detail = value-type string
+          "tag_name"   after `<`; detail = enclosing control type
+        Returns (None, None) if nothing useful applies.
         """
         row, col = view.rowcol(point)
         line_text = view.substr(view.line(point))
@@ -537,7 +560,6 @@ class KodiDevKit(sublime_plugin.EventListener):
 
         node = self._element_at_row(row_1)
 
-        # Find enclosing control type from parsed tree
         ctrl_type = None
         if node is not None:
             p = node
@@ -547,13 +569,12 @@ class KodiDevKit(sublime_plugin.EventListener):
                     break
                 p = p.getparent()
 
-        # Check if inside an attribute value: attr="...|..."
         attr_match = re.search(r'(\w+)="([^"]*?)$', text_before)
         if attr_match:
             attr_name = attr_match.group(1)
             if ctrl_type and INFOS and node is not None:
                 attribs = INFOS.template_attribs.get(ctrl_type, {})
-                # Use tag from buffer if tree node doesn't match
+                # Live-buffer tag name when the parsed tree is stale
                 buf_tag = self._tag_from_buffer(line_text, view, point)
                 tag_key = buf_tag or node.tag
                 tag_attribs = attribs.get(tag_key, {})
@@ -569,14 +590,12 @@ class KodiDevKit(sublime_plugin.EventListener):
                     return "attr_value", "effect"
             return "attr_value", None
 
-        # Check if in tag name position: <...|
         if re.search(r'<\w*$', text_before) and ">" not in text_before.split("<")[-1]:
             return "tag_name", ctrl_type
 
-        # Detect tag name from live buffer text (works before save)
+        # Live-buffer tag name (works before the file is saved)
         buf_tag = self._tag_from_buffer(line_text, view, point)
 
-        # Try template_values with parsed tree
         if ctrl_type and INFOS:
             values = INFOS.template_values.get(ctrl_type, {})
             tag_key = buf_tag or (node.tag if node is not None else None)
@@ -585,7 +604,6 @@ class KodiDevKit(sublime_plugin.EventListener):
                 if value_type:
                     return "tag_value", value_type
 
-        # Fallback: guess from tag name (buffer or tree)
         tag = (buf_tag or (node.tag if node is not None else "")).lower()
         TAG_TYPE_HINTS = {
             "visible": "condition", "enable": "condition",
@@ -610,7 +628,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         return None, None
 
     def _completions_for_type(self, value_type, addon, folder):
-        """Return list of [trigger, completion] pairs for a given value type."""
+        """Build [trigger, completion] pairs for the given value type."""
         from .libs.validation.constants import ALLOWED_VALUES
 
         items = []
@@ -712,7 +730,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 flags = getattr(sublime, "INHIBIT_WORD_COMPLETIONS", 8)
                 return (items, flags)
 
-        # Fallback: includes, variables, window names
+        # Generic fallback when no specific value-type was matched: includes + window names.
         items = []
 
         inc_map = getattr(addon, "include_map", {}).get(folder, {})
@@ -790,9 +808,9 @@ class KodiDevKit(sublime_plugin.EventListener):
         self.timer = t
 
     def get_tooltip(self, view):
-        """
-        Get the appropriate tooltip content based on cursor context.
-        Returns a string (HTML or plain) or None for no tooltip.
+        """Build the tooltip body for the cursor's current context.
+
+        Returns HTML/text to display, or None if nothing useful applies.
         """
         if not INFOS:
             return None
@@ -820,7 +838,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
         if "text.xml.kodi" not in scope_name:
             return None
-        # Heuristic: in XML comments, only evaluate if it looks like a real Kodi expr
+        # In XML comments, only fire if the text looks like a real Kodi expression.
         if "comment" in scope_name:
             comment_text = view.substr(view.extract_scope(region.b))
             if not re.search(
@@ -857,7 +875,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         if dollar_pos != -1:
             open_bracket = line_text.find("[", dollar_pos)
             if open_bracket != -1 and open_bracket < cursor_offset:
-                # Use Kodi's bracket matching to find the closing bracket
+                # Match Kodi's bracket logic so nested [...] don't break the parse.
                 close_bracket = self.find_end_bracket(line_text, '[', ']', open_bracket + 1)
                 if close_bracket != -1 and close_bracket > cursor_offset:
                     token = line_text[dollar_pos:close_bracket + 1]
@@ -892,19 +910,18 @@ class KodiDevKit(sublime_plugin.EventListener):
                 return content
 
         if info_type in {"INFO", "ESCINFO"}:
-            # Check if cursor is on a color name inside [COLOR ...] tag
+            # If the cursor is inside [COLOR <name>...], let the color lookup handle it
+            # instead of asking Kodi for an InfoLabel by that name.
             word_start = label_region.begin() - line.begin()
             if word_at_cursor and word_start >= 7:
                 before_word = line_text[word_start - 7:word_start].upper()
                 if before_word == "[COLOR ":
-                    # Cursor is on color name, skip InfoLabel and let color lookup handle it
                     return None
 
             if getattr(kodi, '_cooldown_until', 0) > time.time():
                 return None
             result = kodi.request(method="XBMC.GetInfoLabels", params={"labels": [info_id]})
             if result:
-                utils.debug_print(result)
                 _, value = result["result"].popitem()
                 if value:
                     return str(value)
@@ -926,12 +943,11 @@ class KodiDevKit(sublime_plugin.EventListener):
         visible_owner = element
         while visible_owner is not None and visible_owner.tag not in VISIBLE_TAGS:
             parent = visible_owner.getparent() if hasattr(visible_owner, "getparent") else None
-            # stop if parent starts after caret line or no parent
             if parent is None or getattr(parent, "sourceline", 0) > (row + 1):
                 break
             visible_owner = parent
 
-        # Evaluate condition="" attributes when hovering on attribute name or inside value
+        # Evaluate condition="..." attributes by sending them to Kodi.
         if element is not None and "condition" in element.attrib:
             if on_attr_name and scope_content.strip() == "condition":
                 cond = element.attrib["condition"].strip()
@@ -943,7 +959,6 @@ class KodiDevKit(sublime_plugin.EventListener):
                         params={"booleans": [cond]},
                     )
                     if result:
-                        utils.debug_print(result)
                         key, value = result["result"].popitem()
                         if value is not None:
                             return "✅ <b>True</b>" if value else "❌ <b>False</b>"
@@ -954,15 +969,15 @@ class KodiDevKit(sublime_plugin.EventListener):
             if element is not None and "condition" in element.attrib:
                 attr_region = view.find(r'condition\s*=\s*"[^"]*"', view.line(region).begin())
                 if attr_region and attr_region.contains(region):
-                    if selected_content.strip() and re.search(r"[A-Za-z]", selected_content):
+                    cond = utils.extract_expression_at_offset(line_text, cursor_offset) or selected_content.strip()
+                    if cond and re.search(r"[A-Za-z]", cond):
                         if getattr(kodi, '_cooldown_until', 0) > time.time():
                             return None
                         result = kodi.request(
                             method="XBMC.GetInfoBooleans",
-                            params={"booleans": [selected_content.strip()]},
+                            params={"booleans": [cond]},
                         )
                         if result:
-                            utils.debug_print(result)
                             key, value = result["result"].popitem()
                             if value is not None:
                                 return "✅ <b>True</b>" if value else "❌ <b>False</b>"
@@ -982,34 +997,50 @@ class KodiDevKit(sublime_plugin.EventListener):
                     if image_info:
                         return image_info
 
-        if (element is not None
-                and element.tag == "include"
-                and element.text
-                and selected_content.strip() == element.text.strip()):
-            include_content = self.get_formatted_include(element.text.strip(), view)
-            if include_content:
-                return include_content
+        if element is not None and element.tag in ("include", "font"):
+            ref_name = None
+            sel = selected_content.strip()
+            if element.text and sel == element.text.strip():
+                ref_name = element.text.strip()
+            elif element.tag == "include":
+                # Modern <include content="Name"> attribute form.
+                attr_name = (element.attrib.get("content") or "").strip()
+                if attr_name and sel == attr_name:
+                    ref_name = attr_name
+            if ref_name:
+                include_content = self.get_formatted_include(ref_name, view)
+                if include_content:
+                    return include_content
 
-        # Fallback: detect <include>Name</include> from buffer text (works before save)
-        if element is None or element.tag != "include":
-            inc_match = re.search(r'<include[^>]*>([^<]+)</include>', line_text)
-            if not inc_match:
-                inc_match = re.match(r'\s*<include[^>]*>(\S+)', line_text)
-            if inc_match:
-                inc_name = inc_match.group(1).strip()
-                if inc_name and selected_content.strip() in inc_name:
-                    include_content = self.get_formatted_include(inc_name, view)
-                    if include_content:
-                        return include_content
+        # Live-buffer fallback for <include>Name</include>, <font>Name</font>,
+        # and <include content="Name"> (works before the file is saved).
+        if element is None or element.tag not in ("include", "font"):
+            ref_name = None
+            attr_match = re.search(
+                r'<include[^>]*\bcontent\s*=\s*"([^"]+)"',
+                line_text,
+            )
+            if attr_match:
+                ref_name = attr_match.group(1).strip()
+            else:
+                ref_match = re.search(r'<(include|font)[^>]*>([^<]+)</\1>', line_text)
+                if not ref_match:
+                    ref_match = re.match(r'\s*<(include|font)[^>]*>(\S+)', line_text)
+                if ref_match:
+                    ref_name = ref_match.group(2).strip()
+            if ref_name and selected_content.strip() in ref_name:
+                include_content = self.get_formatted_include(ref_name, view)
+                if include_content:
+                    return include_content
 
         if element is not None and element.tag == "param":
-            text = selected_content.strip()
+            text = utils.extract_expression_at_offset(line_text, cursor_offset) or selected_content.strip()
 
-            # Skip unresolved include params like <param name="visible">$PARAM[visible]</param>
+            # Unresolved include params like <param name="visible">$PARAM[visible]</param>
+            # have nothing meaningful to look up.
             if "$PARAM[" in text:
                 return None
 
-            # $INFO[...] → fetch label value
             if "$INFO[" in text:
                 info_id = (
                     text.split("$INFO[", 1)[1]
@@ -1022,7 +1053,6 @@ class KodiDevKit(sublime_plugin.EventListener):
                         return None
                     result = kodi.request("XBMC.GetInfoLabels", {"labels": [info_id]})
                     if result:
-                        utils.debug_print(result)
                         _, value = result["result"].popitem()
                         if value:
                             return str(value)
@@ -1045,7 +1075,6 @@ class KodiDevKit(sublime_plugin.EventListener):
                      params={"booleans": [cond]},
                 )
                 if result:
-                    utils.debug_print(result)
                     key, value = result["result"].popitem()
                     if value is not None:
                         return "✅ <b>True</b>" if value else "❌ <b>False</b>"
@@ -1061,21 +1090,17 @@ class KodiDevKit(sublime_plugin.EventListener):
             if raw.startswith("</") or (raw.startswith("/") and ">" in raw):
                 return None
 
-            # Check if cursor is AFTER the closing tag (outside the element)
-            # Look backwards from cursor for the nearest > and check if it's a closing tag
+            # Skip if the cursor sits past a closing tag (outside the element).
             text_before_cursor = line_text[:cursor_offset]
             last_close_bracket = text_before_cursor.rfind(">")
             last_open_bracket = text_before_cursor.rfind("<")
 
-            # If the last bracket before cursor is > and it comes after <, we're outside tags
             if last_close_bracket > last_open_bracket and last_close_bracket >= 0:
-                # Check if this is a closing tag by looking at what's before the >
                 tag_content = text_before_cursor[last_open_bracket:last_close_bracket + 1]
                 if tag_content.startswith("</"):
-                    # We're after a closing tag - skip tooltip
                     return None
 
-            # Skip if hovering on known attributes (allowhiddenfocus, delay, time, repeat)
+            # Don't evaluate hover on visible-tag attributes like allowhiddenfocus / delay.
             if any(attr in raw.lower() for attr in VISIBLE_TAG_ATTRIBUTES):
                 scope_name = view.scope_name(region.b)
                 if "meta.attribute-with-value" in scope_name or "entity.other.attribute-name" in scope_name:
@@ -1090,13 +1115,12 @@ class KodiDevKit(sublime_plugin.EventListener):
             ):
                 cond = "".join(owner.itertext() or "").strip()
             else:
-                cond = raw
+                cond = utils.extract_expression_at_offset(line_text, cursor_offset) or raw
 
-            # Skip unresolved include params like $PARAM[...]
             if "$PARAM[" in cond or cond.startswith("$PARAM"):
                 return None
 
-            # Preserve [] grouping; only trim whitespace & normalize " + "
+            # Keep [] grouping; only normalize whitespace around `+`.
             cond = cond.strip()
             cond = re.sub(r"\s*\+\s*", " + ", cond)
 
@@ -1106,7 +1130,6 @@ class KodiDevKit(sublime_plugin.EventListener):
                      params={"booleans": [cond]},
                 )
                 if result:
-                    utils.debug_print(result)
                     key, value = result["result"].popitem()
                     if value is not None:
                         return "✅ <b>True</b>" if value else "❌ <b>False</b>"
@@ -1142,14 +1165,34 @@ class KodiDevKit(sublime_plugin.EventListener):
             if color:
                 return color
 
+        # Bare-name reference to a defined constant / expression / variable.
+        # Kodi auto-expands these in whitelisted nodes (e.g. <fadetime>Foo</fadetime>)
+        # without `$CONSTANT[]` syntax, so we surface their definitions on hover too.
+        sel = selected_content.strip()
+        if sel and re.match(r"^[A-Za-z_][\w\-]*$", sel):
+            addon = getattr(INFOS, "addon", None)
+            file_name = view.file_name()
+            if addon and file_name:
+                folder = os.path.basename(os.path.dirname(file_name))
+                maps = (
+                    getattr(addon, "constant_map", {}),
+                    getattr(addon, "expression_map", {}),
+                    getattr(addon, "variable_map", {}),
+                )
+                if any(sel in m.get(folder, {}) for m in maps):
+                    content = self.get_formatted_include(sel, view)
+                    if content:
+                        return content
+
         return None
 
     @staticmethod
     def find_end_bracket(text, opener, closer, start_pos=0):
-        """
-        Find matching closing bracket (Kodi's StringUtils::FindEndBracket logic).
-        Assumes start_pos is AFTER the opening bracket (starts with blocks=1).
-        Returns position of matching closing bracket, or -1 if not found.
+        """Find the matching closer for an already-opened bracket.
+
+        Mirrors Kodi's StringUtils::FindEndBracket. `start_pos` is the position
+        AFTER the opener (the search starts at depth 1). Returns the index of
+        the matching closer, or -1 if unbalanced.
         """
         blocks = 1
         for i in range(start_pos, len(text)):
@@ -1163,6 +1206,12 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def get_formatted_include(content, view):
+        """Render `content` (an include/font/variable/constant name) as a popup body.
+
+        Resolves nested includes, constants, and expressions, then returns
+        syntax-highlighted HTML. Plain string values (constants, expressions)
+        are shown verbatim with no XML highlighting.
+        """
         if not INFOS:
             return None
         file_path = view.file_name()
@@ -1185,35 +1234,58 @@ class KodiDevKit(sublime_plugin.EventListener):
         content_elem = node['content']
         resolve_xml = getattr(INFOS, "resolve_xml", None)
 
+        # Normalize whatever return_node returned to a single lxml root.
+        # Includes/variables/defaults yield an Element; fonts a serialized XML
+        # string; constants/expressions a plain value (handled below).
         if hasattr(content_elem, 'tag'):
-            content_str = ET.tostring(content_elem, encoding="unicode", pretty_print=True)
-            if resolve_xml:
-                resolved = resolve_xml(f"<root>{content_str}</root>", folder=folder)
-                node_content = ET.tostring(resolved, encoding="unicode", pretty_print=True) if resolved is not None else content_str
-            else:
-                node_content = content_str
+            root = content_elem
         else:
-            if resolve_xml:
-                resolved = resolve_xml(f"<root>{content_elem}</root>", folder=folder)
-                node_content = ET.tostring(resolved, encoding="unicode", pretty_print=True) if resolved is not None else str(content_elem)
+            text = content_elem.strip() if isinstance(content_elem, str) else ""
+            if not text:
+                return None
+            if text.startswith("<"):
+                try:
+                    root = ET.fromstring(text)
+                except ET.XMLSyntaxError:
+                    root = None
             else:
-                node_content = str(content_elem)
+                root = None
+            if root is None:
+                return mdpopups.syntax_highlight(
+                    view=view,
+                    src=text,
+                    language="text",
+                    allow_code_wrap=True,
+                )
 
+        # resolve_xml deep-copies internally, so `root` isn't mutated.
+        if resolve_xml:
+            resolved = resolve_xml(root, folder=folder)
+            if resolved is not None:
+                root = resolved
+                # Strip resolver-only `_kdk_*` provenance attribs from the popup output.
+                for el in root.iter():
+                    for attr in [a for a in el.attrib if a.startswith("_kdk_")]:
+                        del el.attrib[attr]
+
+        node_content = ET.tostring(root, encoding="unicode", pretty_print=True)
         if not node_content:
             return None
-        if len(node_content) < 50000:
-            return mdpopups.syntax_highlight(
-                view=view,
-                src=node_content,
-                language="xml",
-                allow_code_wrap=True,
-            )
-        return "include too big for preview"
+        if len(node_content) >= 50000:
+            return "include too big for preview"
+        node_content = _soft_wrap_source(node_content, POPUP_WRAP_COLUMN)
+        return mdpopups.syntax_highlight(
+            view=view,
+            src=node_content,
+            language="xml",
+            allow_code_wrap=True,
+        )
 
     def _is_definition_name_here(self, view, tag_names=("include", "variable")) -> bool:
-        """
-        True if caret is inside the opening tag of a definition that uses name="…"
-        for any of the provided tag names.
+        """True if the caret is inside an opening definition tag (`<include name="...">`).
+
+        Used to suppress the tooltip on the definition itself (since the tooltip
+        is meant for usages).
         """
         try:
             pt = view.sel()[0].begin()
@@ -1229,7 +1301,6 @@ class KodiDevKit(sublime_plugin.EventListener):
             if open_pat not in text_lower:
                 continue
 
-            # position within line
             offset = pt - line_region.begin()
             start = text_lower.rfind(open_pat, 0, offset + 1)
             if start == -1:
@@ -1239,14 +1310,14 @@ class KodiDevKit(sublime_plugin.EventListener):
                 continue
 
             tag_text = text_lower[start:end]
-            # must have name= but not be a usage-only include/variable
+            # `name=` distinguishes definitions from usage-only references.
             if "name=" in tag_text:
                 return True
 
         return False
 
     def show_tooltip(self, view):
-        """Show tooltip for current selection using mdpopups."""
+        """Show the mdpopups tooltip for the cursor's current context, if any."""
         if view is None or not view.is_valid():
             return
 
@@ -1262,16 +1333,18 @@ class KodiDevKit(sublime_plugin.EventListener):
             return
 
         try:
+            mw = self.settings.get("tooltip_width", 1000)
+            mh = self.settings.get("tooltip_height", 400)
             sublime.set_timeout(
-                lambda v=view, c=tooltip: (
+                lambda v=view, c=tooltip, w=mw, h=mh: (
                     v.settings().set("kodidevkit.popup_kind", "tooltip"),
                     mdpopups.show_popup(
                         view=v,
                         content=c,
                         css=POPUP_CSS,
                         flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                        max_width=self.settings.get("tooltip_width", 1000),
-                        max_height=self.settings.get("tooltip_height", 400),
+                        max_width=w,
+                        max_height=h,
                         on_navigate=lambda href, vv=v: utils.jump_to_label_declaration(vv, href),
                         on_hide=lambda vv=v: vv.settings().erase("kodidevkit.popup_kind"),
                     )
@@ -1286,6 +1359,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             logger.exception("Failed to show tooltip: %s", exc)
 
     def _hide_tooltip_only(self, view):
+        """Hide our popup without touching popups owned by other plugins."""
         if not view.is_popup_visible():
             return
         try:
@@ -1295,7 +1369,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 if s.has("kodidevkit.popup_kind"):
                     s.erase("kodidevkit.popup_kind")
         except Exception:
-            # Never let popup logic break editing
+            # Editing must never break because popup teardown failed.
             pass
 
     def on_modified(self, view):
@@ -1338,7 +1412,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             logger.warning("on_close SLOW: %.3fs view_id=%s", elapsed, view_id)
 
     def _cleanup_orphaned_phantoms(self):
-        """Remove phantom sets for views that no longer exist."""
+        """Drop phantom sets and stored issues for views that have closed."""
         current_time = time.time()
         if current_time - self._last_phantom_cleanup < 300:
             return
@@ -1359,12 +1433,12 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._cleanup_orphaned_phantoms()
 
     def on_pre_close_window(self, window):
-        """Clean up validation commands when window closes."""
+        """Forget validation commands tied to this window."""
         global _validation_commands
         _validation_commands.pop(window.id(), None)
 
     def on_deactivated_async(self, view):
-        """View deactivated. Only hide our tooltip and cancel pending timer."""
+        """Hide our tooltip and cancel any pending tooltip timer."""
         self._hide_tooltip_only(view)
         timer = getattr(self, "timer", None)
         if timer:
@@ -1374,7 +1448,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 self.timer = None
 
     def on_modified_async(self, view):
-        """Mark XML views as modified so post-save can decide to reload/check."""
+        """Track which xml files were edited so post-save knows what to reload."""
         if not hasattr(self, "_modified_files"):
             self._modified_files = set()
 
@@ -1391,7 +1465,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._modified_files.add(fname)
 
     def on_post_save_async(self, view):
-        """After-save: reload if needed, then run per-file checks every edited save."""
+        """After saving an xml file: reload skin caches and revalidate the file."""
         import time
         save_start = time.time()
 
@@ -1443,7 +1517,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
             self.root = utils.get_root_from_file(filename_full)
             if self.root is None:
-                # parse failed → show as error phantom
+                # Parse failed — surface the parse error inline as an error phantom.
                 if last_xml_errors:
                     err = last_xml_errors[0]
                     issues = [{
@@ -1497,7 +1571,8 @@ class KodiDevKit(sublime_plugin.EventListener):
                 window.run_command("execute_builtin", {"builtin": "ReloadSkin()"})
 
             if window and self.settings.get("auto_skin_check", True):
-                # Skip addon settings.xml (resources folder), validate skin Settings.xml (1080i/720p)
+                # Validate skin Settings.xml (1080i/720p/16x9) but skip addon settings.xml
+                # under `resources/`, which has different schema.
                 is_addon_settings = (
                     filename.lower() == "settings.xml"
                     and ("resources" in filename_full.replace("\\", "/").lower().split("/"))
@@ -1508,12 +1583,13 @@ class KodiDevKit(sublime_plugin.EventListener):
                     check_file = getattr(INFOS, "check_file", None)
                     all_issues = check_file(filename_full) if check_file else []
 
-                    # None means file was skipped (e.g. shortcuts folder)
+                    # None signals the file was skipped (e.g. shortcuts folder).
                     if all_issues is None:
                         sublime.set_timeout(lambda: self._clear_phantoms(view), 0)
                         return
 
-                    # Filter: severity + only show issues whose call site is in this file
+                    # Drop issues below the configured severity, those from other
+                    # files, and (optionally) include-originated warnings.
                     severity_rank = {"error": 0, "warning": 1}
                     min_level = self.settings.get("phantom_severity_level", "warning")
                     max_rank = severity_rank.get(min_level, 1)
@@ -1581,11 +1657,11 @@ class KodiDevKit(sublime_plugin.EventListener):
         return None
 
     def on_pre_save_async(self, view):
-        # Track whether this save follows a real edit.
+        """Record whether this save follows a real edit (so post-save can skip no-ops)."""
         self.is_modified = bool(view.is_dirty())
 
     def check_status(self):
-        """Check the active view, assign syntax, and update InfoProvider if needed."""
+        """Refresh the parsed tree, assign syntax, and re-init the addon if the project changed."""
         start = time.time()
         window = sublime.active_window()
         if window is None:

@@ -198,6 +198,140 @@ def contains_dynamic_expression(text: str) -> bool:
     return any(pref in lowered for pref in _DEFAULT_DYNAMIC_PREFIXES)
 
 
+def split_top_level_commas(text: str) -> list[str]:
+    """
+    Split *text* on commas that appear outside any `(...)` or `[...]` group.
+
+    Kodi expressions routinely embed commas inside nested calls and macros
+    (``String.IsEqual(Label,$LOCALIZE[40211])``, ``$INFO[Label, , - ]``); a
+    naive ``str.split(',')`` corrupts them. Empty pieces are dropped so
+    callers can pass the result straight to a JSON-RPC ``params`` list.
+    """
+    parts: list[str] = []
+    buf: list[str] = []
+    depth = 0
+    for ch in text:
+        if ch in "([":
+            depth += 1
+            buf.append(ch)
+        elif ch in ")]":
+            if depth > 0:
+                depth -= 1
+            buf.append(ch)
+        elif ch == "," and depth == 0:
+            parts.append("".join(buf).strip())
+            buf = []
+        else:
+            buf.append(ch)
+    parts.append("".join(buf).strip())
+    return [p for p in parts if p]
+
+
+_KEYWORD_MACRO_RE = re.compile(
+    r"\$(?:LOCALIZE|NUMBER|INFO|ESCINFO|VAR|ESCVAR|EXP|ADDON|PARAM)\[",
+    re.IGNORECASE,
+)
+
+
+def _kodi_macro_mask(text: str) -> set:
+    """Indices that lie inside a ``$KEYWORD[...]`` macro.
+
+    Kodi's ``Register()`` calls ``ReplaceLocalize`` before parsing booleans
+    (GUIInfoManager.cpp:11441 → GUIInfoLabel.cpp:276-282), so ``$LOCALIZE[N]``
+    and ``$NUMBER[N]`` are gone by the time ``[`` and ``]`` are interpreted as
+    operators. We extend the same masking to ``$INFO``, ``$VAR``, etc. so a
+    hover on those forms doesn't get fragmented at their inner brackets.
+    """
+    masked: set = set()
+    pos = 0
+    while pos < len(text):
+        m = _KEYWORD_MACRO_RE.search(text, pos)
+        if not m:
+            break
+        bracket_open = m.end() - 1
+        depth = 1
+        j = bracket_open + 1
+        while j < len(text) and depth > 0:
+            if text[j] == '[':
+                depth += 1
+            elif text[j] == ']':
+                depth -= 1
+            j += 1
+        end = j if depth == 0 else len(text)
+        masked.update(range(m.start(), end))
+        pos = end
+    return masked
+
+
+def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
+    """Return the smallest Kodi boolean sub-expression enclosing *cursor_offset*.
+
+    Implements the grammar from ``InfoExpression.cpp`` — operators are exactly
+    ``[ ] ! + |`` (lines 125-139); everything else (including ``( ) , . $``) is
+    operand. ``$LOCALIZE[…]`` / ``$NUMBER[…]`` are masked because Kodi resolves
+    them before parsing. Parens are tracked as depth so a click anywhere inside
+    ``Function(args)`` returns the whole call rather than splitting at an inner
+    operator. ``!`` is a unary prefix and stays attached to the operand it
+    precedes — without that, the boolean we send to Kodi would have the
+    OPPOSITE truth value.
+    """
+    if not line_text:
+        return ""
+    n = len(line_text)
+    cursor_offset = max(0, min(cursor_offset, n))
+
+    xml_delims = '"<>\n\r'
+    enc_left = cursor_offset
+    while enc_left > 0 and line_text[enc_left - 1] not in xml_delims:
+        enc_left -= 1
+    enc_right = cursor_offset
+    while enc_right < n and line_text[enc_right] not in xml_delims:
+        enc_right += 1
+
+    enc = line_text[enc_left:enc_right]
+    cur = cursor_offset - enc_left
+    masked = _kodi_macro_mask(enc)
+
+    depths = []
+    d = 0
+    for i, ch in enumerate(enc):
+        depths.append(d)
+        if i in masked:
+            continue
+        if ch == '(':
+            d += 1
+        elif ch == ')' and d > 0:
+            d -= 1
+
+    boundary = set('+|[]')
+
+    def active(i: int) -> bool:
+        return i not in masked and depths[i] == 0
+
+    sub_left = 0
+    leftmost_bang = None
+    for i in range(cur - 1, -1, -1):
+        if not active(i):
+            continue
+        ch = enc[i]
+        if ch in boundary:
+            sub_left = leftmost_bang if leftmost_bang is not None else i + 1
+            break
+        if ch == '!':
+            leftmost_bang = i
+    else:
+        if leftmost_bang is not None:
+            sub_left = leftmost_bang
+
+    sub_right = len(enc)
+    for i in range(cur, len(enc)):
+        if active(i) and enc[i] in boundary:
+            sub_right = i
+            break
+
+    return enc[sub_left:sub_right].strip()
+
+
 def get_param_names_in_context(include_node, xpath_pattern: str) -> set[str]:
     """
     Extract param names used in specific XML contexts within an include definition.

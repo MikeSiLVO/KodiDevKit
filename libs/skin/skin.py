@@ -1,4 +1,4 @@
-""" KodiDevKit is a plugin to assist with Kodi skinning / scripting """
+"""KodiDevKit Sublime Text plugin — Kodi skinning helpers."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
-    # Avoid duplicate handlers after module reloads; let root handlers output.
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
@@ -34,51 +33,33 @@ FILE_PREVIEW_SIZE = 50_000
 
 
 class Skin(addon.Addon):
-
-    """
-    Class representing a Kodi skin.
-    """
+    """A Kodi skin: includes, colors, fonts, and resolved windows."""
 
     LANG_START_ID = 31000
     LANG_OFFSET = 0
 
     def __init__(self, *args, **kwargs):
-        """
-        parses includes / colors / fonts, addon.xml
-        """
+        """Load addon.xml, includes, colors, and fonts for the skin at `path`."""
         super().__init__(*args, **kwargs)
         self.type = "skin"
 
-        # Kodi-style include caches matching CGUIIncludes structure
-        # These are populated eagerly at skin load (update_include_list)
-        # and used lazily during window resolution (resolve methods)
-
-        # Maps: folder -> {name -> (Include, default_params)}
-        # Stores <include name="X"> definitions with their default parameters
+        # Kodi-aligned include caches mirroring CGUIIncludes' five maps.
+        # folder -> {name -> (Include, default_params, file_path)}
         self.include_map = {}
-
-        # Maps: folder -> {control_type -> Include}
-        # Stores <default type="button"> etc for applying to matching controls
+        # folder -> {control_type -> (Include, file_path)}
         self.default_map = {}
-
-        # Maps: folder -> {name -> string_value}
-        # Stores <constant name="X">value</constant> for simple substitution
+        # folder -> {name -> str}
         self.constant_map = {}
-
-        # Maps: folder -> {name -> Include}
-        # Stores <variable name="X"> definitions (not expanded, just indexed)
+        # folder -> {name -> (Include, file_path)}
         self.variable_map = {}
-
-        # Maps: folder -> {name -> string_value}
-        # Stores <expression name="X">condition</expression> wrapped in [...]
+        # folder -> {name -> str (already wrapped in [...])}
         self.expression_map = {}
 
-        # Maps: folder -> {include_name -> [{'params': {name: value}, 'file': path, 'line': num}]}
-        # Tracks where includes are USED with what parameter values (for context-aware validation)
+        # folder -> {include_name -> [{'params': {...}, 'file', 'line'}]}
+        # for context-aware validation; built lazily.
         self.include_usages = {}
-        self._include_usages_built = False  # Lazy building flag
+        self._include_usages_built = False
 
-        # Cache for resolved window trees (RAM cache for performance)
         self._resolved_windows_cache: dict = {}
 
         api_version = self.root.find(".//import[@addon='xbmc.gui']").attrib.get("version")
@@ -97,17 +78,17 @@ class Skin(addon.Addon):
 
         self._load_colors_and_fonts()
 
-        self.validation_index = None  # Built on-demand for performance
+        self.validation_index = None
 
         self.builtin_controls, self.builtin_filename_map = self._load_builtin_controls()
 
-        self._resolver = None  # IncludeResolver instance
-        self._index_builder = None  # ValidationIndexBuilder instance
-        self._resource_loader = None  # ResourceLoader instance
+        self._resolver = None
+        self._index_builder = None
+        self._resource_loader = None
 
     @property
     def resolver(self) -> "SkinResolution":
-        """Get include resolver (lazy initialization)."""
+        """Lazy-built include/constant/expression resolver."""
         if not hasattr(self, '_resolver'):
             self._resolver = None
         if self._resolver is None:
@@ -123,7 +104,7 @@ class Skin(addon.Addon):
 
     @property
     def index_builder(self):
-        """Get validation index builder (lazy initialization)."""
+        """Lazy-built validation index over all windows."""
         if not hasattr(self, '_index_builder'):
             self._index_builder = None
         if self._index_builder is None:
@@ -133,7 +114,7 @@ class Skin(addon.Addon):
 
     @property
     def resource_loader(self) -> "SkinResources":
-        """Get resource loader (lazy initialization)."""
+        """Lazy-built loader for colors, fonts, and media files."""
         if not hasattr(self, '_resource_loader'):
             self._resource_loader = None
         if self._resource_loader is None:
@@ -141,12 +122,7 @@ class Skin(addon.Addon):
         return self._resource_loader
 
     def _load_colors_and_fonts(self):
-        """
-        Load colors and fonts using resource loader.
-
-        Sets self.colors, self.color_labels, self.fonts, self.font_file, and
-        invalidates validation_index.
-        """
+        """Load colors (from defines.xml) and fonts (from Font.xml)."""
         try:
             import sublime
         except Exception:
@@ -167,17 +143,13 @@ class Skin(addon.Addon):
                 kodi_path = None
 
         self.colors, self.color_labels = self.resource_loader.load_colors(kodi_path)
-
         self.fonts, self.font_file = self.resource_loader.load_fonts(self.resolver)
 
     def _load_builtin_controls(self):
-        """
-        Load built-in control IDs from kodi_builtin_controls.xml.
+        """Load built-in control IDs from data/kodi_builtin_controls.xml.
 
-        Returns:
-            tuple: (builtin_controls_dict, filename_to_window_map)
-                builtin_controls_dict: {window_name: {control_id: description}}
-                filename_to_window_map: {filename: window_name} for reverse lookup
+        Returns (window_name -> {control_id -> description},
+                 filename -> window_name).
         """
         builtin_controls = {}
         filename_to_window = {}
@@ -328,32 +300,24 @@ class Skin(addon.Addon):
         return None
 
     def load_xml_folders(self):
-        """
-        get all xml folders from addon.xml
-        """
+        """Read xml folder names from addon.xml's <res folder=...> entries."""
         self.xml_folders = list(dict.fromkeys(
             node.attrib["folder"] for node in self.root.findall('.//res')
         ))
 
     @property
     def lang_path(self):
-        """
-        returns the skin language folder path
-        """
+        """Path to the skin's language folder."""
         return os.path.join(self.path, "language")
 
     @property
     def theme_path(self):
-        """
-        returns the skin theme folder path
-        """
+        """Path to the skin's themes folder."""
         return os.path.join(self.path, "themes")
 
     @property
     def primary_lang_folder(self):
-        """
-        returns the primary lang folder, as chosen in settings
-        """
+        """Path to the first folder in `language_folders` setting (created if missing)."""
         lang_folders = self.settings.get("language_folders")
         if not lang_folders:
             lang_folders = ["resource.language.en_gb"]
@@ -365,9 +329,7 @@ class Skin(addon.Addon):
 
     @property
     def default_xml_folder(self):
-        """
-        returns the fallback xml folder as a string
-        """
+        """Folder name of the <res default="true"> entry in addon.xml, or None."""
         folder = self.root.find(".//res[@default='true']")
         if folder is not None and "folder" in folder.attrib:
             return folder.attrib["folder"]
@@ -375,16 +337,11 @@ class Skin(addon.Addon):
 
     @property
     def media_path(self):
-        """
-        returns the skin media folder path
-        """
+        """Path to the skin's media folder."""
         return os.path.join(self.path, "media")
 
     def update_include_list(self):
-        """
-        Create include caches by parsing all include files starting with includes.xml.
-        Populates the 5 Kodi-style maps matching CGUIIncludes structure.
-        """
+        """Parse every Includes.xml and rebuild the five include maps."""
         import time
         start_time = time.time()
         logger.debug("update_include_list START")
@@ -411,8 +368,8 @@ class Skin(addon.Addon):
                      os.path.join(xml_folder, "includes.xml")]
             self.include_files[folder] = []
 
-            # Clear all maps for this folder to prevent stale entries accumulating over time
-            # This is critical for long-running Sublime sessions where includes are added/removed
+            # Wipe stale per-folder entries before reloading so renamed/deleted
+            # includes don't linger in long-running Sublime sessions.
             self.include_map[folder] = {}
             self.default_map[folder] = {}
             self.constant_map[folder] = {}
@@ -444,16 +401,10 @@ class Skin(addon.Addon):
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
     def update_includes(self, xml_file):
-        """
-        Recursively load include files and populate the 5 Kodi-style maps.
-        Matches CGUIIncludes::Load_Internal behavior exactly.
+        """Load `xml_file` and any files it references into the five maps.
 
-        Maps populated:
-        - include_map: <include name="X"> with params
-        - default_map: <default type="button"> etc
-        - constant_map: <constant name="X">value</constant>
-        - variable_map: <variable name="X"> definitions
-        - expression_map: <expression name="X">condition</expression>
+        Mirrors CGUIIncludes::Load_Internal: <include>, <default>, <constant>,
+        <variable>, <expression>.
         """
         if not hasattr(self, "include_map"):
             self.include_map = {}
@@ -490,64 +441,52 @@ class Skin(addon.Addon):
             self.expression_map[folder] = {}
 
         self._load_defaults(root, folder, xml_file)
-        self._load_constants(root, folder, xml_file)
-        self._load_expressions(root, folder, xml_file)
+        self._load_constants(root, folder)
+        self._load_expressions(root, folder)
         self._load_variables(root, folder, xml_file)
         self._load_includes(root, folder, xml_file)
 
-        # Recursively load included files (matching Kodi's LoadIncludes)
+        # Recurse into <include file="..."/> references (CGUIIncludes::LoadIncludes)
         for node in root.findall("include"):
             if "file" in node.attrib and node.attrib["file"] != "script-skinshortcuts-includes.xml":
                 include_file = os.path.join(self.path, folder, node.attrib["file"])
                 self.update_includes(include_file)
 
     def _load_defaults(self, root, folder, xml_file):
-        """
-        Load <default type="X"> elements. Matches CGUIIncludes::LoadDefaults.
-
-        Store raw nodes like Kodi does - Include objects created on-demand during resolution.
-        """
+        """Index <default type="X"> entries (CGUIIncludes::LoadDefaults)."""
         for node in root.findall("default"):
             control_type = node.attrib.get("type")
-            if control_type and node.find("*") is not None:  # has children
+            if control_type and node.find("*") is not None:
                 self.default_map[folder][control_type] = (node, xml_file)
 
-    def _load_constants(self, root, folder, xml_file):
-        """Load <constant name="X">value</constant>. Matches CGUIIncludes::LoadConstants."""
+    def _load_constants(self, root, folder):
+        """Index <constant name="X">value</constant> (CGUIIncludes::LoadConstants)."""
         for node in root.findall("constant"):
             name = node.attrib.get("name")
             if name and node.text:
                 self.constant_map[folder][name] = node.text.strip()
 
-    def _load_expressions(self, root, folder, xml_file):
-        """Load <expression name="X">condition</expression>. Matches CGUIIncludes::LoadExpressions."""
+    def _load_expressions(self, root, folder):
+        """Index <expression name="X">cond</expression>, wrapped in [...] like Kodi
+        does (GUIIncludes.cpp:119)."""
         for node in root.findall("expression"):
             name = node.attrib.get("name")
             if name and node.text:
-                # Wrap in [...] like Kodi does (line 119 in GUIIncludes.cpp)
                 self.expression_map[folder][name] = "[" + node.text.strip() + "]"
 
     def _load_variables(self, root, folder, xml_file):
-        """
-        Load <variable name="X"> definitions. Matches CGUIIncludes::LoadVariables.
-
-        Store raw nodes like Kodi does - Include objects created on-demand during resolution.
-        """
+        """Index <variable name="X"> entries (CGUIIncludes::LoadVariables)."""
         for node in root.findall("variable"):
             name = node.attrib.get("name")
-            if name and node.find("*") is not None:  # has children
+            if name and node.find("*") is not None:
                 self.variable_map[folder][name] = (node, xml_file)
 
     def _load_includes(self, root, folder, xml_file):
-        """
-        Load <include name="X"> with params. Matches CGUIIncludes::LoadIncludes.
-
-        Stores raw node and params like Kodi's std::pair<TiXmlElement, Params>.
-        Include objects created on-demand during resolution (lazy).
-        """
+        """Index <include name="X"> entries with their default params
+        (CGUIIncludes::LoadIncludes)."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
-            if not name or node.find("*") is None:  # needs name and children
+            if not name or node.find("*") is None:
                 continue
 
             params = {}
@@ -560,77 +499,50 @@ class Skin(addon.Addon):
                     param_value = p.text.strip()
                 params[param_name] = param_value or ""
 
-            # No Include object creation = 400x faster!
             self.include_map[folder][name] = (node, params, xml_file)
 
     def update_xml_files(self):
-        """
-        Update list of all include and window xmls.
-        Overrides Addon.update_xml_files to invalidate validation index.
-        """
+        """Refresh window/include file lists and invalidate the validation index."""
         super().update_xml_files()
         self.validation_index = None
 
     def reload(self, path):
-        """
-        update include, color and font infos, depending on open file
-        """
+        """Reload caches affected by an edit to `path`."""
         folder = path.split(os.sep)[-2]
 
         if folder in self.include_files:
             if path in self.include_files[folder]:
                 self.update_include_list()
             else:
-                # File not tracked — could be a recovered broken include file.
-                # Check root tag to avoid reparsing for window files.
+                # Untracked file may be a previously-broken include just made valid;
+                # peek at the root tag instead of reparsing every window save.
                 root = utils.get_root_from_file(path)
                 if root is not None and root.tag == "includes":
                     logger.info("Recovered include file detected: %s", path)
                     self.update_include_list()
 
         if path.endswith("colors/defaults.xml"):
-            self._load_colors_and_fonts()  # Reload colors
+            self._load_colors_and_fonts()
         if path.endswith(("Font.xml", "font.xml")):
-            self._load_colors_and_fonts()  # Reload fonts
+            self._load_colors_and_fonts()
 
     def get_themes(self):
-        """
-        returns a list of all theme names, taken from "themes" folder
-        """
+        """List subfolder names under `themes/`."""
         return [folder for folder in os.listdir(os.path.join(self.path, "themes"))]
 
     def build_include_map(self, folder):
-        """
-        Return the Kodi-style include map for a folder.
-        Matches Kodi's CGUIIncludes which uses std::unordered_map.
-
-        NOTE: This now returns the pre-built include_map directly.
-        The map is already populated during update_includes().
-
-        Args:
-            folder: XML folder (e.g., "1080i", "16x9")
-
-        Returns:
-            dict: {include_name: (Include, params) tuple}
-        """
+        """Return the include map for `folder`: {name -> (node, params, file)}."""
         return self.include_map.get(folder, {})
 
     def get_constants(self, folder):
-        """
-        Returns list with names of all constants defined.
-        Uses the Kodi-aligned constant_map.
-        """
+        """List defined constant names for `folder`."""
         return list(self.constant_map.get(folder, {}).keys())
 
     def return_node(self, keyword=None, folder=False):
-        """
-        Override base Addon.return_node() to work with Kodi-aligned 5-map structure.
-        Searches through fonts, include_map, variable_map, default_map, constant_map, and expression_map.
+        """Look up `keyword` as font, include, variable, default, constant, or expression.
 
-        Supports lookups with parameters like "MyVar,(prefix,suffix)"
-        by extracting just the variable/include name before the first comma.
-
-        Returns dict with "name", "content", "file", "line", "type" for compatibility.
+        Strips any param tail (`Name,arg1,arg2` -> `Name`). Returns
+        {"name", "content", "file", "line", "type"} or None.
         """
         if not keyword or not folder:
             return None
@@ -644,7 +556,7 @@ class Skin(addon.Addon):
 
         includes_for_folder = self.include_map.get(folder, {})
         if lookup_name in includes_for_folder:
-            node, params, file_path = includes_for_folder[lookup_name]
+            node, _params, file_path = includes_for_folder[lookup_name]
             return {
                 "name": lookup_name,
                 "content": node,
@@ -696,15 +608,8 @@ class Skin(addon.Addon):
         return None
 
     def _insert_nested(self, parent_node, include_node, inserted_node):
-        """
-        Insert call-site children at <nested /> marker locations.
-        Matches CGUIIncludes::InsertNested (GUIIncludes.cpp:471-504).
-
-        Args:
-            parent_node: The parent control containing the include call
-            include_node: The <include> element being expanded
-            inserted_node: The node just inserted from the include definition
-        """
+        """Insert call-site children at <nested /> markers
+        (CGUIIncludes::InsertNested, GUIIncludes.cpp:471-504)."""
         if inserted_node.tag == "nested":
             nested = inserted_node
             target = parent_node
@@ -725,23 +630,15 @@ class Skin(addon.Addon):
                 parent_node.remove(inserted_node)
 
     def _resolve_params_for_node(self, node, params, include_node=None):
-        """
-        Resolve $PARAM[name] in node recursively.
-        Matches CGUIIncludes::ResolveParametersForNode (GUIIncludes.cpp:549-606).
-
-        Args:
-            node: Node to resolve params in
-            params: Parameter dictionary
-            include_node: Optional include call node (for undefined param detection)
-        """
+        """Recursively expand $PARAM[name] in `node`'s attribs and text
+        (CGUIIncludes::ResolveParametersForNode, GUIIncludes.cpp:549-606)."""
         if node is None:
             return
 
         for attr_name, attr_value in list(node.attrib.items()):
             resolved, status = utils.resolve_params_in_text(attr_value, params)
 
-            # Special case: undefined param in <param value="$PARAM[undefined]" />
-            # (GUIIncludes.cpp:559-568)
+            # <param value="$PARAM[undef]"/> is dropped entirely (GUIIncludes.cpp:559-568)
             if (status == "SINGLE_UNDEFINED" and
                 node.tag == "param" and
                 attr_name == "value" and
@@ -755,8 +652,7 @@ class Skin(addon.Addon):
         if node.text:
             resolved, status = utils.resolve_params_in_text(node.text, params)
 
-            # Special case: undefined param in <param>$PARAM[undefined]</param>
-            # (GUIIncludes.cpp:580-586)
+            # <param>$PARAM[undef]</param> is dropped entirely (GUIIncludes.cpp:580-586)
             if (status == "SINGLE_UNDEFINED" and
                 node.tag == "param" and
                 node.getparent() is not None and
@@ -766,24 +662,15 @@ class Skin(addon.Addon):
 
             node.text = resolved
 
-        # Recurse to children (save next before recursing, as child might be removed)
-        # (GUIIncludes.cpp:590-605)
+        # Snapshot children before recursing — recursion may remove them.
         for child in list(node):
             self._resolve_params_for_node(child, params, include_node)
 
     def get_expanded_root(self, path, folder):
-        """
-        Get expanded version of XML file on-demand (not cached).
-        Use this when validation requires seeing the full expanded content.
+        """Parse `path` and apply Kodi's resolve pipeline (uncached).
 
-        NOW USES KODI-ALIGNED RESOLUTION matching CGUIIncludes::Resolve exactly.
-
-        Args:
-            path: File path to XML file
-            folder: XML folder context (e.g., "1080i")
-
-        Returns:
-            Expanded XML root element (or None if parse fails)
+        Returns the resolved root, or the unexpanded root on failure, or None
+        if the file can't be parsed.
         """
         root = utils.get_root_from_file(path)
         if root is None:
@@ -794,25 +681,14 @@ class Skin(addon.Addon):
             return root
         except Exception as e:
             logger.warning("Failed to expand %s: %s", os.path.basename(path), e)
-            return root  # Return unexpanded if expansion fails
+            return root
 
     def build_include_maps(self, progress_callback=None):
-        """
-        Build include maps matching Kodi's skin startup phase.
+        """Build the lightweight skin-startup map (includes, fonts, builtin controls).
 
-        This is the lightweight version of build_validation_index that only loads
-        what Kodi loads at skin startup (includes, fonts, builtin controls).
-        Windows are NOT processed - they are validated lazily on-demand.
-
-        Matches Kodi's lifecycle:
-        - Skin startup → Load Includes.xml, build 5 maps
-        - Window activation → Resolve window using maps (done later in validate_single_file)
-
-        Args:
-            progress_callback: Optional callback function(message: str) for progress updates
-
-        Returns:
-            IncludeMaps: Lightweight structure with include maps and metadata
+        Mirrors Kodi's startup phase only — windows are resolved lazily during
+        validation, not here. Cached to disk; rebuilt if the cache is missing
+        or its version differs.
         """
         cache_path = self._get_include_maps_cache_path()
         if cache_path and cache_path.exists():
@@ -933,24 +809,10 @@ class Skin(addon.Addon):
             logger.debug("Cache cleanup error: %s", e)
 
     def validate_single_file(self, file_path, include_maps=None, progress_callback=None):
-        """
-        Validate a single file using Kodi's lazy approach.
+        """Validate one window/include file using lazy resolution.
 
-        Matches Kodi's window activation lifecycle:
-        1. Load window XML (like CGUIWindowManager::ActivateWindow)
-        2. Resolve includes using pre-built maps (like CGUIIncludes::Resolve)
-        3. Cache resolved XML (like m_windowXMLRootElement)
-        4. Validate against window scope
-
-        This is 20x faster than build_validation_index for single-file validation.
-
-        Args:
-            file_path: Path to window/include file to validate
-            include_maps: Pre-built IncludeMaps (or None to load from cache)
-            progress_callback: Optional callback function(message: str) for progress updates
-
-        Returns:
-            dict: Validation results with issues for this file only
+        Mirrors Kodi's window-activation lifecycle: load → resolve includes
+        → cache resolved tree → validate. Returns {'issues': [...], 'file': path}.
         """
         if include_maps is None:
             if progress_callback:
@@ -1076,15 +938,7 @@ class Skin(addon.Addon):
         return {'issues': issues, 'file': file_path}
 
     def _get_folder_for_file(self, file_path):
-        """
-        Determine which XML folder a file belongs to (e.g., '1080i', '720p').
-
-        Args:
-            file_path: Absolute path to the file
-
-        Returns:
-            str: Folder name (e.g., '1080i') or None if not found
-        """
+        """Return the xml folder (e.g. '1080i') containing `file_path`, or None."""
         try:
             file_path_obj = Path(file_path)
 

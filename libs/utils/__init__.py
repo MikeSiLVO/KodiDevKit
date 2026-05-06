@@ -26,6 +26,8 @@ from .expressions import (
     is_dynamic_expression,
     starts_with_param_reference,
     contains_dynamic_expression,
+    split_top_level_commas,
+    extract_expression_at_offset,
     get_param_names_in_context,
 )
 
@@ -82,7 +84,6 @@ from .sublime_helpers import (
     get_node_content,
     jump_to_label_declaration,
     prettyprint,
-    debug_print,
 )
 
 __all__ = [
@@ -102,6 +103,8 @@ __all__ = [
     "is_dynamic_expression",
     "starts_with_param_reference",
     "contains_dynamic_expression",
+    "split_top_level_commas",
+    "extract_expression_at_offset",
     "get_param_names_in_context",
     # files
     "eol_info_from_path_patterns",
@@ -148,5 +151,4 @@ __all__ = [
     "get_node_content",
     "jump_to_label_declaration",
     "prettyprint",
-    "debug_print",
 ]
