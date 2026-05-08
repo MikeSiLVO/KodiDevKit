@@ -156,12 +156,8 @@ class KodiJsonrpc:
 
     def get_userdata_folder(self):
         """Detect Kodi's userdata folder for the current OS / portable mode."""
-        try:
-            import sublime
-            _plat = sublime.platform()
-        except ImportError:
-            import platform as _platform_mod
-            _plat = {"Linux": "linux", "Windows": "windows", "Darwin": "osx"}.get(_platform_mod.system(), "linux")
+        from ..utils import get_platform
+        _plat = get_platform()
         if _plat == "linux":
             return os.path.join(os.path.expanduser("~"), ".%s" % APP_NAME)
         elif _plat == "windows":

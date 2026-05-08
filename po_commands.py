@@ -22,7 +22,7 @@ def _infos():
     return INFOS
 
 
-class ReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
+class KodidevkitReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
     """Command to manually reload language files."""
 
     def run(self):
@@ -39,7 +39,7 @@ class ReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
                 addon.update_labels()
 
 
-class ConvertXmlToPoCommand(sublime_plugin.WindowCommand):
+class KodidevkitConvertXmlToPoCommand(sublime_plugin.WindowCommand):
     """Convert legacy .xml language files to .po format."""
 
     def is_visible(self):
@@ -64,7 +64,7 @@ class ConvertXmlToPoCommand(sublime_plugin.WindowCommand):
                 utils.convert_xml_to_po(path)
 
 
-class MoveToLanguageFileCommand(sublime_plugin.TextCommand):
+class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
     """Move selected text to default .po file (or create .po file if not existing)."""
 
     def is_visible(self):
@@ -127,10 +127,10 @@ class MoveToLanguageFileCommand(sublime_plugin.TextCommand):
             attach_occurrence = getattr(addon, "attach_occurrence_to_label", None)
             if attach_occurrence:
                 attach_occurrence(label_id, rel_path)
-        self.view.run_command("replace_text", {"label_id": label_id})
+        self.view.run_command("kodidevkit_replace_text", {"label_id": label_id})
 
 
-class ReplaceTextCommand(sublime_plugin.TextCommand):
+class KodidevkitReplaceTextCommand(sublime_plugin.TextCommand):
     """Replace selected text with label from *label_id."""
 
     def run(self, edit, label_id):

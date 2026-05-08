@@ -1,16 +1,11 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-"""
+"""Sublime-side log handlers and the results display panel."""
 
 import sublime
 import logging
 
 
 class SublimeLogHandler(logging.StreamHandler):
-    """
-    SublimeText Stream handler, outputs stream via console/panels/dialogs
-    """
+    """Logging handler that routes records to console / output panel / dialogs."""
 
     def __init__(self):
         super().__init__()
@@ -38,88 +33,63 @@ class SublimeLogHandler(logging.StreamHandler):
 
     def info(self, record):
         wnd = sublime.active_window()
-        wnd.run_command("log", {"label": self.format(record).strip()})
+        wnd.run_command("kodidevkit_log", {"label": self.format(record).strip()})
 
     @staticmethod
     def message(record):
-        """
-        shows text in message dialog
-        """
+        """Show `record.msg` in a Sublime message dialog."""
         sublime.message_dialog(record.msg)
 
 
 class ResultsDisplayPanel:
-    """
-    Helper class for displaying structured data (like JSON-RPC results) in Sublime Text.
-    Supports both output panels and scratch views with formatted output.
-    """
+    """Output panel / scratch view for displaying JSON-RPC results and similar dicts."""
 
     def __init__(self, panel_name="kodidevkit"):
-        """
-        Initialize the panel with a given name.
-
-        Args:
-            panel_name: Name of the output panel (without 'output.' prefix)
-        """
+        """`panel_name` is the output-panel name without the `output.` prefix."""
         self.panel_name = panel_name
         self._window = None
         self._panel = None
 
     @property
     def window(self):
-        """Get the active window, cached."""
+        """Cached active window."""
         if self._window is None or not self._window.is_valid():
             self._window = sublime.active_window()
         return self._window
 
     @property
     def panel(self):
-        """Get or create the output panel."""
+        """Lazily-created output panel for this instance."""
         if self._panel is None:
             self._panel = self.window.create_output_panel(self.panel_name)
         return self._panel
 
     def clear(self):
-        """Clear all content from the panel."""
+        """Empty the output panel."""
         self.panel.run_command('select_all')
         self.panel.run_command('left_delete')
 
     def show_panel(self):
-        """Show the output panel."""
+        """Reveal the output panel."""
         self.window.run_command('show_panel', {"panel": f"output.{self.panel_name}"})
 
     def append_msg(self, msg):
-        """
-        Append a message to the panel and show it.
-
-        Args:
-            msg: Message to append
-        """
+        """Append `msg` and reveal the panel."""
         self.panel.run_command("append", {"characters": f'{msg}\n'})
         self.show_panel()
 
     def info(self, msg):
-        """Append info message (also logs to console)."""
+        """Append `msg` to the panel and log at INFO."""
         self.append_msg(msg)
         logging.info(msg)
 
     def warning(self, msg):
-        """Append warning message (also logs to console)."""
+        """Append `msg` to the panel and log at WARNING."""
         self.append_msg(msg)
         logging.warning(msg)
 
     def _format_dict_items(self, data, key_order=None, indent=""):
-        """
-        Format dictionary items as lines, preserving key order if specified.
-
-        Args:
-            data: Dictionary to format
-            key_order: Optional list of keys to control display order
-            indent: String to prepend to each line
-
-        Returns:
-            List of formatted lines
-        """
+        """Render `data` as a list of lines, respecting `key_order` if given."""
         lines = []
 
         if key_order:
@@ -137,14 +107,7 @@ class ResultsDisplayPanel:
         return lines
 
     def display_dict(self, data, clear_first=True, key_order=None):
-        """
-        Display a dictionary in output panel with simple formatting (no headers/borders).
-
-        Args:
-            data: Dictionary to display
-            clear_first: Whether to clear panel before displaying
-            key_order: Optional list of keys to control display order
-        """
+        """Display `data` in the output panel as plain key/value lines."""
         if clear_first:
             self.clear()
 
@@ -156,18 +119,7 @@ class ResultsDisplayPanel:
         self.show_panel()
 
     def display_dict_as_scratch_view(self, data, title, window=None, key_order=None):
-        """
-        Display a dictionary in a scratch view with fancy formatting (headers, borders).
-
-        Args:
-            data: Dictionary to display
-            title: Title for the scratch view
-            window: Window to create the view in (defaults to active window)
-            key_order: Optional list of keys to control display order
-
-        Returns:
-            The created scratch view
-        """
+        """Display `data` in a new scratch view with a header box; returns the view."""
         if window is None:
             window = sublime.active_window()
 
@@ -196,15 +148,9 @@ class ResultsDisplayPanel:
         return view
 
     def display_results(self, data, title, mode, window=None, key_order=None):
-        """
-        High-level method to display results in the specified mode.
+        """Show `data` in either a scratch view or the output panel.
 
-        Args:
-            data: Dictionary of results to display
-            title: Title for the display
-            mode: Display mode ("scratch_view" or "output_panel")
-            window: Window to create view in (for scratch_view mode)
-            key_order: Optional list of keys to control display order
+        `mode` is either "scratch_view" or anything else (treated as panel).
         """
         if mode == "scratch_view":
             self.display_dict_as_scratch_view(
@@ -217,14 +163,7 @@ class ResultsDisplayPanel:
             self.display_dict(data=data, clear_first=True, key_order=key_order)
 
     def display_error(self, error_message, mode, window=None):
-        """
-        Display an error message in the specified mode.
-
-        Args:
-            error_message: Error message to display
-            mode: Display mode ("scratch_view" or "output_panel")
-            window: Window to create view in (for scratch_view mode)
-        """
+        """Show `error_message` in either a scratch view or the output panel."""
         if mode == "scratch_view":
             if window is None:
                 window = sublime.active_window()
@@ -237,33 +176,24 @@ class ResultsDisplayPanel:
         else:
             self.clear()
             for line in error_message.split('\n'):
-                if line:  # Skip empty lines
+                if line:
                     self.append_msg(line)
 
 
 def config():
-    """
-    attach Sublime StreamHandler to logger
-    """
+    """Replace the root logger's handlers with our SublimeLogHandler."""
     logger = logging.getLogger()
-    for hdlr in logger.handlers:  # remove all old handlers
+    for hdlr in logger.handlers:
         logger.removeHandler(hdlr)
     logger.addHandler(SublimeLogHandler())
     logger.setLevel(logging.INFO)
 
 
 def enable_file_logging(log_file_path=None):
-    """
-    Enable logging to file for debugging freeze issues with rotation.
+    """Attach a rotating file handler at DEBUG level and return the log path.
 
-    Uses RotatingFileHandler to prevent log files from getting too large.
-    Keeps up to 5 backup files (5MB each = 30MB total) for multi-day debugging.
-
-    Args:
-        log_file_path: Path to log file. If None, uses Sublime cache directory.
-
-    Returns:
-        Path to the log file
+    Defaults to `<cache>/KodiDevKit/logs/kodidevkit_debug.log`. Rotates at 5 MB
+    per file, keeping 5 backups (~30 MB total).
     """
     import os
     from logging.handlers import RotatingFileHandler
@@ -274,14 +204,11 @@ def enable_file_logging(log_file_path=None):
         os.makedirs(log_dir, exist_ok=True)
         log_file_path = os.path.join(log_dir, "kodidevkit_debug.log")
 
-    # Create rotating file handler
-    # maxBytes=5MB per file, backupCount=5 keeps last 5 rotations (30MB total)
-    # This gives roughly 3-7 days of logs depending on verbosity
     file_handler = RotatingFileHandler(
         log_file_path,
         mode='a',
-        maxBytes=5*1024*1024,  # 5 MB
-        backupCount=5,         # Keep .log.1 through .log.5
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
         encoding='utf-8'
     )
 

@@ -34,6 +34,7 @@ from .expressions import (
 from .files import (
     eol_info_from_path_patterns,
     save_xml,
+    get_platform,
     get_sublime_path,
     get_absolute_file_paths,
     make_archive,
@@ -109,6 +110,7 @@ __all__ = [
     # files
     "eol_info_from_path_patterns",
     "save_xml",
+    "get_platform",
     "get_sublime_path",
     "get_absolute_file_paths",
     "make_archive",

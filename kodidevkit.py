@@ -288,7 +288,7 @@ def plugin_loaded():
 
 
 class KodiDevKit(sublime_plugin.EventListener):
-    settings = {}  # type: ignore[assignment]
+    settings: "sublime.Settings | dict" = {}
     _phantom_sets = {}  # Track PhantomSets by view.id()
     _validation_issues = {}  # Track validation issues by view.id()
     _media_cache = {}  # Cache media file completions per addon path
@@ -299,7 +299,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._modified_files = set()
         self._last_phantom_cleanup = 0
 
-        self.settings = sublime.load_settings(SETTINGS_FILE)
+        self.settings = KodiDevKit.settings
 
         self.timer = None
         self._prev_selections = {}  # per-view selection tracking: {view_id: Region}
@@ -1568,7 +1568,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             window = view.window()
 
             if needs_reload and window and self.settings.get("auto_reload_skin", True):
-                window.run_command("execute_builtin", {"builtin": "ReloadSkin()"})
+                window.run_command("kodidevkit_execute_builtin", {"builtin": "ReloadSkin()"})
 
             if window and self.settings.get("auto_skin_check", True):
                 # Validate skin Settings.xml (1080i/720p/16x9) but skip addon settings.xml

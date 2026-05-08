@@ -23,7 +23,7 @@ FILE_ERROR_PATTERN = re.compile(r'File "(.*?)", line (\d*), in .*')
 TUPLE_ERROR_PATTERN = re.compile(r"', \('(.*?)', (\d+), (\d+), ")
 
 
-class OpenKodiLogCommand(sublime_plugin.WindowCommand):
+class KodidevkitOpenKodiLogCommand(sublime_plugin.WindowCommand):
     """Open kodi.log from its default userdata location."""
 
     def run(self):
@@ -50,7 +50,7 @@ class OpenKodiLogCommand(sublime_plugin.WindowCommand):
             )
 
 
-class OpenAltKodiLogCommand(sublime_plugin.WindowCommand):
+class KodidevkitOpenAltKodiLogCommand(sublime_plugin.WindowCommand):
     """Open kodi.log from %APPDATA%\\Kodi (Windows portable mode)."""
 
     def is_visible(self):
@@ -76,7 +76,7 @@ class OpenAltKodiLogCommand(sublime_plugin.WindowCommand):
             )
 
 
-class OpenSourceFromLog(sublime_plugin.TextCommand):
+class KodidevkitOpenSourceFromLogCommand(sublime_plugin.TextCommand):
     """Jump from a Python traceback line in the log to the source file/line."""
 
     def run(self, edit):
@@ -100,7 +100,7 @@ class OpenSourceFromLog(sublime_plugin.TextCommand):
                 return
 
 
-class GoToOnlineHelpCommand(sublime_plugin.TextCommand):
+class KodidevkitGoToOnlineHelpCommand(sublime_plugin.TextCommand):
     """Open the Kodi doxygen page for the control under the cursor."""
 
     CONTROLS = {"renderaddon": "https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d4/d1e/_addon__rendering_control.html",
@@ -160,14 +160,7 @@ class GoToOnlineHelpCommand(sublime_plugin.TextCommand):
         webbrowser.open_new(self.CONTROLS[word])
 
 
-class AppendTextCommand(sublime_plugin.TextCommand):
-    """Append a label line to the end of the current view."""
-
-    def run(self, edit, label):
-        self.view.insert(edit, self.view.size(), label + "\n")
-
-
-class LogCommand(sublime_plugin.TextCommand):
+class KodidevkitLogCommand(sublime_plugin.TextCommand):
     """Append a line to a Sublime output panel."""
 
     def run(self, edit, label, panel_name='example'):
@@ -181,9 +174,9 @@ class LogCommand(sublime_plugin.TextCommand):
         window.run_command("show_panel", {"panel": "output." + panel_name})
 
 
-class CreateElementRowCommand(sublime_plugin.WindowCommand):
+class KodidevkitCreateElementRowCommand(sublime_plugin.WindowCommand):
     """Prompt for a count, then duplicate the selection that many times via
-    ReplaceXmlElementsCommand."""
+    KodidevkitReplaceXmlElementsCommand."""
 
     def run(self):
         self.window.show_input_panel("Enter number of items to generate",
@@ -193,10 +186,10 @@ class CreateElementRowCommand(sublime_plugin.WindowCommand):
                                      on_cancel=None)
 
     def generate_items(self, num_items):
-        self.window.run_command("replace_xml_elements", {"num_items": num_items})
+        self.window.run_command("kodidevkit_replace_xml_elements", {"num_items": num_items})
 
 
-class ReplaceXmlElementsCommand(sublime_plugin.TextCommand):
+class KodidevkitReplaceXmlElementsCommand(sublime_plugin.TextCommand):
     """Replace the selection with `num_items` copies, expanding any [n] placeholder."""
 
     def run(self, edit, num_items):
@@ -214,7 +207,7 @@ class ReplaceXmlElementsCommand(sublime_plugin.TextCommand):
             break
 
 
-class EvaluateMathExpressionPromptCommand(sublime_plugin.WindowCommand):
+class KodidevkitEvaluateMathExpressionPromptCommand(sublime_plugin.WindowCommand):
     """Prompt for an equation (with `x` = current selected int) and run it on each selection."""
 
     def run(self):
@@ -225,10 +218,10 @@ class EvaluateMathExpressionPromptCommand(sublime_plugin.WindowCommand):
                                      None)
 
     def evaluate(self, equation):
-        self.window.run_command("evaluate_math_expression", {'equation': equation})
+        self.window.run_command("kodidevkit_evaluate_math_expression", {'equation': equation})
 
 
-class EvaluateMathExpressionCommand(sublime_plugin.TextCommand):
+class KodidevkitEvaluateMathExpressionCommand(sublime_plugin.TextCommand):
     """Evaluate `equation` per selection (substituting `x` and `i`) and replace it."""
 
     def run(self, edit, equation):
@@ -240,7 +233,7 @@ class EvaluateMathExpressionCommand(sublime_plugin.TextCommand):
             self.view.replace(edit, region, str(eval(temp_equation)).replace(".0", ""))
 
 
-class ColorPickerCommand(sublime_plugin.WindowCommand):
+class KodidevkitColorPickerCommand(sublime_plugin.WindowCommand):
     """Show ColorPicker and insert the chosen color in Kodi's AARRGGBB format."""
 
     def is_visible(self):
@@ -262,15 +255,16 @@ class ColorPickerCommand(sublime_plugin.WindowCommand):
             view.run_command("insert", {"characters": "FF" + color[1:]})
 
 
-class SetKodiFolderCommand(sublime_plugin.WindowCommand):
+class KodidevkitSetKodiFolderCommand(sublime_plugin.WindowCommand):
     """Prompt for the Kodi installation folder and save it to settings."""
 
     def run(self):
-        if sublime.platform() == "linux":
+        plat = sublime.platform()
+        if plat == "linux":
             preset_path = "/usr/share/%s/" % APP_NAME.lower()
-        elif sublime.platform() == "windows":
+        elif plat == "windows":
             preset_path = "C:/%s/" % APP_NAME.lower()
-        elif sublime.platform() == "osx":
+        elif plat == "osx":
             preset_path = os.path.join(os.path.expanduser("~"),
                                        "Applications",
                                        "%s.app" % APP_NAME,
@@ -295,8 +289,8 @@ class SetKodiFolderCommand(sublime_plugin.WindowCommand):
             logging.critical("Folder %s does not exist." % path)
 
 
-class ExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):
-    """Prompt for a Kodi builtin and dispatch it via ExecuteBuiltinCommand."""
+class KodidevkitExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):
+    """Prompt for a Kodi builtin and dispatch it via KodidevkitExecuteBuiltinCommand."""
 
     def run(self):
         self.settings = sublime.load_settings(SETTINGS_FILE)
@@ -308,10 +302,10 @@ class ExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):
 
     def execute_builtin(self, builtin):
         self.settings.set("prev_json_builtin", builtin)
-        self.window.run_command("execute_builtin", {"builtin": builtin})
+        self.window.run_command("kodidevkit_execute_builtin", {"builtin": builtin})
 
 
-class ExecuteBuiltinCommand(sublime_plugin.WindowCommand):
+class KodidevkitExecuteBuiltinCommand(sublime_plugin.WindowCommand):
     """Run a Kodi builtin via the script.toolbox JSON-RPC bridge."""
 
     def run(self, builtin):
@@ -322,8 +316,8 @@ class ExecuteBuiltinCommand(sublime_plugin.WindowCommand):
                            params=params)
 
 
-class _KodiQueryPromptCommand(sublime_plugin.WindowCommand):
-    """Base for commands that prompt for comma-separated values and query Kodi JSON-RPC."""
+class _KodiQueryPromptMixin:
+    """Prompt for comma-separated values, query Kodi JSON-RPC. Pair with `WindowCommand`."""
     _prompt = ""
     _settings_key = ""
     _method = ""
@@ -331,6 +325,8 @@ class _KodiQueryPromptCommand(sublime_plugin.WindowCommand):
     _panel_name = ""
     _title = ""
     _error_subject = ""
+    window: sublime.Window
+    settings: sublime.Settings
 
     def run(self):
         self.settings = sublime.load_settings(SETTINGS_FILE)
@@ -376,7 +372,7 @@ class _KodiQueryPromptCommand(sublime_plugin.WindowCommand):
         sublime.set_timeout(show_results, 0)
 
 
-class GetInfoLabelsPromptCommand(_KodiQueryPromptCommand):
+class KodidevkitGetInfoLabelsPromptCommand(_KodiQueryPromptMixin, sublime_plugin.WindowCommand):
     _prompt = "Get InfoLabels (comma-separated)"
     _settings_key = "prev_infolabel"
     _method = "XBMC.GetInfoLabels"
@@ -386,7 +382,7 @@ class GetInfoLabelsPromptCommand(_KodiQueryPromptCommand):
     _error_subject = "InfoLabels"
 
 
-class BrowseKodiVfsCommand(sublime_plugin.WindowCommand):
+class KodidevkitBrowseKodiVfsCommand(sublime_plugin.WindowCommand):
     """Browse the Kodi VFS via JSON-RPC."""
 
     def run(self):
@@ -409,7 +405,7 @@ class BrowseKodiVfsCommand(sublime_plugin.WindowCommand):
                                      selected_index=0)
 
 
-class GetInfoBooleansPromptCommand(_KodiQueryPromptCommand):
+class KodidevkitGetInfoBooleansPromptCommand(_KodiQueryPromptMixin, sublime_plugin.WindowCommand):
     _prompt = "Get boolean values (comma-separated)"
     _settings_key = "prev_boolean"
     _method = "XBMC.GetInfoBooleans"
@@ -419,7 +415,7 @@ class GetInfoBooleansPromptCommand(_KodiQueryPromptCommand):
     _error_subject = "Boolean conditions"
 
 
-class OpenKodiAddonCommand(sublime_plugin.WindowCommand):
+class KodidevkitOpenKodiAddonCommand(sublime_plugin.WindowCommand):
     """Open a chosen Kodi addon folder in a new Sublime Text window."""
 
     def run(self):
@@ -509,7 +505,7 @@ class ReportGenerator:
             pass
 
 
-class ShowValidationReportCommand(sublime_plugin.WindowCommand):
+class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
     """Run every validation check and open the HTML report in a browser."""
 
     def run(self):
@@ -648,7 +644,7 @@ class ShowValidationReportCommand(sublime_plugin.WindowCommand):
         thread.start()
 
 
-class OpenValidationReportCommand(sublime_plugin.WindowCommand):
+class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
     """Open an existing validation report from the report directory."""
 
     def _open_folder_and_notify(self, folder_path, created=False):
@@ -656,9 +652,10 @@ class OpenValidationReportCommand(sublime_plugin.WindowCommand):
         import subprocess
 
         try:
-            if sublime.platform() == 'windows':
+            plat = sublime.platform()
+            if plat == 'windows':
                 subprocess.Popen(['explorer', folder_path])
-            elif sublime.platform() == 'osx':
+            elif plat == 'osx':
                 subprocess.Popen(['open', folder_path])
             else:
                 subprocess.Popen(['xdg-open', folder_path])

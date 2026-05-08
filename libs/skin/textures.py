@@ -32,13 +32,8 @@ def texturepacker(media_path, settings, xbt_filename="Textures.xbt"):
     args = ['-dupecheck',
             '-input "%s"' % media_path,
             '-output "%s"' % os.path.join(media_path, xbt_filename)]
-    try:
-        import sublime
-        _plat = sublime.platform()
-    except ImportError:
-        import platform as _platform_mod
-        _plat = "linux" if _platform_mod.system() == "Linux" else "other"
-    if _plat == "linux":
+    from ..utils import get_platform
+    if get_platform() == "linux":
         args = ['%s %s' % (tp_path, " ".join(args))]
     else:
         args.insert(0, tp_path)

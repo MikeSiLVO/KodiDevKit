@@ -24,7 +24,7 @@ def _infos():
     return INFOS
 
 
-class BuildAddonCommand(sublime_plugin.WindowCommand):
+class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
     """Create an installable zip archive of the currently open addon."""
 
     def is_visible(self):
@@ -54,7 +54,7 @@ class BuildAddonCommand(sublime_plugin.WindowCommand):
             webbrowser.open(path)
 
 
-class BuildThemeCommand(sublime_plugin.WindowCommand):
+class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
     """Select and build a theme of the currently open skin."""
 
     def is_visible(self):
@@ -108,7 +108,7 @@ class BuildThemeCommand(sublime_plugin.WindowCommand):
             webbrowser.open(media_path)
 
 
-class BumpVersionCommand(sublime_plugin.WindowCommand):
+class KodidevkitBumpVersionCommand(sublime_plugin.WindowCommand):
     """Bump Addon version by incrementing addon.xml version and adding changelog entry."""
 
     def run(self):

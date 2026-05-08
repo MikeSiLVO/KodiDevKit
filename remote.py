@@ -21,7 +21,7 @@ def plugin_loaded():
     REMOTE.setup(sublime.load_settings(SETTINGS_FILE))
 
 
-class RemoteActionsCommand(sublime_plugin.WindowCommand):
+class KodidevkitRemoteActionsCommand(sublime_plugin.WindowCommand):
     """
     Menu with all options related to ADB
     """
@@ -57,7 +57,7 @@ class RemoteActionsCommand(sublime_plugin.WindowCommand):
                                          None)
         elif index == 1:
             REMOTE.adb_reconnect_async()
-            self.window.run_command("remote_actions")
+            self.window.run_command("kodidevkit_remote_actions")
         elif index == 2:
             active_view = self.window.active_view()
             if active_view:
@@ -87,4 +87,4 @@ class RemoteActionsCommand(sublime_plugin.WindowCommand):
         """
         self.settings.set("remote_ip", ip)
         sublime.save_settings(SETTINGS_FILE)
-        self.window.run_command("remote_actions")
+        self.window.run_command("kodidevkit_remote_actions")
