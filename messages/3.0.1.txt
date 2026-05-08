@@ -1,0 +1,19 @@
+  KodiDevKit 3.0.1
+  =================
+
+  Action required
+  ---------------
+  All commands now use a single 'kodidevkit_' prefix. If you have custom
+  key bindings or menu entries referencing the old names, rename them:
+
+      build_addon          ->  kodidevkit_build_addon
+      preview_image        ->  kodidevkit_preview_image
+      set_kodi_folder      ->  kodidevkit_set_kodi_folder
+      ...etc.
+
+  Default key bindings and command palette captions are unchanged.
+
+  Improvements
+  ------------
+  Hover popups and the JSON-RPC prompt now parse Kodi boolean
+  expressions correctly (operators [ ] ! + |, $LOCALIZE/$NUMBER masked).
