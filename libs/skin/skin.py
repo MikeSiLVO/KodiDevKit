@@ -90,6 +90,7 @@ class Skin(addon.Addon):
         self._resolver = None
         self._index_builder = None
         self._resource_loader = None
+        self._include_param_roles = None
 
     @property
     def resolver(self) -> "SkinResolution":
@@ -125,6 +126,110 @@ class Skin(addon.Addon):
         if self._resource_loader is None:
             self._resource_loader = SkinResources(self.path, self.xml_folders)
         return self._resource_loader
+
+    def _build_include_param_roles(self):
+        """Scan every <include name=...> body for $PARAM[X] usages and record
+        the role each parameter plays.
+
+        Role is one of:
+            ("tag", tag_name)              -- $PARAM[X] is text of <tag_name>
+            ("attr", attr_name)            -- $PARAM[X] is value of an attribute
+            ("forward", inc_name, pname)   -- $PARAM[X] is forwarded to a nested
+                                              <include content="inc_name">'s
+                                              <param name="pname">
+            "multi"                        -- $PARAM[X] appears in 2+ distinct
+                                              roles (no single context)
+
+        Returns: {folder: {include_name: {param_name: role}}}
+        """
+        result = {}
+        param_re = re.compile(r"\$PARAM\[([^,\]]+)")
+
+        def mark(roles, pname, new_role):
+            existing = roles.get(pname)
+            if existing is None:
+                roles[pname] = new_role
+            elif existing == "multi" or existing == new_role:
+                return
+            else:
+                roles[pname] = "multi"
+
+        def role_for(node):
+            # `<param>` inside a nested `<include content="X">` call is a forward.
+            parent = node.getparent() if hasattr(node, "getparent") else None
+            if (node.tag == "param" and parent is not None
+                    and parent.tag == "include" and parent.get("content")):
+                target_inc = parent.get("content")
+                target_param = node.get("name") or ""
+                if target_inc and target_param:
+                    return ("forward", target_inc, target_param)
+            return None
+
+        for folder, includes_for_folder in self.include_map.items():
+            folder_result = {}
+            for inc_name, (inc_node, _defaults, _file) in includes_for_folder.items():
+                roles: dict = {}
+                for node in inc_node.iter():
+                    # Skip the top-level <include> wrapper itself.
+                    if node is inc_node:
+                        continue
+                    # Skip top-level <param> defaults (no $PARAM in defaults in practice).
+                    parent = node.getparent() if hasattr(node, "getparent") else None
+                    if (node.tag == "param" and parent is inc_node):
+                        continue
+                    text = (node.text or "")
+                    if "$PARAM[" in text:
+                        forward_role = role_for(node)
+                        for match in param_re.finditer(text):
+                            pname = match.group(1).strip()
+                            mark(roles, pname, forward_role or ("tag", node.tag))
+                    for attr_name, attr_value in node.attrib.items():
+                        if attr_name.startswith("_kdk_") or "$PARAM[" not in attr_value:
+                            continue
+                        for match in param_re.finditer(attr_value):
+                            pname = match.group(1).strip()
+                            mark(roles, pname, ("attr", attr_name))
+                if roles:
+                    folder_result[inc_name] = roles
+            if folder_result:
+                result[folder] = folder_result
+        return result
+
+    @property
+    def include_param_roles(self):
+        """Lazy `{folder: {include_name: {param_name: role}}}` map. See
+        `_build_include_param_roles` for role tuple shape."""
+        if not hasattr(self, "_include_param_roles"):
+            self._include_param_roles = None
+        if self._include_param_roles is None:
+            self._include_param_roles = self._build_include_param_roles()
+        return self._include_param_roles
+
+    def resolve_param_role(self, folder, include_name, param_name, _visited=None):
+        """Resolve `<param name=param_name>` inside `<include content=include_name>`
+        to its terminal role, following forwarding chains.
+
+        Returns the role tuple, "multi", or None if unresolved or cyclic.
+        """
+        if _visited is None:
+            _visited = set()
+        key = (folder, include_name, param_name)
+        if key in _visited:
+            return None
+        _visited.add(key)
+
+        roles_for_folder = self.include_param_roles.get(folder, {})
+        include_roles = roles_for_folder.get(include_name, {})
+        role = include_roles.get(param_name)
+
+        if role is None or role == "multi":
+            return role
+
+        if isinstance(role, tuple) and role and role[0] == "forward":
+            _, target_inc, target_param = role
+            return self.resolve_param_role(folder, target_inc, target_param, _visited)
+
+        return role
 
     def _load_colors_and_fonts(self):
         """Load colors (from defines.xml) and fonts (from Font.xml)."""
@@ -369,6 +474,7 @@ class Skin(addon.Addon):
             self.expression_source_map = {}
 
         self.validation_index = None
+        self._include_param_roles = None
 
         for folder in self.xml_folders:
             xml_folder = os.path.join(self.path, folder)

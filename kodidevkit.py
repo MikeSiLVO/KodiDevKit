@@ -1079,6 +1079,51 @@ class KodiDevKit(sublime_plugin.EventListener):
                     if value is not None:
                         return "✅ <b>True</b>" if value else "❌ <b>False</b>"
 
+            # Fallback: bare InfoBool token with no operators. Use the include
+            # definition to resolve what role this param plays; if it's a
+            # condition/visible/enable slot, evaluate via JSON-RPC.
+            parent = element.getparent() if hasattr(element, "getparent") else None
+            if (parent is not None and parent.tag == "include"
+                    and parent.get("content")
+                    and re.search(r"[A-Za-z]", text)):
+                addon = getattr(INFOS, "addon", None)
+                file_name = view.file_name()
+                resolver = getattr(addon, "resolve_param_role", None) if addon else None
+                if resolver and file_name:
+                    folder = os.path.basename(os.path.dirname(file_name))
+                    inc_name = parent.get("content")
+                    param_name = element.get("name") or ""
+                    role = resolver(folder, inc_name, param_name)
+                    is_condition_role = (
+                        isinstance(role, tuple)
+                        and (
+                            (role[0] == "tag" and role[1] in VISIBLE_TAGS)
+                            or (role[0] == "attr" and role[1] == "condition")
+                        )
+                    )
+                    if is_condition_role:
+                        # On the `name="..."` attribute value: evaluate the whole
+                        # param body (same as hovering on a real <visible> tag).
+                        # On the value text inside the param: evaluate the token
+                        # under the cursor.
+                        text_before_cursor = line_text[:cursor_offset]
+                        in_name_attr = bool(re.search(r'\bname="[^"]*$', text_before_cursor))
+                        if in_name_attr:
+                            cond = (element.text or "").strip()
+                        else:
+                            cond = text.strip()
+                        if cond and "$PARAM[" not in cond and re.search(r"[A-Za-z]", cond):
+                            if getattr(kodi, '_cooldown_until', 0) > time.time():
+                                return None
+                            result = kodi.request(
+                                method="XBMC.GetInfoBooleans",
+                                params={"booleans": [cond]},
+                            )
+                            if result:
+                                _, value = result["result"].popitem()
+                                if value is not None:
+                                    return "✅ <b>True</b>" if value else "❌ <b>False</b>"
+
         owner = (
             visible_owner
             if (visible_owner is not None and visible_owner.tag in VISIBLE_TAGS)
