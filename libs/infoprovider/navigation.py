@@ -133,6 +133,26 @@ class NavigationMixin:
                     "node": def_inc.node
                 })
 
+            expr_source = getattr(self.addon, 'expression_source_map', {}).get(folder, {})  # type: ignore[attr-defined]
+            for name, (file_path, line) in expr_source.items():
+                result.append({
+                    "name": name,
+                    "type": "expression",
+                    "file": file_path,
+                    "line": line,
+                    "content": self.addon.expression_map.get(folder, {}).get(name, ""),  # type: ignore[attr-defined]
+                })
+
+            const_source = getattr(self.addon, 'constant_source_map', {}).get(folder, {})  # type: ignore[attr-defined]
+            for name, (file_path, line) in const_source.items():
+                result.append({
+                    "name": name,
+                    "type": "constant",
+                    "file": file_path,
+                    "line": line,
+                    "content": self.addon.constant_map.get(folder, {}).get(name, ""),  # type: ignore[attr-defined]
+                })
+
             return result
 
         return self.addon.includes.get(folder, [])

@@ -50,10 +50,15 @@ class Skin(addon.Addon):
         self.default_map = {}
         # folder -> {name -> str}
         self.constant_map = {}
+        # folder -> {name -> (file, line)} for jump-to-definition.
+        self.constant_source_map = {}
         # folder -> {name -> (Include, file_path)}
         self.variable_map = {}
         # folder -> {name -> str (already wrapped in [...])}
         self.expression_map = {}
+        # folder -> {name -> (file, line)} for jump-to-definition (expression_map
+        # only stores the value, not where it came from).
+        self.expression_source_map = {}
 
         # folder -> {include_name -> [{'params': {...}, 'file', 'line'}]}
         # for context-aware validation; built lazily.
@@ -354,10 +359,14 @@ class Skin(addon.Addon):
             self.default_map = {}
         if not hasattr(self, "constant_map"):
             self.constant_map = {}
+        if not hasattr(self, "constant_source_map"):
+            self.constant_source_map = {}
         if not hasattr(self, "variable_map"):
             self.variable_map = {}
         if not hasattr(self, "expression_map"):
             self.expression_map = {}
+        if not hasattr(self, "expression_source_map"):
+            self.expression_source_map = {}
 
         self.validation_index = None
 
@@ -372,8 +381,10 @@ class Skin(addon.Addon):
             self.include_map[folder] = {}
             self.default_map[folder] = {}
             self.constant_map[folder] = {}
+            self.constant_source_map[folder] = {}
             self.variable_map[folder] = {}
             self.expression_map[folder] = {}
+            self.expression_source_map[folder] = {}
 
             include_file = utils.check_paths(paths)
             if include_file:
@@ -411,10 +422,14 @@ class Skin(addon.Addon):
             self.default_map = {}
         if not hasattr(self, "constant_map"):
             self.constant_map = {}
+        if not hasattr(self, "constant_source_map"):
+            self.constant_source_map = {}
         if not hasattr(self, "variable_map"):
             self.variable_map = {}
         if not hasattr(self, "expression_map"):
             self.expression_map = {}
+        if not hasattr(self, "expression_source_map"):
+            self.expression_source_map = {}
 
         if not os.path.exists(xml_file):
             logger.info("Could not find include file %s", xml_file)
@@ -434,14 +449,18 @@ class Skin(addon.Addon):
             self.default_map[folder] = {}
         if folder not in self.constant_map:
             self.constant_map[folder] = {}
+        if folder not in self.constant_source_map:
+            self.constant_source_map[folder] = {}
         if folder not in self.variable_map:
             self.variable_map[folder] = {}
         if folder not in self.expression_map:
             self.expression_map[folder] = {}
+        if folder not in self.expression_source_map:
+            self.expression_source_map[folder] = {}
 
         self._load_defaults(root, folder, xml_file)
-        self._load_constants(root, folder)
-        self._load_expressions(root, folder)
+        self._load_constants(root, folder, xml_file)
+        self._load_expressions(root, folder, xml_file)
         self._load_variables(root, folder, xml_file)
         self._load_includes(root, folder, xml_file)
 
@@ -458,20 +477,24 @@ class Skin(addon.Addon):
             if control_type and node.find("*") is not None:
                 self.default_map[folder][control_type] = (node, xml_file)
 
-    def _load_constants(self, root, folder):
+    def _load_constants(self, root, folder, xml_file):
         """Index <constant name="X">value</constant> (CGUIIncludes::LoadConstants)."""
         for node in root.findall("constant"):
             name = node.attrib.get("name")
             if name and node.text:
                 self.constant_map[folder][name] = node.text.strip()
+                self.constant_source_map[folder][name] = (
+                    xml_file, node.sourceline if hasattr(node, 'sourceline') else 0)
 
-    def _load_expressions(self, root, folder):
+    def _load_expressions(self, root, folder, xml_file):
         """Index <expression name="X">cond</expression>, wrapped in [...] like Kodi
         does (GUIIncludes.cpp:119)."""
         for node in root.findall("expression"):
             name = node.attrib.get("name")
             if name and node.text:
                 self.expression_map[folder][name] = "[" + node.text.strip() + "]"
+                self.expression_source_map[folder][name] = (
+                    xml_file, node.sourceline if hasattr(node, 'sourceline') else 0)
 
     def _load_variables(self, root, folder, xml_file):
         """Index <variable name="X"> entries (CGUIIncludes::LoadVariables)."""
@@ -587,21 +610,23 @@ class Skin(addon.Addon):
             }
 
         if folder in self.constant_map and lookup_name in self.constant_map[folder]:
+            source = self.constant_source_map.get(folder, {}).get(lookup_name, (None, 0))
             return {
                 "name": lookup_name,
                 "type": "constant",
                 "content": self.constant_map[folder][lookup_name],
-                "file": None,
-                "line": 0
+                "file": source[0],
+                "line": source[1],
             }
 
         if folder in self.expression_map and lookup_name in self.expression_map[folder]:
+            source = self.expression_source_map.get(folder, {}).get(lookup_name, (None, 0))
             return {
                 "name": lookup_name,
                 "type": "expression",
                 "content": self.expression_map[folder][lookup_name],
-                "file": None,
-                "line": 0
+                "file": source[0],
+                "line": source[1],
             }
 
         return None

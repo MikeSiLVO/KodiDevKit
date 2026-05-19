@@ -1281,7 +1281,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             allow_code_wrap=True,
         )
 
-    def _is_definition_name_here(self, view, tag_names=("include", "variable")) -> bool:
+    def _is_definition_name_here(self, view, tag_names=("include", "variable", "constant", "expression")) -> bool:
         """True if the caret is inside an opening definition tag (`<include name="...">`).
 
         Used to suppress the tooltip on the definition itself (since the tooltip
@@ -1310,8 +1310,9 @@ class KodiDevKit(sublime_plugin.EventListener):
                 continue
 
             tag_text = text_lower[start:end]
-            # `name=` distinguishes definitions from usage-only references.
-            if "name=" in tag_text:
+            # Suppress only when caret is inside the opening tag of a definition;
+            # nested `$EXP[]` in the body still needs the popup.
+            if "name=" in tag_text and start <= offset <= end:
                 return True
 
         return False
@@ -1325,7 +1326,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         if window is None or not view.file_name():
             return
 
-        if self._is_definition_name_here(view, ("include", "variable")):
+        if self._is_definition_name_here(view, ("include", "variable", "constant", "expression")):
             return
 
         tooltip = self.get_tooltip(view)
