@@ -20,11 +20,13 @@ A Sublime Text 4 plugin for Kodi skin and addon development. Provides validation
 
 ## Installation
 
-Clone into your Sublime Text `Packages` folder:
+**Package Control** (recommended): Install Package Control if you don't have it, then open the Command Palette (`Ctrl+Shift+P`), select "Package Control: Install Package", and search for "KodiDevKit".
+
+**Manual**: Clone into your Sublime Text `Packages` folder:
 
 ```bash
 # Windows
-cd "~/AppData/Roaming/Sublime Text/Packages"
+cd "%APPDATA%/Sublime Text/Packages"
 
 # macOS
 cd "~/Library/Application Support/Sublime Text/Packages"
@@ -35,9 +37,7 @@ cd "~/.config/sublime-text/Packages"
 git clone https://github.com/MikeSiLVO/KodiDevKit.git
 ```
 
-Restart Sublime Text after cloning.
-
-*Note: The Package Control listing still points to the [original repository](https://github.com/phil65/KodiDevKit), which is no longer maintained. Install via git clone above to get the current version.*
+Restart Sublime Text after installing.
 
 ## License
 
