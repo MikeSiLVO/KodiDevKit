@@ -76,7 +76,7 @@ class ValidationVariable:
         """Resolve $PARAM[...] in variable names using parameter values."""
         return utils.resolve_param_in_name(var_name, param_context, self._resolution_cache)
 
-    def _get_all_parameter_contexts(self, var_name, var_file_path, folder):
+    def _get_all_parameter_contexts(self, folder):
         """Get all parameter contexts where a variable might be used."""
         return utils.get_all_parameter_contexts(self.addon, folder)
 
@@ -185,7 +185,7 @@ class ValidationVariable:
 
                 found_in_context = False
                 if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(raw_name, var_ref['file'], folder)
+                    contexts = self._get_all_parameter_contexts(folder)
 
                     found_in_context = False
                     for param_context in contexts:
@@ -224,7 +224,7 @@ class ValidationVariable:
                 referenced_var_names.add(ref_name)
 
                 if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(raw_name, var_ref['file'], folder)
+                    contexts = self._get_all_parameter_contexts(folder)
                     for param_context in contexts:
                         resolved_name = self._resolve_param_in_variable_name(raw_name, param_context)
                         if resolved_name:

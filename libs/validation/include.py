@@ -125,7 +125,7 @@ class ValidationInclude:
         """Resolve $PARAM[...] in include names using parameter values."""
         return utils.resolve_param_in_name(inc_name, param_context, self._resolution_cache)
 
-    def _get_all_parameter_contexts(self, inc_name, inc_file_path, folder):
+    def _get_all_parameter_contexts(self, folder):
         """Get all parameter contexts where an include might be used."""
         return utils.get_all_parameter_contexts(self.addon, folder)
 
@@ -336,7 +336,7 @@ class ValidationInclude:
 
                 found_in_context = False  # Initialize for type safety
                 if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(raw_name, inc_ref['file'], folder)
+                    contexts = self._get_all_parameter_contexts(folder)
 
                     found_in_context = False
                     for param_context in contexts:
@@ -378,7 +378,7 @@ class ValidationInclude:
                 referenced_include_names.add(ref_name)
 
                 if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(raw_name, inc_ref['file'], folder)
+                    contexts = self._get_all_parameter_contexts(folder)
                     for param_context in contexts:
                         resolved_name = self._resolve_param_in_include_name(raw_name, param_context)
                         if resolved_name:
