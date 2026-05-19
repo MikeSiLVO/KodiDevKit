@@ -10,6 +10,8 @@ import logging
 from typing import Dict, List, Generator, Optional, Tuple
 from lxml import etree as ET
 
+from .. import utils
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,8 +51,6 @@ class SkinResources:
             - colors_list: List of dicts with keys: name, line, content, file
             - color_labels_set: Set of color names for quick lookup
         """
-        from .. import utils
-
         colors = []
 
         if self.skin_path:
@@ -123,8 +123,6 @@ class SkinResources:
             - fonts_dict: Dict[folder -> list of font dicts]
             - font_file_path: Path to last processed font file (for compatibility)
         """
-        from .. import utils
-
         fonts = {}
         font_file = None
 
@@ -217,8 +215,6 @@ class SkinResources:
             Dict[folder -> list of font reference dicts] or None if error
             Each font ref dict has keys: file, name, line
         """
-        from .. import utils
-
         font_refs = {}
         for folder in self.xml_folders:
             font_refs[folder] = []

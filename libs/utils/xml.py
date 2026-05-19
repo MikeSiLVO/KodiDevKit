@@ -4,6 +4,7 @@ XML parsing and validation utilities for KodiDevKit.
 
 import os
 import re
+import time
 import logging
 from lxml import etree as ET
 from lxml.etree import XMLSyntaxError
@@ -213,8 +214,6 @@ def get_root_from_file(xml_file):
     when files are modified rapidly (within filesystem mtime granularity).
     This adds zero overhead since os.stat() returns both values.
     """
-    import time
-
     if not os.path.isfile(xml_file):
         # Truncate to avoid dumping entire XML strings into the log
         preview = repr(xml_file)[:80]
