@@ -1166,8 +1166,8 @@ class KodiDevKit(sublime_plugin.EventListener):
                 return color
 
         # Bare-name reference to a defined constant / expression / variable.
-        # Kodi auto-expands these in whitelisted nodes (e.g. <fadetime>Foo</fadetime>)
-        # without `$CONSTANT[]` syntax, so we surface their definitions on hover too.
+        # Constants resolve in whitelisted attribs/nodes (e.g. <fadetime>Foo</fadetime>)
+        # as bare names, so we surface their definitions on hover too.
         sel = selected_content.strip()
         if sel and re.match(r"^[A-Za-z_][\w\-]*$", sel):
             addon = getattr(INFOS, "addon", None)

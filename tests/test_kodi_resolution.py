@@ -65,7 +65,7 @@ class TestKodiResolutionOrder(unittest.TestCase):
     <constant name="ButtonWidth">200</constant>
     <include name="TestButton">
         <control type="button">
-            <width>$CONSTANT[ButtonWidth]</width>
+            <width>ButtonWidth</width>
         </control>
     </include>
 </includes>"""
@@ -129,54 +129,46 @@ class TestConstantWhitelist(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_constant_expands_in_whitelisted_attribute(self):
-        """Constants should expand in whitelisted attributes (GUIIncludes.cpp:391-410)."""
-        # 'width' is in CONSTANT_ATTRIBUTES whitelist
-        test_xml = """<control type="button" width="$CONSTANT[TestValue]" />"""
+        """Bare constant name resolves in a CONSTANT_ATTRIBUTES attrib (GUIIncludes.cpp:641-651)."""
+        test_xml = """<control type="button" width="TestValue" />"""
         root = ET.fromstring(test_xml)
 
         kodi_resolve(self.skin, root, "16x9")
 
-        self.assertEqual(root.attrib.get("width"), "100", "Constant should expand in whitelisted attribute")
+        self.assertEqual(root.attrib.get("width"), "100")
 
     def test_constant_expands_in_whitelisted_node(self):
-        """Constants should expand in whitelisted node text (GUIIncludes.cpp:391-410)."""
-        # 'width' is in CONSTANT_NODES whitelist
+        """Bare constant name resolves in a CONSTANT_NODES text."""
         test_xml = """<control type="button">
-    <width>$CONSTANT[TestValue]</width>
+    <width>TestValue</width>
 </control>"""
         root = ET.fromstring(test_xml)
 
         kodi_resolve(self.skin, root, "16x9")
 
         width_elem = root.find("width")
-        self.assertEqual(width_elem.text, "100", "Constant should expand in whitelisted node")
+        self.assertEqual(width_elem.text, "100")
 
     def test_constant_does_not_expand_in_non_whitelisted_attribute(self):
-        """Constants should NOT expand in non-whitelisted attributes (GUIIncludes.cpp:391-410)."""
-        # 'id' is NOT in CONSTANT_ATTRIBUTES whitelist
-        test_xml = """<control type="button" id="$CONSTANT[TestValue]" />"""
+        """`id` is not in CONSTANT_ATTRIBUTES, so the bare name stays."""
+        test_xml = """<control type="button" id="TestValue" />"""
         root = ET.fromstring(test_xml)
 
         kodi_resolve(self.skin, root, "16x9")
 
-        # Constant should remain unexpanded
-        self.assertEqual(root.attrib.get("id"), "$CONSTANT[TestValue]",
-                        "Constant should NOT expand in non-whitelisted attribute")
+        self.assertEqual(root.attrib.get("id"), "TestValue")
 
     def test_constant_does_not_expand_in_non_whitelisted_node(self):
-        """Constants should NOT expand in non-whitelisted node text (GUIIncludes.cpp:391-410)."""
-        # 'label' is NOT in CONSTANT_NODES whitelist
+        """`label` is not in CONSTANT_NODES, so the bare name stays."""
         test_xml = """<control type="button">
-    <label>$CONSTANT[TestValue]</label>
+    <label>TestValue</label>
 </control>"""
         root = ET.fromstring(test_xml)
 
         kodi_resolve(self.skin, root, "16x9")
 
         label_elem = root.find("label")
-        # Constant should remain unexpanded
-        self.assertEqual(label_elem.text, "$CONSTANT[TestValue]",
-                        "Constant should NOT expand in non-whitelisted node")
+        self.assertEqual(label_elem.text, "TestValue")
 
 
 class TestExpressionWrapping(unittest.TestCase):

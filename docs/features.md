@@ -35,7 +35,7 @@ Triggers automatically when typing in skin XML files. Provides completions for:
 | Includes | Include names from the current resolution folder |
 | Fonts | Font names from the current resolution folder |
 | Variables | Not in completions (use `$VAR[...]` syntax) |
-| Constants | Not in completions (use `$CONSTANT[...]` syntax) |
+| Constants | Not in completions (used as bare names in whitelisted attribs/nodes) |
 | Builtins | Kodi builtin functions with parameter placeholders |
 | Boolean conditions | Kodi condition expressions |
 | Window names | Kodi window identifiers |

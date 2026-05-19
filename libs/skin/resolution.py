@@ -1,9 +1,4 @@
-"""
-Include resolution engine matching Kodi's CGUIIncludes.cpp behavior.
-
-This module provides the IncludeResolver class that handles all XML resolution
-operations: defaults, constants, expressions, and includes with parameter substitution.
-"""
+"""Include / constant / expression / default resolver, mirroring CGUIIncludes."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -23,21 +18,14 @@ logger = logging.getLogger(__name__)
 class SkinResolution:
     """
     Resolves includes, constants, expressions, and defaults in Kodi skin XML.
-    
+
     Matches Kodi's CGUIIncludes resolution pipeline exactly.
     """
 
     def __init__(self, include_maps: SkinMaps, skin_path: str):
-        """
-        Initialize resolver with include maps.
-        
-        Args:
-            include_maps: SkinMaps instance containing all skin definitions
-            skin_path: Path to skin directory (for logging context)
-        """
         self.include_maps = include_maps
         self.skin_path = skin_path
-        
+
         self.include_map = include_maps.includes
         self.default_map = include_maps.defaults
         self.constant_map = include_maps.constants
@@ -125,10 +113,11 @@ class SkinResolution:
 
     def resolve_constants(self, node, folder: str):
         """
-        Resolve constants. Matches CGUIIncludes::ResolveConstants (GUIIncludes.cpp:391-410).
+        Resolve constants. Matches CGUIIncludes::ResolveConstants (GUIIncludes.cpp:320-342).
 
-        CRITICAL: Only expands in whitelisted attributes and nodes!
-        This is what Kodi does - constants are NOT expanded everywhere.
+        Whitelisted only: a node gets text-resolution iff its tag is in
+        SkinInclude.constant_nodes, else its attributes get value-resolution
+        for any name in SkinInclude.constant_attribs. Never both for one node.
         """
         if node is None:
             return
@@ -137,34 +126,28 @@ class SkinResolution:
         if not constants_for_folder:
             return
 
-
         if node.text and node.tag in SkinInclude.constant_nodes:
             node.text = self._resolve_constant_value(node.text, constants_for_folder)
-
-        for attr_name, attr_value in list(node.attrib.items()):
-            if attr_name in SkinInclude.constant_attribs:
-                node.attrib[attr_name] = self._resolve_constant_value(attr_value, constants_for_folder)
+        else:
+            for attr_name, attr_value in list(node.attrib.items()):
+                if attr_name in SkinInclude.constant_attribs:
+                    node.attrib[attr_name] = self._resolve_constant_value(attr_value, constants_for_folder)
 
     def _resolve_constant_value(self, value: str, constant_map: dict) -> str:
         """
-        Resolve constant references in a value. Matches CGUIIncludes::ResolveConstant.
+        Resolve bare constant names via comma-split lookup.
+        Matches CGUIIncludes::ResolveConstant (GUIIncludes.cpp:641-651).
 
-        Parses $CONSTANT[name] syntax and replaces with constant value.
-        Only resolves constants using explicit $CONSTANT[] syntax (Kodi spec).
+        Splits `value` by ',' then exact-matches each piece against
+        `constant_map` (no $ prefix, no whitespace trim, case-sensitive).
+        Matches are substituted verbatim, non-matches pass through. Pieces
+        are rejoined with ','. Substituted values are NOT re-scanned.
         """
         if not value:
             return value
-
-        pattern = re.compile(r'\$CONSTANT\[\s*([A-Za-z0-9_\-]+)\s*\]', re.IGNORECASE)
-
-        def replacer(match):
-            const_name = match.group(1)
-            if const_name in constant_map:
-                return constant_map[const_name]
-            return match.group(0)  # Return unchanged if not found
-
-        result = pattern.sub(replacer, value)
-        return result
+        pieces = value.split(",")
+        pieces = [constant_map.get(p, p) for p in pieces]
+        return ",".join(pieces)
 
     def resolve_expressions(self, node, folder: str):
         """
@@ -340,15 +323,8 @@ class SkinResolution:
 
 
     def _insert_nested(self, parent_node, include_node, inserted_node):
-        """
-        Insert call-site children at <nested /> marker locations.
-        Matches CGUIIncludes::InsertNested (GUIIncludes.cpp:471-504).
-
-        Args:
-            parent_node: The parent control containing the include call
-            include_node: The <include> element being expanded
-            inserted_node: The node just inserted from the include definition
-        """
+        """Insert call-site children at `<nested/>` markers
+        (CGUIIncludes::InsertNested, GUIIncludes.cpp:471-504)."""
         if inserted_node.tag == "nested":
             nested = inserted_node
             target = parent_node
@@ -369,15 +345,8 @@ class SkinResolution:
                 parent_node.remove(inserted_node)
 
     def _resolve_params_for_node(self, node, params: dict, include_node=None):
-        """
-        Resolve $PARAM[name] in node recursively.
-        Matches CGUIIncludes::ResolveParametersForNode (GUIIncludes.cpp:549-606).
-
-        Args:
-            node: Node to resolve params in
-            params: Parameter dictionary
-            include_node: Optional include call node (for undefined param detection)
-        """
+        """Recursively expand `$PARAM[]` in `node`'s attribs and text
+        (CGUIIncludes::ResolveParametersForNode, GUIIncludes.cpp:549-606)."""
         if node is None:
             return
 

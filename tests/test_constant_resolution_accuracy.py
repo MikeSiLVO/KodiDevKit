@@ -1,14 +1,9 @@
 """
-Tests for constant resolution accuracy matching Kodi behavior.
+Tests for constant resolution matching Kodi behavior.
 
-Tests the fix for incorrect constant resolution that was resolving bare
-constant names (skin.py:1241-1252). Kodi ONLY resolves constants using
-explicit $CONSTANT[] syntax, NOT bare names.
-
-Kodi behavior (GUIIncludes.cpp:391-410):
-- $CONSTANT[name] syntax: Resolves to constant value
-- Bare constant names: NOT resolved (left as-is)
-- Only resolves in whitelisted attributes and nodes
+Kodi resolves bare constant names (no $-prefix syntax) in whitelisted
+attribs/nodes via comma-split lookup. See GUIIncludes.cpp:139-153 (load),
+:320-342 (traversal), :641-651 (resolve algorithm).
 """
 
 import os
@@ -17,7 +12,6 @@ import tempfile
 import unittest
 from lxml import etree as ET
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -27,15 +21,13 @@ from tests.test_utils import kodi_resolve
 
 
 class TestConstantResolutionAccuracy(unittest.TestCase):
-    """Test that constant resolution matches Kodi's exact behavior."""
+    """Constant resolution matches CGUIIncludes::ResolveConstant (GUIIncludes.cpp:641-651)."""
 
     def setUp(self):
-        """Create temporary skin with constants."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.skin_path = self.temp_dir.name
         os.makedirs(os.path.join(self.skin_path, "16x9"))
 
-        # Create minimal addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test" provider-name="Test">
     <requires><import addon="xbmc.gui" version="5.15.0"/></requires>
@@ -46,7 +38,6 @@ class TestConstantResolutionAccuracy(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create Includes.xml with constants
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <constant name="ButtonWidth">200</constant>
@@ -61,177 +52,86 @@ class TestConstantResolutionAccuracy(unittest.TestCase):
         self.skin.update_include_list()
 
     def tearDown(self):
-        """Clean up temporary directory."""
         self.temp_dir.cleanup()
 
-    def test_explicit_constant_syntax_resolves(self):
-        """Test that $CONSTANT[name] syntax resolves correctly in whitelisted attribute."""
-        # 'width' is in constant_attribs whitelist
-        test_xml = """<control type="button" width="$CONSTANT[ButtonWidth]" />"""
-        root = ET.fromstring(test_xml)
-
-        kodi_resolve(self.skin,root, "16x9")
-
-        self.assertEqual(root.attrib.get("width"), "200",
-                        "$CONSTANT[ButtonWidth] should resolve to '200'")
-
-    def test_bare_constant_name_does_not_resolve(self):
-        """Test that bare constant names do NOT resolve (Kodi spec)."""
-        # Even though ButtonWidth is defined as constant, bare name should NOT resolve
+    def test_bare_name_resolves_in_whitelisted_attribute(self):
+        """Bare constant name resolves in a CONSTANT_ATTRIBUTES attrib."""
         test_xml = """<control type="button" width="ButtonWidth" />"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.attrib.get("width"), "200")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        # Should remain as-is (Kodi doesn't resolve bare names)
-        self.assertEqual(root.attrib.get("width"), "ButtonWidth",
-                        "Bare constant name should NOT resolve")
-
-    def test_comma_separated_bare_names_do_not_resolve(self):
-        """Test that comma-separated bare constant names do NOT resolve."""
-        # This was the buggy behavior we removed (lines 1241-1252)
-        test_xml = """<control type="button" width="ButtonWidth,ButtonHeight" />"""
-        root = ET.fromstring(test_xml)
-
-        kodi_resolve(self.skin,root, "16x9")
-
-        # Should remain unchanged
-        self.assertEqual(root.attrib.get("width"), "ButtonWidth,ButtonHeight",
-                        "Comma-separated bare names should NOT resolve")
-
-    def test_explicit_constant_in_node_text(self):
-        """Test $CONSTANT[] in whitelisted node text."""
-        # 'width' is in constant_nodes whitelist
-        test_xml = """<control type="button">
-    <width>$CONSTANT[ButtonWidth]</width>
-</control>"""
-        root = ET.fromstring(test_xml)
-
-        kodi_resolve(self.skin,root, "16x9")
-
-        width_elem = root.find("width")
-        self.assertEqual(width_elem.text, "200",
-                        "$CONSTANT[] in node text should resolve")
-
-    def test_bare_constant_in_node_text_does_not_resolve(self):
-        """Test bare constant name in whitelisted node does NOT resolve."""
+    def test_bare_name_resolves_in_whitelisted_node_text(self):
+        """Bare constant name resolves in a CONSTANT_NODES text."""
         test_xml = """<control type="button">
     <width>ButtonWidth</width>
 </control>"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.find("width").text, "200")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        width_elem = root.find("width")
-        self.assertEqual(width_elem.text, "ButtonWidth",
-                        "Bare constant in node should NOT resolve")
-
-    def test_constant_not_resolved_in_non_whitelisted_attribute(self):
-        """Test that constants don't resolve in non-whitelisted attributes."""
-        # 'id' is NOT in constant_attribs whitelist
-        test_xml = """<control type="button" id="$CONSTANT[ButtonWidth]" />"""
+    def test_bare_name_does_not_resolve_in_non_whitelisted_attribute(self):
+        """`id` is not in CONSTANT_ATTRIBUTES so the bare name stays."""
+        test_xml = """<control type="button" id="ButtonWidth" />"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.attrib.get("id"), "ButtonWidth")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        # Should remain unexpanded (id not whitelisted)
-        self.assertEqual(root.attrib.get("id"), "$CONSTANT[ButtonWidth]",
-                        "Constants should NOT expand in non-whitelisted attributes")
-
-    def test_constant_not_resolved_in_non_whitelisted_node(self):
-        """Test that constants don't resolve in non-whitelisted nodes."""
-        # 'label' is NOT in constant_nodes whitelist
+    def test_bare_name_does_not_resolve_in_non_whitelisted_node(self):
+        """`label` is not in CONSTANT_NODES so the bare name stays."""
         test_xml = """<control type="button">
-    <label>$CONSTANT[ButtonWidth]</label>
+    <label>ButtonWidth</label>
 </control>"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.find("label").text, "ButtonWidth")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        label_elem = root.find("label")
-        self.assertEqual(label_elem.text, "$CONSTANT[ButtonWidth]",
-                        "Constants should NOT expand in non-whitelisted nodes")
-
-    def test_multiple_constants_in_same_value(self):
-        """Test multiple $CONSTANT[] references in same value."""
-        # This is valid Kodi syntax
-        test_xml = """<control type="button" width="$CONSTANT[ButtonWidth]" height="$CONSTANT[ButtonHeight]" />"""
+    def test_comma_separated_pieces_each_lookup(self):
+        """Each comma-separated piece is resolved independently."""
+        # `border` is whitelisted; four-value border with constant pieces.
+        test_xml = """<control type="button" border="CommonPadding,CommonPadding,CommonPadding,CommonPadding" />"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.attrib.get("border"), "10,10,10,10")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        self.assertEqual(root.attrib.get("width"), "200")
-        self.assertEqual(root.attrib.get("height"), "50")
-
-    def test_undefined_constant_not_resolved(self):
-        """Test that undefined constants remain as-is."""
-        test_xml = """<control type="button" width="$CONSTANT[UndefinedConstant]" />"""
+    def test_mixed_known_and_unknown_pieces(self):
+        """Unknown pieces pass through unchanged; known pieces resolve."""
+        test_xml = """<control type="button" border="ButtonWidth,Unknown,ButtonHeight,Unknown" />"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.attrib.get("border"), "200,Unknown,50,Unknown")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        # Undefined constant should remain unchanged
-        self.assertEqual(root.attrib.get("width"), "$CONSTANT[UndefinedConstant]",
-                        "Undefined constant should remain unchanged")
-
-    def test_constant_with_whitespace(self):
-        """Test $CONSTANT[] with whitespace in name (should still work)."""
-        test_xml = """<control type="button" width="$CONSTANT[  ButtonWidth  ]" />"""
+    def test_undefined_name_stays(self):
+        """Names not in the constant map pass through unchanged."""
+        test_xml = """<control type="button" width="UndefinedConstant" />"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.attrib.get("width"), "UndefinedConstant")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        # Whitespace should be trimmed, constant should resolve
-        self.assertEqual(root.attrib.get("width"), "200",
-                        "Constant with whitespace should resolve")
-
-    def test_constant_case_insensitive(self):
-        """Test that $CONSTANT[] is case-insensitive."""
-        test_xml = """<control type="button" width="$constant[ButtonWidth]" />"""
+    def test_lookup_is_case_sensitive(self):
+        """`buttonwidth` does NOT match `ButtonWidth` (case-sensitive lookup)."""
+        test_xml = """<control type="button" width="buttonwidth" />"""
         root = ET.fromstring(test_xml)
+        kodi_resolve(self.skin, root, "16x9")
+        self.assertEqual(root.attrib.get("width"), "buttonwidth")
 
-        kodi_resolve(self.skin,root, "16x9")
-
-        self.assertEqual(root.attrib.get("width"), "200",
-                        "$constant (lowercase) should resolve")
-
-    def test_mixed_constant_and_text(self):
-        """Test constant mixed with other text."""
-        # Some attributes might have constants mixed with text
-        test_xml = """<control type="button" x="$CONSTANT[CommonPadding]" />"""
-        root = ET.fromstring(test_xml)
-
-        kodi_resolve(self.skin,root, "16x9")
-
-        # x is whitelisted, should resolve
-        self.assertEqual(root.attrib.get("x"), "10",
-                        "Constant in whitelisted attribute should resolve")
-
-    def test_nested_constants_not_supported(self):
-        """Test that nested constants are not resolved recursively."""
-        # Recreate skin with nested constant
+    def test_no_recursion_in_constant_values(self):
+        """Constant values are NOT re-scanned (no recursive expansion)."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <constant name="BaseWidth">100</constant>
-    <constant name="NestedWidth">$CONSTANT[BaseWidth]</constant>
+    <constant name="NestedWidth">BaseWidth</constant>
 </includes>"""
-        includes_path = os.path.join(self.skin_path, "16x9", "Includes.xml")
-        with open(includes_path, "w", encoding="utf-8") as f:
+        with open(os.path.join(self.skin_path, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
             f.write(includes_xml)
-
-        # Reload skin to pick up new constants
         skin = Skin(path=self.skin_path)
         skin.update_include_list()
 
-        test_xml = """<control type="button" width="$CONSTANT[NestedWidth]" />"""
+        test_xml = """<control type="button" width="NestedWidth" />"""
         root = ET.fromstring(test_xml)
-
         kodi_resolve(skin, root, "16x9")
-
-        # NestedWidth should expand to its literal value "$CONSTANT[BaseWidth]"
-        # Kodi doesn't recursively resolve constants in constant definitions
-        self.assertEqual(root.attrib.get("width"), "$CONSTANT[BaseWidth]",
-                        "Nested constants should not resolve recursively")
+        # NestedWidth -> "BaseWidth" verbatim; not re-scanned to "100".
+        self.assertEqual(root.attrib.get("width"), "BaseWidth")
 
 
 if __name__ == "__main__":
