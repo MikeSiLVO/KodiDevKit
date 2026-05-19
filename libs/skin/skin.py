@@ -342,7 +342,6 @@ class Skin(addon.Addon):
 
     def update_include_list(self):
         """Parse every Includes.xml and rebuild the five include maps."""
-        import time
         start_time = time.time()
         logger.debug("update_include_list START")
 
@@ -606,65 +605,6 @@ class Skin(addon.Addon):
             }
 
         return None
-
-    def _insert_nested(self, parent_node, include_node, inserted_node):
-        """Insert call-site children at <nested /> markers
-        (CGUIIncludes::InsertNested, GUIIncludes.cpp:471-504)."""
-        if inserted_node.tag == "nested":
-            nested = inserted_node
-            target = parent_node
-        else:
-            nested = inserted_node.find("nested")
-            target = inserted_node
-
-        if nested is not None:
-            for child in include_node:
-                if child.tag != "param":
-                    cloned = copy.deepcopy(child)
-                    insert_index = list(target).index(nested)
-                    target.insert(insert_index, cloned)
-
-            if nested != inserted_node:
-                target.remove(nested)
-            else:
-                parent_node.remove(inserted_node)
-
-    def _resolve_params_for_node(self, node, params, include_node=None):
-        """Recursively expand $PARAM[name] in `node`'s attribs and text
-        (CGUIIncludes::ResolveParametersForNode, GUIIncludes.cpp:549-606)."""
-        if node is None:
-            return
-
-        for attr_name, attr_value in list(node.attrib.items()):
-            resolved, status = utils.resolve_params_in_text(attr_value, params)
-
-            # <param value="$PARAM[undef]"/> is dropped entirely (GUIIncludes.cpp:559-568)
-            if (status == "SINGLE_UNDEFINED" and
-                node.tag == "param" and
-                attr_name == "value" and
-                node.getparent() is not None and
-                node.getparent().tag == "include"):
-                node.getparent().remove(node)
-                return
-
-            node.attrib[attr_name] = resolved
-
-        if node.text:
-            resolved, status = utils.resolve_params_in_text(node.text, params)
-
-            # <param>$PARAM[undef]</param> is dropped entirely (GUIIncludes.cpp:580-586)
-            if (status == "SINGLE_UNDEFINED" and
-                node.tag == "param" and
-                node.getparent() is not None and
-                node.getparent().tag == "include"):
-                node.getparent().remove(node)
-                return
-
-            node.text = resolved
-
-        # Snapshot children before recursing — recursion may remove them.
-        for child in list(node):
-            self._resolve_params_for_node(child, params, include_node)
 
     def get_expanded_root(self, path, folder):
         """Parse `path` and apply Kodi's resolve pipeline (uncached).
