@@ -613,7 +613,7 @@ class TestNestedIncludes(unittest.TestCase):
             f.write(includes_xml)
 
         # Initialize skin
-        skin = Skin(project_path=self.test_dir, settings={})
+        skin = Skin(path=self.test_dir, settings={})
 
         # Create XML with include reference
         xml = ET.fromstring("""<window>
