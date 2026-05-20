@@ -1,7 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-"""
+"""Remote-action commands: ADB-based push/pull to a running Kodi device."""
 
 from __future__ import annotations
 
@@ -15,16 +12,12 @@ SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 
 def plugin_loaded():
-    """
-    gets called when plugin is ready
-    """
+    """gets called when plugin is ready"""
     REMOTE.setup(sublime.load_settings(SETTINGS_FILE))
 
 
 class KodidevkitRemoteActionsCommand(sublime_plugin.WindowCommand):
-    """
-    Menu with all options related to ADB
-    """
+    """Menu with all options related to ADB"""
 
     settings: sublime.Settings
 
@@ -32,9 +25,7 @@ class KodidevkitRemoteActionsCommand(sublime_plugin.WindowCommand):
         super().__init__(*args, **kwargs)
 
     def run(self):
-        """
-        Show quick panel with all possible actions
-        """
+        """Show quick panel with all possible actions"""
         self.settings = sublime.load_settings(SETTINGS_FILE)
         active_device = "Set device: %s" % self.settings.get("remote_ip", "")
         listitems = [active_device, "Reconnect", "Send this add-on",
@@ -44,9 +35,7 @@ class KodidevkitRemoteActionsCommand(sublime_plugin.WindowCommand):
                                      selected_index=0)
 
     def on_done(self, index):
-        """
-        callback for menu items, gets called with *index of selected items
-        """
+        """callback for menu items, gets called with `index` of selected items"""
         if index == -1:
             return None
         elif index == 0:
@@ -76,15 +65,11 @@ class KodidevkitRemoteActionsCommand(sublime_plugin.WindowCommand):
             REMOTE.reboot()
 
     def open_file(self, path):
-        """
-        used as callback, opens file with *path
-        """
+        """used as callback, opens file with `path`"""
         self.window.open_file(path)
 
     def set_ip(self, ip):
-        """
-        set and save ip of adb device, return to actions menu when finished
-        """
+        """set and save ip of adb device, return to actions menu when finished"""
         self.settings.set("remote_ip", ip)
         sublime.save_settings(SETTINGS_FILE)
         self.window.run_command("kodidevkit_remote_actions")

@@ -1,6 +1,4 @@
-"""
-Navigation and jump-to-definition mixin for InfoProvider.
-"""
+"""Navigation and jump-to-definition mixin for InfoProvider."""
 
 from __future__ import annotations
 
@@ -26,9 +24,7 @@ class NavigationMixin:
         def get_po_files(self) -> list: ...
 
     def go_to_tag(self, keyword, folder):
-        """
-        Jump to a definition by ref name or label id.
-        """
+        """Jump to a definition by ref name or label id."""
         if not self.addon or not keyword:
             return False
         kw = str(keyword).strip()
@@ -83,10 +79,9 @@ class NavigationMixin:
         return False
 
     def _get_includes_for_folder(self, folder):
-        """
-        Get includes for a folder, supporting both legacy and new 5-map structure.
-        Returns a list of include-like dicts for iteration.
-        Works with both Skin (5 maps) and Addon (legacy) instances.
+        """Get includes for a folder as a list of include-like dicts.
+
+        Works with both Skin (5-map structure) and Addon (flat list).
         """
         if not self.addon:
             return []

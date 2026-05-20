@@ -1,6 +1,4 @@
-"""
-PO file (gettext translation) utilities for KodiDevKit.
-"""
+"""PO file (gettext translation) utilities for KodiDevKit."""
 
 import time
 import logging
@@ -22,9 +20,7 @@ def get_po_file(po_file_path):
 
 
 def create_new_po_file(path=None):
-    """
-    creates a new pofile and returns it (doesnt save yet)
-    """
+    """creates a new pofile and returns it (doesnt save yet)"""
     po_file = polib.POFile(fpath=path)
     mail = ""
     actual_date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -43,7 +39,7 @@ def create_new_po_file(path=None):
 
 
 def convert_xml_to_po(path):
-    """ convert language xmls inside *path to .po files """
+    """convert language xmls inside `path` to .po files"""
     # Import here to avoid circular dependency
     from ..utils.xml import get_root_from_file
 

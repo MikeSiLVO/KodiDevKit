@@ -1,6 +1,4 @@
-"""
-Validation and check orchestration mixin for InfoProvider.
-"""
+"""Validation and check orchestration mixin for InfoProvider."""
 
 from __future__ import annotations
 
@@ -54,17 +52,12 @@ class CheckerMixin:
         return [{"message": f"No {kind} issues found", "file": "", "line": 0}]
 
     def resolve_xml(self, path_or_root, *, folder=None, strict=False):
-        """
-        Return XML root with includes, constants, expressions, and defaults resolved.
-        Uses Kodi-aligned kodi_resolve() method for accurate window-based resolution.
+        """Return a resolved copy of `path_or_root` (path or lxml root).
 
-        Args:
-            path_or_root: File path (str) or parsed root (lxml.Element)
-            folder: Override include folder; auto-detect from path or addon default
-            strict: Raise on parse errors when True, else return original root
-
-        Returns:
-            Resolved lxml.Element tree (deep copy with all transformations applied)
+        Applies Kodi's pipeline (defaults -> constants -> expressions -> includes
+        -> recurse). `folder` overrides the auto-detected include folder. With
+        `strict=True`, parse failures raise; otherwise the original tree is
+        returned so callers can still display something.
         """
         from ..skin import Skin
 
@@ -88,23 +81,17 @@ class CheckerMixin:
             f = next(iter(self.addon.xml_folders), None)
 
         if not f:
-            # No folder context → nothing to expand
             return root
 
-        # 3) Get Skin instance (with 5-map structure for Kodi-aligned resolution)
         sk = getattr(self, "addon", None)
         if not sk or not isinstance(sk, Skin):
-            # Non-Skin addon or no addon - cannot resolve includes
             return root
 
         try:
             # Make deep copy to avoid modifying cached/original tree
             # (kodi_resolve modifies tree in-place per Kodi's CGUIIncludes::Resolve)
             resolved_root = copy.deepcopy(root)
-
-            # Apply Kodi-exact resolution: defaults → constants → expressions → includes → recurse
             sk.resolver.resolve(resolved_root, f)
-
             return resolved_root
         except Exception:
             if strict:
@@ -113,13 +100,10 @@ class CheckerMixin:
             return root
 
     def get_check_listitems(self, check_type, progress_callback=None):
-        """
-        Dispatch skin checks by type and return a list of rows:
-        {"message": str, "file": str, "line": int}
+        """Run the named check and return rows of {"message", "file", "line"}.
 
-        Args:
-            check_type: Type of check to run
-            progress_callback: Optional callback for progress updates (for checks that support it)
+        Filters out issues from runtime-generated includes (e.g. those
+        produced by script.skinvariables).
         """
         checks_with_progress = {
             "general": lambda: self.check_values(progress_callback=progress_callback),
@@ -159,16 +143,7 @@ class CheckerMixin:
         return filtered_rows
 
     def get_validation_index(self, progress_callback=None):
-        """
-        Get or build the validation index.
-        The index is built once and cached for performance.
-
-        Args:
-            progress_callback: Optional callback function(message: str) for progress updates
-
-        Returns:
-            dict: Validation index with fonts, labels, IDs, etc.
-        """
+        """Return the cached validation index, building it on first access."""
         if not self.addon:
             return None
 
@@ -200,11 +175,7 @@ class CheckerMixin:
         return checker.check(progress_callback=progress_callback)
 
     def check_fonts(self, progress_callback=None):
-        """Validate fonts declared by the current skin.
-
-        Args:
-            progress_callback: Optional callback function(message: str) for progress updates
-        """
+        """Validate fonts declared by the current skin."""
         if not self.addon:
             return self._no_issues("font")
 
@@ -216,11 +187,7 @@ class CheckerMixin:
         return checker.check(progress_callback=progress_callback)
 
     def check_ids(self, progress_callback=None):
-        """Check undefined or invalid control/window IDs.
-
-        Args:
-            progress_callback: Optional callback function(message: str) for progress updates
-        """
+        """Check undefined or invalid control/window IDs."""
         if not self.addon:
             return self._no_issues("id")
 
@@ -232,11 +199,7 @@ class CheckerMixin:
         return checker.check(progress_callback=progress_callback)
 
     def check_labels(self, progress_callback=None):
-        """Find untranslated/undefined labels.
-
-        Args:
-            progress_callback: Optional callback function(message: str) for progress updates
-        """
+        """Find untranslated/undefined labels."""
         if not self.addon:
             return self._no_issues("label")
 
@@ -266,9 +229,6 @@ class CheckerMixin:
         """
         Apply check_file to all XML files in the addon.
         Validates what the skin author actually wrote (unexpanded source).
-
-        Args:
-            progress_callback: Optional function to call with progress updates (message: str)
         """
         if not self.addon:
             return []
@@ -349,19 +309,10 @@ class CheckerMixin:
         return True
 
     def _validate_variable_values(self, listitems, node, var_text, value_type, folder, tag_name=None):
-        """
-        Validate that all values in a variable definition match the expected type.
+        """Check that every <value> inside a `$VAR[...]` definition matches `value_type`.
 
-        Args:
-            listitems: List to add issues to
-            node: XML node where variable is used
-            var_text: Text containing variable reference (e.g., "$VAR[HighlightColor]")
-            value_type: Expected type (e.g., "color", "int", "enum_name")
-            folder: XML folder for include lookup
-            tag_name: Name of tag or attribute where variable is used (for error messages)
-
-        Returns:
-            True if all values are valid or validation skipped, False if any invalid
+        Returns True if all values are valid (or validation was skipped),
+        False as soon as any value fails. Issues are appended to `listitems`.
         """
         var_name = utils.extract_variable_name(var_text)
         if not var_name:
@@ -522,7 +473,7 @@ class CheckerMixin:
             )
 
         # When interpreter handles resolved tree, skip value checks here to avoid
-        # false positives from $PARAM/$VAR/$CONST in unresolved XML
+        # false positives from $PARAM/$VAR placeholders or bare constant names in unresolved XML
         skip_value_checks = self._can_resolve()
 
         seen_singletons = {}
@@ -595,8 +546,8 @@ class CheckerMixin:
                     else:
                         seen.add(tag_low)
 
-            # Attribute checks — structural (invalid name) always runs,
-            # value checks gated by skip_value_checks
+            # Attribute name checks always run; value checks defer to the
+            # resolved pass when `skip_value_checks` is set.
             for k, v in subnode.attrib.items():
                 if k == "description":
                     continue
@@ -637,7 +588,7 @@ class CheckerMixin:
         if self._can_resolve():
             resolved_issues = self._check_file_resolved(root, path, folder)
             if resolved_issues:
-                # Deduplicate by (line, message) — raw pass issues take priority
+                # Source-pass issues take priority on collision.
                 seen = {(item["line"], item["message"]) for item in listitems}
                 for item in resolved_issues:
                     key = (item["line"], item["message"])

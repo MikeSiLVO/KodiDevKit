@@ -1,8 +1,4 @@
-"""
-Texture packing utilities for Kodi skins.
-
-This module provides functionality to run TexturePacker on skin media directories.
-"""
+"""Texture packing utilities: runs TexturePacker on skin media directories."""
 
 import os
 import subprocess
@@ -15,17 +11,7 @@ logger.propagate = True
 
 
 def texturepacker(media_path, settings, xbt_filename="Textures.xbt"):
-    """
-    Run TexturePacker on media_path.
-
-    Args:
-        media_path: Path to media directory containing skin images
-        settings: Settings object with texturepacker_path configuration
-        xbt_filename: Output XBT filename (default: "Textures.xbt")
-
-    Returns:
-        None
-    """
+    """Run TexturePacker on `media_path`, writing the output to `xbt_filename` there."""
     tp_path = settings.get("texturepacker_path")
     if not tp_path:
         return None

@@ -1,6 +1,4 @@
-"""
-InfoProvider facade class — combines all mixins into a single public API.
-"""
+"""InfoProvider facade class: combines all mixins into a single public API."""
 
 from __future__ import annotations
 

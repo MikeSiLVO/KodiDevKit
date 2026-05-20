@@ -1,6 +1,4 @@
-"""
-HTML report generator for KodiDevKit validation results.
-"""
+"""HTML report generator for validation results."""
 
 import os
 import html
@@ -100,19 +98,10 @@ def _classify_subtype(message: str) -> str:
 
 
 def generate_html_report(all_issues, skin_name, skin_path, output_path=None, server_port=48273, progress_callback=None):
-    """
-    Generate a comprehensive HTML report of all validation issues.
+    """Render `all_issues` to an HTML report and return its path.
 
-    Args:
-        all_issues: Dict with check names as keys and lists of issues as values
-        skin_name: Name of the skin being checked
-        skin_path: Path to the skin directory
-        output_path: Optional path to save the report (default: skin_path/validation_report.html)
-        server_port: Port number for the local HTTP server (default: 48273)
-        progress_callback: Optional callback function(message: str) for progress updates
-
-    Returns:
-        Path to the generated HTML file
+    `all_issues` is keyed by check name (Variables/Includes/...).
+    Defaults output to `<skin_path>/validation_report.html`.
     """
     if output_path is None:
         output_path = os.path.join(skin_path, "validation_report.html")

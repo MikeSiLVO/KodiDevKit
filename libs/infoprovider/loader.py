@@ -1,6 +1,4 @@
-"""
-Data loading and initialization mixin for InfoProvider.
-"""
+"""Data loading and initialization mixin for InfoProvider."""
 
 from __future__ import annotations
 
@@ -36,9 +34,7 @@ class LoaderMixin:
     _fatal_xml_error: str | None
 
     def load_data(self, kodi_version="omega"):
-        """
-        Load control templates (controls.xml) and builtins/conditions (data.xml).
-        """
+        """Load control templates (controls.xml) and builtins/conditions (data.xml)."""
         try:
             import sublime  # packaged load via Sublime API
 
@@ -162,9 +158,6 @@ class LoaderMixin:
                 return
 
     def load_settings(self, settings):
-        """
-        Load settings file.
-        """
         self.settings = settings
         self.kodi_path = settings.get("kodi_path")
         logger.info("kodi path: %s", self.kodi_path)

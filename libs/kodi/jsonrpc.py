@@ -211,7 +211,7 @@ class KodiJsonrpc:
     def load_settings(self, settings, force: bool = False):
         """Apply `settings`; rebuild url/paths and re-sync the log level.
 
-        Idempotent — returns immediately if already loaded unless `force=True`.
+        Idempotent: returns immediately if already loaded unless `force=True`.
         """
         if getattr(self, "_settings_loaded", False) and not force:
             return
@@ -256,7 +256,7 @@ class KodiJsonrpc:
         folders = self.settings.get("language_folders", ["resource.language.en_gb", "English"])
 
         # Always include en_gb when scanning core addons, even if the user's
-        # language settings don't list it — core has English regardless.
+        # language settings don't list it; core has English regardless.
         if folder == self.core_addons_path:
             scan_folders = list(dict.fromkeys(folders + ["resource.language.en_gb"]))
         else:

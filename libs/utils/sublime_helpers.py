@@ -1,6 +1,4 @@
-"""
-Sublime Text specific helper utilities for KodiDevKit.
-"""
+"""Sublime Text specific helper utilities for KodiDevKit."""
 
 import json
 import logging
@@ -12,18 +10,14 @@ logger.propagate = True
 
 
 def find_word(view):
-    """
-    return selected text or surrounding text for first selection
-    """
+    """return selected text or surrounding text for first selection"""
     for region in view.sel():
         word = view.word(region) if region.begin() == region.end() else region
         return view.substr(word) if not word.empty() else ""
 
 
 def get_node_content(view, flags):
-    """
-    return surrounding text for for first selection
-    """
+    """return surrounding text for first selection"""
     for region in view.sel():
         try:
             bracket_region = view.expand_by_class(region, flags, '<>"[]')
@@ -33,9 +27,7 @@ def get_node_content(view, flags):
 
 
 def jump_to_label_declaration(view, label_id):
-    """
-    prints properly formatted output for json objects
-    """
+    """Insert `label_id` at the cursor and hide the popup (callback for label tooltip links)."""
     view.run_command("insert", {"characters": label_id})
     # hide only our tooltip
     try:

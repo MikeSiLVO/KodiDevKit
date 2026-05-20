@@ -1,8 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-Image validation for Kodi skins.
-"""
+"""Image validation for Kodi skins."""
 
 from __future__ import annotations
 
@@ -16,11 +12,6 @@ class ValidationImage:
     """Validates image references used by Kodi skins."""
 
     def __init__(self, addon, validation_index=None):
-        """
-        Args:
-            addon: Addon/Skin instance with xml_folders, path
-            validation_index: Pre-built validation index with image_files_checked
-        """
         self.addon = addon
         self._validation_index = validation_index
 

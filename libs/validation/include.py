@@ -1,8 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-Include validation for Kodi skins.
-"""
+"""Include validation for Kodi skins."""
 
 import os
 import re
@@ -26,22 +22,13 @@ class ValidationInclude:
     """Validates include definitions and usage in Kodi skins."""
 
     def __init__(self, addon):
-        """
-        Args:
-            addon: Addon/Skin instance with xml_folders, path, window_files, includes, include_files
-        """
         self.addon = addon
         self.runtime_addons = self._detect_runtime_addons()
         # Cache for parameter resolution: (include_name, frozenset(params)) -> resolved_name
         self._resolution_cache = {}
 
     def _detect_runtime_addons(self):
-        """
-        Parse addon.xml to detect runtime content generation addons.
-
-        Returns:
-            set: Set of addon IDs that generate runtime content (e.g., {'script.skinvariables'})
-        """
+        """Set of addon IDs in addon.xml that generate runtime content (skinvariables / skinshortcuts)."""
         if not self.addon:
             return set()
 
@@ -67,15 +54,7 @@ class ValidationInclude:
             return set()
 
     def _is_runtime_include(self, include_name):
-        """
-        Check if an include name matches runtime-generated patterns.
-
-        Args:
-            include_name: Name of the include to check
-
-        Returns:
-            bool: True if include appears to be runtime-generated
-        """
+        """True if `include_name` matches a runtime-generated name pattern."""
         if not include_name:
             return False
 
@@ -87,19 +66,11 @@ class ValidationInclude:
         return False
 
     def _resolve_include_name_kodi_style(self, name, params=None):
-        """
-        Resolve $PARAM references in include name using Kodi's approach.
+        """Resolve $PARAM references in an include name using Kodi's rules.
 
         Kodi replaces undefined params with empty strings (GUIIncludes.cpp:628).
-        Example: "Dialog_Background_Blur$PARAM[dialog_size]" with dialog_size undefined
-                 becomes "Dialog_Background_Blur" (param replaced with "")
-
-        Args:
-            name: Include name that may contain $PARAM references
-            params: Dict of available parameters (or None)
-
-        Returns:
-            Resolved include name with undefined params replaced by empty strings
+        Example: "Dialog_Background_Blur$PARAM[dialog_size]" with dialog_size
+        undefined becomes "Dialog_Background_Blur".
         """
         if not name or "$PARAM[" not in name:
             return name

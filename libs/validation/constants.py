@@ -1,9 +1,4 @@
-"""
-Constants and data tables for Kodi skin validation.
-
-Extracted from infoprovider.py as part of Phase 2 refactoring.
-Contains control tag definitions, allowed values, and validation rules.
-"""
+"""Constants and data tables for Kodi skin validation: control tags, allowed values, validation rules."""
 
 from __future__ import annotations
 from lxml import etree as ET

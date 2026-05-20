@@ -1,4 +1,4 @@
-"""KodiDevKit Sublime Text plugin — entry point and event handlers."""
+"""KodiDevKit Sublime Text plugin: entry point and event handlers."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ VISIBLE_TAGS = {"visible", "enable", "usealttexture", "expression", "autoscroll"
 # Attributes on VISIBLE_TAGS that should not be evaluated as conditions
 VISIBLE_TAG_ATTRIBUTES = {"allowhiddenfocus", "delay", "time", "repeat"}
 
-# mdpopups CSS — fixed dark background so syntax colors pop regardless of theme
+# mdpopups CSS: fixed dark background so syntax colors pop regardless of theme
 POPUP_CSS = """
 html, body {
     background-color: #1B2530;
@@ -462,7 +462,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
     @staticmethod
     def _on_phantom_navigate(href, view):
-        """Phantom link handler — dismiss the phantoms or jump to the next issue line."""
+        """Phantom link handler: dismiss the phantoms or jump to the next issue line."""
         view_id = view.id()
 
         if href == "hide":
@@ -1563,7 +1563,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
             self.root = utils.get_root_from_file(filename_full)
             if self.root is None:
-                # Parse failed — surface the parse error inline as an error phantom.
+                # Parse failed: surface the parse error inline as an error phantom.
                 if last_xml_errors:
                     err = last_xml_errors[0]
                     issues = [{

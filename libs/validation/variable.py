@@ -1,8 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-Variable validation for Kodi skins.
-"""
+"""Variable validation for Kodi skins."""
 
 import os
 import re
@@ -14,32 +10,19 @@ logger = logging.getLogger(__name__)
 
 
 def strip_xml_comments(content):
-    """
-    Remove XML comments from content.
-
-    Args:
-        content: String containing XML content
-
-    Returns:
-        Content with all XML comments (<!-- ... -->) removed
-    """
+    """Remove all `<!-- ... -->` comments from `content`."""
     return re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
 
 
 def extract_variable_name_with_nested_brackets(match_text):
-    r"""
-    Extract variable name from $VAR[...] handling nested brackets like $PARAM[...].
+    r"""Extract variable name from `$VAR[...]`, handling nested brackets (e.g. `$PARAM[...]` inside).
 
-    The simple regex r"\$VAR\[(.*?)\]" fails for nested brackets:
-    - Input: $VAR[Label_Title_C$PARAM[id]3]
-    - Broken regex captures: Label_Title_C$PARAM[id (stops at first ])
-    - This function captures: Label_Title_C$PARAM[id]3 (handles nesting)
+    The simple regex `\$VAR\[(.*?)\]` fails for nested brackets:
+    - Input: `$VAR[Label_Title_C$PARAM[id]3]`
+    - Broken regex captures: `Label_Title_C$PARAM[id` (stops at first `]`)
+    - This function captures: `Label_Title_C$PARAM[id]3`
 
-    Args:
-        match_text: String starting with "$VAR[" or "$ESCVAR["
-
-    Returns:
-        Variable name with balanced brackets, or empty string if malformed
+    Returns an empty string if no matching closing bracket is found.
     """
     # Find the start position after $VAR[ or $ESCVAR[
     start_pos = match_text.find('[')
@@ -64,10 +47,6 @@ class ValidationVariable:
     """Validates variable definitions and usage in Kodi skins."""
 
     def __init__(self, addon):
-        """
-        Args:
-            addon: Addon/Skin instance with xml_folders, path, window_files, includes
-        """
         self.addon = addon
         # Cache for parameter resolution: (var_name, frozenset(params)) -> resolved_name
         self._resolution_cache = {}

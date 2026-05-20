@@ -1,6 +1,4 @@
-"""
-File operation utilities for KodiDevKit.
-"""
+"""File operation utilities for KodiDevKit."""
 
 from __future__ import annotations
 
@@ -85,7 +83,7 @@ def eol_info_from_path_patterns(
 
 def save_xml(filename: str, root, tab_width: int = 4) -> None:
     """
-    Save XML node *root to file *filename.
+    Save XML node `root` to file `filename`.
     Uses lxml pretty_print, then converts leading spaces to tabs.
     """
 

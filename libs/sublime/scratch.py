@@ -1,9 +1,4 @@
-"""
-Progress scratch view helper for long-running operations.
-
-Provides a reusable scratch view that shows real-time progress updates
-for validation, report generation, and other lengthy operations.
-"""
+"""Progress scratch views for long-running validation and reporting tasks."""
 
 import re
 import sublime
@@ -25,14 +20,7 @@ class ProgressScratchView:
     """
 
     def __init__(self, window, title, icon="📊"):
-        """
-        Create and display a progress scratch view.
-
-        Args:
-            window: Sublime window to create view in
-            title: Title for the scratch view tab
-            icon: Optional emoji icon for the tab name
-        """
+        """Create the scratch view in `window` with `title` and tab `icon`."""
         self.window = window
         self.title = title
         self.icon = icon
@@ -53,12 +41,7 @@ class ProgressScratchView:
             sublime.set_timeout(create, 0)
 
     def update(self, message):
-        """
-        Add a progress message to the view (thread-safe).
-
-        Args:
-            message: Progress message to append
-        """
+        """Append a progress line to the view (thread-safe)."""
         def append_message():
             if self._view and self._view.is_valid():
                 self._view.set_read_only(False)
@@ -69,12 +52,7 @@ class ProgressScratchView:
         sublime.set_timeout(append_message, 0)
 
     def replace_content(self, content):
-        """
-        Replace entire view content (for in-place updates).
-
-        Args:
-            content: New content to display
-        """
+        """Replace the entire view contents (for in-place redraws)."""
         def replace():
             if self._view and self._view.is_valid():
                 self._view.set_read_only(False)
@@ -94,14 +72,7 @@ class ProgressScratchView:
         sublime.set_timeout(close_view, 0)
 
     def finalize(self, message, close=False):
-        """
-        Show final message and optionally close the view.
-
-        Args:
-            message: Final status message
-            close: If True, close the view after showing message
-                   If False, keep view open with message
-        """
+        """Show the final `message`; close the view after a short delay if `close` is True."""
         self.update(message)
 
         if close:
@@ -116,20 +87,10 @@ class ProgressScratchView:
 
 
 class ValidationProgressView(ProgressScratchView):
-    """
-    Specialized progress view for validation operations.
-
-    Provides helpers for common validation progress patterns.
-    """
+    """Validation-specific progress view with a spinner and progress bar."""
 
     def __init__(self, window, check_type):
-        """
-        Create validation progress view.
-
-        Args:
-            window: Sublime window
-            check_type: Type of validation (general, font, label, etc.)
-        """
+        """`check_type` is shown in the tab title (e.g. 'general', 'font')."""
         super().__init__(window, f"Validation Progress - {check_type}", icon="🔍")
         self.check_type = check_type
         self._created_at = time.time()
@@ -140,14 +101,7 @@ class ValidationProgressView(ProgressScratchView):
         self._current_progress = None  # Store current progress state for animation
 
     def show_file_progress(self, filename, current, total):
-        """
-        Show progress for file-based validation (in-place update).
-
-        Args:
-            filename: Name of file being checked
-            current: Current file number (1-indexed)
-            total: Total number of files
-        """
+        """Render progress for file-by-file validation (e.g. 'File 12 of 50')."""
         self._current_progress = ('file', filename, current, total)
 
         if self._animation_timer is None:
@@ -156,12 +110,7 @@ class ValidationProgressView(ProgressScratchView):
         self._update_display()
 
     def update(self, message):
-        """
-        Override update to support animated message-based progress.
-
-        Args:
-            message: Progress message to display
-        """
+        """Show `message` with the animated spinner."""
         self._current_progress = ('message', message)
 
         if self._animation_timer is None:
@@ -240,16 +189,11 @@ class ValidationProgressView(ProgressScratchView):
         sublime.set_timeout(self._animate_spinner, 200)
 
     def show_completion(self, issue_count, close_on_issues=True):
-        """
-        Show fancy completion screen with Enter-to-close.
+        """Render the completion screen.
 
-        Args:
-            issue_count: Number of issues found
-            close_on_issues: If True, auto-close after showing completion
-                           If False, keep view open
-
-        Returns:
-            int: Delay in milliseconds before view will close (useful for timing quick panel)
+        If `close_on_issues` is True, the view auto-closes after a short
+        delay (longer when issues were found, so the user has time to read).
+        Returns the delay in ms, useful for timing a follow-up quick panel.
         """
         self._animation_timer = None
         self._current_progress = None
@@ -285,17 +229,7 @@ class ValidationProgressView(ProgressScratchView):
         return close_delay
 
     def _show_fancy_completion(self, status, result, footer, icon, auto_close=True, close_delay=300):
-        """
-        Display styled completion screen.
-
-        Args:
-            status: Status header text
-            result: Result message
-            footer: Footer text (instruction or status)
-            icon: Emoji icon
-            auto_close: If True, close view after delay
-            close_delay: Milliseconds to wait before closing
-        """
+        """Render the styled completion box and optionally auto-close after `close_delay` ms."""
         content = f"""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
@@ -327,25 +261,19 @@ class ValidationProgressView(ProgressScratchView):
 
 
 class ReportProgressView(ProgressScratchView):
-    """
-    Specialized progress view for report generation with progress bar.
-
-    Displays a visual progress bar and step-by-step status updates.
-    Automatically animates dots when a step takes more than 2 seconds.
-    """
+    """Progress view for report generation: progress bar, step count, animated spinner."""
 
     def __init__(self, window):
-        """Create report generation progress view."""
         super().__init__(window, "Generating Validation Report", icon="⚙")
         self._current_step = 0
         self._total_steps = 0
         self._last_update_time = 0
         self._min_update_interval = 0.1  # Minimum 100ms between UI updates (prevent spam)
         self._pending_message = None
-        self._base_message = ""  # Current message
+        self._base_message = ""
         self._spinner_cycle = 0  # Cycles through spinner frames continuously
-        self._spinner_frames = ['|', '/', '-', '\\']  # Classic spinner animation
-        self._animation_timer = None  # Timer handle for animation
+        self._spinner_frames = ['|', '/', '-', '\\']
+        self._animation_timer = None
 
     def set_total_steps(self, total):
         """Set total number of steps for progress bar."""
@@ -353,13 +281,7 @@ class ReportProgressView(ProgressScratchView):
         self._current_step = 0
 
     def update_step(self, step, message):
-        """
-        Update progress with step number and message (throttled to prevent UI spam).
-
-        Args:
-            step: Current step number (1-indexed)
-            message: Description of current step
-        """
+        """Update progress to `step` with `message`. Throttled to ~10 Hz."""
         self._current_step = step
         self._pending_message = (step, message)
 
@@ -390,7 +312,7 @@ class ReportProgressView(ProgressScratchView):
                 self._last_update_time = current_time
 
     def _do_update(self, step, message):
-        """Actually perform the UI update (internal method)."""
+        """Render the progress panel for `step`/`message`."""
         progress_pct = int((step / self._total_steps) * 100) if self._total_steps > 0 else 0
         bar_width = 50
         filled = int(bar_width * step / self._total_steps) if self._total_steps > 0 else 0
@@ -405,7 +327,8 @@ class ReportProgressView(ProgressScratchView):
             count_str = f"File ({count_match.group(1)}/{count_match.group(2)})"
 
             step_label = f"  Step {step} of {self._total_steps}:"
-            total_width = 13 + bar_width + 1  # Width up to and including ']'
+            # 13 chars for "  Progress: [" plus the bar width plus the closing ']'.
+            total_width = 13 + bar_width + 1
             line1 = f"{step_label}{count_str:>{total_width - len(step_label)}}"
 
             line2 = f"  {base_msg}"

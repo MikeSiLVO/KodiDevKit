@@ -21,14 +21,6 @@ class ValidationIds:
     """Validates control and window IDs in Kodi skins."""
 
     def __init__(self, addon, window_ids, window_names, resolve_include_fn=None, validation_index=None):
-        """
-        Args:
-            addon: Addon/Skin instance with xml_folders, path, window_files, includes
-            window_ids: List of valid Kodi window IDs
-            window_names: List of Kodi window names (parallel to window_ids)
-            resolve_include_fn: Callable to resolve include content (optional, slow path)
-            validation_index: Pre-built validation index for performance (optional)
-        """
         self.addon = addon
         self.window_ids = window_ids
         self.window_names = window_names
@@ -100,7 +92,7 @@ class ValidationIds:
 
                             usage_basename = os.path.basename(usage_file)
 
-                            # Shared files have no window scope — skip
+                            # Shared files have no window scope; skip
                             include_files_list = self._validation_index.get('include_files', {}).get(folder, [])
                             is_shared_file = usage_basename in include_files_list
 

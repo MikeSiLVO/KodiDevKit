@@ -1,15 +1,10 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-Expression validation for Kodi skins.
+"""Expression validation for Kodi skins.
 
-This module documents which XML tags support dynamic expressions ($VAR, $INFO, $LOCALIZE)
-and which require literal values. It also validates that expressions are only used in
+Documents which XML tags support dynamic expressions ($VAR, $INFO, $LOCALIZE)
+and which require literal values. Validates that expressions only appear in
 tags that support them.
 
-Source: Analyzed from Kodi source code (GUIControlFactory.cpp)
-Date: 2025-11-04
-Kodi Version: v21 (Omega) / v22 (Piers) compatible
+Source: Kodi GUIControlFactory.cpp.
 
 CRITICAL DISTINCTION:
 - Tags parsed with GetInfoLabel/GetInfoTexture/GetInfoColor: Support expressions
@@ -838,29 +833,12 @@ LITERAL_ONLY = {
 
 
 def supports_expressions(tag_name):
-    """
-    Check if a tag supports dynamic expressions ($VAR, $INFO, etc.)
-
-    Args:
-        tag_name: XML tag name (e.g., 'label', 'texture', 'posx')
-
-    Returns:
-        bool: True if tag supports expressions, False if literal only
-    """
+    """True if `tag_name` supports dynamic expressions ($VAR, $INFO, etc.)."""
     return tag_name in SUPPORTS_EXPRESSIONS
 
 
 def get_tag_info(tag_name):
-    """
-    Get full information about a tag's expression support.
-
-    Args:
-        tag_name: XML tag name
-
-    Returns:
-        dict: Tag information including type, description, reason
-        None: If tag not found in either dict
-    """
+    """Return full info about a tag's expression support, or None if unknown."""
     if tag_name in SUPPORTS_EXPRESSIONS:
         return {
             'supports_expressions': True,
@@ -875,15 +853,9 @@ def get_tag_info(tag_name):
 
 
 def validate_tag_expression(tag_name, value):
-    """
-    Validate if a tag value is appropriate (literal vs expression).
+    """Validate if a tag value is appropriate (literal vs expression).
 
-    Args:
-        tag_name: XML tag name
-        value: Tag content/value as string
-
-    Returns:
-        tuple: (is_valid: bool, message: str)
+    Returns `(is_valid: bool, message: str)`.
 
     Examples:
         >>> validate_tag_expression('label', '$VAR[MyLabel]')
@@ -916,11 +888,6 @@ class ValidationExpression:
     """Validates that expressions are only used in tags that support them."""
 
     def __init__(self, addon, validation_index=None):
-        """
-        Args:
-            addon: Addon/Skin instance with xml_folders, path
-            validation_index: Pre-built validation index for performance (optional)
-        """
         self.addon = addon
         self._validation_index = validation_index
 
@@ -958,16 +925,7 @@ class ValidationExpression:
         return issues
 
     def _check_xml_tree(self, root, file_path):
-        """
-        Check all elements in an XML tree for invalid expression usage.
-
-        Args:
-            root: XML root element
-            file_path: Path to the file being checked
-
-        Returns:
-            List of issues found
-        """
+        """Walk `root` and emit issues for expressions used in literal-only tags."""
         issues = []
 
         for element in root.iter():
@@ -996,15 +954,9 @@ class ValidationExpression:
 
 
 def check(addon, validation_index):
-    """
-    Module-level check function for expression validation.
+    """Module-level dispatcher: instantiate ValidationExpression and run it.
 
-    Args:
-        addon: Skin instance
-        validation_index: Validation index dict (not currently used but kept for API consistency)
-
-    Returns:
-        List of issues
+    `validation_index` is accepted but not used; kept for API consistency.
     """
     checker = ValidationExpression(addon, validation_index)
     return checker.check()

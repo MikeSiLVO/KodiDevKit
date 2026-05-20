@@ -1,8 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-Label validation for Kodi skins.
-"""
+"""Label validation for Kodi skins."""
 
 import os
 import re
@@ -55,13 +51,6 @@ class ValidationLabel:
     """Validates label translations and definitions in Kodi skins."""
 
     def __init__(self, addon, get_po_files_fn, resolve_include_fn=None, validation_index=None):
-        """
-        Args:
-            addon: Addon/Skin instance with xml_folders, path, window_files
-            get_po_files_fn: Callable that returns list of PO files for label lookup
-            resolve_include_fn: Callable to resolve includes and $PARAM (optional)
-            validation_index: Pre-built validation index for performance (optional)
-        """
         self.addon = addon
         self._get_po_files = get_po_files_fn
         self._resolve_include = resolve_include_fn
@@ -172,11 +161,7 @@ class ValidationLabel:
         return True
 
     def check(self, progress_callback=None):
-        """
-        Find untranslated/undefined labels.
-
-        Args:
-            progress_callback: Optional callback for progress updates
+        """Find untranslated/undefined labels.
 
         Returns list of {"message": str, "file": str, "line": int}.
         """
@@ -428,15 +413,6 @@ class ValidationLabel:
 
 
 def check(addon, validation_index):
-    """
-    Module-level check function for label validation.
-
-    Args:
-        addon: Skin instance
-        validation_index: Validation index dict
-
-    Returns:
-        List of issues
-    """
+    """Module-level dispatcher: instantiate ValidationLabel and run it."""
     checker = ValidationLabel(addon, get_po_files_fn=lambda: addon.get_po_files(), validation_index=validation_index)
     return checker.check()

@@ -1,6 +1,4 @@
-"""
-Dynamic expression detection and parameter resolution for Kodi skinning.
-"""
+"""Dynamic expression detection and parameter resolution for Kodi skinning."""
 
 from __future__ import annotations
 
@@ -38,14 +36,7 @@ def is_number(text: str) -> bool:
 
 
 def extract_number_value(text: str) -> str | None:
-    """
-    Extract numeric value from $NUMBER[...] expressions.
-
-    Args:
-        text: String that may contain a $NUMBER[value] expression
-
-    Returns:
-        The extracted numeric string if valid $NUMBER[] expression, None otherwise
+    """Extract numeric value from $NUMBER[...] expressions; None if not a valid $NUMBER expression.
 
     Examples:
         extract_number_value("$NUMBER[25]") -> "25"
@@ -69,14 +60,7 @@ def extract_number_value(text: str) -> str | None:
 
 
 def extract_variable_name(text: str) -> str | None:
-    """
-    Extract variable name from $VAR[...] or $ESCVAR[...] expressions.
-
-    Args:
-        text: String that may contain a $VAR or $ESCVAR expression
-
-    Returns:
-        The variable name if valid expression, None otherwise
+    """Extract variable name from $VAR[...] or $ESCVAR[...] expressions; None if not a valid expression.
 
     Examples:
         extract_variable_name("$VAR[HighlightColor]") -> "HighlightColor"
@@ -101,7 +85,7 @@ def extract_variable_name(text: str) -> str | None:
 
 def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -> tuple[str, str]:
     """
-    Replace $PARAM[name] in *text* using values from *params* dict.
+    Replace $PARAM[name] in `text` using values from `params` dict.
     Missing keys are left unchanged.
     Parameter values are XML-escaped to preserve entities like & < >.
 
@@ -151,7 +135,7 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -
 
 def is_dynamic_expression(text: str, *, prefixes: Optional[tuple[str, ...]] = None) -> bool:
     """
-    Return True when *text* starts with a Kodi runtime expression such as
+    Return True when `text` starts with a Kodi runtime expression such as
     $PARAM[], $VAR[], $INFO[], etc. Case-insensitive. Leading whitespace ignored.
     """
     if not isinstance(text, str):
@@ -174,7 +158,7 @@ def starts_with_param_reference(text: str) -> bool:
 
 def contains_dynamic_expression(text: str) -> bool:
     """
-    Return True when *text* contains a Kodi runtime expression anywhere in the string.
+    Return True when `text` contains a Kodi runtime expression anywhere in the string.
 
     This differs from is_dynamic_expression() which only checks if the text STARTS with
     a dynamic expression. This function checks if ANY dynamic expression appears in the text,
@@ -200,7 +184,7 @@ def contains_dynamic_expression(text: str) -> bool:
 
 def split_top_level_commas(text: str) -> list[str]:
     """
-    Split *text* on commas that appear outside any `(...)` or `[...]` group.
+    Split `text` on commas that appear outside any `(...)` or `[...]` group.
 
     Kodi expressions routinely embed commas inside nested calls and macros
     (``String.IsEqual(Label,$LOCALIZE[40211])``, ``$INFO[Label, , - ]``); a
@@ -237,7 +221,7 @@ def _kodi_macro_mask(text: str) -> set:
     """Indices that lie inside a ``$KEYWORD[...]`` macro.
 
     Kodi's ``Register()`` calls ``ReplaceLocalize`` before parsing booleans
-    (GUIInfoManager.cpp:11441 → GUIInfoLabel.cpp:276-282), so ``$LOCALIZE[N]``
+    (GUIInfoManager.cpp:11441 calls GUIInfoLabel.cpp:276-282), so ``$LOCALIZE[N]``
     and ``$NUMBER[N]`` are gone by the time ``[`` and ``]`` are interpreted as
     operators. We extend the same masking to ``$INFO``, ``$VAR``, etc. so a
     hover on those forms doesn't get fragmented at their inner brackets.
@@ -264,15 +248,15 @@ def _kodi_macro_mask(text: str) -> set:
 
 
 def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
-    """Return the smallest Kodi boolean sub-expression enclosing *cursor_offset*.
+    """Return the smallest Kodi boolean sub-expression enclosing `cursor_offset`.
 
-    Implements the grammar from ``InfoExpression.cpp`` — operators are exactly
+    Implements the grammar from ``InfoExpression.cpp``: operators are exactly
     ``[ ] ! + |`` (lines 125-139); everything else (including ``( ) , . $``) is
-    operand. ``$LOCALIZE[…]`` / ``$NUMBER[…]`` are masked because Kodi resolves
+    operand. ``$LOCALIZE[...]`` / ``$NUMBER[...]`` are masked because Kodi resolves
     them before parsing. Parens are tracked as depth so a click anywhere inside
     ``Function(args)`` returns the whole call rather than splitting at an inner
     operator. ``!`` is a unary prefix and stays attached to the operand it
-    precedes — without that, the boolean we send to Kodi would have the
+    precedes; without that, the boolean we send to Kodi would have the
     OPPOSITE truth value.
     """
     if not line_text:

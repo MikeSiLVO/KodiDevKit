@@ -1,6 +1,4 @@
-"""
-Build, package, and version management commands.
-"""
+"""Build, package, and version management commands."""
 
 from __future__ import annotations
 

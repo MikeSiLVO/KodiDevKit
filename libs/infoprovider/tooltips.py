@@ -1,6 +1,4 @@
-"""
-Tooltip and popup content mixin for InfoProvider.
-"""
+"""Tooltip and popup content mixin for InfoProvider."""
 
 from __future__ import annotations
 
@@ -29,9 +27,7 @@ class TooltipMixin:
     kodi_path: str | None
 
     def return_label(self, selection):
-        """
-        Return formatted label for id in *selection.
-        """
+        """Return formatted label for id in `selection`."""
         tooltips = ""
         if not selection.isdigit():
             return ""
@@ -63,9 +59,7 @@ class TooltipMixin:
         return tooltips
 
     def return_addon_label(self, addon_id, label_id):
-        """
-        Return formatted label for addon string $ADDON[addon.id label_id].
-        """
+        """Return formatted label for addon string $ADDON[addon.id label_id]."""
         from .. import polib
 
         if not label_id.isdigit():
@@ -108,9 +102,7 @@ class TooltipMixin:
         return tooltips if tooltips else f"<i>Label {label_id} not found in {addon_id}</i>"
 
     def get_po_files(self):
-        """
-        Aggregate active PO files from kodi module, live instance, and addon.
-        """
+        """Aggregate active PO files from kodi module, live instance, and addon."""
         po_files = []
         seen = set()
 
@@ -142,9 +134,7 @@ class TooltipMixin:
         return po_files
 
     def get_colors(self):
-        """
-        get list of all colors (core + addon)
-        """
+        """get list of all colors (core + addon)"""
         colors = []
         if kodi.colors:
             colors.extend(kodi.colors)
@@ -156,9 +146,7 @@ class TooltipMixin:
         return self.addon.color_labels if self.addon else set()
 
     def get_color_info_html(self, color_string):
-        """
-        Build a small HTML swatch + info for a color value or name.
-        """
+        """Build a small HTML swatch + info for a color value or name."""
         color_info = ""
         colors = self.addon.colors if self.addon else []
         for item in colors:
@@ -192,9 +180,7 @@ class TooltipMixin:
             )
 
     def build_translate_label(self, label_id, view):
-        """
-        Return the correct localize expression based on scope.
-        """
+        """Return the correct localize expression based on scope."""
         if not self.addon:
             return str(label_id)
 
@@ -215,9 +201,7 @@ class TooltipMixin:
             return str(label_id)
 
     def get_image_info(self, path):
-        """
-        Return a small HTML snippet with image properties.
-        """
+        """Return a small HTML snippet with image properties."""
         if not imageparser or not self.addon:
             return ""
         imagepath = self.addon.translate_path(path)
@@ -229,9 +213,7 @@ class TooltipMixin:
 
     @staticmethod
     def get_ancestor_info(element):
-        """
-        Collect position-ish attributes from ancestors for a quick summary.
-        """
+        """Collect position-ish attributes from ancestors for a quick summary."""
         values = {}
         for anc in element.iterancestors():
             for sib in anc.iterchildren():

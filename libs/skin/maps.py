@@ -1,9 +1,4 @@
-"""
-Include maps data structure for Kodi skin include resolution.
-
-This module provides the IncludeMaps class that matches Kodi's CGUIIncludes
-5-map structure for managing includes, constants, variables, expressions, and defaults.
-"""
+"""SkinMaps: Kodi's 5-map include/constant/variable/expression/default structure."""
 
 from __future__ import annotations
 

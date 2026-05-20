@@ -1,13 +1,4 @@
-"""
-Validation index builder for Kodi skin validation.
-
-This module provides the ValidationIndexBuilder class that builds a comprehensive
-validation index by scanning all XML files in a skin and extracting:
-- Font definitions and usages
-- Label references (localized strings)
-- Image paths
-- Control ID definitions and references
-"""
+"""Builds the validation index: font/label/image/control-id usage across the skin."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -71,10 +62,8 @@ def _build_control_regex():
 
     whitelist = _load_infolabel_whitelist()
 
-    # Build list of function names to exclude (these take integer parameters but are not control IDs)
-    # E.g., Container.Position(5), Window.IsVisible(10), ListItem(5)
-    # Window.* functions based on Kodi source: xbmc/GUIInfoManager.cpp lines 7971-7979
-    # All entries lowercase — matched case-insensitively at lookup time
+    # Window.* InfoLabels per Kodi GUIInfoManager.cpp:7971-7979. Stored
+    # lowercase; lookups do .lower() too.
     excluded_functions = {
         'window', 'window.is', 'window.isactive', 'window.isvisible', 'window.ismedia',
         'window.isdialogtopmost', 'window.ismodaldialogtopmost', 'window.previous', 'window.next',
@@ -102,39 +91,19 @@ def _build_control_regex():
 
 
 class SkinIndex:
-    """
-    Builds comprehensive validation index for Kodi skin.
+    """Walks every skin xml file once to build the validation index.
 
-    Scans all XML files in skin and extracts metadata for validation:
-    - Font definitions and usages
-    - Label references (localized strings)
-    - Image paths and texture pack detection
-    - Control ID definitions and references
+    Indexes font defs/uses, label references, image paths, and control IDs.
     """
 
     def __init__(self, skin):
-        """
-        Initialize index builder.
-
-        Args:
-            skin: Skin instance with all necessary data
-        """
         self.skin = skin
         self.skin_path = skin.path
         self.xml_folders = skin.xml_folders
-        self.include_maps = None  # Not used in new implementation
+        self.include_maps = None
 
     def build_validation_index(self, progress_callback=None):
-        """
-        Build comprehensive validation index by parsing all XML files once.
-        Fast uncached build (~1 second) thanks to Kodi-aligned architecture.
-
-        Args:
-            progress_callback: Optional callback function(message: str) for progress updates
-
-        Returns:
-            dict: Validation index with fonts, labels, IDs, etc.
-        """
+        """Build and return the validation index in a single pass over the skin."""
         if progress_callback:
             progress_callback("Building validation index...")
 
@@ -348,10 +317,8 @@ class SkinIndex:
                             if window_file not in index['include_to_windows'][folder][inc_name]:
                                 index['include_to_windows'][folder][inc_name].append(window_file)
 
-        # Resolve each window and extract IDs from the resolved tree.
-        # This replaces the old manual _resolve_include_ids_recursive() approach
-        # with actual include expansion, giving accurate ID sets.
-        # Runs sequentially (resolver's _source_file is not thread-safe).
+        # Resolve each window so the ID set reflects expanded includes too.
+        # Single-threaded; the resolver's _source_file isn't thread-safe.
         if hasattr(self.skin, 'resolver') and self.skin.resolver:
             if progress_callback:
                 progress_callback("Resolving windows for ID extraction...")
@@ -417,18 +384,9 @@ class SkinIndex:
         return index
 
     def _get_optimal_workers(self):
-        """
-        Calculate optimal thread count for I/O-bound XML parsing.
-
-        For I/O-bound tasks, more threads than cores is beneficial since threads
-        spend most time waiting for disk I/O. ThreadPoolExecutor can overlap these waits.
-
-        Returns:
-            int: Optimal number of worker threads
-        """
+        """Pick a worker count for I/O-bound XML parsing (capped at 8)."""
         cpu_count = os.cpu_count() or 1
 
-        # Adaptive sizing based on CPU capabilities
         if cpu_count == 1:
             return 3  # Still helps with I/O overlap on single-core
         elif cpu_count == 2:
@@ -437,13 +395,9 @@ class SkinIndex:
             return min(cpu_count + 4, 8)  # Cap at 8 to avoid overhead
 
     def _process_window_file(self, path, folder):
-        """
-        Process single window file (thread-safe extraction).
+        """Worker fn: extract fonts/labels/ids from one window file (thread-safe).
 
-        Called by ThreadPoolExecutor workers. Must not mutate shared state.
-
-        Returns:
-            dict: Local results with fonts, labels, IDs or None if failed
+        Must not mutate shared state. Returns a per-file results dict or None.
         """
         try:
             if "script-skinshortcuts-includes.xml" in path.lower():
@@ -487,14 +441,14 @@ class SkinIndex:
                 if inc_name:
                     results['window_includes'].append({'name': inc_name})
 
-            # This includes both <control> and <item> elements (list items in <content> blocks)
+            # `base_ids` includes both <control id=...> and <item id=...> entries;
+            # the latter are list items that scripts can address via Container().HasFocus().
             for elem in root.iter('control'):
                 ctrl_id = elem.get('id')
                 if ctrl_id:
                     ctrl_id = utils.normalize_control_id(ctrl_id)
                     results['base_ids'].add(ctrl_id)
 
-            # These are list item IDs that can be referenced with Container().HasFocus()
             for item_elem in root.iter('item'):
                 item_id = item_elem.get('id')
                 if item_id:
@@ -523,10 +477,7 @@ class SkinIndex:
         Example:
             Variable defined as: <variable name="Label_Title_C$PARAM[id]3">
             Used in include with: <param name="id">50</param>
-            Resolution: Label_Title_C$PARAM[id]3 → Label_Title_C503
-
-        Args:
-            progress_callback: Optional callback function(message: str)
+            Resolution: Label_Title_C$PARAM[id]3 -> Label_Title_C503
         """
         if self.skin._include_usages_built:
             return  # Already built
@@ -676,7 +627,6 @@ class SkinIndex:
                 val = node.attrib.get(attr)
                 if val:
                     _track(val.strip(), node, attr)
-            # Texture-only attrs (fallback on <label> is text, not an image)
             if is_texture_tag:
                 for attr in texture_only_attrs:
                     val = node.attrib.get(attr)
@@ -684,17 +634,7 @@ class SkinIndex:
                         _track(val.strip(), node, attr)
 
     def _check_image_files(self, index, progress_callback=None):
-        """
-        Check existence of all referenced image files in the filesystem.
-        Pre-validates all images during index build to eliminate I/O during ImageCheck.
-
-        This matches ImageCheck's logic but runs once during index build instead of
-        repeatedly during validation.
-
-        Args:
-            index: Validation index containing 'images_referenced'
-            progress_callback: Optional callback for progress updates
-        """
+        """Stat every referenced image so ImageCheck can skip disk I/O later."""
         if 'images_referenced' not in index:
             return
 
@@ -820,12 +760,7 @@ class SkinIndex:
 
         logger.info(f"  → Checked {checked_count} unique image references")
     def _detect_textures_xbt(self):
-        """
-        Detect if skin uses packed textures (Textures.xbt).
-
-        Returns:
-            bool: True if Textures.xbt exists
-        """
+        """True if the skin ships a packed Textures.xbt anywhere we know to look."""
         xbt_locations = [
             os.path.join(self.skin.path, 'media', 'Textures.xbt'),
             os.path.join(self.skin.path, 'resources', 'media', 'Textures.xbt'),
@@ -839,16 +774,10 @@ class SkinIndex:
         return False
 
     def _check_font_files(self, index, progress_callback=None):
-        """
-        Check existence of all font files referenced in font definitions.
-        Pre-validates font files during index build to eliminate I/O during FontCheck.
+        """Pre-stat skin font files so FontCheck can skip disk I/O later.
 
-        Note: Only checks skin fonts directory, not Kodi core fonts (which require
-        runtime settings). FontCheck will still check core fonts at validation time.
-
-        Args:
-            index: Validation index containing 'fonts_defined'
-            progress_callback: Optional callback for progress updates
+        Only the skin's own `fonts/` dir is checked here; core Kodi fonts
+        depend on runtime settings and are checked during validation.
         """
         if 'fonts_defined' not in index:
             return

@@ -42,7 +42,7 @@ class ValidationFileCheck:
                     "severity": SEVERITY_ERROR,
                 })
 
-        # EOL check — scan entire skin directory for all file types
+        # EOL check: scan entire skin directory for all file types
         result = utils.eol_info_from_path_patterns(
             [self.addon.path],
             recursive=True,

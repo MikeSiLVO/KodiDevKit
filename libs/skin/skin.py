@@ -1,4 +1,4 @@
-"""KodiDevKit Sublime Text plugin — Kodi skinning helpers."""
+"""KodiDevKit Sublime Text plugin: Kodi skinning helpers."""
 
 from __future__ import annotations
 
@@ -307,10 +307,10 @@ class Skin(addon.Addon):
         """
         Find a Kodi addon root by locating an addon.xml.
         Strategy:
-          1) Active file → walk upward.
-          2) Open folders → walk upward.
-          3) Project folders → walk upward.
-          4) If still not found, shallow walk (≤3 levels) under open folders.
+          1) Active file, walk upward.
+          2) Open folders, walk upward.
+          3) Project folders, walk upward.
+          4) If still not found, shallow walk (max 3 levels) under open folders.
         Returns a directory path or None.
         """
         import os
@@ -757,7 +757,7 @@ class Skin(addon.Addon):
     def build_include_maps(self, progress_callback=None):
         """Build the lightweight skin-startup map (includes, fonts, builtin controls).
 
-        Mirrors Kodi's startup phase only — windows are resolved lazily during
+        Mirrors Kodi's startup phase only; windows are resolved lazily during
         validation, not here. Cached to disk; rebuilt if the cache is missing
         or its version differs.
         """
@@ -882,8 +882,8 @@ class Skin(addon.Addon):
     def validate_single_file(self, file_path, include_maps=None, progress_callback=None):
         """Validate one window/include file using lazy resolution.
 
-        Mirrors Kodi's window-activation lifecycle: load → resolve includes
-        → cache resolved tree → validate. Returns {'issues': [...], 'file': path}.
+        Mirrors Kodi's window-activation lifecycle: load, resolve includes,
+        cache resolved tree, validate. Returns {'issues': [...], 'file': path}.
         """
         if include_maps is None:
             if progress_callback:

@@ -1,4 +1,4 @@
-"""KodiDevKit Sublime Text plugin — general commands."""
+"""KodiDevKit Sublime Text plugin: general commands."""
 
 import re
 import glob

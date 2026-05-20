@@ -1,6 +1,4 @@
-"""
-Image metadata helpers using only the Python standard library.
-"""
+"""Image metadata helpers using only the Python standard library."""
 
 from __future__ import annotations
 

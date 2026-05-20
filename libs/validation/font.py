@@ -1,8 +1,4 @@
-"""
-KodiDevKit is a plugin to assist with Kodi skinning / scripting
-using Sublime Text 4
-Font validation for Kodi skins.
-"""
+"""Font validation for Kodi skins."""
 
 from __future__ import annotations
 
@@ -23,12 +19,6 @@ class ValidationFont:
     """Validates font definitions and usage in Kodi skins."""
 
     def __init__(self, addon, resolve_include_fn=None, validation_index=None):
-        """
-        Args:
-            addon: Addon/Skin instance with fonts, includes, xml_folders
-            resolve_include_fn: Callable to resolve include content (optional)
-            validation_index: Pre-built validation index for performance (optional)
-        """
         self.addon = addon
         self._resolve_include = resolve_include_fn
         self._validation_index = validation_index
@@ -374,15 +364,6 @@ class ValidationFont:
 
 
 def check(addon, validation_index):
-    """
-    Module-level check function for font validation.
-
-    Args:
-        addon: Skin instance
-        validation_index: Validation index dict
-
-    Returns:
-        List of issues
-    """
+    """Module-level dispatcher: instantiate ValidationFont and run it."""
     checker = ValidationFont(addon, validation_index=validation_index)
     return checker.check()

@@ -1,6 +1,4 @@
-"""
-Language file operations: reload, convert, move labels to PO.
-"""
+"""Language file operations: reload, convert, move labels to PO."""
 
 from __future__ import annotations
 
@@ -131,7 +129,7 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
 
 
 class KodidevkitReplaceTextCommand(sublime_plugin.TextCommand):
-    """Replace selected text with label from *label_id."""
+    """Replace selected text with label from `label_id`."""
 
     def run(self, edit, label_id):
         infos = _infos()

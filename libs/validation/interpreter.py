@@ -124,7 +124,7 @@ class XmlInterpreter:
             elif tag == "coordinates":
                 self._walk_coordinates(child)
             elif tag == "include":
-                # Residual unresolved include — skip silently
+                # An unresolved include here is reported by the unexpanded pass.
                 pass
             elif tag not in WINDOW_CHILDREN:
                 self._add_issue(
@@ -161,12 +161,7 @@ class XmlInterpreter:
         self._context_stack.pop()
 
     def _walk_control(self, node, *, inside_layout: bool):
-        """
-        Dispatch control validation based on type.
-        Groups recurse into child <control>s.
-        Containers expect layout tags.
-        Leaf controls get child-tag validation.
-        """
+        """Dispatch a <control> based on its type (group / container / leaf)."""
         control_type = (node.attrib.get("type") or "").lower().strip()
 
         if control_type in GROUP_TYPES:
@@ -175,7 +170,7 @@ class XmlInterpreter:
             self._walk_container(node, control_type, inside_layout=inside_layout)
         elif control_type:
             self._validate_control_children(node, control_type, inside_layout=inside_layout)
-        # No type attribute — skip (invalid control type is caught by raw pass)
+        # No type attribute; skip (invalid control type is caught by the unexpanded pass).
 
     def _walk_group_control(self, node, control_type: str, *, inside_layout: bool):
         """
@@ -215,7 +210,7 @@ class XmlInterpreter:
         self._context_stack.pop()
 
     def _walk_layout(self, node):
-        """Validate layout children — only <control> elements. (CGUIListItemLayout)"""
+        """Validate layout children: only <control> elements. (CGUIListItemLayout)"""
         self._context_stack.append(Context.LAYOUT)
         for child in node:
             tag = child.tag
@@ -231,7 +226,7 @@ class XmlInterpreter:
         self._context_stack.pop()
 
     def _walk_content(self, node):
-        """Validate <content> children — <item> or <include>. (StaticProvider.cpp:20-34)"""
+        """Validate <content> children: <item> or <include>. (StaticProvider.cpp:20-34)"""
         self._context_stack.append(Context.CONTENT)
         for child in node:
             if child.tag not in CONTENT_CHILDREN:
@@ -414,7 +409,7 @@ class XmlInterpreter:
         self._context_stack.pop()
 
     def _walk_variable(self, node):
-        """Validate <variable> children — only <value>. (GUIIncludes.cpp:160-168)"""
+        """Validate <variable> children: only <value>. (GUIIncludes.cpp:160-168)"""
         self._context_stack.append(Context.VARIABLE)
         for child in node:
             if child.tag not in VARIABLE_CHILDREN:

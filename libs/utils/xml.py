@@ -1,6 +1,4 @@
-"""
-XML parsing and validation utilities for KodiDevKit.
-"""
+"""XML parsing and validation utilities for KodiDevKit."""
 
 import os
 import re
@@ -67,7 +65,7 @@ def _check_tag_balance(xml_file):
 
     For <control> siblings with the same type attribute (e.g. multiple
     grouplist controls), detects the unclosed tag immediately when the next
-    sibling of the same type opens — only group type can self-nest.
+    sibling of the same type opens; only group type can self-nest.
 
     Returns dict with message/line on error, or None if no mismatch found.
     """
@@ -251,9 +249,7 @@ def get_root_from_file(xml_file):
 
 
 def check_brackets(label):
-    """
-    check if all brackets in *label match, return True / False
-    """
+    """check if all brackets in `label` match, return True / False"""
     stack = []
     push_chars, pop_chars = "<({[", ">)}]"
     for c in label:
@@ -271,18 +267,10 @@ def check_brackets(label):
 
 
 def file_needs_expansion(path, max_bytes=FILE_PREVIEW_SIZE):
-    """
-    Quick check if XML file likely needs include/param expansion.
+    """Quick check if `path` likely needs include/param expansion.
 
-    Reads first max_bytes of file and checks for $PARAM or <include patterns.
-    Used to avoid expensive expansion on static files.
-
-    Args:
-        path: File path to check
-        max_bytes: Maximum bytes to read for check (default 50KB)
-
-    Returns:
-        bool: True if file likely needs expansion
+    Reads the first `max_bytes` and looks for `$PARAM[` or `<include`. Used
+    to avoid the expensive expansion pass on static files.
     """
     try:
         with open(path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -294,17 +282,9 @@ def file_needs_expansion(path, max_bytes=FILE_PREVIEW_SIZE):
 
 
 def tree_needs_expansion(root):
-    """
-    Check if parsed XML tree needs expansion (no file I/O required).
+    """True if the already-parsed `root` likely needs expansion.
 
-    More efficient than file_needs_expansion() when tree is already parsed,
-    avoiding redundant file reads.
-
-    Args:
-        root: Parsed XML ElementTree root element
-
-    Returns:
-        bool: True if tree likely needs expansion
+    Skips a file read; use this when you already have the tree in memory.
     """
     if root is None:
         return False

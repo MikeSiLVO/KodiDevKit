@@ -1,9 +1,4 @@
-"""
-Resource loading for Kodi skins.
-
-Handles loading of colors, fonts, and media files from skin directories.
-Separated from Skin class for better separation of concerns and testability.
-"""
+"""Resource loading for Kodi skins: colors, fonts, and media files."""
 
 import os
 import logging
@@ -16,40 +11,22 @@ logger = logging.getLogger(__name__)
 
 
 class SkinResources:
-    """
-    Loads skin resources (colors, fonts, media).
-
-    This class handles all resource file loading operations that were previously
-    in the Skin class. It depends only on file paths and utilities, making it
-    easier to test and maintain.
-    """
+    """Loads skin resources (colors, fonts, media)."""
 
     def __init__(self, skin_path: str, xml_folders: List[str]):
-        """
-        Initialize resource loader.
-
-        Args:
-            skin_path: Absolute path to skin directory
-            xml_folders: List of resolution folders (e.g., ["16x9", "1080i"])
-        """
         self.skin_path = skin_path
         self.xml_folders = xml_folders
 
     def load_colors(self, kodi_path: Optional[str] = None) -> Tuple[List[Dict], set]:
-        """
-        Load colors from skin and system paths.
+        """Load colors from skin and (optionally) system paths.
 
         Loads from:
           1) <skin>/colors/*.xml (e.g., defaults.xml)
           2) <kodi_path>/system/colors.xml (if kodi_path provided)
 
-        Args:
-            kodi_path: Optional path to Kodi installation for system colors
-
-        Returns:
-            Tuple of (colors_list, color_labels_set) where:
-            - colors_list: List of dicts with keys: name, line, content, file
-            - color_labels_set: Set of color names for quick lookup
+        Returns (colors_list, color_labels_set):
+          - colors_list: list of dicts with keys name, line, content, file
+          - color_labels_set: set of color names for quick lookup
         """
         colors = []
 
@@ -110,18 +87,11 @@ class SkinResources:
         return colors, color_labels
 
     def load_fonts(self, resolver=None) -> Tuple[Dict[str, List[Dict]], Optional[str]]:
-        """
-        Load fonts by parsing Font.xml/font.xml in each folder.
+        """Load fonts by parsing Font.xml/font.xml in each folder.
 
         Also expands includes inside fontsets using the provided resolver.
-
-        Args:
-            resolver: Optional IncludeResolver for expanding includes in Font.xml
-
-        Returns:
-            Tuple of (fonts_dict, font_file_path) where:
-            - fonts_dict: Dict[folder -> list of font dicts]
-            - font_file_path: Path to last processed font file (for compatibility)
+        Returns (fonts_dict, font_file_path) where fonts_dict maps each folder
+        to a list of font dicts, and font_file_path is the last processed file.
         """
         fonts = {}
         font_file = None
@@ -182,16 +152,10 @@ class SkinResources:
         return fonts, font_file
 
     def load_media_files(self, media_path: str) -> Generator[str, None, None]:
-        """
-        Yield relative paths of all files in media directory.
+        """Yield relative paths of all files in `media_path`.
 
-        Skips "studio" and "recordlabel" subdirectories.
-
-        Args:
-            media_path: Absolute path to media directory
-
-        Yields:
-            Relative file paths (forward slashes, no leading slash)
+        Skips `studio` and `recordlabel` subdirectories. Paths use forward
+        slashes with no leading slash.
         """
         for path, _, files in os.walk(media_path):
             if "studio" in path or "recordlabel" in path:
@@ -205,15 +169,9 @@ class SkinResources:
                 yield img_path
 
     def get_font_references(self, window_files: Dict[str, List[str]]) -> Optional[Dict[str, List[Dict]]]:
-        """
-        Extract font references from all window files.
+        """Extract font references from all window files.
 
-        Args:
-            window_files: Dict[folder -> list of window XML filenames]
-
-        Returns:
-            Dict[folder -> list of font reference dicts] or None if error
-            Each font ref dict has keys: file, name, line
+        Returns dict[folder -> list of {file, name, line}] or None on error.
         """
         font_refs = {}
         for folder in self.xml_folders:
