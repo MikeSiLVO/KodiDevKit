@@ -392,5 +392,80 @@ class TestParameterMerging(unittest.TestCase):
         self.assertEqual(label_elem.text, "DefaultLabel", "Default label should be used")
 
 
+class TestNestedParameterizedFanout(unittest.TestCase):
+    """A wrapper include that fans out to the same parameterized sub-include
+    several times must expand every instance.
+
+    Regression: resolve_includes tracked processed nodes by id(), and freed
+    lxml proxies had their address reused by newly spliced include nodes, so
+    some fan-out instances were skipped non-deterministically. This produced
+    false-positive "Control ID X not defined" errors for the missing panels
+    (e.g. DialogVideoInfo's 90011-90021 in Aeon Nox).
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.skin_path = self.temp_dir.name
+        os.makedirs(os.path.join(self.skin_path, "16x9"))
+
+        addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<addon id="skin.test" version="1.0.0" name="Test" provider-name="Test">
+    <requires><import addon="xbmc.gui" version="5.15.0"/></requires>
+    <extension point="xbmc.gui.skin" debugging="false">
+        <res width="1920" height="1080" aspect="16:9" default="true" folder="16x9" />
+    </extension>
+</addon>"""
+        with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
+            f.write(addon_xml)
+
+        # Layout: panel whose id comes from a param. Lists: a wrapper that
+        # instantiates Layout once per id. A window pulls Lists in via a
+        # conditional include nested inside a control (mirrors the real skin).
+        instances = "\n".join(
+            f'        <include content="Layout"><param name="id">{900_10 + n}</param></include>'
+            for n in range(1, 12)
+        )
+        includes_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+    <include name="Layout">
+        <control type="panel" id="$PARAM[id]">
+            <visible>Integer.IsGreater(Container($PARAM[id]).NumItems,0)</visible>
+        </control>
+    </include>
+    <include name="Lists">
+{instances}
+    </include>
+</includes>"""
+        with open(os.path.join(self.skin_path, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write(includes_xml)
+
+        self.skin = Skin(path=self.skin_path)
+        self.skin.update_include_list()
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_all_fanout_ids_resolved(self):
+        test_xml = """<window>
+    <controls>
+        <control type="group">
+            <include condition="true">Lists</include>
+        </control>
+    </controls>
+</window>"""
+        root = ET.fromstring(test_xml)
+
+        kodi_resolve(self.skin, root, "16x9")
+
+        resolved_ids = {c.get("id") for c in root.iter("control") if c.get("id")}
+        expected = {str(90010 + n) for n in range(1, 12)}
+        self.assertEqual(
+            expected, resolved_ids & expected,
+            f"Every fan-out panel id must resolve. Missing: {sorted(expected - resolved_ids)}",
+        )
+        # No unresolved $PARAM left behind.
+        self.assertNotIn("$PARAM[id]", resolved_ids)
+
+
 if __name__ == "__main__":
     unittest.main()

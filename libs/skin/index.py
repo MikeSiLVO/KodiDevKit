@@ -119,6 +119,8 @@ class SkinIndex:
             'window_includes': {}, # {folder: {window_file: [inc_names]}}
             'window_base_ids': {}, # {folder: {window_file: {id1, id2}}} - IDs from raw XML
             'window_expanded_ids': {},  # {folder: {window_file: set(ids)}} - IDs from resolved tree
+            # Files whose root is not <window> (timers, fonts, ...): no control-ID scope
+            'non_window_files': {},  # {folder: set(basenames)}
             # Track which files are include files (from Kodi's <include file="..."/> declarations)
             'include_files': {},   # {folder: [file basenames]} - files loaded via Includes.xml
             # Variables metadata (for VariableCheck optimization)
@@ -140,6 +142,7 @@ class SkinIndex:
             index['window_includes'][folder] = {}
             index['window_base_ids'][folder] = {}
             index['window_expanded_ids'][folder] = {}
+            index['non_window_files'][folder] = set()
             # Copy include files list from skin.include_files (loaded via Includes.xml)
             # Convert full paths to basenames for easier comparison
             include_file_paths = getattr(self.skin, 'include_files', {}).get(folder, [])
@@ -235,6 +238,8 @@ class SkinIndex:
                             window_file = os.path.basename(path)
                             index['window_includes'][folder][window_file] = results['window_includes']
                             index['window_base_ids'][folder][window_file] = results['base_ids']
+                            if results.get('root_tag') != 'window':
+                                index['non_window_files'][folder].add(window_file)
 
                             if 'view_ids' in results:
                                 index['view_ids'][folder].update(results['view_ids'])
@@ -409,6 +414,7 @@ class SkinIndex:
 
             results = {
                 'path': path,
+                'root_tag': root.tag,
                 'fonts_used': {folder: {}},
                 'labels_used': {folder: {}},
                 'labels_untranslated': [],

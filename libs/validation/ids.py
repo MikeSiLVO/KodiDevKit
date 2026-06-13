@@ -92,11 +92,11 @@ class ValidationIds:
 
                             usage_basename = os.path.basename(usage_file)
 
-                            # Shared files have no window scope; skip
+                            # Shared files (includes) and non-window roots (timers, fonts)
+                            # have no control scope -- their control-ID refs are cross-window.
                             include_files_list = self._validation_index.get('include_files', {}).get(folder, [])
-                            is_shared_file = usage_basename in include_files_list
-
-                            if is_shared_file:
+                            non_window_files = self._validation_index.get('non_window_files', {}).get(folder, set())
+                            if usage_basename in include_files_list or usage_basename in non_window_files:
                                 continue
 
                             window_file = usage_basename

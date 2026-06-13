@@ -1202,5 +1202,76 @@ class TestBuiltinControls(unittest.TestCase):
                        "Non-builtin control 99999 should still be flagged as undefined")
 
 
+class TestNonWindowRootScope(unittest.TestCase):
+    """Control-ID references in non-window files (e.g. Timers.xml) are
+    cross-window and must not be scope-validated.
+
+    Regression: Timers.xml has a <timers> root, not <window>. Its
+    Container(90100) references controls in whatever window is active at
+    runtime, so scope-checking flagged false positives.
+    """
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.test_dir, "16x9"))
+        addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
+    <requires><import addon="xbmc.gui" version="5.16.0"/></requires>
+    <extension point="xbmc.gui.skin" defaultthemename="Textures.xbt" debugging="false">
+        <res width="1920" height="1080" aspect="16x9" default="true" folder="16x9" />
+    </extension>
+</addon>"""
+        with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
+            f.write(addon_xml)
+        with open(os.path.join(self.test_dir, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n<includes>\n</includes>')
+
+    def tearDown(self):
+        if os.path.exists(self.test_dir):
+            shutil.rmtree(self.test_dir)
+
+    def _check(self):
+        provider = InfoProvider()
+        provider.load_data("omega")
+        provider.init_addon(self.test_dir)
+        index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]
+        from libs.validation import ValidationIds as IdCheck
+        checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
+        return checker.check()
+
+    def test_timers_container_ref_not_flagged(self):
+        timers_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<timers>
+    <timer>
+        <name>selectactor</name>
+        <stop>Integer.IsEqual(Container(90100).NumItems,1) | !Window.IsVisible(1107)</stop>
+        <onstop condition="Integer.IsEqual(Container(90100).NumItems,1)">Action(Select)</onstop>
+    </timer>
+</timers>"""
+        with open(os.path.join(self.test_dir, "16x9", "Timers.xml"), "w", encoding="utf-8") as f:
+            f.write(timers_xml)
+
+        issues = self._check()
+        flagged = [i for i in issues if "90100" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
+        self.assertEqual(len(flagged), 0, f"Container ref in <timers> root should not be scope-checked. Found: {flagged}")
+
+    def test_window_root_still_scope_checked(self):
+        # Same Container ref in a real window IS undefined and should be flagged.
+        window_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="image" id="100">
+            <visible>Integer.IsEqual(Container(90100).NumItems,1)</visible>
+        </control>
+    </controls>
+</window>"""
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write(window_xml)
+
+        issues = self._check()
+        flagged = [i for i in issues if "90100" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
+        self.assertTrue(len(flagged) > 0, "Undefined Container ref in a <window> should still be flagged")
+
+
 if __name__ == "__main__":
     unittest.main()

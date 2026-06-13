@@ -198,9 +198,20 @@ class SkinResolution:
 
         return pattern.sub(replacer, value)
 
+    # Separator for the include-expansion path stamped on spliced <include> nodes.
+    # Tab is XML-attribute-safe and never appears in include names.
+    _PATH_SEP = "\t"
+
     def resolve_includes(self, node, folder: str):
         """
         Resolve includes. Matches CGUIIncludes::ResolveIncludes (GUIIncludes.cpp:368-469).
+
+        Walks <include> children in document order: a resolvable include is spliced
+        in and the scan restarts from the first include; an unresolvable one (unknown
+        name or a cycle) is left in place and the scan advances to the next sibling.
+        Cycles are detected via the `_kdk_inc_path` stamp, not element identity --
+        id()-based tracking is unreliable because freed element proxies get their
+        address reused by newly spliced nodes (GUIIncludes.cpp:461,466).
         """
         if node is None:
             return
@@ -209,33 +220,11 @@ class SkinResolution:
         if not includes_for_folder:
             return
 
-        # Kodi uses while loop that keeps finding first include until none left
-        # (GUIIncludes.cpp:419-468)
-        # We use a similar approach but track processed nodes
-        processed_nodes = set()  # Track node IDs we've already tried to process
-
-        while True:
-            include_nodes = list(node.findall("include"))
-            if not include_nodes:
-                break
-
-            include_node = None
-            for candidate in include_nodes:
-                node_id = id(candidate)
-                if node_id not in processed_nodes:
-                    include_node = candidate
-                    break
-
-            if include_node is None:
-                break
-
+        include_node = node.find("include")
+        while include_node is not None:
             inc_name = include_node.attrib.get("content")
             if not inc_name and include_node.text:
                 inc_name = include_node.text.strip()
-
-            if not inc_name:
-                node.remove(include_node)
-                continue
 
             # Collect call-site parameters BEFORE looking up include
             # (needed to resolve $PARAM in include name - GUIIncludes.cpp:628)
@@ -251,7 +240,7 @@ class SkinResolution:
 
             # Resolve $PARAM in include name before lookup (matches Kodi GUIIncludes.cpp:628)
             # Kodi replaces undefined params with empty strings
-            if "$PARAM[" in inc_name:
+            if inc_name and "$PARAM[" in inc_name:
                 resolved_name, status = utils.resolve_params_in_text(inc_name, call_params)
                 if status in ("ALL_RESOLVED", "NO_PARAMS"):
                     inc_name = resolved_name
@@ -265,10 +254,17 @@ class SkinResolution:
                     else:
                         inc_name = resolved_name
 
-            include_def = includes_for_folder.get(inc_name)
-            if not include_def:
-                logger.warning("Skin has invalid include: %s", inc_name)
-                processed_nodes.add(id(include_node))
+            path_attr = include_node.get("_kdk_inc_path")
+            path = path_attr.split(self._PATH_SEP) if path_attr else []
+
+            include_def = includes_for_folder.get(inc_name) if inc_name else None
+
+            # Unknown include or a cycle: leave node in place, advance to next sibling
+            # (Kodi: include = include->NextSiblingElement("include"), GUIIncludes.cpp:466)
+            if include_def is None or inc_name in path:
+                if include_def is None and inc_name:
+                    logger.warning("Skin has invalid include: %s", inc_name)
+                include_node = next(include_node.itersiblings("include"), None)
                 continue
 
             node_or_obj, default_params, file_path = include_def
@@ -279,11 +275,6 @@ class SkinResolution:
                 include_obj = SkinInclude(node=include_body, file=file_path)
             else:
                 include_obj = node_or_obj  # Already an Include object
-
-            # Mark this include as processed BEFORE expanding it (prevents circular references)
-            # This matches Kodi's behavior - once we start processing an include node,
-            # we never process that same node again, even if it appears in nested content
-            processed_nodes.add(id(include_node))
 
             # Merge params: call-site params override defaults (no overwrites of existing)
             # Note: call_params already collected earlier for $PARAM resolution in include name
@@ -302,6 +293,10 @@ class SkinResolution:
             else:
                 call_line = str(include_node.sourceline) if include_node.sourceline else ""
                 call_file = getattr(self, "_source_file", "")
+
+            # Stamp expanded includes with their ancestry so re-expansion of the same
+            # name (a cycle) is skipped, even across control/recursion boundaries.
+            child_path_attr = self._PATH_SEP.join(path + [inc_name])
             for child in include_element:
                 cloned_child = copy.deepcopy(child)
 
@@ -312,6 +307,10 @@ class SkinResolution:
                     cloned_child.set("_kdk_call_file", call_file)
                     self._stamp_descendants(cloned_child, call_line, inc_name, inc_file_for_stamp, call_file=call_file)
 
+                for nested_inc in cloned_child.iter("include"):
+                    if nested_inc.get("_kdk_inc_path") is None:
+                        nested_inc.set("_kdk_inc_path", child_path_attr)
+
                 insert_index = list(node).index(include_node)
                 node.insert(insert_index, cloned_child)
 
@@ -320,6 +319,9 @@ class SkinResolution:
                 self._resolve_params_for_node(cloned_child, merged_params, include_node)
 
             node.remove(include_node)
+            # Restart from the first include so spliced-in includes are processed in
+            # document order (Kodi: include = node->FirstChildElement("include")).
+            include_node = node.find("include")
 
 
     def _insert_nested(self, parent_node, include_node, inserted_node):
