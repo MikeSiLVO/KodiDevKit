@@ -145,7 +145,7 @@ def generate_html_report(all_issues, skin_name, skin_path, output_path=None, ser
         progress_callback(f"Generating HTML report ({len(normal_categories)} categories, {len(issues_by_file)} files)...")
 
     html_content = _generate_html_template(
-        skin_name, skin_path, total_normal_issues, total_runtime_issues,
+        skin_name, skin_path, total_runtime_issues,
         normal_categories, normal_issues, issues_by_file, server_port, progress_callback
     )
 
@@ -161,7 +161,7 @@ def generate_html_report(all_issues, skin_name, skin_path, output_path=None, ser
     return output_path
 
 
-def _generate_html_template(skin_name, skin_path, total_issues, total_runtime_excluded,
+def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                             categories, all_issues, issues_by_file, server_port, progress_callback=None):
     """Generate the complete HTML report template."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -315,8 +315,10 @@ def _generate_html_template(skin_name, skin_path, total_issues, total_runtime_ex
             }});
         }});
 
-        // Severity filtering — warnings hidden by default (educational, not actionable)
+        // Filtering — warnings and include-sourced warnings hidden by default
+        // (educational, not actionable). The export link mirrors these toggles.
         const hiddenSeverities = new Set(['warning']);
+        let includeWarningsHidden = true;
 
         function toggleSeverity(severity, btn) {{
             if (hiddenSeverities.has(severity)) {{
@@ -326,16 +328,36 @@ def _generate_html_template(skin_name, skin_path, total_issues, total_runtime_ex
                 hiddenSeverities.add(severity);
                 btn.classList.remove('active');
             }}
-            applySeverityFilter();
+            applyFilters();
         }}
 
-        function applySeverityFilter() {{
-            // Hide/show table rows and list items by severity class
-            ['error', 'warning'].forEach(sev => {{
-                const hidden = hiddenSeverities.has(sev);
-                document.querySelectorAll('.severity-' + sev).forEach(el => {{
-                    el.style.display = hidden ? 'none' : '';
-                }});
+        function toggleIncludeWarnings(btn) {{
+            includeWarningsHidden = !includeWarningsHidden;
+            btn.classList.toggle('active', !includeWarningsHidden);
+            applyFilters();
+        }}
+
+        function elementHidden(el) {{
+            if (el.classList.contains('severity-error') && hiddenSeverities.has('error')) return true;
+            if (el.classList.contains('severity-warning') && hiddenSeverities.has('warning')) return true;
+            if (includeWarningsHidden && el.classList.contains('from-include')) return true;
+            return false;
+        }}
+
+        function updateExportLink() {{
+            const link = document.getElementById('export-link');
+            if (!link) return;
+            const params = new URLSearchParams();
+            if (hiddenSeverities.size) params.set('hidesev', Array.from(hiddenSeverities).join(','));
+            if (includeWarningsHidden) params.set('hideinc', '1');
+            const qs = params.toString();
+            link.href = 'http://localhost:{server_port}/export' + (qs ? '?' + qs : '');
+        }}
+
+        function applyFilters() {{
+            // Hide/show table rows and list items by combined severity + include filters
+            document.querySelectorAll('.severity-error, .severity-warning').forEach(el => {{
+                el.style.display = elementHidden(el) ? 'none' : '';
             }});
 
             let totalErrors = 0;
@@ -386,10 +408,12 @@ def _generate_html_template(skin_name, skin_path, total_issues, total_runtime_ex
             const warningStat = document.querySelector('.stat-number-warning');
             if (errorStat) errorStat.textContent = totalErrors;
             if (warningStat) warningStat.textContent = totalWarnings;
+
+            updateExportLink();
         }}
 
-        // Apply default filter on load
-        document.addEventListener('DOMContentLoaded', applySeverityFilter);
+        // Apply default filters on load
+        document.addEventListener('DOMContentLoaded', applyFilters);
     </script>
     <style>
         @keyframes slideInUp {{
@@ -435,13 +459,14 @@ def _generate_html_template(skin_name, skin_path, total_issues, total_runtime_ex
                     </div>
                 </div>
                 <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
-                    <a href="http://localhost:{server_port}/export" class="export-button" download="validation_report.txt">
+                    <a id="export-link" href="http://localhost:{server_port}/export" class="export-button" download="validation_report.txt">
                         📥 Export to Text
                     </a>
                     <div class="severity-filters">
                         <span style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-right: 6px;">Filter:</span>
                         <button class="sev-toggle active" data-severity="error" onclick="toggleSeverity('error', this)">&#x2716; Errors</button>
                         <button class="sev-toggle" data-severity="warning" onclick="toggleSeverity('warning', this)">&#x26A0; Warnings</button>
+                        <button class="sev-toggle" data-filter="include" onclick="toggleIncludeWarnings(this)" title="Warnings sourced from &lt;include&gt; content (mostly educational)">&#x26A0; Include warnings</button>
                     </div>
                 </div>
             </div>
@@ -603,10 +628,11 @@ def _generate_category_section(category, issues, server_port):
             source_html = ""
 
         sev_class = f"severity-{severity}"
+        inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
         subtype = _classify_subtype(message)
         subtype_html = f'<span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
         issue_rows.append(f"""
-                    <tr class="{sev_class}">
+                    <tr class="{sev_class}{inc_class}">
                         <td><span class="sev-badge {sev_class}">{html.escape(severity)}</span>{subtype_html}</td>
                         <td>{file_display}</td>
                         <td class="line-number">{line if line else "N/A"}</td>
@@ -678,10 +704,11 @@ def _generate_file_section(file_path, issues, server_port):
                 source_html = ""
 
             sev_class = f"severity-{severity}"
+            inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
             subtype = _classify_subtype(message)
             subtype_html = f' <span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
             issue_items.append(f"""
-                        <li class="{sev_class}">
+                        <li class="{sev_class}{inc_class}">
                             <span class="sev-badge {sev_class}">{html.escape(severity)}</span>{subtype_html}
                             <a href="{localhost_url}" class="file-link" target="_blank" title="Open in Sublime Text at line {line}">
                                 <span class="line-number">Line {line}:</span>

@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 import threading
 import logging
 import sys
-from .. import utils
+from .text import generate_text_report
 
 logger = logging.getLogger("KodiDevKit.report_server")
 
@@ -133,7 +133,17 @@ class FileOpenHandler(BaseHTTPRequestHandler):
                 self.send_error(404, "No report data available")
                 return
 
-            text_content = _generate_text_report(_report_data)
+            params = parse_qs(parsed.query)
+            hidden_severities = {
+                s for s in params.get('hidesev', [''])[0].split(',') if s
+            }
+            hide_include_warnings = params.get('hideinc', ['0'])[0] == '1'
+
+            text_content = generate_text_report(
+                _report_data,
+                hidden_severities=hidden_severities,
+                hide_include_warnings=hide_include_warnings,
+            )
 
             self.send_response(200)
             self.send_header('Content-type', 'text/plain; charset=utf-8')
@@ -144,96 +154,6 @@ class FileOpenHandler(BaseHTTPRequestHandler):
 
         else:
             self.send_error(404, "Not found")
-
-
-def _generate_text_report(report_data):
-    """Generate a nicely formatted text report."""
-    lines = []
-    lines.append("=" * 80)
-    lines.append("KODI SKIN VALIDATION REPORT")
-    lines.append("=" * 80)
-    lines.append("")
-    lines.append(f"Skin: {report_data.get('skin_name', 'Unknown')}")
-    lines.append(f"Path: {report_data.get('skin_path', 'Unknown')}")
-    lines.append(f"Generated: {report_data.get('timestamp', 'Unknown')}")
-    lines.append("")
-    lines.append("=" * 80)
-    lines.append("SUMMARY")
-    lines.append("=" * 80)
-    lines.append("")
-
-    all_issues_raw = report_data.get('all_issues', {})
-
-    # Filter out runtime-generated issues (same as HTML report)
-    all_issues = {}
-    total_runtime_excluded = 0
-
-    for category, issues in all_issues_raw.items():
-        filtered_issues = [
-            issue for issue in issues
-            if not utils.is_runtime_generated_file(issue.get("file", ""))
-        ]
-        excluded_count = len(issues) - len(filtered_issues)
-        total_runtime_excluded += excluded_count
-
-        if filtered_issues:
-            all_issues[category] = filtered_issues
-
-    total_issues = sum(len(issues) for issues in all_issues.values())
-    lines.append(f"Total Issues: {total_issues}")
-    lines.append(f"Categories: {len([c for c, issues in all_issues.items() if issues])}")
-
-    if total_runtime_excluded > 0:
-        lines.append("")
-        lines.append(f"Note: {total_runtime_excluded} runtime-generated issue{'s' if total_runtime_excluded != 1 else ''} from")
-        lines.append("      script-skinvariables-*.xml files excluded from this report.")
-        lines.append("      These files are auto-generated and over-generation is expected.")
-
-    lines.append("")
-
-    lines.append("-" * 80)
-    lines.append("ISSUES BY CATEGORY")
-    lines.append("-" * 80)
-    lines.append("")
-
-    for category, issues in all_issues.items():
-        if not issues:
-            continue
-
-        lines.append("")
-        lines.append(f"{'#' * 60}")
-        lines.append(f"# {category.upper()} ({len(issues)} issues)")
-        lines.append(f"{'#' * 60}")
-        lines.append("")
-
-        by_file = {}
-        for issue in issues:
-            file_path = issue.get('file', 'Unknown')
-            if file_path not in by_file:
-                by_file[file_path] = []
-            by_file[file_path].append(issue)
-
-        for file_path in sorted(by_file.keys()):
-            file_issues = by_file[file_path]
-            lines.append(f"  File: {file_path}")
-            lines.append(f"  {'-' * 76}")
-
-            for issue in file_issues:
-                line_num = issue.get('line', 0)
-                message = issue.get('message', 'No message')
-                issue_type = issue.get('type', '')
-
-                lines.append(f"    Line {line_num:4d}: {message}")
-                if issue_type:
-                    lines.append(f"                Type: {issue_type}")
-                lines.append("")
-
-    lines.append("")
-    lines.append("=" * 80)
-    lines.append("END OF REPORT")
-    lines.append("=" * 80)
-
-    return '\n'.join(lines)
 
 
 def set_report_data(all_issues, skin_name, skin_path, timestamp):
