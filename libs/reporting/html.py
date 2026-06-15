@@ -315,9 +315,9 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
             }});
         }});
 
-        // Filtering — warnings and include-sourced warnings hidden by default
-        // (educational, not actionable). The export link mirrors these toggles.
-        const hiddenSeverities = new Set(['warning']);
+        // Filtering — errors and warnings shown by default; include-sourced
+        // warnings hidden (mostly educational). The export link mirrors these toggles.
+        const hiddenSeverities = new Set();
         let includeWarningsHidden = true;
 
         function toggleSeverity(severity, btn) {{
@@ -465,7 +465,7 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                     <div class="severity-filters">
                         <span style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-right: 6px;">Filter:</span>
                         <button class="sev-toggle active" data-severity="error" onclick="toggleSeverity('error', this)">&#x2716; Errors</button>
-                        <button class="sev-toggle" data-severity="warning" onclick="toggleSeverity('warning', this)">&#x26A0; Warnings</button>
+                        <button class="sev-toggle active" data-severity="warning" onclick="toggleSeverity('warning', this)">&#x26A0; Warnings</button>
                         <button class="sev-toggle" data-filter="include" onclick="toggleIncludeWarnings(this)" title="Warnings sourced from &lt;include&gt; content (mostly educational)">&#x26A0; Include warnings</button>
                     </div>
                 </div>

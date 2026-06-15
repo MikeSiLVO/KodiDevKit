@@ -79,6 +79,17 @@ class TestHtmlIncludeTagging(unittest.TestCase):
         self.assertIn("toggleIncludeWarnings(this)", doc)
         self.assertIn('id="export-link"', doc)
 
+    def test_default_toggle_states(self):
+        """Errors + Warnings shown by default; include warnings hidden."""
+        import tempfile
+        out = os.path.join(tempfile.mkdtemp(), "r.html")
+        H.generate_html_report(_report()["all_issues"], "skin.test", "/skin", output_path=out, server_port=48273)
+        doc = open(out, encoding="utf-8").read()
+        self.assertIn("const hiddenSeverities = new Set();", doc)
+        self.assertIn("let includeWarningsHidden = true;", doc)
+        self.assertIn('class="sev-toggle active" data-severity="warning"', doc)
+        self.assertIn('class="sev-toggle" data-filter="include"', doc)
+
 
 if __name__ == "__main__":
     unittest.main()
