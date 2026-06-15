@@ -1147,7 +1147,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 if "meta.attribute-with-value" in scope_name or "entity.other.attribute-name" in scope_name:
                     return None
 
-            owner_tag = owner.tag.lower() if hasattr(owner, "tag") and owner is not None else ""
+            owner_tag = owner.tag.lower()
             if (
                 "<" in raw
                 or ">" in raw
