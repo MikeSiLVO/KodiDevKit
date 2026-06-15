@@ -94,7 +94,7 @@ class ValidationProgressView(ProgressScratchView):
         super().__init__(window, f"Validation Progress - {check_type}", icon="🔍")
         self.check_type = check_type
         self._created_at = time.time()
-        self._min_display_ms = 1500  # Minimum time to display before opening quick panel
+        self._min_display_ms = 500  # Hold the progress tab this long so fast checks don't flash
         self._spinner_cycle = 0
         self._spinner_frames = ['|', '/', '-', '\\']
         self._animation_timer = None
@@ -188,76 +188,12 @@ class ValidationProgressView(ProgressScratchView):
 
         sublime.set_timeout(self._animate_spinner, 200)
 
-    def show_completion(self, issue_count, close_on_issues=True):
-        """Render the completion screen.
-
-        If `close_on_issues` is True, the view auto-closes after a short
-        delay (longer when issues were found, so the user has time to read).
-        Returns the delay in ms, useful for timing a follow-up quick panel.
-        """
+    def remaining_min_display_ms(self):
+        """Delay before swapping to results so a fast check doesn't flash the tab."""
         self._animation_timer = None
         self._current_progress = None
-
         elapsed_ms = (time.time() - self._created_at) * 1000
-
-        # Ensure minimum display time before closing (when issues found)
-        if issue_count > 0 and close_on_issues:
-            remaining_ms = max(0, self._min_display_ms - elapsed_ms)
-            close_delay = int(remaining_ms + 300)  # Add 300ms after minimum time
-        else:
-            close_delay = 300
-
-        if issue_count > 0:
-            self._show_fancy_completion(
-                status="✓ VALIDATION COMPLETE",
-                result=f"{issue_count} issue{'s' if issue_count != 1 else ''} found",
-                footer="Press ENTER to see results",
-                icon="⚠",
-                auto_close=close_on_issues,
-                close_delay=close_delay
-            )
-        else:
-            self._show_fancy_completion(
-                status="VALIDATION COMPLETE",
-                result="No issues found",
-                footer="Press ENTER to close",
-                icon="✅",
-                auto_close=close_on_issues,
-                close_delay=close_delay
-            )
-
-        return close_delay
-
-    def _show_fancy_completion(self, status, result, footer, icon, auto_close=True, close_delay=300):
-        """Render the styled completion box and optionally auto-close after `close_delay` ms."""
-        content = f"""
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                                                                              ║
-║  {icon}  {status:<70} ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-  {result}
-
-
-  ──────────────────────────────────────────────────────────────────────────────
-
-  {footer}
-"""
-
-        self.replace_content(content)
-
-        def mark_completion():
-            if self._view and self._view.is_valid():
-                self._view.settings().set('kodidevkit_completion_view', True)
-                window = self._view.window()
-                if window:
-                    window.focus_view(self._view)
-
-        sublime.set_timeout(mark_completion, 0)
-
-        if auto_close:
-            sublime.set_timeout(self.close, close_delay)
+        return int(max(0, self._min_display_ms - elapsed_ms))
 
 
 class ReportProgressView(ProgressScratchView):

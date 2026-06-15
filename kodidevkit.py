@@ -152,10 +152,6 @@ _setup_logging_once()
 
 logger = logging.getLogger("KodiDevKit.kodidevkit")
 
-# Active validation commands keyed by view id, so the Enter-handler can
-# reach their callbacks.
-_validation_commands = {}
-
 
 
 def _on_settings_changed():
@@ -1477,11 +1473,6 @@ class KodiDevKit(sublime_plugin.EventListener):
     def on_activated_async(self, view):
         self.check_status()
         self._cleanup_orphaned_phantoms()
-
-    def on_pre_close_window(self, window):
-        """Forget validation commands tied to this window."""
-        global _validation_commands
-        _validation_commands.pop(window.id(), None)
 
     def on_deactivated_async(self, view):
         """Hide our tooltip and cancel any pending tooltip timer."""

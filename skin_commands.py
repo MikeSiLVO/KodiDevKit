@@ -22,11 +22,6 @@ def _infos():
     return INFOS
 
 
-def _validation_commands():
-    from .kodidevkit import _validation_commands
-    return _validation_commands
-
-
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 
@@ -248,36 +243,37 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
         sublime.set_timeout(lambda: self._show_results(nodes, check_type), 0)
 
     def _show_results(self, nodes, check_type):
-        """Show validation results (must run on main thread)."""
+        """Close the progress view and show results in a quick panel (main thread)."""
         self.nodes = nodes
-        self.window.status_message(f"Validation complete: {len(nodes)} issues found")
 
-        is_placeholder = (
-            len(self.nodes) == 1
-            and isinstance(self.nodes[0], dict)
-            and str(self.nodes[0].get("message", "")).lower().startswith("no ")
+        no_issues = (
+            len(nodes) == 1
+            and isinstance(nodes[0], dict)
+            and str(nodes[0].get("message", "")).lower().startswith("no ")
         )
-
-        if self.nodes and not is_placeholder:
-            listitems = [
-                [str(i.get("message", "")), "%s: %s" % (os.path.basename(str(i.get("file", ""))), i.get("line", 0))]
-                for i in self.nodes
-            ]
-
-            self.window.settings().set('kodidevkit_validation_pending', {
-                'listitems': listitems,
-                'window_id': self.window.id()
-            })
-            logger.debug(f"KodidevkitCheckVariablesCommand: Stored {len(listitems)} items for window {self.window.id()}")
-
-            vc = _validation_commands()
-            vc[self.window.id()] = self
-            logger.debug("KodidevkitCheckVariablesCommand: Stored command instance in _validation_commands")
-
-            self.progress.show_completion(len(self.nodes), close_on_issues=False)
-        else:
-            self.progress.show_completion(0, close_on_issues=False)
+        if no_issues:
             self.window.status_message("✅ Validation complete: No issues found")
+        else:
+            self.window.status_message(
+                f"Validation complete: {len(nodes)} issue{'s' if len(nodes) != 1 else ''} found"
+            )
+
+        listitems = []
+        for i in nodes:
+            file_path = str(i.get("file", ""))
+            location = f"{os.path.basename(file_path)}: {i.get('line', 0)}" if file_path else ""
+            listitems.append([str(i.get("message", "")), location])
+
+        def reveal():
+            self.progress.close()
+            self.window.show_quick_panel(
+                items=listitems,
+                on_select=self.on_done,
+                selected_index=0,
+                on_highlight=self.show_preview,
+            )
+
+        sublime.set_timeout(reveal, self.progress.remaining_min_display_ms())
 
     def on_done(self, index):
         if index == -1:
@@ -295,46 +291,6 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
             return
 
         self.window.open_file("%s:%d" % (path, line), sublime.ENCODED_POSITION)
-
-
-class KodidevkitCloseCompletionViewCommand(sublime_plugin.TextCommand):
-    """Enter-key handler for the validation completion view: close it and open results."""
-
-    def run(self, edit):
-        """Close the view; if results are queued for this window, show them in a quick panel."""
-        window = self.view.window()
-        if not window:
-            self.view.close()
-            return
-
-        validation_data = window.settings().get('kodidevkit_validation_pending')
-
-        if validation_data:
-            window_id = validation_data.get('window_id')
-            listitems = validation_data.get('listitems', [])
-
-            vc = _validation_commands()
-            command = vc.get(window_id)
-
-            if command and listitems:
-                window.settings().erase('kodidevkit_validation_pending')
-                vc.pop(window_id, None)
-
-                self.view.close()
-
-                window.show_quick_panel(
-                    items=listitems,
-                    on_select=command.on_done,
-                    selected_index=0,
-                    on_highlight=command.show_preview,
-                )
-                return
-
-        self.view.close()
-
-    def is_enabled(self):
-        """Only enable in completion views."""
-        return self.view.settings().get("kodidevkit_completion_view", False)
 
 
 class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
