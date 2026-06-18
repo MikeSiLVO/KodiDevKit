@@ -1727,7 +1727,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     logger.warning("check_status XML parse SLOW: %.3fs file=%s", parse_elapsed, os.path.basename(self.filename))
                 view.assign_syntax('Packages/KodiDevKit/KodiSkinXML.sublime-syntax')
         elif ext == ".po":
-            view.assign_syntax('Packages/KodiDevKit/Gettext.tmLanguage')
+            view.assign_syntax('Packages/KodiDevKit/Gettext.sublime-syntax')
         elif ext == ".log":
             view.assign_syntax('Packages/KodiDevKit/KodiLog.sublime-syntax')
 
