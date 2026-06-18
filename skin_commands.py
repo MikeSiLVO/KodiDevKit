@@ -240,10 +240,14 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
             )
             return
 
-        sublime.set_timeout(lambda: self._show_results(nodes, check_type), 0)
+        sublime.set_timeout(lambda: self._show_results(nodes), 0)
 
-    def _show_results(self, nodes, check_type):
+    def _show_results(self, nodes):
         """Close the progress view and show results in a quick panel (main thread)."""
+        # Checkers are inconsistent: some return a "No ... issues found" placeholder
+        # when clean, others an empty list. Normalize so the panel always has a row.
+        if not nodes:
+            nodes = [{"message": "No issues found", "file": "", "line": 0}]
         self.nodes = nodes
 
         no_issues = (
