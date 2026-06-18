@@ -71,6 +71,47 @@ class ProgressScratchView:
 
         sublime.set_timeout(close_view, 0)
 
+    def close_sync(self):
+        """Close the view immediately. Call only from the main thread, so the
+        tab is gone before a follow-up panel or dialog is shown over it."""
+        if self._view and self._view.is_valid():
+            self._view.close()
+
+    def to_results_view(self, name, content, file_regex, line_regex="", base_dir=""):
+        """Repurpose this tab into a read-only results view (main thread).
+
+        `result_file_regex` / `result_line_regex` make matching lines open on
+        double-click and via F4 / Shift+F4, the same as build output. Reusing
+        the tab avoids the flicker of closing the progress view and opening a
+        fresh one.
+        """
+        if not (self._view and self._view.is_valid()):
+            return
+        view = self._view
+        view.set_name(name)
+        view.assign_syntax("Packages/KodiDevKit/KodiValidationResults.sublime-syntax")
+        settings = view.settings()
+        settings.set("result_file_regex", file_regex)
+        if line_regex:
+            settings.set("result_line_regex", line_regex)
+        if base_dir:
+            settings.set("result_base_dir", base_dir)
+        # Declutter: drop the gutter line numbers (redundant next to the inline
+        # ones), the active-line highlight, and indent guides.
+        settings.set("line_numbers", False)
+        settings.set("highlight_line", False)
+        settings.set("draw_indent_guides", False)
+        settings.set("draw_white_space", "none")
+        settings.set("rulers", [])
+        settings.set("kodidevkit_results", True)
+        view.set_read_only(False)
+        view.run_command("select_all")
+        view.run_command("left_delete")
+        view.run_command("append", {"characters": content})
+        view.set_read_only(True)
+        view.sel().clear()
+        view.show(0)
+
     def finalize(self, message, close=False):
         """Show the final `message`; close the view after a short delay if `close` is True."""
         self.update(message)

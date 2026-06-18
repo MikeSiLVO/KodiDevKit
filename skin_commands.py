@@ -24,6 +24,70 @@ def _infos():
 
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
+# Friendly names for the results view title/header, keyed by check_type.
+CHECK_LABELS = {
+    "general": "General",
+    "file": "File",
+    "variable": "Variables",
+    "include": "Includes",
+    "font": "Fonts",
+    "label": "Labels",
+    "id": "IDs",
+    "filecheck": "File Integrity",
+}
+
+# Results view navigation (build-output style): a file header line (col 0, ends
+# in an extension) sets the file; an indented "<line>  message" row opens at that
+# line on double-click / F4. Pathless rows are indented text and stay plain.
+RESULT_FILE_REGEX = r"^(\S.*\.[A-Za-z0-9]+)\s*$"
+RESULT_LINE_REGEX = r"^\s+([0-9]+)\s"
+
+
+def _rel_path(file_path, base_dir):
+    """Path relative to the skin root when it sits inside it, else as-is."""
+    if base_dir:
+        try:
+            candidate = os.path.relpath(file_path, base_dir)
+            if not candidate.startswith(".."):
+                return candidate
+        except (ValueError, OSError):
+            pass
+    return file_path
+
+
+def _as_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _results_body(nodes, base_dir):
+    """Group issues under a per-file header with indented rows; pathless
+    issues go under a trailing "Skin-wide" block as non-navigable text."""
+    by_file = {}
+    pathless = []
+    for issue in nodes:
+        file_path = str(issue.get("file", ""))
+        if file_path:
+            by_file.setdefault(file_path, []).append(issue)
+        else:
+            pathless.append(issue)
+
+    blocks = []
+    for file_path in sorted(by_file):
+        rows = sorted(by_file[file_path], key=lambda i: _as_int(i.get("line", 0)))
+        lines = "\n".join(
+            f"{_as_int(i.get('line', 0)):>7}  {str(i.get('message', ''))}" for i in rows
+        )
+        blocks.append(f"{_rel_path(file_path, base_dir)}\n{lines}")
+
+    if pathless:
+        lines = "\n".join(f"         {str(i.get('message', ''))}" for i in pathless)
+        blocks.append(f"Skin-wide\n{lines}")
+
+    return "\n\n".join(blocks)
+
 
 class _QuickPanelMixin:
     """Quick-panel callbacks (open node location, select text); pair with `WindowCommand`."""
@@ -240,61 +304,66 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
             )
             return
 
-        sublime.set_timeout(lambda: self._show_results(nodes), 0)
+        sublime.set_timeout(lambda: self._show_results(nodes, check_type), 0)
 
-    def _show_results(self, nodes):
-        """Close the progress view and show results in a quick panel (main thread)."""
-        # Checkers are inconsistent: some return a "No ... issues found" placeholder
-        # when clean, others an empty list. Normalize so the panel always has a row.
-        if not nodes:
-            nodes = [{"message": "No issues found", "file": "", "line": 0}]
+    def _show_results(self, nodes, check_type):
+        """Surface validation results once the check finishes (main thread).
+
+        Clean result (empty list or a checker's "No ... issues found"
+        placeholder) shows a dialog; real issues become a navigable results
+        view (double-click / F4 to open). The progress tab is reused so there
+        is no close/open flicker.
+        """
         self.nodes = nodes
+        label = CHECK_LABELS.get(check_type, "Validation")
 
         no_issues = (
-            len(nodes) == 1
-            and isinstance(nodes[0], dict)
-            and str(nodes[0].get("message", "")).lower().startswith("no ")
-        )
-        if no_issues:
-            self.window.status_message("✅ Validation complete: No issues found")
-        else:
-            self.window.status_message(
-                f"Validation complete: {len(nodes)} issue{'s' if len(nodes) != 1 else ''} found"
+            not nodes
+            or (
+                len(nodes) == 1
+                and isinstance(nodes[0], dict)
+                and str(nodes[0].get("message", "")).lower().startswith("no ")
             )
+        )
 
-        listitems = []
-        for i in nodes:
-            file_path = str(i.get("file", ""))
-            location = f"{os.path.basename(file_path)}: {i.get('line', 0)}" if file_path else ""
-            listitems.append([str(i.get("message", "")), location])
+        if no_issues:
+            self.window.status_message(f"✅ {label}: No issues found")
+
+            def reveal_clean():
+                self.progress.close_sync()
+                sublime.message_dialog(f"{label}: No issues found")
+
+            sublime.set_timeout(reveal_clean, self.progress.remaining_min_display_ms())
+            return
+
+        self.window.status_message(
+            f"{label}: {len(nodes)} issue{'s' if len(nodes) != 1 else ''} found"
+        )
+
+        addon = getattr(_infos(), "addon", None)
+        base_dir = getattr(addon, "path", "") or "" if addon is not None else ""
+
+        file_count = len({str(i.get("file", "")) for i in nodes if i.get("file")})
+        n = len(nodes)
+        summary = f"{n} issue{'s' if n != 1 else ''}"
+        if file_count:
+            summary += f" in {file_count} file{'s' if file_count != 1 else ''}"
+        header = (
+            f"{label} validation  -  {summary}\n"
+            "Double-click a line to open  -  F4 / Shift+F4 to step through\n"
+            f"{chr(0x2500) * 60}\n\n"
+        )
 
         def reveal():
-            self.progress.close()
-            self.window.show_quick_panel(
-                items=listitems,
-                on_select=self.on_done,
-                selected_index=0,
-                on_highlight=self.show_preview,
+            self.progress.to_results_view(
+                name=f"🔍 {label}",
+                content=header + _results_body(nodes, base_dir) + "\n",
+                file_regex=RESULT_FILE_REGEX,
+                line_regex=RESULT_LINE_REGEX,
+                base_dir=base_dir,
             )
 
         sublime.set_timeout(reveal, self.progress.remaining_min_display_ms())
-
-    def on_done(self, index):
-        if index == -1:
-            return
-
-        item = self.nodes[index]
-        path = (item.get("file") or "").strip()
-        line = int(item.get("line") or 0)
-
-        if not path:
-            sublime.message_dialog(item.get("message") or "No issues")
-            return
-
-        if not os.path.isfile(path):
-            return
-
-        self.window.open_file("%s:%d" % (path, line), sublime.ENCODED_POSITION)
 
 
 class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):

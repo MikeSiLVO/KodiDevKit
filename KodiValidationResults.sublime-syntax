@@ -1,0 +1,27 @@
+%YAML 1.2
+---
+# Internal syntax for the validation results view (assigned by skin_commands).
+# Not a file type: hidden, no file_extensions. See:
+# https://www.sublimetext.com/docs/syntax.html
+name: KodiDevKit Validation Results
+scope: text.kodidevkit.results
+hidden: true
+
+contexts:
+  main:
+    # Header rule, title and instruction lines -> muted.
+    - match: '^\x{2500}+\s*$'
+      scope: comment.line.kodidevkit.results
+    - match: '^.+  -  [0-9]+ issues?\b.*$'
+      scope: comment.line.kodidevkit.results
+    - match: '^Double-click\b.*$'
+      scope: comment.line.kodidevkit.results
+    # Section headers: per-file path and the trailing "Skin-wide" block.
+    - match: '^Skin-wide\s*$'
+      scope: entity.name.section.kodidevkit.results
+    - match: '^\S.*\.[A-Za-z0-9]+\s*$'
+      scope: entity.name.section.kodidevkit.results
+    # Leading line number on an indented issue row.
+    - match: '^\s+([0-9]+)\b'
+      captures:
+        1: constant.numeric.line.kodidevkit.results
