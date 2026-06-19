@@ -316,6 +316,7 @@
         <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturefocus>
         <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturenofocus>
         <movingspeed acceleration="int" maxvelocity="int" resettimeout="int" delta="int"></movingspeed>
+        <pulseonselect>bool</pulseonselect>
     </control>
     <control type="gamecontroller" id="int">
         <width>int</width>
