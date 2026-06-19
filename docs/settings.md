@@ -41,7 +41,7 @@ Configure the connection to Kodi's JSON-RPC interface. Enable it in Kodi under S
 |---------|------|---------|-------------|
 | `auto_skin_check` | bool | `true` | Run validation checks automatically when saving XML files. Results appear as inline phantoms. |
 | `phantom_severity_level` | string | `"warning"` | Minimum severity for on-save phantoms. Values: `"error"`, `"warning"`. Full reports always show everything. |
-| `phantom_hide_include_warnings` | bool | `true` | Suppress warnings from include content in on-save phantoms. Includes may be valid in other contexts. Errors from includes are always shown. Full reports always show everything. |
+| `hide_include_warnings` | bool | `true` | Hide warnings that originate from include content, everywhere: on-save phantoms, the validation results view, and the HTML report's initial state. Errors from includes are always shown, and `Defaults.xml` issues are reported at their source (not treated as include warnings). Set `false` to show them. |
 | `validation_exclude` | list | `["shortcuts"]` | Folder or file names to skip during validation. Matches any path component, so `"shortcuts"` skips any file inside a `shortcuts/` folder. |
 | `validation_report_directory` | string | `""` | Directory for HTML validation reports. Leave empty to use the default (`Packages/User/KodiDevKit/ValidationReports/`). |
 

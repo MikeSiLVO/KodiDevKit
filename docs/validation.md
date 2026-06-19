@@ -17,14 +17,14 @@ KodiDevKit validates in two modes with different defaults:
 
 **On-save phantoms** appear inline after saving an XML file, controlled by [`auto_skin_check`](settings.md#validation) (default: `true`). These run the XML interpreter against the saved file only (tags, attributes, values, brackets) -- not the full-skin checks like unused variables or missing images. They are filtered:
 - `phantom_severity_level` controls the minimum severity shown (default: `warning`, showing both errors and warnings).
-- `phantom_hide_include_warnings` (default: `true`) suppresses warnings that originate from include content, since an include may be valid in other contexts. Errors from includes are always shown.
+- `hide_include_warnings` (default: `true`) suppresses warnings that originate from include content, since an include may be valid in other contexts. Errors from includes are always shown. This is a plugin-wide setting -- it also applies to the results view and the HTML report.
 - Phantoms show navigation links (Next Issue, Dismiss) and group multiple issues per line.
 
-**Full reports** (Command Palette: "KodiDevKit: Generate Validation Report") run 8 checks across the entire skin: Variables, Includes, Labels, Fonts, IDs, Images, XML Validation, and File Integrity. Reports always show all severity levels regardless of phantom settings. They open in the browser as an interactive HTML page with:
-- Toggle buttons to show/hide each severity level (warnings are hidden by default).
+**Full reports** (Command Palette: "KodiDevKit: Generate Validation Report") run 8 checks across the entire skin: Variables, Includes, Labels, Fonts, IDs, Images, XML Validation, and File Integrity. They open in the browser as an interactive HTML page with:
+- Toggle buttons for errors, warnings, and include-originated warnings. Errors and warnings show by default; include warnings start hidden, following `hide_include_warnings`.
 - Category sections (Variables, Includes, Labels, etc.) with issue counts and descriptions.
 - Clickable file paths that open the file in Sublime Text at the correct line.
-- Export functionality and file navigation.
+- Export to text that mirrors the active toggles.
 
 **Individual checks** can also be run from the Command Palette:
 
@@ -40,7 +40,7 @@ KodiDevKit validates in two modes with different defaults:
 
 File Integrity and Expressions do not have individual commands -- they run as part of the full report and on-save validation respectively.
 
-Results appear in a quick panel. Useful when you want to run one check without generating a full report.
+Results open in a read-only results view grouped by file -- double-click a line (or F4 / Shift+F4) to jump to the issue. Useful when you want to run one check without generating a full report.
 
 ## Validators
 
@@ -154,6 +154,8 @@ The interpreter walks the resolved XML tree (after include expansion, constant/e
 
 Kodi silently ignores all of these structural issues. They are flagged to teach correct XML structure and catch typos.
 
+`<default type="X">` blocks (e.g. in `Defaults.xml`) are validated at their own source against control type X's schema, so a malformed default is reported once at `Defaults.xml` rather than on every control that inherits it -- and is never treated as an include warning.
+
 ### Expressions (on-save only)
 
 Validates that dynamic expressions (`$VAR[]`, `$INFO[]`, `$LOCALIZE[]`) are only used in tags that support them. This check runs during on-save validation but is not included in full reports.
@@ -182,7 +184,7 @@ All of these block Kodi repo submission.
 |---------|---------|--------|
 | [`auto_skin_check`](settings.md#validation) | `true` | Run validation on save |
 | [`phantom_severity_level`](settings.md#validation) | `"warning"` | Minimum severity for on-save phantoms |
-| [`phantom_hide_include_warnings`](settings.md#validation) | `true` | Suppress include-originated warnings in phantoms |
+| [`hide_include_warnings`](settings.md#validation) | `true` | Hide include-originated warnings (phantoms, results view, report) |
 | [`validation_exclude`](settings.md#validation) | `["shortcuts"]` | Paths to skip during validation |
 | [`validation_report_directory`](settings.md#validation) | `""` (auto) | Where HTML reports are saved |
 
