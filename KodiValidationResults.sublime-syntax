@@ -25,3 +25,13 @@ contexts:
     - match: '^\s+([0-9]+)\b'
       captures:
         1: constant.numeric.line.kodidevkit.results
+    - match: '\(from include (\x27[^\x27]*\x27)\)'
+      scope: comment.kodidevkit.results
+      captures:
+        1: string.quoted.single.kodidevkit.results
+    - match: '<[^>]+>'
+      scope: entity.name.tag.kodidevkit.results
+    - match: '\x27[^\x27]*\x27'
+      scope: string.quoted.single.kodidevkit.results
+    - match: '\$(?:LOCALIZE|VAR|INFO|ESCINFO|NUMBER)\[[^\]]*\]'
+      scope: variable.function.kodidevkit.results
