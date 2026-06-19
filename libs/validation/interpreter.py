@@ -252,6 +252,11 @@ class XmlInterpreter:
         for child in node:
             tag = child.tag
 
+            # Default-appended children are validated at their source in
+            # _walk_default; skip them here so a Defaults.xml error isn't
+            # reported again on every control that inherits the default.
+            if (child.get("_kdk_inc_name") or "").startswith("default type="):
+                continue
             if tag in INCLUDE_DEFINITION_TAGS:
                 continue
             if tag == "include":
@@ -406,7 +411,17 @@ class XmlInterpreter:
                 )
             elif child.tag == "variable":
                 self._walk_variable(child)
+            elif child.tag == "default":
+                self._walk_default(child)
         self._context_stack.pop()
+
+    def _walk_default(self, node):
+        """Validate a <default type="X"> block as a control of type X, at its
+        own source. Defaults are the skin's own file, not reusable include
+        content, so errors are reported here (not stamped as include warnings)."""
+        control_type = (node.attrib.get("type") or "").lower().strip()
+        if control_type in self.template_attribs:
+            self._validate_control_children(node, control_type, inside_layout=False)
 
     def _walk_variable(self, node):
         """Validate <variable> children: only <value>. (GUIIncludes.cpp:160-168)"""
