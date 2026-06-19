@@ -140,6 +140,12 @@ class CheckerMixin:
             if not utils.is_runtime_generated_file(row.get("file", ""))
         ]
 
+        if self.settings.get("hide_include_warnings", True):
+            filtered_rows = [
+                row for row in filtered_rows
+                if not (row.get("include_name") and row.get("severity") != SEVERITY_ERROR)
+            ]
+
         return filtered_rows
 
     def get_validation_index(self, progress_callback=None):

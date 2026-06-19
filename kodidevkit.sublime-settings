@@ -126,15 +126,15 @@
     "phantom_severity_level": "warning",
 
     /*
-     * Hide include-originated warnings in phantoms
+     * Hide include-originated warnings everywhere (phantoms, results view,
+     * and the HTML report's initial state)
      *
      * When true, warnings from include content (invalid tags, etc.) are
-     * suppressed in on-save phantoms since the include may be valid in
-     * other contexts. Errors from includes are always shown.
-     *
-     * Full reports always show all issues regardless of this setting.
+     * suppressed since the include may be valid in other contexts. Errors
+     * from includes are always shown, and Defaults.xml issues are reported
+     * at their source (not treated as include warnings).
      */
-    "phantom_hide_include_warnings": true,
+    "hide_include_warnings": true,
 
     /*
      * Exclude paths from XML validation

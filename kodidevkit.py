@@ -1630,7 +1630,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     severity_rank = {"error": 0, "warning": 1}
                     min_level = self.settings.get("phantom_severity_level", "warning")
                     max_rank = severity_rank.get(min_level, 1)
-                    hide_include_warnings = self.settings.get("phantom_hide_include_warnings", True)
+                    hide_include_warnings = self.settings.get("hide_include_warnings", True)
                     issues = [
                         i for i in all_issues
                         if severity_rank.get(i.get("severity", "warning"), 1) <= max_rank

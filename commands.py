@@ -603,13 +603,15 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
                     update_progress(8, f"Report: {message}")
 
                 try:
+                    hide_inc = sublime.load_settings(SETTINGS_FILE).get("hide_include_warnings", True)
                     report_path = report_generator.generate_html_report(
                         all_issues=all_issues,
                         skin_name=skin_name,
                         skin_path=addon_path,
                         output_path=report_path,
                         server_port=server_port,
-                        progress_callback=report_progress
+                        progress_callback=report_progress,
+                        hide_include_warnings=hide_inc
                     )
                 finally:
                     last_update['stop_heartbeat'] = True

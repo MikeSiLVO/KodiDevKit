@@ -97,7 +97,7 @@ def _classify_subtype(message: str) -> str:
     return ""
 
 
-def generate_html_report(all_issues, skin_name, skin_path, output_path=None, server_port=48273, progress_callback=None):
+def generate_html_report(all_issues, skin_name, skin_path, output_path=None, server_port=48273, progress_callback=None, hide_include_warnings=True):
     """Render `all_issues` to an HTML report and return its path.
 
     `all_issues` is keyed by check name (Variables/Includes/...).
@@ -146,7 +146,8 @@ def generate_html_report(all_issues, skin_name, skin_path, output_path=None, ser
 
     html_content = _generate_html_template(
         skin_name, skin_path, total_runtime_issues,
-        normal_categories, normal_issues, issues_by_file, server_port, progress_callback
+        normal_categories, normal_issues, issues_by_file, server_port, progress_callback,
+        hide_include_warnings
     )
 
     if progress_callback:
@@ -162,9 +163,12 @@ def generate_html_report(all_issues, skin_name, skin_path, output_path=None, ser
 
 
 def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
-                            categories, all_issues, issues_by_file, server_port, progress_callback=None):
+                            categories, all_issues, issues_by_file, server_port, progress_callback=None,
+                            hide_include_warnings=True):
     """Generate the complete HTML report template."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    inc_hidden_js = "true" if hide_include_warnings else "false"
+    inc_btn_active = "" if hide_include_warnings else " active"
 
     total_errors = 0
     total_warnings = 0
@@ -318,7 +322,7 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
         // Filtering — errors and warnings shown by default; include-sourced
         // warnings hidden (mostly educational). The export link mirrors these toggles.
         const hiddenSeverities = new Set();
-        let includeWarningsHidden = true;
+        let includeWarningsHidden = {inc_hidden_js};
 
         function toggleSeverity(severity, btn) {{
             if (hiddenSeverities.has(severity)) {{
@@ -466,7 +470,7 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                         <span style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-right: 6px;">Filter:</span>
                         <button class="sev-toggle active" data-severity="error" onclick="toggleSeverity('error', this)">&#x2716; Errors</button>
                         <button class="sev-toggle active" data-severity="warning" onclick="toggleSeverity('warning', this)">&#x26A0; Warnings</button>
-                        <button class="sev-toggle" data-filter="include" onclick="toggleIncludeWarnings(this)" title="Warnings sourced from &lt;include&gt; content (mostly educational)">&#x26A0; Include warnings</button>
+                        <button class="sev-toggle{inc_btn_active}" data-filter="include" onclick="toggleIncludeWarnings(this)" title="Warnings sourced from &lt;include&gt; content (mostly educational)">&#x26A0; Include warnings</button>
                     </div>
                 </div>
             </div>
