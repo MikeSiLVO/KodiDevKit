@@ -15,6 +15,19 @@ APP_NAME = "kodi"
 
 _USER_VISIBLE_METHODS = frozenset({"XBMC.GetInfoBooleans", "XBMC.GetInfoLabels"})
 
+
+def _without_negation_twins(result):
+    """Drop the `![cond]` probe twin the hover adds, so only real queries print."""
+    if not isinstance(result, dict) or not isinstance(result.get("result"), dict):
+        return result
+    values = result["result"]
+    trimmed = {
+        key: val
+        for key, val in values.items()
+        if not (key.startswith("![") and key.endswith("]") and key[2:-1] in values)
+    }
+    return {**result, "result": trimmed}
+
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
@@ -116,7 +129,7 @@ class KodiJsonrpc:
                     else:
                         logger.info("JSONRPC.Introspect unexpected response; payload suppressed")
             elif method in _USER_VISIBLE_METHODS:
-                print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
+                print(json.dumps(_without_negation_twins(result), indent=2, ensure_ascii=False, sort_keys=True))
             elif debug:
                 utils.prettyprint(result)
 

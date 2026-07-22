@@ -43,9 +43,6 @@ LABEL_TAGS = {"label", "label2", "altlabel", "property", "hinttext"}
 
 VISIBLE_TAGS = {"visible", "enable", "usealttexture", "expression", "autoscroll", "selected"}
 
-# Attributes on VISIBLE_TAGS that should not be evaluated as conditions
-VISIBLE_TAG_ATTRIBUTES = {"allowhiddenfocus", "delay", "time", "repeat"}
-
 # mdpopups CSS: fixed dark background so syntax colors pop regardless of theme
 POPUP_CSS = """
 html, body {
@@ -81,10 +78,141 @@ html, body {
     padding: 4px 6px;
     background-color: #1B2530;
 }
+.mdpopups .kdk-verdict {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+.mdpopups .kdk-true {
+    background-color: #1E4620;
+    color: #7CE38B;
+}
+.mdpopups .kdk-false {
+    background-color: #4A1D1D;
+    color: #F28B82;
+}
+.mdpopups .kdk-invalid {
+    background-color: #4A3A1D;
+    color: #F2C744;
+}
+.mdpopups .kdk-offline {
+    background-color: #2A2F36;
+    color: #8A97A5;
+}
+.mdpopups .kdk-rule {
+    border-top: 1px solid #3E4F5A;
+    margin: 6px 0;
+}
+.mdpopups .kdk-sub {
+    color: #8A97A5;
+    font-size: 0.9em;
+}
 """
 
 
 POPUP_WRAP_COLUMN = 100
+
+# Too long to show in a tooltip, so don't claim a verdict for text the user can't see.
+EXPANSION_LIMIT = 1200
+
+# Color + word, not emoji: emoji fonts render inconsistently across platforms.
+_VERDICT_TEXT = {
+    utils.STATE_TRUE: ("kdk-true", "TRUE"),
+    utils.STATE_FALSE: ("kdk-false", "FALSE"),
+    utils.STATE_INVALID: ("kdk-invalid", "NOT PARSEABLE"),
+    utils.STATE_NEEDS_CONTEXT: ("kdk-offline", "NEEDS INCLUDE CONTEXT"),
+    utils.STATE_OFFLINE: ("kdk-offline", "KODI UNREACHABLE"),
+}
+
+# XML's five predefined entities; conditions carry them via &amp; and quotes.
+_XML_ENTITIES = {"&quot;": '"', "&apos;": "'", "&lt;": "<", "&gt;": ">", "&amp;": "&"}
+
+
+def _decode_entities(text):
+    """Undo XML escaping so Kodi compares against what the skin really means."""
+    for entity, char in _XML_ENTITIES.items():
+        if entity != "&amp;":
+            text = text.replace(entity, char)
+    return text.replace("&amp;", "&")
+
+
+def _verdict_html(state, detail=""):
+    """Verdict pill for a condition, with `detail` as a subdued second line."""
+    style, label = _VERDICT_TEXT.get(state, ("kdk-offline", "UNKNOWN"))
+    body = f'<div><span class="kdk-verdict {style}">{label}</span></div>'
+    if detail:
+        body += f'<div class="kdk-sub">{html.escape(detail)}</div>'
+    return body
+
+
+# Chars that end an operand: hovering one of these is not "on an item".
+_OPERAND_STOP = set(" \t+|[]<>\"'")
+
+
+def _on_tag_name(line_text, cursor_offset):
+    """True when the caret is on an element's tag name, not an attribute."""
+    before = line_text[:cursor_offset]
+    if before.rfind("<") <= before.rfind(">"):
+        return False
+    return bool(re.match(r"</?\s*[\w.-]*$", before[before.rfind("<"):]))
+
+
+def _operand_clause(line_text, cursor_offset):
+    """The single condition item under the caret, or None on an operator or gap."""
+    at = line_text[cursor_offset] if 0 <= cursor_offset < len(line_text) else ""
+    if not at or at in _OPERAND_STOP:
+        return None
+    return utils.extract_expression_at_offset(line_text, cursor_offset) or None
+
+
+def _skin_expressions(view):
+    """`$EXP` definitions for the folder holding the file in `view`."""
+    addon = getattr(INFOS, "addon", None)
+    file_name = view.file_name()
+    if not addon or not file_name:
+        return {}
+    folder = os.path.basename(os.path.dirname(file_name))
+    return (getattr(addon, "expression_map", None) or {}).get(folder, {})
+
+
+def evaluate_condition(view, condition):
+    """Popup HTML giving a Kodi boolean condition's verdict, or None if there is none.
+
+    `$EXP` is flattened first because JSON-RPC never sees the skin's expression
+    map; Kodi resolves those at load time (GUIIncludes.cpp:344-366).
+    """
+    condition = _decode_entities(condition or "").strip()
+    if not condition or not re.search(r"[A-Za-z]", condition):
+        return None
+
+    flattened, unknown = utils.flatten_expressions(condition, _skin_expressions(view))
+    if unknown:
+        return _verdict_html(utils.STATE_INVALID, f"undefined expression {sorted(unknown)[0]}")
+
+    expansion = flattened if flattened != condition else ""
+    if len(flattened) > EXPANSION_LIMIT:
+        return _verdict_html(utils.STATE_OFFLINE, "expression too large to evaluate")
+
+    problem = utils.check_condition(flattened)
+    if problem:
+        return _verdict_html(*problem)
+
+    if getattr(kodi, "_cooldown_until", 0) > time.time():
+        return None
+    result = kodi.request(method="XBMC.GetInfoBooleans",
+                          params={"booleans": utils.probe_booleans(flattened)})
+    state = utils.read_probe(result, flattened)
+
+    body = _verdict_html(state)
+    if expansion:
+        body += '<div class="kdk-rule"></div><div class="kdk-sub">expands to</div>'
+        body += mdpopups.syntax_highlight(
+            view=view,
+            src=_soft_wrap_source(expansion, POPUP_WRAP_COLUMN),
+            language="text",
+            allow_code_wrap=True,
+        )
+    return body
 
 
 _WRAP_BREAK_CHARS = ",|+"
@@ -900,7 +1028,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 if window_index < len(window_filenames):
                     return window_filenames[window_index]
 
-        if info_type in {"VAR", "ESCVAR", "EXP"}:
+        if info_type in {"VAR", "ESCVAR"}:
             content = self.get_formatted_include(selected_content, view)
             if content:
                 return content
@@ -946,18 +1074,9 @@ class KodiDevKit(sublime_plugin.EventListener):
         # Evaluate condition="..." attributes by sending them to Kodi.
         if element is not None and "condition" in element.attrib:
             if on_attr_name and scope_content.strip() == "condition":
-                cond = element.attrib["condition"].strip()
-                if cond and re.search(r"[A-Za-z]", cond):
-                    if getattr(kodi, '_cooldown_until', 0) > time.time():
-                        return None
-                    result = kodi.request(
-                        method="XBMC.GetInfoBooleans",
-                        params={"booleans": [cond]},
-                    )
-                    if result:
-                        key, value = result["result"].popitem()
-                        if value is not None:
-                            return "✅ <b>True</b>" if value else "❌ <b>False</b>"
+                verdict = evaluate_condition(view, element.attrib["condition"])
+                if verdict:
+                    return verdict
 
         if "string.quoted.double.xml" in scope_name:
             content = scope_content[1:-1]
@@ -965,18 +1084,12 @@ class KodiDevKit(sublime_plugin.EventListener):
             if element is not None and "condition" in element.attrib:
                 attr_region = view.find(r'condition\s*=\s*"[^"]*"', view.line(region).begin())
                 if attr_region and attr_region.contains(region):
-                    cond = utils.extract_expression_at_offset(line_text, cursor_offset) or selected_content.strip()
-                    if cond and re.search(r"[A-Za-z]", cond):
-                        if getattr(kodi, '_cooldown_until', 0) > time.time():
-                            return None
-                        result = kodi.request(
-                            method="XBMC.GetInfoBooleans",
-                            params={"booleans": [cond]},
-                        )
-                        if result:
-                            key, value = result["result"].popitem()
-                            if value is not None:
-                                return "✅ <b>True</b>" if value else "❌ <b>False</b>"
+                    # The item at the caret; the whole attribute is on the `condition` name.
+                    cond = _operand_clause(line_text, cursor_offset)
+                    if cond:
+                        verdict = evaluate_condition(view, cond)
+                        if verdict:
+                            return verdict
 
             if (content.isdigit()
                     and element is not None
@@ -1060,20 +1173,11 @@ class KodiDevKit(sublime_plugin.EventListener):
                 return None
             has_operators = any(op in text for op in ['|', '+', '!', '[', ']'])
             if (has_operators
-                    and re.search(r"[A-Za-z]", text)
                     and "entity.name.tag" not in view.scope_name(region.b)
                     and info_type not in {"INFO", "ESCINFO", "VAR", "ESCVAR", "EXP"}):
-                if getattr(kodi, '_cooldown_until', 0) > time.time():
-                    return None
-                cond = text.strip()
-                result = kodi.request(
-                     method="XBMC.GetInfoBooleans",
-                     params={"booleans": [cond]},
-                )
-                if result:
-                    key, value = result["result"].popitem()
-                    if value is not None:
-                        return "✅ <b>True</b>" if value else "❌ <b>False</b>"
+                verdict = evaluate_condition(view, text)
+                if verdict:
+                    return verdict
 
             # Fallback: bare InfoBool token with no operators. Use the include
             # definition to resolve what role this param plays; if it's a
@@ -1098,27 +1202,17 @@ class KodiDevKit(sublime_plugin.EventListener):
                         )
                     )
                     if is_condition_role:
-                        # On the `name="..."` attribute value: evaluate the whole
-                        # param body (same as hovering on a real <visible> tag).
-                        # On the value text inside the param: evaluate the token
-                        # under the cursor.
+                        # Whole body on the param name, a single item inside the body.
                         text_before_cursor = line_text[:cursor_offset]
                         in_name_attr = bool(re.search(r'\bname="[^"]*$', text_before_cursor))
                         if in_name_attr:
                             cond = (element.text or "").strip()
                         else:
-                            cond = text.strip()
-                        if cond and "$PARAM[" not in cond and re.search(r"[A-Za-z]", cond):
-                            if getattr(kodi, '_cooldown_until', 0) > time.time():
-                                return None
-                            result = kodi.request(
-                                method="XBMC.GetInfoBooleans",
-                                params={"booleans": [cond]},
-                            )
-                            if result:
-                                _, value = result["result"].popitem()
-                                if value is not None:
-                                    return "✅ <b>True</b>" if value else "❌ <b>False</b>"
+                            cond = _operand_clause(line_text, cursor_offset)
+                        if cond:
+                            verdict = evaluate_condition(view, cond)
+                            if verdict:
+                                return verdict
 
         owner = (
             visible_owner
@@ -1126,54 +1220,20 @@ class KodiDevKit(sublime_plugin.EventListener):
             else element
         )
         if owner is not None and owner.tag in VISIBLE_TAGS:
-            raw = selected_content.strip()
-
-            if raw.startswith("</") or (raw.startswith("/") and ">" in raw):
-                return None
-
-            # Skip if the cursor sits past a closing tag (outside the element).
-            text_before_cursor = line_text[:cursor_offset]
-            last_close_bracket = text_before_cursor.rfind(">")
-            last_open_bracket = text_before_cursor.rfind("<")
-
-            if last_close_bracket > last_open_bracket and last_close_bracket >= 0:
-                tag_content = text_before_cursor[last_open_bracket:last_close_bracket + 1]
-                if tag_content.startswith("</"):
-                    return None
-
-            # Don't evaluate hover on visible-tag attributes like allowhiddenfocus / delay.
-            if any(attr in raw.lower() for attr in VISIBLE_TAG_ATTRIBUTES):
-                scope_name = view.scope_name(region.b)
-                if "meta.attribute-with-value" in scope_name or "entity.other.attribute-name" in scope_name:
-                    return None
-
-            owner_tag = owner.tag.lower()
-            if (
-                "<" in raw
-                or ">" in raw
-                or raw.strip("/").lower() in VISIBLE_TAGS
-                or raw.lower() == owner_tag
-            ):
+            # Whole condition on the tag name; a single item on an operand; nothing else.
+            if _on_tag_name(line_text, cursor_offset):
                 cond = "".join(owner.itertext() or "").strip()
-            else:
-                cond = utils.extract_expression_at_offset(line_text, cursor_offset) or raw
-
-            if "$PARAM[" in cond or cond.startswith("$PARAM"):
+            elif line_text[:cursor_offset].rfind("<") > line_text[:cursor_offset].rfind(">"):
                 return None
+            else:
+                cond = _operand_clause(line_text, cursor_offset)
+                if not cond:
+                    return None
 
-            # Keep [] grouping; only normalize whitespace around `+`.
-            cond = cond.strip()
-            cond = re.sub(r"\s*\+\s*", " + ", cond)
-
-            if cond and re.search(r"[A-Za-z]", cond):
-                result = kodi.request(
-                     method="XBMC.GetInfoBooleans",
-                     params={"booleans": [cond]},
-                )
-                if result:
-                    key, value = result["result"].popitem()
-                    if value is not None:
-                        return "✅ <b>True</b>" if value else "❌ <b>False</b>"
+            cond = re.sub(r"\s*\+\s*", " + ", cond.strip())
+            verdict = evaluate_condition(view, cond)
+            if verdict:
+                return verdict
 
         if element is not None and element.tag in LABEL_TAGS:
             if "$PARAM[" in selected_content:
@@ -1367,7 +1427,8 @@ class KodiDevKit(sublime_plugin.EventListener):
         if window is None or not view.file_name():
             return
 
-        if self._is_definition_name_here(view, ("include", "variable", "constant", "expression")):
+        # `expression` omitted: its body is a boolean, so hovering the name still evaluates it.
+        if self._is_definition_name_here(view, ("include", "variable", "constant")):
             return
 
         tooltip = self.get_tooltip(view)
