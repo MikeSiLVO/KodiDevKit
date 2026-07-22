@@ -27,8 +27,22 @@ from .expressions import (
     starts_with_param_reference,
     contains_dynamic_expression,
     split_top_level_commas,
+    flatten_expressions,
     extract_expression_at_offset,
     get_param_names_in_context,
+)
+
+from .infobool import (
+    STATE_TRUE,
+    STATE_FALSE,
+    STATE_INVALID,
+    STATE_NEEDS_CONTEXT,
+    STATE_OFFLINE,
+    check_syntax,
+    check_condition,
+    negation_of,
+    probe_booleans,
+    read_probe,
 )
 
 from .files import (
@@ -105,8 +119,20 @@ __all__ = [
     "starts_with_param_reference",
     "contains_dynamic_expression",
     "split_top_level_commas",
+    "flatten_expressions",
     "extract_expression_at_offset",
     "get_param_names_in_context",
+    # infobool
+    "STATE_TRUE",
+    "STATE_FALSE",
+    "STATE_INVALID",
+    "STATE_NEEDS_CONTEXT",
+    "STATE_OFFLINE",
+    "check_syntax",
+    "check_condition",
+    "negation_of",
+    "probe_booleans",
+    "read_probe",
     # files
     "eol_info_from_path_patterns",
     "save_xml",

@@ -171,32 +171,8 @@ class SkinResolution:
                 node.attrib[attr_name] = self._resolve_expression_value(attr_value, expressions_for_folder, [])
 
     def _resolve_expression_value(self, value: str, expression_map: dict, resolved: list) -> str:
-        """
-        Resolve $EXP[name] references with circular detection.
-        Matches CGUIIncludes::FlattenExpression (GUIIncludes.cpp:223-242).
-        """
-        if not value:
-            return value
-
-        pattern = re.compile(r'\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]', re.IGNORECASE)
-
-        def replacer(match):
-            exp_name = match.group(1)
-
-            # Check for circular expression (GUIIncludes.cpp:227-231)
-            if exp_name in resolved:
-                logger.error("Skin has a circular expression \"%s\": %s", resolved[-1] if resolved else exp_name, value)
-                return ""
-
-            if exp_name not in expression_map:
-                return match.group(0)
-
-            # Recursively flatten nested expressions
-            resolved_copy = resolved + [exp_name]
-            exp_value = expression_map[exp_name]
-            return self._resolve_expression_value(exp_value, expression_map, resolved_copy)
-
-        return pattern.sub(replacer, value)
+        """Resolve $EXP[name] references with circular detection."""
+        return utils.flatten_expressions(value, expression_map, resolved)[0]
 
     # Separator for the include-expansion path stamped on spliced <include> nodes.
     # Tab is XML-attribute-safe and never appears in include names.

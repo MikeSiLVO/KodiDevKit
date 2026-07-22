@@ -211,6 +211,40 @@ def split_top_level_commas(text: str) -> list[str]:
     return [p for p in parts if p]
 
 
+_EXP_PATTERN = re.compile(r"\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
+
+
+def flatten_expressions(text: str, expression_map: dict[str, str],
+                        _resolved: Optional[list[str]] = None) -> tuple[str, set[str]]:
+    """Expand `$EXP[name]` recursively; returns the text and any undefined names.
+
+    Mirrors CGUIIncludes::FlattenExpression (GUIIncludes.cpp:213-242). Undefined
+    names are left in place, not erased as Kodi does (GUIIncludes.cpp:663), so a
+    caller can tell "no such expression" from a genuinely empty body.
+    """
+    if not text:
+        return text, set()
+
+    resolved = _resolved or []
+    unknown: set[str] = set()
+
+    def replacer(match):
+        name = match.group(1)
+        if name in resolved:
+            logger.error('Skin has a circular expression "%s": %s', resolved[-1], text)
+            return ""
+        if name not in expression_map:
+            unknown.add(name)
+            return match.group(0)
+        body, nested_unknown = flatten_expressions(
+            expression_map[name], expression_map, resolved + [name]
+        )
+        unknown.update(nested_unknown)
+        return body
+
+    return _EXP_PATTERN.sub(replacer, text), unknown
+
+
 _KEYWORD_MACRO_RE = re.compile(
     r"\$(?:LOCALIZE|NUMBER|INFO|ESCINFO|VAR|ESCVAR|EXP|ADDON|PARAM)\[",
     re.IGNORECASE,
