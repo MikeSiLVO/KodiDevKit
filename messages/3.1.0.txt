@@ -1,0 +1,39 @@
+  KodiDevKit 3.1.0
+  =================
+
+  Action required
+  ---------------
+  The 'phantom_hide_include_warnings' setting is now 'hide_include_warnings'
+  and applies everywhere: on-save phantoms, the results view, and the HTML
+  report. If you set the old name, rename it. The default is unchanged
+  (include warnings hidden).
+
+  Improvements
+  ------------
+  Validation checks now open in a navigable results view grouped by file.
+  Double-click a line, or use F4 / Shift+F4, to jump to the issue. The old
+  'press ENTER to see results' step is gone.
+
+  The HTML report has an 'Include warnings' toggle (hidden by default), and
+  'Export to Text' now mirrors whichever toggles are active.
+
+  Defaults.xml <default> blocks are validated at their own source, so a bad
+  default is reported once at Defaults.xml instead of on every control that
+  inherits it.
+
+  Boolean-condition hovers now resolve $EXP references and show a distinct
+  'not parseable' state, so an expression or a broken condition no longer
+  reads as a plain false. Hover the tag or attribute name for the whole
+  condition, an operand for a single item.
+
+  Conditions are now checked against Kodi's parser during validation: a
+  $VAR or $INFO inside a boolean, a misplaced operator, or an undefined
+  $EXP is reported instead of silently evaluating false at runtime.
+
+  Fixes
+  -----
+  - Fixed intermittent false-positive 'control ID not defined' errors for
+    includes reused with different IDs.
+  - <pulseonselect> is no longer falsely flagged on mover controls.
+  - Control-ID references in non-window files (e.g. Timers.xml) are no
+    longer flagged.
