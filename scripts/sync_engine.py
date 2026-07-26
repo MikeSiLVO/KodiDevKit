@@ -30,10 +30,10 @@ SHARED_LIB_DIRS = ("addon", "infoprovider", "polib", "reporting", "skin", "utils
 # Modules sitting directly in libs/ rather than a subpackage.
 SHARED_LIB_FILES = ("__init__.py", "kodi_refs.py")
 
-# Reference data drives validation results, so it mirrors too. data/kodi/ is
-# excluded: those snapshots are committed here and fetched at build time in kdk.
+# Reference data drives validation results, so it mirrors too, including the
+# Kodi-core snapshots both repos now commit.
 SHARED_DATA = ("kodi_builtin_controls.xml", "kodi_infolabel_functions.json")
-SHARED_DATA_DIRS = ("omega", "piers")
+SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers")
 
 # Written to run under either layout, so both repos carry the same file.
 SHARED_SCRIPTS = ("update_kodi_refs.py",)
@@ -180,7 +180,8 @@ def pairs(kdk: Path):
     for sub in SHARED_DATA_DIRS:
         for src in sorted((HERE / "data" / sub).glob("*")):
             if src.is_file():
-                yield f"data/{sub}/{src.name}", src, kdk / "src" / "kdk" / "data" / sub / src.name
+                rel = f"data/{sub}/{src.name}"
+                yield rel, src, kdk / "src" / "kdk" / rel
     for name in SHARED_LIB_DIRS:
         for src in sorted((HERE / "libs" / name).rglob("*.py")):
             rel = src.relative_to(HERE).as_posix()

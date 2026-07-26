@@ -4,3 +4,10 @@
 .gitignore export-ignore
 pyproject.toml export-ignore
 tests/ export-ignore
+
+# sync_engine.py byte-compares these against kdk, so a checkout on a machine
+# with core.autocrlf=true must not read as wholesale drift.
+data/**/*.xml text eol=lf
+data/**/*.po text eol=lf
+data/**/*.json text eol=lf
+scripts/update_kodi_refs.py text eol=lf

@@ -4,8 +4,8 @@ For each release listed in `Addon.RELEASES`, fetch the latest `colors.xml` and
 `strings.po` matching its `github_ref` and write them to the package's
 `data/kodi/<release>/`. Compares SHA256 first; only writes on change.
 
-Run locally before tagging a release, or invoked by `release.yml` on tag push.
-Requires no extra Python deps - uses `urllib`.
+Snapshots are committed, so this runs only when refreshing them. Requires no
+extra Python deps - uses `urllib`.
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ import fnmatch
 import hashlib
 import importlib
 import json
+import os
 import sys
 from pathlib import Path
-from typing import Iterable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -39,7 +39,13 @@ FILES = [
 
 
 def _gh(url: str) -> bytes:
-    req = Request(url, headers={"User-Agent": "kdk-update-kodi-refs"})
+    # Anonymous callers get 60 requests/hour per IP, which shared CI runners
+    # burn through, so use a token when one is in the environment.
+    headers = {"User-Agent": "kdk-update-kodi-refs"}
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = Request(url, headers=headers)
     with urlopen(req, timeout=30) as r:
         return r.read()
 
@@ -119,7 +125,7 @@ def _refresh_one(release: dict) -> list[str]:
     return changed
 
 
-def main(argv: Iterable[str] | None = None) -> int:
+def main() -> int:
     releases = _load_releases()
     if not releases:
         print("No releases with `github_ref` configured in Addon.RELEASES", file=sys.stderr)
