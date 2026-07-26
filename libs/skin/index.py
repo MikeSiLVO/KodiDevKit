@@ -310,17 +310,17 @@ class SkinIndex:
             if progress_callback:
                 progress_callback(f"Processed {include_count} include definitions")
 
-            index['include_to_windows'] = {}
-            for folder in self.skin.xml_folders:
-                index['include_to_windows'][folder] = {}
-                for window_file, inc_usages in index['window_includes'].get(folder, {}).items():
-                    for inc_usage in inc_usages:
-                        inc_name = inc_usage.get('name') if isinstance(inc_usage, dict) else inc_usage
-                        if inc_name:
-                            if inc_name not in index['include_to_windows'][folder]:
-                                index['include_to_windows'][folder][inc_name] = []
-                            if window_file not in index['include_to_windows'][folder][inc_name]:
-                                index['include_to_windows'][folder][inc_name].append(window_file)
+        index['include_to_windows'] = {}
+        for folder in self.skin.xml_folders:
+            index['include_to_windows'][folder] = {}
+            for window_file, inc_usages in index['window_includes'].get(folder, {}).items():
+                for inc_usage in inc_usages:
+                    inc_name = inc_usage.get('name') if isinstance(inc_usage, dict) else inc_usage
+                    if inc_name:
+                        if inc_name not in index['include_to_windows'][folder]:
+                            index['include_to_windows'][folder][inc_name] = []
+                        if window_file not in index['include_to_windows'][folder][inc_name]:
+                            index['include_to_windows'][folder][inc_name].append(window_file)
 
         # Resolve each window so the ID set reflects expanded includes too.
         # Single-threaded; the resolver's _source_file isn't thread-safe.
@@ -376,7 +376,7 @@ class SkinIndex:
 
         if progress_callback:
             progress_callback(f"Index built successfully ({file_count} files processed)")
-        logger.info("✓ Validation index built successfully (%d files + includes processed)", file_count)
+        logger.info("OK: Validation index built successfully (%d files + includes processed)", file_count)
 
         # Pre-check image files (eliminates I/O during ImageCheck validation)
         if 'images_referenced' in index:
@@ -690,10 +690,10 @@ class SkinIndex:
             return exact_relpaths, cf_rel_to_exact, cf_base_to_relpaths
 
         exact_relpaths, cf_rel_to_exact, cf_base_to_relpaths = build_fs_index(self.skin.path)
-        logger.info(f"  → Indexed {len(exact_relpaths)} files in media directories")
+        logger.info(f"  -> Indexed {len(exact_relpaths)} files in media directories")
         has_packed_textures = self._detect_textures_xbt()
         if has_packed_textures:
-            logger.info("  → Textures.xbt detected - missing images may be in archive")
+            logger.info("  -> Textures.xbt detected - missing images may be in archive")
 
         def normalize_ref(val: str) -> str:
             """Normalize image reference to relative path."""
@@ -764,7 +764,7 @@ class SkinIndex:
                     'normalized': normalized,  # Normalized path used for checking
                 }
 
-        logger.info(f"  → Checked {checked_count} unique image references")
+        logger.info(f"  -> Checked {checked_count} unique image references")
     def _detect_textures_xbt(self):
         """True if the skin ships a packed Textures.xbt anywhere we know to look."""
         xbt_locations = [
@@ -804,7 +804,7 @@ class SkinIndex:
             except Exception as e:
                 logger.warning(f"Failed to list font files: {e}")
 
-        logger.info(f"  → Indexed {len(skin_files)} font files in fonts/ directory")
+        logger.info(f"  -> Indexed {len(skin_files)} font files in fonts/ directory")
 
         index['font_files_checked'] = {}
 
@@ -862,7 +862,7 @@ class SkinIndex:
                     'filename': filename,  # Original filename from Font.xml
                 }
 
-        logger.info(f"  → Checked {checked_count} font file references")
+        logger.info(f"  -> Checked {checked_count} font file references")
 
     def _extract_id_definitions_from_xml(self, root, path, folder, index):
         """Extract control and window ID definitions from an XML file."""

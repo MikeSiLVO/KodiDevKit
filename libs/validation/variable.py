@@ -187,7 +187,7 @@ class ValidationVariable:
 
                 if '$PARAM[' in raw_name and not found_in_context:
                     issue['message'] += (
-                        " → Note: Variable contains $PARAM but doesn't resolve to any defined variable "
+                        " -> Note: Variable contains $PARAM but doesn't resolve to any defined variable "
                         "in any usage context. Check variable definitions and parameter names."
                     )
 

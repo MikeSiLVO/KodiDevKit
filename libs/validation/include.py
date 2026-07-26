@@ -330,7 +330,7 @@ class ValidationInclude:
 
                 if '$PARAM[' in raw_name and not found_in_context:
                     issue['message'] += (
-                        " → Note: Include contains $PARAM but doesn't resolve to any defined include "
+                        " -> Note: Include contains $PARAM but doesn't resolve to any defined include "
                         "in any usage context. Check include definitions and parameter names."
                     )
 
