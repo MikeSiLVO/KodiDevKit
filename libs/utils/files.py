@@ -12,7 +12,7 @@ from typing import Optional
 from urllib.request import urlopen
 from lxml import etree as ET
 
-logger = logging.getLogger("KodiDevKit.utils.files")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
