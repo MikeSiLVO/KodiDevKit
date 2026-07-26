@@ -3,7 +3,7 @@
 import json
 import logging
 
-logger = logging.getLogger("KodiDevKit.utils.sublime_helpers")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True

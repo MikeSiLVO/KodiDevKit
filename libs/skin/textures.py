@@ -4,7 +4,7 @@ import os
 import subprocess
 import logging
 
-logger = logging.getLogger("KodiDevKit.skin.textures")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True

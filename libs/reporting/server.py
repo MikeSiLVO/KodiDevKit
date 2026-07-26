@@ -11,7 +11,7 @@ import logging
 import sys
 from .text import generate_text_report
 
-logger = logging.getLogger("KodiDevKit.report_server")
+logger = logging.getLogger(__name__)
 
 _server = None
 _server_port = 48273  # Random high port

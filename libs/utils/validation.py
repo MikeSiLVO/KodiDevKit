@@ -5,7 +5,7 @@ import re
 import logging
 from functools import lru_cache
 
-logger = logging.getLogger("KodiDevKit.utils.validation")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True

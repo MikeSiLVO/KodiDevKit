@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger("kdk.kodi_refs")
+logger = logging.getLogger(__name__)
 
 _BUNDLED_DATA = Path(__file__).resolve().parent.parent / "data" / "kodi"
 

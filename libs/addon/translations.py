@@ -5,7 +5,7 @@ import logging
 from .. import polib
 from ..polib import pofile
 
-logger = logging.getLogger("KodiDevKit.utils.po_helpers")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True

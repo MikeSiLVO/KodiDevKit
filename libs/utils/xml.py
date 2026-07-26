@@ -7,7 +7,7 @@ import logging
 from lxml import etree as ET
 from lxml.etree import XMLSyntaxError
 
-logger = logging.getLogger("KodiDevKit.utils.xml")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True

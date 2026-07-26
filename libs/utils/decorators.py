@@ -8,7 +8,7 @@ import time
 from functools import wraps
 from typing import Any, Callable, Type
 
-logger = logging.getLogger("KodiDevKit.utils.decorators")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
