@@ -65,8 +65,11 @@ class SkinInclude(dict):
             return self.length
         return super().__getitem__(key)
 
-    def get(self, key):
-        return self.__getitem__(key)
+    def get(self, key, default=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
 
     @property
     def line(self):
