@@ -1,0 +1,17 @@
+{
+  "include": ["*.py", "libs", "tests"],
+  "exclude": ["libs/polib", "debug_scripts"],
+  "stubPath": "typings",
+  "pythonVersion": "3.8",
+  "reportMissingModuleSource": "none",
+  "reportIncompatibleMethodOverride": "none",
+  "executionEnvironments": [
+    {
+      "root": "libs",
+      "reportIncompatibleMethodOverride": "error"
+    },
+    {
+      "root": "."
+    }
+  ]
+}
