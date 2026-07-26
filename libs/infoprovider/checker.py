@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import copy
 import logging
-from typing import TYPE_CHECKING
 from .. import utils
 from ..validation import ValidationFont
 from ..validation import ValidationImage
@@ -31,6 +30,26 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# The Kodi-core snapshot is large and read-only, and the editor re-enters
+# get_po_files on every hover. Keyed by mtime so a refreshed snapshot reloads.
+_CORE_PO_CACHE: dict = {}
+
+
+def _core_po(path):
+    """Parsed Kodi-core strings.po for `path`, reusing the last parse."""
+    try:
+        stamp = os.path.getmtime(path)
+    except OSError:
+        stamp = None
+    cached = _CORE_PO_CACHE.get(path)
+    if cached and cached[0] == stamp:
+        return cached[1]
+    po = utils.get_po_file(path)
+    if po is not None:
+        po.language = "resource.language.en_gb"  # type: ignore[attr-defined]
+        _CORE_PO_CACHE[path] = (stamp, po)
+    return po
+
 
 class CheckerMixin:
     """All validation: dispatching, per-file checks, reporting."""
@@ -43,10 +62,78 @@ class CheckerMixin:
     WINDOW_NAMES: list
     _variable_cache: dict
 
-    if TYPE_CHECKING:
-        def get_po_files(self) -> list: ...
-        def get_color_labels(self) -> set: ...
-        def _get_includes_for_folder(self, folder: str) -> list: ...
+    def get_po_files(self) -> list:
+        """Return the skin's PO files plus Kodi-core `strings.po` (from `kodi_path` or bundled snapshot)."""
+        from ..kodi_refs import kodi_strings_po
+
+        po_files = []
+        seen = set()
+
+        def _add(po):
+            if po is None or id(po) in seen:
+                return
+            seen.add(id(po))
+            po_files.append(po)
+
+        if self.addon and hasattr(self.addon, "po_files"):
+            for po in self.addon.po_files:
+                _add(po)
+
+        kodi_path = (self.settings.get("kodi_path") or "").strip() if self.settings else ""
+        core_po_path = kodi_strings_po(self.addon, kodi_path or None)
+        if core_po_path:
+            try:
+                _add(_core_po(core_po_path))
+            except Exception as e:
+                logger.warning("Failed to load Kodi-core strings.po (%s): %s", core_po_path, e)
+
+        return po_files
+
+    def get_color_labels(self) -> set:
+        """Return the addon's color-name set (empty if no addon)."""
+        if self.addon and hasattr(self.addon, "color_labels"):
+            return self.addon.color_labels
+        return set()
+
+    def _get_includes_for_folder(self, folder: str) -> list:
+        """Flatten the addon's `include_map`/`variable_map`/`default_map` for `folder` into one list of `{name, type, file, line, content, node, [params]}` dicts."""
+        if not self.addon:
+            return []
+
+        if not hasattr(self.addon, "include_map"):
+            return self.addon.includes.get(folder, [])
+
+        from ..skin.include import SkinInclude
+
+        result = []
+        for name, (node, params, file_path) in self.addon.include_map.get(folder, {}).items():
+            definition = node.find("definition")
+            include_body = definition if definition is not None else node
+            inc = SkinInclude(node=include_body, file=file_path)
+            result.append({
+                "name": name, "type": "include",
+                "file": inc.file, "line": inc.line,
+                "content": inc.content, "node": inc.node,
+                "params": params,
+            })
+
+        for name, (node, file_path) in self.addon.variable_map.get(folder, {}).items():
+            inc = SkinInclude(node=node, file=file_path)
+            result.append({
+                "name": name, "type": "variable",
+                "file": inc.file, "line": inc.line,
+                "content": inc.content, "node": inc.node,
+            })
+
+        for control_type, (node, file_path) in self.addon.default_map.get(folder, {}).items():
+            inc = SkinInclude(node=node, file=file_path)
+            result.append({
+                "name": control_type, "type": "default",
+                "file": inc.file, "line": inc.line,
+                "content": inc.content, "node": inc.node,
+            })
+
+        return result
 
     def _no_issues(self, kind: str):
         return [{"message": f"No {kind} issues found", "file": "", "line": 0}]
@@ -324,7 +411,6 @@ class CheckerMixin:
         if not var_name:
             return True  # Not a variable expression
 
-        # PERFORMANCE FIX: Use pre-built cache (O(1) lookup instead of O(m) iteration)
         # The cache is built once per file in check_file() for fast lookups
         var_def = getattr(self, '_variable_cache', {}).get(var_name)
 

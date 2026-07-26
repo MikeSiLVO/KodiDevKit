@@ -79,75 +79,29 @@ class NavigationMixin:
         return False
 
     def _get_includes_for_folder(self, folder):
-        """Get includes for a folder as a list of include-like dicts.
-
-        Works with both Skin (5-map structure) and Addon (flat list).
-        """
-        if not self.addon:
-            return []
-
-        if hasattr(self.addon, 'include_map'):
-            result = []
-
-            for name, (node, params, file_path) in self.addon.include_map.get(folder, {}).items():  # type: ignore[attr-defined]
-                from ..skin.include import SkinInclude
-                definition = node.find("definition")
-                include_body = definition if definition is not None else node
-                inc = SkinInclude(node=include_body, file=file_path)
-                result.append({
-                    "name": name,
-                    "type": "include",
-                    "file": inc.file,
-                    "line": inc.line,
-                    "content": inc.content,
-                    "node": inc.node,
-                    "params": params
-                })
-
-            for name, (node, file_path) in self.addon.variable_map.get(folder, {}).items():  # type: ignore[attr-defined]
-                from ..skin.include import SkinInclude
-                var_inc = SkinInclude(node=node, file=file_path)
-                result.append({
-                    "name": name,
-                    "type": "variable",
-                    "file": var_inc.file,
-                    "line": var_inc.line,
-                    "content": var_inc.content,
-                    "node": var_inc.node
-                })
-
-            for control_type, (node, file_path) in self.addon.default_map.get(folder, {}).items():  # type: ignore[attr-defined]
-                from ..skin.include import SkinInclude
-                def_inc = SkinInclude(node=node, file=file_path)
-                result.append({
-                    "name": control_type,
-                    "type": "default",
-                    "file": def_inc.file,
-                    "line": def_inc.line,
-                    "content": def_inc.content,
-                    "node": def_inc.node
-                })
-
-            expr_source = getattr(self.addon, 'expression_source_map', {}).get(folder, {})  # type: ignore[attr-defined]
-            for name, (file_path, line) in expr_source.items():
-                result.append({
-                    "name": name,
-                    "type": "expression",
-                    "file": file_path,
-                    "line": line,
-                    "content": self.addon.expression_map.get(folder, {}).get(name, ""),  # type: ignore[attr-defined]
-                })
-
-            const_source = getattr(self.addon, 'constant_source_map', {}).get(folder, {})  # type: ignore[attr-defined]
-            for name, (file_path, line) in const_source.items():
-                result.append({
-                    "name": name,
-                    "type": "constant",
-                    "file": file_path,
-                    "line": line,
-                    "content": self.addon.constant_map.get(folder, {}).get(name, ""),  # type: ignore[attr-defined]
-                })
-
+        """Engine's list plus the expression/constant entries goto-def needs."""
+        result = super()._get_includes_for_folder(folder)
+        if not self.addon or not hasattr(self.addon, "include_map"):
             return result
 
-        return self.addon.includes.get(folder, [])
+        expr_source = getattr(self.addon, "expression_source_map", {}).get(folder, {})
+        for name, (file_path, line) in expr_source.items():
+            result.append({
+                "name": name,
+                "type": "expression",
+                "file": file_path,
+                "line": line,
+                "content": self.addon.expression_map.get(folder, {}).get(name, ""),
+            })
+
+        const_source = getattr(self.addon, "constant_source_map", {}).get(folder, {})
+        for name, (file_path, line) in const_source.items():
+            result.append({
+                "name": name,
+                "type": "constant",
+                "file": file_path,
+                "line": line,
+                "content": self.addon.constant_map.get(folder, {}).get(name, ""),
+            })
+
+        return result

@@ -102,7 +102,7 @@ class TooltipMixin:
         return tooltips if tooltips else f"<i>Label {label_id} not found in {addon_id}</i>"
 
     def get_po_files(self):
-        """Aggregate active PO files from kodi module, live instance, and addon."""
+        """Prepend PO files from a live Kodi instance to the engine's own set."""
         po_files = []
         seen = set()
 
@@ -124,12 +124,10 @@ class TooltipMixin:
                     seen.add(po_id)
                     po_files.append(po)
 
-        if self.addon and hasattr(self.addon, "po_files"):
-            for po in self.addon.po_files:
-                po_id = id(po)
-                if po_id not in seen:
-                    seen.add(po_id)
-                    po_files.append(po)
+        for po in super().get_po_files():
+            if id(po) not in seen:
+                seen.add(id(po))
+                po_files.append(po)
 
         return po_files
 
@@ -141,9 +139,6 @@ class TooltipMixin:
         if self.addon and self.addon.colors:
             colors.extend(self.addon.colors)
         return colors
-
-    def get_color_labels(self):
-        return self.addon.color_labels if self.addon else set()
 
     def get_color_info_html(self, color_string):
         """Build a small HTML swatch + info for a color value or name."""
