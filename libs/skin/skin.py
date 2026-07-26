@@ -22,12 +22,6 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
-try:
-    import sublime
-    _debug = bool(sublime.load_settings('kodidevkit.sublime-settings').get('debug_mode', False))
-    logger.setLevel(logging.DEBUG if _debug else logging.INFO)
-except Exception:
-    logger.setLevel(logging.INFO)
 
 FILE_PREVIEW_SIZE = 50_000
 
@@ -67,17 +61,6 @@ class Skin(addon.Addon):
 
         self._resolved_windows_cache: dict = {}
 
-        api_version = self.root.find(".//import[@addon='xbmc.gui']").attrib.get("version")
-        logger.info("xbmc.gui API version: %s", api_version)
-        parsed_api_version = self._safe_version_tuple(api_version)
-        if parsed_api_version is not None:
-            for item in self.RELEASES:
-                target_version = self._safe_version_tuple(item["gui_version"])
-                if target_version is None:
-                    continue
-                if parsed_api_version <= target_version:
-                    self.api_version = item["name"]
-                    break
         self.load_xml_folders()
         self.update_include_list()
 
@@ -91,6 +74,21 @@ class Skin(addon.Addon):
         self._index_builder = None
         self._resource_loader = None
         self._include_param_roles = None
+
+    def _release_from_addon_xml(self) -> str | None:
+        """Oldest release whose xbmc.gui version satisfies this skin's import."""
+        node = self.root.find(".//import[@addon='xbmc.gui']")
+        if node is None:
+            return None
+        wanted = self._safe_version_tuple(node.attrib.get("version"))
+        logger.info("xbmc.gui API version: %s", node.attrib.get("version"))
+        if wanted is None:
+            return None
+        for item in self.RELEASES:
+            target = self._safe_version_tuple(item["gui_version"])
+            if target is not None and wanted <= target:
+                return item["name"]
+        return None
 
     @property
     def resolver(self) -> "SkinResolution":
@@ -233,10 +231,7 @@ class Skin(addon.Addon):
 
     def _load_colors_and_fonts(self):
         """Load colors (from defines.xml) and fonts (from Font.xml)."""
-        try:
-            import sublime
-        except Exception:
-            sublime = None
+        from ..kodi_refs import kodi_colors_xml
 
         self.validation_index = None
 
@@ -246,13 +241,9 @@ class Skin(addon.Addon):
                 kodi_path = self.settings.get("kodi_path")
             except Exception:
                 kodi_path = None
-        if not kodi_path and sublime:
-            try:
-                kodi_path = sublime.load_settings('kodidevkit.sublime-settings').get("kodi_path")
-            except Exception:
-                kodi_path = None
 
-        self.colors, self.color_labels = self.resource_loader.load_colors(kodi_path)
+        system_colors = kodi_colors_xml(self, kodi_path)
+        self.colors, self.color_labels = self.resource_loader.load_colors(system_colors)
         self.fonts, self.font_file = self.resource_loader.load_fonts(self.resolver)
 
     def _load_builtin_controls(self):
@@ -302,112 +293,6 @@ class Skin(addon.Addon):
         except Exception as e:
             logger.warning("Failed to load built-in controls: %s", e)
             return builtin_controls, filename_to_window
-
-    def _discover_addon_root(self):
-        """
-        Find a Kodi addon root by locating an addon.xml.
-        Strategy:
-          1) Active file, walk upward.
-          2) Open folders, walk upward.
-          3) Project folders, walk upward.
-          4) If still not found, shallow walk (max 3 levels) under open folders.
-        Returns a directory path or None.
-        """
-        import os
-        try:
-            import sublime
-        except Exception:
-            sublime = None
-
-        def upward_find(start):
-            d = start
-            for _ in range(10):
-                if os.path.isfile(os.path.join(d, "addon.xml")):
-                    return d
-                parent = os.path.dirname(d)
-                if not parent or parent == d:
-                    break
-                d = parent
-            return None
-
-        candidates = []
-
-        if sublime:
-            try:
-                win = sublime.active_window()
-                view = win.active_view() if win else None
-                if view:
-                    fn = view.file_name()
-                    if fn:
-                        candidates.append(os.path.dirname(fn))
-            except Exception:
-                pass
-
-        if sublime:
-            try:
-                win = sublime.active_window()
-                if win:
-                    candidates.extend(win.folders() or [])
-            except Exception:
-                pass
-
-        if sublime:
-            try:
-                win = sublime.active_window()
-                pdata = win.project_data() if win else None
-                if isinstance(pdata, dict):
-                    for folder in pdata.get("folders", []):
-                        pf = folder.get("path")
-                        if pf:
-                            candidates.append(pf)
-            except Exception:
-                pass
-
-        try:
-            candidates.append(os.getcwd())
-        except Exception:
-            pass
-
-        norm = []
-        seen = set()
-        for c in candidates:
-            if not c:
-                continue
-            p = os.path.abspath(c)
-            if p not in seen:
-                seen.add(p)
-                norm.append(p)
-
-        packages_dir = None
-        if sublime:
-            try:
-                packages_dir = os.path.abspath(sublime.packages_path())
-            except Exception:
-                packages_dir = None
-
-        for start in norm:
-            if packages_dir and os.path.commonpath([packages_dir, os.path.abspath(start)]) == packages_dir:
-                continue
-            found = upward_find(start)
-            if found:
-                return found
-
-        for root in norm:
-            if packages_dir and os.path.commonpath([packages_dir, os.path.abspath(root)]) == packages_dir:
-                continue
-            try:
-                for dirpath, dirnames, filenames in os.walk(root):
-                    rel = os.path.relpath(dirpath, root)
-                    depth = 0 if rel == "." else rel.count(os.sep) + 1
-                    if depth > 3:
-                        dirnames[:] = []
-                        continue
-                    if "addon.xml" in filenames:
-                        return dirpath
-            except Exception:
-                continue
-
-        return None
 
     def load_xml_folders(self):
         """Read xml folder names from addon.xml's <res folder=...> entries."""

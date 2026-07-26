@@ -34,15 +34,9 @@ class ValidationFont:
         if not self.addon:
             return [row("No font issues found", "", 0)]
 
-        try:
-            import sublime
-            kodi_path = (
-                sublime.load_settings("kodidevkit.sublime-settings")
-                .get("kodi_path", "")
-                .strip()
-            )
-        except ImportError:
-            kodi_path = ""
+        kodi_path = ""
+        if hasattr(self.addon, 'settings') and self.addon.settings:
+            kodi_path = (self.addon.settings.get("kodi_path") or "").strip()
 
         if kodi_path and not os.path.isdir(kodi_path):
             return [row(f"Kodi path not found: {kodi_path}")]

@@ -23,6 +23,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Must fail the release rather than ship an installer with no Kodi-core
+      # colors or strings.
+      - name: Fetch Kodi reference snapshots
+        run: |
+          pip install lxml
+          python scripts/update_kodi_refs.py
+
       - name: Build installer
         run: python .github/build_installer.py "${{ github.event.release.tag_name || github.event.inputs.version || 'dev' }}"
 

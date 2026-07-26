@@ -17,12 +17,13 @@ class SkinResources:
         self.skin_path = skin_path
         self.xml_folders = xml_folders
 
-    def load_colors(self, kodi_path: Optional[str] = None) -> Tuple[List[Dict], set]:
-        """Load colors from skin and (optionally) system paths.
+    def load_colors(self, system_colors_path: Optional[str] = None) -> Tuple[List[Dict], set]:
+        """Load colors from skin and (optionally) Kodi-core paths.
 
         Loads from:
           1) <skin>/colors/*.xml (e.g., defaults.xml)
-          2) <kodi_path>/system/colors.xml (if kodi_path provided)
+          2) `system_colors_path`, already resolved by `kodi_refs.kodi_colors_xml`
+             to either the installed Kodi or a bundled snapshot
 
         Returns (colors_list, color_labels_set):
           - colors_list: list of dicts with keys name, line, content, file
@@ -52,16 +53,10 @@ class SkinResources:
                     added = len(colors) - before
                     logger.info("found color file %s including %d colors", file_path, added)
 
-        sys_path = None
-        if kodi_path:
-            candidate = os.path.join(kodi_path, "system", "colors.xml")
-            if os.path.exists(candidate):
-                sys_path = candidate
-
-        if sys_path:
-            root = utils.get_root_from_file(sys_path)
+        if system_colors_path and os.path.isfile(system_colors_path):
+            root = utils.get_root_from_file(system_colors_path)
             if root is None:
-                logger.info("Invalid color file: %s", sys_path)
+                logger.info("Invalid color file: %s", system_colors_path)
             else:
                 before = len(colors)
                 for node in root.findall("color"):
@@ -69,15 +64,12 @@ class SkinResources:
                         "name": node.attrib.get("name"),
                         "line": getattr(node, "sourceline", None),
                         "content": (node.text or "").strip(),
-                        "file": sys_path,
+                        "file": system_colors_path,
                     })
-                added = len(colors) - before
-                logger.info("found color file %s including %d colors", sys_path, added)
+                logger.info("loaded Kodi-core colors from %s (%d entries)",
+                            system_colors_path, len(colors) - before)
         else:
-            if kodi_path:
-                logger.info("system colors.xml not found at: %s", os.path.join(kodi_path, "system", "colors.xml"))
-            else:
-                logger.info("system colors.xml skipped: kodi_path not provided")
+            logger.info("Kodi-core colors unavailable (resolved path: %s)", system_colors_path)
 
         if not colors:
             logger.info("No color file found in skin or system paths")

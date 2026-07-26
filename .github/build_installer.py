@@ -21,6 +21,7 @@ EXCLUDE = {
     ".claude", ".git", ".github", ".gitignore", ".python-version",
     ".flake8", ".travis.yml", "pyrightconfig.json", "pyproject.toml",
     "CLAUDE.md", "Debug JSON Health.txt", "tests", "__pycache__",
+    "scripts",  # build-time only; the data/kodi/ it produces still ships
 }
 
 
