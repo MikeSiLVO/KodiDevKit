@@ -7,7 +7,7 @@ import re
 from typing import Optional
 from xml.sax.saxutils import escape as xml_escape
 
-logger = logging.getLogger("KodiDevKit.utils.expressions")
+logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True

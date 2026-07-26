@@ -52,3 +52,24 @@ jobs:
             echo "Editor import in shared engine code:"; echo "$hits"; exit 1
           fi
           echo "engine is editor-free (loader.py + files.py host abstractions excepted)"
+
+  sync:
+    name: engine mirrors kdk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check out kdk
+        uses: actions/checkout@v5
+        with:
+          repository: MikeSiLVO/kdk
+          path: .kdk-checkout
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Fails on any difference in a mirrored file that isn't declared in the
+      # script's EXEMPT map. Silent drift here is what forked the two trees.
+      - name: Check for engine drift
+        run: python scripts/sync_engine.py --check --kdk .kdk-checkout
