@@ -281,10 +281,22 @@ _setup_logging_once()
 logger = logging.getLogger("KodiDevKit.kodidevkit")
 
 
+def _apply_debug_level(settings):
+    """Point debug_mode at the engine loggers, which are __name__-based under this package."""
+    level = logging.DEBUG if bool(settings.get("debug_mode", False)) else logging.INFO
+    logging.getLogger(f"{__package__}.libs" if __package__ else "libs").setLevel(level)
+
 
 def _on_settings_changed():
     s = sublime.load_settings(SETTINGS_FILE)
     KodiDevKit.settings = s
+
+    # Ahead of the INFOS guard below: debug output matters most when the
+    # provider failed to come up.
+    try:
+        _apply_debug_level(s)
+    except Exception:
+        pass
 
     try:
         if not INFOS:
@@ -297,12 +309,6 @@ def _on_settings_changed():
             INFOS.kodi = KodiJsonrpc(s)
             INFOS.kodi.load_settings(s, force=True)
         kodi.update_labels()
-    except Exception:
-        pass
-
-    try:
-        level = logging.DEBUG if bool(s.get("debug_mode", False)) else logging.INFO
-        logging.getLogger("libs.skin").setLevel(level)
     except Exception:
         pass
 
@@ -353,6 +359,13 @@ def plugin_loaded():
     from importlib import import_module
 
     settings = sublime.load_settings('kodidevkit.sublime-settings')
+
+    # Without this, debug_mode only takes effect once the settings file is
+    # next touched, so a restart with it already set logs nothing extra.
+    try:
+        _apply_debug_level(settings)
+    except Exception:
+        pass
 
     if settings.get("enable_file_logging", False):
         try:
