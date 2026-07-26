@@ -51,16 +51,16 @@ class TestBundledReferences(unittest.TestCase):
     def test_core_colors_load_without_kodi_path(self):
         """Core colors must be present; Kodi always loads system/colors.xml."""
         path = kodi_colors_xml(self.skin, None)
-        self.assertIsNotNone(path, "no bundled colors.xml resolved")
+        assert path is not None, "no bundled colors.xml resolved"
         self.assertTrue(os.path.isfile(path))
         self.assertGreater(len(self.skin.colors), 0, "skin loaded zero colors")
 
     def test_core_string_resolves_without_kodi_path(self):
         """A core string id must resolve, or core $LOCALIZE ids read as undefined."""
         path = kodi_strings_po(self.skin, None)
-        self.assertIsNotNone(path, "no bundled strings.po resolved")
+        assert path is not None, "no bundled strings.po resolved"
         po = utils.get_po_file(path)
-        self.assertIsNotNone(po)
+        assert po is not None
         self.assertTrue(
             any(entry.msgctxt == "#13050" for entry in po),
             "core string 13050 missing from bundled strings.po",

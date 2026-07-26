@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false
 """Tests for ``utils.infobool`` -- the Kodi boolean-condition syntax check and
 the negation probe that tells a parse failure apart from a genuine false.
 
