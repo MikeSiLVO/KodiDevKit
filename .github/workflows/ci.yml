@@ -26,17 +26,16 @@ jobs:
       # Sublime is mocked by tests/mock_sublime.py; lxml is the only real dep
       # the engine needs outside the editor.
       - name: Install deps
-        run: pip install lxml ruff
-
-      # Gitignored, so fetch them or the bundled-reference tests skip silently.
-      - name: Fetch Kodi reference snapshots
-        run: python scripts/update_kodi_refs.py
+        run: pip install lxml ruff pyright
 
       - name: Run test suite
         run: python tests/run_tests.py
 
       - name: Lint
         run: ruff check .
+
+      - name: Type check
+        run: pyright
 
       # kdk vendors this engine and has no Sublime. loader.py and files.py are
       # the two host-abstraction points, both with fallbacks so kdk runs them
