@@ -115,6 +115,10 @@ class TestCheckCondition(unittest.TestCase):
         self.assertIn("misplaced '!'", reason)
 
 
+@unittest.skipUnless(
+    hasattr(infobool, "read_probe"),
+    "live-probe helpers ship only with the editor plugin",
+)
 class TestNegationProbe(unittest.TestCase):
 
     def _response(self, condition, direct, negated):

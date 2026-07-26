@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.12"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Sublime is mocked by tests/mock_sublime.py; lxml is the only real dep
+      # the engine needs outside the editor.
+      - name: Install deps
+        run: pip install lxml ruff
+
+      # Gitignored, so fetch them or the bundled-reference tests skip silently.
+      - name: Fetch Kodi reference snapshots
+        run: python scripts/update_kodi_refs.py
+
+      - name: Run test suite
+        run: python tests/run_tests.py
+
+      - name: Lint
+        run: ruff check .
+
+      # kdk vendors this engine and has no Sublime. loader.py and files.py are
+      # the two host-abstraction points, both with fallbacks so kdk runs them
+      # unchanged; anywhere else an editor import breaks kdk.
+      - name: Engine must not import the editor
+        shell: bash
+        run: |
+          hits=$(grep -rn "import sublime" --include=*.py libs \
+            | grep -vE "libs/(sublime|kodi)/" \
+            | grep -vE "(tooltips|navigation|sublime_helpers|decorators)\.py" \
+            | grep -vE "libs/reporting/(html|server)\.py" \
+            | grep -vE "libs/(infoprovider/loader|utils/files)\.py" || true)
+          if [ -n "$hits" ]; then
+            echo "Editor import in shared engine code:"; echo "$hits"; exit 1
+          fi
+          echo "engine is editor-free (loader.py + files.py host abstractions excepted)"
