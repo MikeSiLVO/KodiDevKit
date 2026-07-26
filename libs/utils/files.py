@@ -31,7 +31,8 @@ def eol_info_from_path_patterns(
     Return a list of (filepath, eol) where eol is one of:
       '\r\n' (Windows), '\n' (Unix), '\r' (old Mac), or None (no newline found).
 
-    `includes`/`excludes` are simple substring filters on the full path.
+    `excludes` match anywhere in the path; `includes` match its end, so a
+    caller can restrict the scan to text file types.
     """
 
     includes = includes or []
@@ -41,7 +42,7 @@ def eol_info_from_path_patterns(
         p = path.replace('\\', '/')
         return (
             any(x and x in p for x in excludes)
-            or (includes and not any(x in p for x in includes))
+            or (includes and not any(p.endswith(x) for x in includes))
         )
 
     files = []

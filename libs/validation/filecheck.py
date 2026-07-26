@@ -42,10 +42,12 @@ class ValidationFileCheck:
                     "severity": SEVERITY_ERROR,
                 })
 
-        # EOL check: scan entire skin directory for all file types
+        # Text types only: binaries such as PNGs routinely contain 0D 0A and
+        # would otherwise be reported as having Windows line endings.
         result = utils.eol_info_from_path_patterns(
             [self.addon.path],
             recursive=True,
+            includes=['.xml', '.po', '.txt', '.py', '.md'],
             excludes=['.svn', '.git'],
         )
         for path, eol in result:
