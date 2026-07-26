@@ -47,7 +47,10 @@ def kodi_colors_xml(addon, kodi_path: str | None) -> Optional[str]:
         target = _latest_bundled_dir()
 
     if target is None:
-        logger.debug("No bundled Kodi colors snapshot available")
+        logger.warning(
+            "No Kodi reference data: core colours will be reported as undefined. "
+            "Set kodi_path or run scripts/update_kodi_refs.py."
+        )
         return None
 
     path = target / "colors.xml"
@@ -75,7 +78,10 @@ def kodi_strings_po(addon, kodi_path: str | None) -> Optional[str]:
         target = _latest_bundled_dir()
 
     if target is None:
-        logger.debug("No bundled Kodi strings snapshot available")
+        logger.warning(
+            "No Kodi reference data: core label ids will be reported as undefined. "
+            "Set kodi_path or run scripts/update_kodi_refs.py."
+        )
         return None
 
     path = target / "strings.po"
