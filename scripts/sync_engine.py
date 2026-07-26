@@ -27,6 +27,17 @@ HERE = Path(__file__).resolve().parent.parent
 # libs/<name> in KodiDevKit  ->  src/kdk/libs/<name> in kdk
 SHARED_LIB_DIRS = ("addon", "infoprovider", "polib", "reporting", "skin", "utils", "validation")
 
+# Modules sitting directly in libs/ rather than a subpackage.
+SHARED_LIB_FILES = ("__init__.py", "kodi_refs.py")
+
+# Reference data drives validation results, so it mirrors too. data/kodi/ is
+# excluded: those snapshots are committed here and fetched at build time in kdk.
+SHARED_DATA = ("kodi_builtin_controls.xml", "kodi_infolabel_functions.json")
+SHARED_DATA_DIRS = ("omega", "piers")
+
+# Written to run under either layout, so both repos carry the same file.
+SHARED_SCRIPTS = ("update_kodi_refs.py",)
+
 # Never leaves KodiDevKit: needs Sublime, mdpopups, or the live-Kodi client.
 EDITOR_ONLY = {
     "libs/sublime", "libs/kodi",
@@ -60,14 +71,14 @@ EXEMPT = {
     },
     "libs/infoprovider/loader.py": {
         # sublime.load_resource for packaged installs, with a filesystem fallback.
-        "LoaderMixin.init_addon", "LoaderMixin.load_data",
+        "LoaderMixin.init_addon", "LoaderMixin.load_data", "<module prelude>",
     },
     "libs/infoprovider/provider.py": {
         # Different mixin sets, which is the point of the split.
-        "InfoProvider.__init__",
+        "InfoProvider.__init__", "<module prelude>",
     },
     "libs/reporting/text.py": {
-        "generate_text_report", "_describe_filters", "issue_visible",
+        "generate_text_report", "_describe_filters", "issue_visible", "<module prelude>",
     },
     "libs/skin/skin.py": {
         # Jump-to-definition data with no kdk consumer.
@@ -103,8 +114,17 @@ class StripDocs(ast.NodeTransformer):
     visit_Module = _strip
 
 
+def _bound_names(node) -> list[str]:
+    """Plain names this statement assigns, empty for anything else."""
+    if isinstance(node, ast.Assign):
+        return [t.id for t in node.targets if isinstance(t, ast.Name)]
+    if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        return [node.target.id]
+    return []
+
+
 def units(path: Path) -> dict[str, str]:
-    """Qualified name -> normalized source for every function in `path`."""
+    """Qualified name -> normalized source for every comparable piece of `path`."""
     try:
         tree = StripDocs().visit(ast.parse(path.read_text(encoding="utf-8")))
     except (OSError, SyntaxError):
@@ -112,17 +132,24 @@ def units(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
 
     def walk(node, prefix=""):
+        # Anything that binds no plain name (`logger.propagate = x`, `A["k"] = v`,
+        # tuple targets, imports, bare calls) still changes behaviour, so it is
+        # compared as one lump rather than falling through uncompared.
+        residual = []
         for child in node.body:
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 out[prefix + child.name] = ast.unparse(child)
             elif isinstance(child, ast.ClassDef):
                 walk(child, prefix + child.name + ".")
-            elif isinstance(child, (ast.Assign, ast.AnnAssign)):
+            elif names := _bound_names(child):
                 # Whitelists and severity constants drift as readily as code.
-                targets = child.targets if isinstance(child, ast.Assign) else [child.target]
-                for t in targets:
-                    if isinstance(t, ast.Name):
-                        out[prefix + t.id] = ast.unparse(child)
+                for name in names:
+                    out[prefix + name] = ast.unparse(child)
+            else:
+                residual.append(ast.unparse(child))
+        if residual:
+            label = "<module prelude>" if not prefix else f"<{prefix.rstrip('.')} body>"
+            out[label] = "\n".join(residual)
 
     walk(tree)
     return out
@@ -138,6 +165,22 @@ def find_kdk(explicit: str | None) -> Path:
 
 def pairs(kdk: Path):
     """(relative label, canonical path, kdk path) for everything that mirrors."""
+    for fname in SHARED_LIB_FILES:
+        src = HERE / "libs" / fname
+        if src.is_file():
+            yield f"libs/{fname}", src, kdk / "src" / "kdk" / "libs" / fname
+    for fname in SHARED_DATA:
+        src = HERE / "data" / fname
+        if src.is_file():
+            yield f"data/{fname}", src, kdk / "src" / "kdk" / "data" / fname
+    for fname in SHARED_SCRIPTS:
+        src = HERE / "scripts" / fname
+        if src.is_file():
+            yield f"scripts/{fname}", src, kdk / "scripts" / fname
+    for sub in SHARED_DATA_DIRS:
+        for src in sorted((HERE / "data" / sub).glob("*")):
+            if src.is_file():
+                yield f"data/{sub}/{src.name}", src, kdk / "src" / "kdk" / "data" / sub / src.name
     for name in SHARED_LIB_DIRS:
         for src in sorted((HERE / "libs" / name).rglob("*.py")):
             rel = src.relative_to(HERE).as_posix()
@@ -162,6 +205,9 @@ def check(kdk: Path) -> int:
         if src.read_bytes() == dst.read_bytes():
             clean += 1
             continue
+        if src.suffix != ".py":
+            drifted.append((rel, ["<file contents>"]))
+            continue
         a, b = units(src), units(dst)
         differing = {n for n in set(a) & set(b) if a[n] != b[n]} | (set(a) ^ set(b))
         if rel in NEVER_COPY:
@@ -185,8 +231,14 @@ def check(kdk: Path) -> int:
         for n in names:
             print(f"      {n}")
     if drifted or missing:
-        print("\nRun `python scripts/sync_engine.py --apply`, or add a deliberate "
-              "divergence to EXEMPT in this script.")
+        auto = [r for r, _ in drifted if r not in EXEMPT and r not in NEVER_COPY] + missing
+        manual = [r for r, _ in drifted if r in EXEMPT or r in NEVER_COPY]
+        print()
+        if auto:
+            print(f"`--apply` fixes {len(auto)}: " + ", ".join(auto))
+        if manual:
+            print(f"`--apply` will NOT touch {len(manual)} (declared divergent); port by hand "
+                  "or widen the entry in EXEMPT: " + ", ".join(manual))
         return 1
     return 0
 
