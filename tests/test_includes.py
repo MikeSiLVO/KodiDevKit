@@ -30,11 +30,6 @@ from libs.skin import Skin
 from tests.test_utils import kodi_resolve
 
 
-# ============================================================================
-# SECTION 1: ADVANCED PARAM FORWARDING
-# Tests for complex parameter forwarding patterns
-# ============================================================================
-
 class TestParamForwarding(unittest.TestCase):
     """Test deeply nested parameterized include patterns."""
 
@@ -211,11 +206,6 @@ class TestParamForwarding(unittest.TestCase):
         # Should not crash with deeply nested param forwarding
         self.assertIsInstance(issues, list, "Should handle triple-nested param forwarding without crashing")
 
-
-# ============================================================================
-# SECTION 2: BASIC PARAM RESOLUTION
-# Tests for $PARAM substitution, defaults, and scoping
-# ============================================================================
 
 class DummyInclude(dict):
     """Minimal include structure with optional default params."""
@@ -558,11 +548,6 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         self.assertIn('<include content="NoSuchInclude"', result)
         self.assertIn("<label>After</label>", result)
 
-
-# ============================================================================
-# SECTION 3: NESTED INCLUDE RESOLUTION
-# Tests for include-within-include resolution
-# ============================================================================
 
 class TestNestedIncludes(unittest.TestCase):
     """Test nested include resolution."""

@@ -67,10 +67,6 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
             ["Foo", "Bar"],
         )
 
-    # ------------------------------------------------------------------
-    # Real boolean conditions sampled from skin.estuary
-    # (.claude/kodi-source/addons/skin.estuary/xml/)
-    # ------------------------------------------------------------------
 
     def test_string_isequal_with_two_nested_calls(self):
         expr = "String.IsEqual(Container(11).CurrentItem,Container(11).NumItems)"
@@ -95,10 +91,6 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
         c = "Skin.HasSetting(MyToggle)"
         self.assertEqual(split_top_level_commas(f"{a},{b},{c}"), [a, b, c])
 
-    # ------------------------------------------------------------------
-    # InfoLabel formatting macros use commas inside [...]
-    # see GUIInfoLabel.cpp — $INFO[label, prefix, suffix]
-    # ------------------------------------------------------------------
 
     def test_info_macro_with_prefix_suffix(self):
         # commas inside $INFO[] must not split the label
@@ -110,11 +102,6 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
         b = "$INFO[ListItem.Genre,  - ]"
         self.assertEqual(split_top_level_commas(f"{a},{b}"), [a, b])
 
-    # ------------------------------------------------------------------
-    # InfoExpression operators: !, +, |, [, ]
-    # see InfoExpression.cpp — these are top-level operators in the
-    # boolean expression grammar, but must not be misread as separators
-    # ------------------------------------------------------------------
 
     def test_grouping_brackets_at_top_level(self):
         # [A | B] is a single expression; outer brackets are operator-level
@@ -127,10 +114,6 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
         expr = "!Window.IsActive(home) + Window.IsVisible(MyDialog) | Skin.HasSetting(x)"
         self.assertEqual(split_top_level_commas(expr), [expr])
 
-    # ------------------------------------------------------------------
-    # Resilience to malformed input — we don't validate, we just don't
-    # crash and we don't lose user content.
-    # ------------------------------------------------------------------
 
     def test_unmatched_open_paren_keeps_input_as_one_piece(self):
         # Better to send the whole broken thing to Kodi (which will error)

@@ -26,11 +26,6 @@ from tests.base import ValidationTestCase, IdCheck
 from libs.infoprovider import InfoProvider
 
 
-# ============================================================================
-# SECTION 1: BASIC ID VALIDATION
-# Tests for control and window ID validation
-# ============================================================================
-
 class TestBasicIDValidation(ValidationTestCase):
     """Test control and window ID validation."""
 
@@ -360,11 +355,6 @@ class TestBasicIDValidation(ValidationTestCase):
         self.assertEqual(len(id_4412_issues), 0, "Should recognize fadelabel control IDs")
 
 
-# ============================================================================
-# SECTION 2: LISTITEM INDEX HANDLING
-# Tests that ListItem indices are not flagged as undefined control IDs
-# ============================================================================
-
 class TestListItemIndexHandling(ValidationTestCase):
     """Test that ListItem indices are not flagged as undefined control IDs."""
 
@@ -531,11 +521,6 @@ class TestListItemIndexHandling(ValidationTestCase):
         self.assertEqual(len(undefined_0), 0, "ListItemAbsolute(0) index should not be flagged")
 
 
-# ============================================================================
-# SECTION 3: WINDOW SCOPING
-# Tests for window-scoped ID validation matching Kodi's behavior
-# ============================================================================
-
 class TestWindowScoping(ValidationTestCase):
     """Test window-scoped ID validation matching Kodi's behavior."""
 
@@ -697,12 +682,6 @@ class TestWindowScoping(ValidationTestCase):
         undefined_issues = [i for i in issues if "not defined" in i.get("message", "").lower() and "100" in i.get("message", "")]
         self.assertEqual(len(undefined_issues), 0, f"Should not flag nested include control 100 as undefined. Issues: {undefined_issues}")
 
-
-# ============================================================================
-# SECTION 4: ALARMCLOCK EXCEPTION
-# Tests for AlarmClock delayed execution exception (libs/skin.py:3238-3271)
-# Fixed 9 false positives for control ID 2012 in Arctic Fuse 2
-# ============================================================================
 
 class TestAlarmClockException(ValidationTestCase):
     """Test AlarmClock delayed execution exception.
@@ -889,12 +868,6 @@ class TestAlarmClockException(ValidationTestCase):
         self.assertTrue(len(id_888_issues) > 0, "Should flag undefined control 888")
 
 
-# ============================================================================
-# SECTION 5: WINDOW ID PARSER
-# Tests for Window.* function ID parsing (libs/skin.py:3179)
-# Fixed 6 false positives for windows 1144, 1149 in Arctic Fuse 2
-# ============================================================================
-
 class TestWindowIDParser(ValidationTestCase):
     """Test Window.* vs Control.* function distinction.
 
@@ -1063,12 +1036,6 @@ class TestWindowIDParser(ValidationTestCase):
         self.assertEqual(len(window_as_control_issues), 0,
                         "Window.IsActive should not confuse window ID with control ID")
 
-
-# ============================================================================
-# SECTION 6: BUILTIN CONTROLS
-# Tests for Kodi C++ builtin controls (data/kodi_builtin_controls.xml)
-# Fixed 2 false positives for DialogMediaSource controls 18, 19
-# ============================================================================
 
 class TestBuiltinControls(unittest.TestCase):
     """Test Kodi builtin controls from C++ source.

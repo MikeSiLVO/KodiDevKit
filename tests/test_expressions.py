@@ -25,11 +25,6 @@ from libs.infoprovider import InfoProvider
 from libs import utils
 
 
-# ============================================================================
-# SECTION 1: $NUMBER[] PARSING
-# Tests for $NUMBER[] expression extraction and validation
-# ============================================================================
-
 class TestNumberExpressions(unittest.TestCase):
     """Test $NUMBER[] expression handling."""
 
@@ -187,11 +182,6 @@ class TestNumberExpressions(unittest.TestCase):
         integer_issues = [i for i in issues if "invalid integer value for limit" in i.get("message", "")]
         self.assertEqual(len(integer_issues), 0, "$NUMBER[] should be case-insensitive")
 
-
-# ============================================================================
-# SECTION 2: DYNAMIC EXPRESSION DETECTION
-# Tests for detecting $VAR, $INFO, $PARAM expressions
-# ============================================================================
 
 class TestContainsDynamicExpression(unittest.TestCase):
     """Test contains_dynamic_expression() function for embedded expressions."""

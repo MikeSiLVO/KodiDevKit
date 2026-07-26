@@ -21,9 +21,6 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         idx = line.index(needle)
         return idx + len(needle) // 2
 
-    # ------------------------------------------------------------------
-    # Regression: $LOCALIZE inside String.IsEqual no longer truncates
-    # ------------------------------------------------------------------
 
     def test_hover_inside_localize_returns_full_expression(self):
         line = '<value condition="String.IsEqual(ListItem.Label,$LOCALIZE[40211])">x</value>'
@@ -50,9 +47,6 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
             "String.IsEqual(ListItem.Label,$LOCALIZE[40211])",
         )
 
-    # ------------------------------------------------------------------
-    # XML delimiter boundaries
-    # ------------------------------------------------------------------
 
     def test_quote_bounds_attribute_value(self):
         line = '<control visible="Window.IsActive(home)" id="1"/>'
@@ -75,9 +69,6 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         line = "Window.IsActive(home)"
         self.assertEqual(extract_expression_at_offset(line, -5), line)
 
-    # ------------------------------------------------------------------
-    # Real Estuary expressions — must round-trip unchanged
-    # ------------------------------------------------------------------
 
     def test_estuary_param_in_string_isequal(self):
         line = '<visible>String.IsEqual(Container(9000).ListItem.Property(id),$PARAM[id])</visible>'
@@ -115,9 +106,6 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
             "Skin.HasSetting(x)",
         )
 
-    # ------------------------------------------------------------------
-    # Cursor adjacent to delimiters
-    # ------------------------------------------------------------------
 
     def test_cursor_right_after_opening_quote(self):
         line = '<control visible="Window.IsActive(home)"/>'
@@ -129,12 +117,8 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         cursor = line.index("</")
         self.assertEqual(extract_expression_at_offset(line, cursor), "Skin.HasSetting(x)")
 
-    # ------------------------------------------------------------------
-    # Sub-expression scoping — compound boolean expressions
-    # ------------------------------------------------------------------
 
     def test_compound_and_returns_only_the_clause_under_cursor(self):
-        # Regression: hovering the middle clause must not return the whole AND.
         line = '<visible>ListItem.IsFolder + String.IsEqual(ListItem.Label,$LOCALIZE[40211]) + String.IsEmpty(ListItem.Art(fanart)) + !Skin.HasSetting(Disable.Fanart)</visible>'
         cursor = self._at_substr(line, "IsEqual")
         self.assertEqual(

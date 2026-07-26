@@ -26,11 +26,6 @@ from tests.base import ValidationTestCase, VariableCheck
 from libs.infoprovider import InfoProvider
 
 
-# ============================================================================
-# SECTION 1: BASIC VARIABLE VALIDATION
-# Tests for variable definition, usage, and undefined variable detection
-# ============================================================================
-
 class TestVariableBasicValidation(ValidationTestCase):
     """Test basic variable definition and usage validation."""
 
@@ -466,11 +461,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         self.assertEqual(len(skin_undefined), 0, "Skin-defined variable should not be flagged as undefined")
 
 
-# ============================================================================
-# SECTION 2: VARIABLE COMMENT HANDLING
-# Tests for variable usage detection in commented code
-# ============================================================================
-
 class TestVariableCommentHandling(ValidationTestCase):
     """Test that variables referenced only in comments are flagged as unused."""
 
@@ -643,11 +633,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         unused_issues = [i for i in issues if "ActiveVar" in i.get("message", "") and "Unused" in i.get("message", "")]
         self.assertEqual(len(unused_issues), 0, "Variable used after comment end should be recognized as used")
 
-
-# ============================================================================
-# SECTION 3: VARIABLE VALUE VALIDATION
-# Tests for validating values within variable definitions
-# ============================================================================
 
 class TestVariableValueValidation(ValidationTestCase):
     """Test validation of values within variable definitions."""
