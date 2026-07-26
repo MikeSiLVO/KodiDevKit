@@ -5,23 +5,22 @@ from __future__ import annotations
 import os
 import re
 import logging
-from typing import TYPE_CHECKING
 from lxml import etree as ET
 
 from .. import utils
+from .checker import CheckerMixin
 
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class NavigationMixin:
+# Extends the engine's own implementations via super(); InfoProvider lists this
+# before CheckerMixin, so the MRO is unchanged.
+class NavigationMixin(CheckerMixin):
     """Handles jump-to-definition for fonts, includes, colors, labels."""
 
     addon: Any
-
-    if TYPE_CHECKING:
-        def get_po_files(self) -> list: ...
 
     def go_to_tag(self, keyword, folder):
         """Jump to a definition by ref name or label id."""

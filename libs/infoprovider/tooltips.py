@@ -12,13 +12,16 @@ try:
 except (ImportError, ModuleNotFoundError):
     imageparser = None
 from ..validation.constants import POS_TAGS
+from .checker import CheckerMixin
 
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class TooltipMixin:
+# Extends the engine's own implementations via super(); InfoProvider lists this
+# before CheckerMixin, so the MRO is unchanged.
+class TooltipMixin(CheckerMixin):
     """Provides tooltip/popup content for the editor."""
 
     addon: Any
