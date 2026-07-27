@@ -1,0 +1,5 @@
+# Pinned so a tool release cannot change what CI enforces without a commit
+# saying so. Install these locally too, or local runs disagree with CI.
+lxml
+ruff==0.16.0
+pyright==1.1.411

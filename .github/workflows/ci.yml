@@ -26,7 +26,7 @@ jobs:
       # Sublime is mocked by tests/mock_sublime.py; lxml is the only real dep
       # the engine needs outside the editor.
       - name: Install deps
-        run: pip install lxml ruff pyright
+        run: pip install -r requirements-dev.txt
 
       - name: Run test suite
         run: python tests/run_tests.py

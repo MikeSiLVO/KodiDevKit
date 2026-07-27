@@ -7,6 +7,9 @@ exclude = ["libs/polib", "debug_scripts"]
 target-version = "py38"
 
 [tool.ruff.lint]
+# Stated rather than inherited: ruff 0.16 widened its default set, which changed
+# what CI enforced without anything here changing.
+select = ["E4", "E7", "E9", "F"]
 ignore = []
 
 [tool.ruff.lint.per-file-ignores]
