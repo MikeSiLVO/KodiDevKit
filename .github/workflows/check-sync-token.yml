@@ -1,0 +1,32 @@
+name: Check SYNC_TOKEN
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe the token without printing it
+        env:
+          TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "SYNC_TOKEN is empty or unset"; exit 1; fi
+          echo "length: ${#TOKEN}"
+          case "$TOKEN" in
+            github_pat_*) echo "kind: fine-grained" ;;
+            ghp_*)        echo "kind: classic" ;;
+            *)            echo "kind: unrecognised prefix" ;;
+          esac
+          printf 'trailing whitespace/newline: '
+          case "$TOKEN" in *[[:space:]]) echo "YES (this alone causes 401)" ;; *) echo "no" ;; esac
+
+          for url in \
+            "https://api.github.com/user" \
+            "https://api.github.com/repos/MikeSiLVO/kdk" \
+            "https://api.github.com/repos/MikeSiLVO/KodiDevKit"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Accept: application/vnd.github+json" "$url")
+            echo "$code  $url"
+          done
