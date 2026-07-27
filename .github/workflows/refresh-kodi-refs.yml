@@ -57,14 +57,7 @@ jobs:
           branch: kodi-refs-refresh
           title: "Update Kodi reference snapshots"
           commit-message: "Update Kodi reference snapshots"
-          body: |
-            Automated refresh from `xbmc/xbmc` via `scripts/update_kodi_refs.py`.
-
-            Review the diff before merging: changes to `colors.xml` or
-            `strings.po` alter what validation reports.
-
-            Merge the matching kdk PR at the same time, or CI here stays red
-            until the two trees match again.
+          body: "Automated refresh from xbmc/xbmc. Merge with the kdk PR."
           delete-branch: true
 
       - name: Open the matching PR on kdk
@@ -76,15 +69,9 @@ jobs:
           branch: kodi-refs-refresh
           title: "Update Kodi reference snapshots"
           commit-message: "Update Kodi reference snapshots"
-          body: |
-            Mirrored from KodiDevKit by `scripts/sync_engine.py --apply`.
-
-            Merge alongside the KodiDevKit PR of the same name.
+          body: "Mirrored from KodiDevKit. Merge with the KodiDevKit PR."
           delete-branch: true
 
       - name: Warn when the kdk half was skipped
         if: env.SYNC_TOKEN == ''
-        run: |
-          echo "::warning::No SYNC_TOKEN, so kdk was not updated. After merging" \
-               "the KodiDevKit PR, run scripts/sync_engine.py --apply against kdk" \
-               "and merge that too, or the sync job stays red."
+        run: echo "::warning::No SYNC_TOKEN. Mirror kdk by hand or the sync job stays red."
