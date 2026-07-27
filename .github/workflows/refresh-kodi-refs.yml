@@ -20,12 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # kdk is public, so the default token reads it. Only the PR step below
+      # needs SYNC_TOKEN, and a bad token should not kill the whole run here.
       - name: Check out kdk
         uses: actions/checkout@v5
         with:
           repository: MikeSiLVO/kdk
           path: .kdk-checkout
-          token: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v6
         with:
