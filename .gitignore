@@ -30,6 +30,10 @@ Debug JSON Health.txt
 # Cache
 .kodidevkit/
 
+# CI checks kdk out here, inside this workspace; without this it lands in the
+# refresh PR as an embedded-repo entry.
+/.kdk-checkout/
+
 # IDE
 .vscode/
 .idea/
