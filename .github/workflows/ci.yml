@@ -59,10 +59,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Paired branches share a name in both repos; against kdk main they read as drift.
+      - name: Pick the kdk branch to compare against
+        id: kdk
+        shell: bash
+        run: |
+          branch="${{ github.head_ref || github.ref_name }}"
+          if git ls-remote --exit-code --heads https://github.com/MikeSiLVO/kdk "$branch" >/dev/null 2>&1; then
+            echo "kdk branch: $branch"
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "kdk branch: default"
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check out kdk
         uses: actions/checkout@v5
         with:
           repository: MikeSiLVO/kdk
+          ref: ${{ steps.kdk.outputs.ref }}
           path: .kdk-checkout
 
       - uses: actions/setup-python@v6
