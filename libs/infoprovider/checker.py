@@ -13,6 +13,7 @@ from ..validation import ValidationLabel
 from ..validation import ValidationInclude
 from ..validation import ValidationVariable
 from ..validation import ValidationFileCheck
+from ..validation.suppress import scan_skin
 from ..validation.interpreter import XmlInterpreter
 from ..validation.constants import (
     BRACKET_TAGS,
@@ -235,6 +236,23 @@ class CheckerMixin:
 
         return filtered_rows
 
+    def get_suppressions(self):
+        """Cached `kdk-ignore` directives for the current skin; rebuilt when the skin reloads."""
+        cached = getattr(self.addon, "_kdk_suppressions", None)
+        if cached is None:
+            cached = scan_skin(self.addon)
+            try:
+                self.addon._kdk_suppressions = cached
+            except AttributeError:
+                pass
+        return cached
+
+    def _muted(self, category, issues):
+        """Drop the issues in `category` that a `kdk-ignore` comment mutes."""
+        if not self.addon or not issues:
+            return issues
+        return self.get_suppressions().filter(category, issues)
+
     def get_validation_index(self, progress_callback=None):
         """Return the cached validation index, building it on first access."""
         if not self.addon:
@@ -257,7 +275,7 @@ class CheckerMixin:
             return self._no_issues("variable")
 
         checker = ValidationVariable(self.addon)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("Variables", checker.check(progress_callback=progress_callback))
 
     def check_includes(self, progress_callback=None):
         """Check undefined/unused includes."""
@@ -265,7 +283,7 @@ class CheckerMixin:
             return self._no_issues("include")
 
         checker = ValidationInclude(self.addon)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("Includes", checker.check(progress_callback=progress_callback))
 
     def check_fonts(self, progress_callback=None):
         """Validate fonts declared by the current skin."""
@@ -277,7 +295,7 @@ class CheckerMixin:
             checker = ValidationFont(self.addon, resolve_include_fn=self.resolve_xml, validation_index=index)
         else:
             checker = ValidationFont(self.addon, resolve_include_fn=self.resolve_xml)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("Fonts", checker.check(progress_callback=progress_callback))
 
     def check_ids(self, progress_callback=None):
         """Check undefined or invalid control/window IDs."""
@@ -289,7 +307,7 @@ class CheckerMixin:
             checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES, resolve_include_fn=self.resolve_xml, validation_index=index)
         else:
             checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES, resolve_include_fn=self.resolve_xml)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("IDs", checker.check(progress_callback=progress_callback))
 
     def check_labels(self, progress_callback=None):
         """Find untranslated/undefined labels."""
@@ -301,12 +319,12 @@ class CheckerMixin:
             checker = ValidationLabel(self.addon, self.get_po_files, resolve_include_fn=self.resolve_xml, validation_index=index)
         else:
             checker = ValidationLabel(self.addon, self.get_po_files, resolve_include_fn=self.resolve_xml)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("Labels", checker.check(progress_callback=progress_callback))
 
     def check_file_integrity(self, progress_callback=None):
         """Check for BOM and wrong line endings."""
         checker = ValidationFileCheck(self.addon)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("File Integrity", checker.check(progress_callback=progress_callback))
 
     def check_images(self, progress_callback=None):
         """Validate image references used by the current skin."""
@@ -315,7 +333,7 @@ class CheckerMixin:
 
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationImage(self.addon, validation_index=index)
-        return checker.check(progress_callback=progress_callback)
+        return self._muted("Images", checker.check(progress_callback=progress_callback))
 
 
     def check_values(self, progress_callback=None):
@@ -346,9 +364,10 @@ class CheckerMixin:
             if result:
                 listitems.extend(result)
 
-        error_count = len(listitems)
+        listitems = self._muted("XML Validation", listitems)
+
         if progress_callback:
-            progress_callback(f"Complete: {error_count} XML validation issues found")
+            progress_callback(f"Complete: {len(listitems)} XML validation issues found")
 
         return listitems
 

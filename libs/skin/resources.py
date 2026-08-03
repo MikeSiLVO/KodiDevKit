@@ -130,7 +130,8 @@ class SkinResources:
                     "line": getattr(node, "sourceline", None),
                     "filename_line": getattr(file_el, "sourceline", None),
                     "content": ET.tostring(node, pretty_print=True, encoding="unicode"),
-                    "file": font_file_path,
+                    # Spliced-in fonts keep the sourceline of the include's own file
+                    "file": node.get("_kdk_inc_file") or font_file_path,
                     "filename": (file_el.text or "").strip(),
                 }
 

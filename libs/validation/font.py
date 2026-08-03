@@ -22,6 +22,30 @@ class ValidationFont:
         self.addon = addon
         self._resolve_include = resolve_include_fn
         self._validation_index = validation_index
+        self._dir_cache = {}
+
+    def _dir_listing(self, path):
+        """Case-folded name -> on-disk name for `path`; empty if unreadable."""
+        listing = self._dir_cache.get(path)
+        if listing is None:
+            try:
+                listing = {f.casefold(): f for f in os.listdir(path)}
+            except OSError:
+                listing = {}
+            self._dir_cache[path] = listing
+        return listing
+
+    def _resolve_font_path(self, base_dir, rel):
+        """On-disk spelling of `rel` under `base_dir`, matched per component ignoring case; None if absent."""
+        current = base_dir
+        parts = []
+        for part in rel.split("/"):
+            match = self._dir_listing(current).get(part.casefold())
+            if match is None:
+                return None
+            parts.append(match)
+            current = os.path.join(current, match)
+        return "/".join(parts) if os.path.isfile(current) else None
 
     def check(self, progress_callback=None):
         """
@@ -43,11 +67,7 @@ class ValidationFont:
 
         skin_fonts_dir = os.path.join(self.addon.path, "fonts")
         core_dirs = []
-
-        try:
-            skin_files = {f.casefold(): f for f in os.listdir(skin_fonts_dir)} if os.path.isdir(skin_fonts_dir) else {}
-        except Exception:
-            skin_files = {}
+        self._dir_cache = {}
 
         if kodi_path:
             core_dirs = [
@@ -88,21 +108,13 @@ class ValidationFont:
                         if rel.startswith("resource://"):
                             continue
 
+                        rel = "/".join(p for p in rel.split("/") if p and p != ".")
                         base = os.path.basename(rel)
 
-                        exists = False
-                        actual = None
+                        actual = self._resolve_font_path(skin_fonts_dir, rel)
+                        exists = actual is not None
 
-                        if "/" not in rel:
-                            actual = skin_files.get(base.casefold())
-                            exists = bool(actual and os.path.isfile(os.path.join(skin_fonts_dir, actual)))
-                        else:
-                            rel_path = os.path.join(skin_fonts_dir, rel)
-                            if os.path.isfile(rel_path):
-                                exists = True
-                                actual = os.path.basename(rel_path)
-
-                        if exists and actual and actual != base:
+                        if exists and actual != rel:
                             issues.append(row(f"Case mismatch in font filename '{filename}' (actual '{actual}')", file_src, fn_line, SEVERITY_WARNING))
 
                         if not exists and core_files_maps:
@@ -240,6 +252,17 @@ class ValidationFont:
                         if nm and nm not in used and nm not in REQUIRED_FONTS:
                             issues.append({"message": f"Unused font definition: '{nm}'", "file": it.get("file") or "", "line": int(it.get("line") or 0), "severity": SEVERITY_WARNING})
 
+        # One include pulled into N fontsets re-reports each of its fonts N times
+        seen = set()
+        deduped = []
+        for it in issues:
+            key = (it.get("message"), it.get("file"), it.get("line"))
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(it)
+        issues = deduped
+
         error_count = len(issues)
         missing_count = len([i for i in issues if "Missing font file" in i.get("message", "")])
         undefined_count = len([i for i in issues if "not defined in Fonts.xml" in i.get("message", "")])
@@ -281,6 +304,7 @@ class ValidationFont:
             fn = (fnode.findtext("filename") or "").strip()
             sz = (fnode.findtext("size") or "").strip()
             ln = getattr(fnode, "sourceline", 0) or 0
+            src_file = fnode.get("_kdk_inc_file") or src_file
             if include_def and nm:
                 ln = utils.find_font_line_in_include(include_def, nm)
                 src_file = include_def.get("file") or src_file

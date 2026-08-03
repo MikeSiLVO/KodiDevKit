@@ -52,8 +52,16 @@ class TestFontValidation(unittest.TestCase):
     def create_font_file(self, filename):
         """Create a dummy font file."""
         path = os.path.join(self.fonts_dir, filename)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             f.write(b"FAKE TTF FILE")
+        return path
+
+    def create_includes_xml(self, content):
+        """Create Includes.xml in the xml directory."""
+        path = os.path.join(self.xml_dir, "Includes.xml")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
         return path
 
     def create_fonts_xml(self, content):
@@ -224,6 +232,119 @@ class TestFontValidation(unittest.TestCase):
         # Should detect case mismatch
         has_case_error = any("case" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_case_error, "Should detect case mismatch in filename")
+
+    def test_case_mismatch_font_file_in_subdirectory(self):
+        """Case mismatch below the fonts dir must report as such, not as a missing file."""
+        self.create_font_file("lyrics/theboldfont.ttf")
+
+        fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<fonts>
+    <fontset id="Default" unicode="true">
+        <font>
+            <name>font13</name>
+            <filename>lyrics/Theboldfont.ttf</filename>
+            <size>13</size>
+        </font>
+    </fontset>
+</fonts>
+"""
+        self.create_fonts_xml(fonts_xml)
+        provider = self.init_provider()
+
+        issues = provider.check_fonts()
+
+        case_issues = [i for i in issues if "case mismatch" in i["message"].lower()]
+        self.assertEqual(len(case_issues), 1, f"Should report one case mismatch, got: {issues}")
+        self.assertIn("lyrics/theboldfont.ttf", case_issues[0]["message"])
+        self.assertFalse(
+            any("missing font file" in i["message"].lower() for i in issues),
+            "Case mismatch must not also report as a missing file",
+        )
+
+    def test_case_mismatch_in_font_subdirectory_name(self):
+        """A miscased directory component resolves the same way a miscased filename does."""
+        self.create_font_file("lyrics/theboldfont.ttf")
+
+        fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<fonts>
+    <fontset id="Default" unicode="true">
+        <font>
+            <name>font13</name>
+            <filename>Lyrics/theboldfont.ttf</filename>
+            <size>13</size>
+        </font>
+    </fontset>
+</fonts>
+"""
+        self.create_fonts_xml(fonts_xml)
+        provider = self.init_provider()
+
+        issues = provider.check_fonts()
+
+        case_issues = [i for i in issues if "case mismatch" in i["message"].lower()]
+        self.assertEqual(len(case_issues), 1, f"Should report one case mismatch, got: {issues}")
+        self.assertIn("lyrics/theboldfont.ttf", case_issues[0]["message"])
+
+    def test_font_from_include_reported_against_include_file(self):
+        """A font spliced in from an include is blamed on the include's file, once, not once per fontset."""
+        self.create_font_file("font.ttf")
+
+        includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+    <include name="LyricsFonts">
+        <font>
+            <name>lyr1</name>
+            <filename>missing.ttf</filename>
+            <size>30</size>
+        </font>
+    </include>
+</includes>
+"""
+        self.create_includes_xml(includes_xml)
+
+        fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<fonts>
+    <fontset id="Default" unicode="true">
+        <font>
+            <name>font13</name>
+            <filename>font.ttf</filename>
+            <size>13</size>
+        </font>
+        <include>LyricsFonts</include>
+    </fontset>
+    <fontset id="Arial">
+        <font>
+            <name>font13</name>
+            <filename>font.ttf</filename>
+            <size>13</size>
+        </font>
+        <include>LyricsFonts</include>
+    </fontset>
+</fonts>
+"""
+        self.create_fonts_xml(fonts_xml)
+
+        window_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="label">
+            <font>lyr1</font>
+            <label>Test</label>
+        </control>
+    </controls>
+</window>
+"""
+        self.create_window_xml(window_xml)
+
+        provider = self.init_provider()
+        issues = provider.check_fonts()
+
+        missing = [i for i in issues if "missing font file" in i["message"].lower()]
+        self.assertEqual(len(missing), 1, f"Two fontsets share one definition, expected one issue, got: {missing}")
+        self.assertTrue(
+            missing[0]["file"].endswith("Includes.xml"),
+            f"Should point at the include's file, got: {missing[0]['file']}",
+        )
 
     def test_invalid_font_size(self):
         """Test detection of invalid font size."""
