@@ -4974,7 +4974,12 @@ msgctxt "#1450"
 msgid "Put display to sleep when idle"
 msgstr ""
 
-#empty strings from id 1451 to 2049
+#: system/settings/settings.xml
+msgctxt "#1451"
+msgid "Restart playback after waking up"
+msgstr ""
+
+#empty strings from id 1452 to 2049
 #strings through to 1470 reserved for power-saving
 
 msgctxt "#2050"
@@ -7966,7 +7971,19 @@ msgctxt "#13557"
 msgid "Skip delay"
 msgstr ""
 
-#empty strings from id 13558 to 13600
+#. Name of a setting to configure the maximum fast-forward speed with smooth/continuous playback
+#: system/settings/settings.xml
+msgctxt "#13558"
+msgid "Maximum smooth fast-forward speed"
+msgstr ""
+
+#. Playback speed unit used to format speeds for display ex. 2x, 4x, ...
+#: xbmc/settings/PlayerSettings.cpp
+msgctxt "#13559"
+msgid "{0:d}x"
+msgstr ""
+
+#empty strings id 13600
 
 #: system/settings/darwin_tvos.xml
 msgctxt "#13601"
@@ -19709,7 +19726,13 @@ msgctxt "#36053"
 msgid "Tuner Device"
 msgstr ""
 
-#empty strings from id 36054 to 36095
+#. Label of CEC setting double_tap_timeout_ms: a repeated identical button press within this many ms is treated as a duplicate and dropped (double-tap dedup). 0 disables it.
+#: system/peripherals.xml
+msgctxt "#36054"
+msgid "Remote button double press timeout (ms) (0 = off)"
+msgstr ""
+
+#empty strings from id 36055 to 36095
 
 #. Label of setting "System / Display / Use system HDR/SDR brightness balance"
 #: system/settings/settings.xml
@@ -21537,7 +21560,13 @@ msgctxt "#36415"
 msgid "No info available yet."
 msgstr ""
 
-#empty strings from id 36416 to 36417
+#. Description of setting with label #1451 "Restart playback after waking up"
+#: system/settings/settings.xml
+msgctxt "#36416"
+msgid "Restarts playback of the last played file when woken up."
+msgstr ""
+
+#empty strings from id 36417 to 36417
 
 #. Description of setting with label #295 "Low latency mode"
 #: system/settings/settings.xml
@@ -22937,7 +22966,13 @@ msgctxt "#37116"
 msgid "Adaptive"
 msgstr ""
 
-#empty strings from id 37117 to 37119
+#. Description of setting #13558 Maximum smooth fast-forward speed
+#: system/settings/settings.xml
+msgctxt "#37117"
+msgid "Cutoff of the analog fast-forward mode that shows every picture. Some hardware may not be able to keep up with the higher demand of the higher speeds."
+msgstr ""
+
+#empty strings from id 37118 to 37119
 
 #. Value of setting - Byte
 #: xbmc/settings/SevicesSettings.cpp
@@ -24843,6 +24878,7 @@ msgstr ""
 #. Button label for video extras
 #: addons/skin.estuary/xml/DialogVideoInfo.xml
 #: xbmc/filesystem/VideoDatabaseDirectory.cpp
+#: xbmc/video/windows/GUIWindowVideoNav.cpp
 #: addons/skin.estuary/xml/Variables.xml
 msgctxt "#40211"
 msgid "Extras"
@@ -24906,7 +24942,19 @@ msgctxt "#40222"
 msgid "Group the different versions of videos"
 msgstr ""
 
-#empty strings from id 40223 to 40399
+#. "The newly scanned versions replace the default versions of movies" setting
+#: system/settings/settings.xml
+msgctxt "#40223"
+msgid "Make the most recent version the default version"
+msgstr ""
+
+#. Help for setting New versions replace the default versions
+#: system/settings/settings.xml
+msgctxt "#40224"
+msgid "Make the most recently scanned version of a movie the movie's default version.[CR]Helps identify new movie versions as recently added and locate them when the \"Unwatched\" filter of the library is turned on."
+msgstr ""
+
+#empty strings from id 40225 to 40399
 
 # Video versions
 
