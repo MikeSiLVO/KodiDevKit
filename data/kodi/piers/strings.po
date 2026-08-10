@@ -2741,6 +2741,7 @@ msgid "Date added"
 msgstr ""
 
 #: xbmc/playlists/SmartPlaylist.cpp
+#: xbmc/dialogs/GUIDialogSmartPlaylistEditor.cpp
 #: xbmc/settings/SubtitlesSettings.cpp
 msgctxt "#571"
 msgid "Default"
@@ -4199,8 +4200,11 @@ msgctxt "#1023"
 msgid "Browse for new share"
 msgstr ""
 
-#: addons/skin.estuary/xml/DialogNetworkSetup.xml
+#. Displays a dialog to select movie title(s) for text matching in a smart rule
 #: addons/skin.estuary/xml/SmartPlaylistRule.xml
+#.
+#. Action on DVD/Bluray physical disc insertion - show a browse dialog
+#: system/settings/settings.xml
 msgctxt "#1024"
 msgid "Browse"
 msgstr ""
@@ -6468,7 +6472,10 @@ msgctxt "#13018"
 msgid "Allow idle shutdown"
 msgstr ""
 
-#empty string with id 13019
+#: xbmc/storage/MediaManager.cpp
+msgctxt "#13019"
+msgid "Mounted optical disc"
+msgstr ""
 
 #: unknown
 msgctxt "#13020"
@@ -6774,6 +6781,7 @@ msgstr ""
 #: xbmc/pvr/channels/PVRChannel.cpp
 #: xbmc/pvr/dialogs/GUIDialogPVRClientPriorities.cpp
 #: xbmc/pvr/guilib/guiinfo/PVRGUIInfo.cpp
+#: xbmc/settings/MediaSettings.cpp
 #: xbmc/video/dialogs/GUIDialogAudioSubtitleSettings.cpp
 #: xbmc/video/PlayerController.cpp
 #: xbmc/video/dialogs/GUIDialogAudioSettings.cpp
@@ -8348,7 +8356,10 @@ msgctxt "#14084"
 msgid "Queue songs on selection"
 msgstr ""
 
-#empty string with id 14085
+#: system/settings/settings.xml
+msgctxt "#14085"
+msgid "Video disc insert action"
+msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#14086"
@@ -8361,10 +8372,7 @@ msgctxt "#14087"
 msgid "Discs"
 msgstr ""
 
-#: system/settings/settings.xml
-msgctxt "#14088"
-msgid "Play DVDs automatically"
-msgstr ""
+#empty string with id 14088
 
 #. Subtitle font selection setting
 #: system/settings/settings.xml
@@ -8410,10 +8418,7 @@ msgctxt "#14097"
 msgid "Audio CD insert action"
 msgstr ""
 
-#: system/settings/settings.xml
-msgctxt "#14098"
-msgid "Play"
-msgstr ""
+#empty string with id 14098
 
 #: system/settings/settings.xml
 msgctxt "#14099"
@@ -9298,7 +9303,6 @@ msgctxt "#16017"
 msgid "Enter search string"
 msgstr ""
 
-#: system/settings/settings.xml
 #: xbmc/playlists/SmartPlaylist.cpp
 msgctxt "#16018"
 msgid "None"
@@ -9415,17 +9419,21 @@ msgstr ""
 
 #empty strings from id 16042 to 16099
 
-#: xbmc/video/windows/GUIWindowVideoNav.cpp
+#: xbmc/settings/MediaSettings.cpp
 #: xbmc/video/windows/VideoFileItemListModifier.cpp
 msgctxt "#16100"
 msgid "All videos"
 msgstr ""
 
+#: xbmc/settings/MediaSettings.cpp
+#: xbmc/pvr/windows/GUIWindowPVRRecordings.cpp
 msgctxt "#16101"
 msgid "Unwatched"
 msgstr ""
 
 #: addons/skin.estuary/xml/Home.xml
+#: xbmc/settings/MediaSettings.cpp
+#: xbmc/pvr/windows/GUIWindowPVRRecordings.cpp
 msgctxt "#16102"
 msgid "Watched"
 msgstr ""
@@ -14479,7 +14487,13 @@ msgctxt "#20478"
 msgid "DV profile"
 msgstr ""
 
-#empty strings from id 20479 to 21329
+#. Used in the smart playlist editor to define a watched mode
+#: xbmc/dialogs/GUIDialogSmartPlaylistEditor.cpp
+msgctxt "#20479"
+msgid "Watched Mode"
+msgstr ""
+
+#empty strings from id 20480 to 21329
 #up to 21329 is reserved for the video db !! !
 
 #: system/settings/settings.xml
@@ -20300,11 +20314,7 @@ msgctxt "#36193"
 msgid "This category contains the settings for how DVD's, Blu-ray, & CD's are handled."
 msgstr ""
 
-#. Description of setting with label #14088 "Play DVDs automatically"
-#: system/settings/settings.xml
-msgctxt "#36194"
-msgid "Autorun DVD video when inserted in drive."
-msgstr ""
+#empty strings from id 36194
 
 #. Description of setting with label #21372 "Forced DVD player region"
 #: system/settings/settings.xml
@@ -20778,11 +20788,7 @@ msgctxt "#36282"
 msgid "This category contains the settings for how CDs are handled."
 msgstr ""
 
-#. Description of setting with label #14097 "Audio CD Insert Action"
-#: system/settings/settings.xml
-msgctxt "#36283"
-msgid "Autorun CDs when inserted in drive."
-msgstr ""
+#empty strings from id 36283
 
 #. Description of setting with label #227 "Load audio CD information from online service"
 #: system/settings/settings.xml
@@ -21697,7 +21703,17 @@ msgctxt "#36439"
 msgid "Enable automatic playback of the next programme when playing past programmes (catchup) or for Video On Demand (VOD) channels. Please note that catchup and VOD only work if supported by the channel provider."
 msgstr ""
 
-#empty strings from id 36440 to 36441
+#. Description of setting with label #14085 "Video disc insert action"
+#: system/settings/settings.xml
+msgctxt "#36440"
+msgid "Action to take when a video disc is inserted."
+msgstr ""
+
+#. Description of setting with label #14097 "Audio CD Insert Action"
+#: system/settings/settings.xml
+msgctxt "#36441"
+msgid "Action to take when an audio CD is inserted."
+msgstr ""
 
 #. Description of setting "System -> Audio output -> Volume control steps" with label #1302
 #: system/settings/settings.xml
@@ -24832,7 +24848,13 @@ msgctxt "#40041"
 msgid "Assign playlist to current movie version?"
 msgstr ""
 
-#empty strings with id 40042 to 40201
+#. Different video version found dialog text for blurays
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40042"
+msgid "Found a different version of the movie \"{0:s}\" in playlist {1:s} of {2:s} - length {3:s}. Would you like to convert it into an additional version of the original?"
+msgstr ""
+
+#empty strings with id 40043 to 40201
 
 #. Ignore different video versions settting
 #: system/settings/settings.xml
@@ -24954,7 +24976,31 @@ msgctxt "#40224"
 msgid "Make the most recently scanned version of a movie the movie's default version.[CR]Helps identify new movie versions as recently added and locate them when the \"Unwatched\" filter of the library is turned on."
 msgstr ""
 
-#empty strings from id 40225 to 40399
+#. Setting to determine when art is retrieved - during or after scrape
+#: system/settings/settings.xml
+msgctxt "#40225"
+msgid "Retrieve art"
+msgstr ""
+
+#. Help for retrieve art during/after scrape setting
+#: system/settings/settings.xml
+msgctxt "#40226"
+msgid "Determines whether art is retrieved synchronously during scrape or in the background afterwards.[CR][During scrape] Art is retrieved synchronously during scrape. This significantly extends time taken to scrape.[CR][After scrape][Default] Art is retrieved in the background after scrape. Actor thumbnails may take a while to appear."
+msgstr ""
+
+#. Option for the retrieve art during/after scrape setting
+#: system/settings/settings.xml
+msgctxt "#40227"
+msgid "During scrape"
+msgstr ""
+
+#. Option for the retrieve art during/after scrape setting
+#: system/settings/settings.xml
+msgctxt "#40228"
+msgid "After scrape"
+msgstr ""
+
+#empty strings from id 40229 to 40399
 
 # Video versions
 
