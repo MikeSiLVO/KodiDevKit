@@ -60,10 +60,7 @@ class ValidationVariable:
         return utils.get_all_parameter_contexts(self.addon, folder)
 
     def check(self, progress_callback=None):
-        """
-        Find undefined or unused variables.
-        Returns list of {"message": str, "file": str, "line": int}.
-        """
+        """Find undefined or unused variables."""
         total_vars = sum(len(vars) for vars in self.addon.variable_map.values()) if hasattr(self.addon, 'variable_map') else 0
         total_files = sum(len(self.addon.window_files.get(f, [])) for f in self.addon.xml_folders)
 

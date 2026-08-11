@@ -101,10 +101,7 @@ class ValidationInclude:
         return utils.get_all_parameter_contexts(self.addon, folder)
 
     def check(self, progress_callback=None):
-        """
-        Check undefined/unused includes. Also counts <fontset>/<include> as usage.
-        Returns list of {"message": str, "file": str, "line": int}.
-        """
+        """Check undefined/unused includes, counting <fontset>/<include> as usage."""
         total_includes = sum(len(self.addon.include_map.get(f, {})) for f in self.addon.xml_folders)
         total_files = sum(len(self.addon.window_files.get(f, [])) for f in self.addon.xml_folders)
 
