@@ -12,6 +12,8 @@ KodiDevKit shows hover tooltips when the cursor rests on recognized content in K
 
 **Includes and variables** -- Hovering over `$VAR[Name]`, `$ESCVAR[Name]`, or `$EXP[Name]` shows a syntax-highlighted preview of the definition content. Inline `<include>IncludeName</include>` tags also show a preview when the cursor is on the name.
 
+**Maps** -- Hovering the map name in `$MAP[Name, InfoLabel]` or `$ESCMAP[...]` previews the `<map>` definition. Hovering the infolabel instead fetches its live value and shows what the map turns it into.
+
 **Fonts** -- Font name references show the font tag information.
 
 **Constants** -- Constant names show the defined value.
@@ -46,7 +48,7 @@ Completions are scoped to the current XML folder (e.g., `1080i/`). Builtin funct
 
 | Shortcut | Context | Action |
 |----------|---------|--------|
-| `Shift+Enter` | Skin XML | Jump to include, variable, constant, font, label, or color definition |
+| `Shift+Enter` | Skin XML | Jump to include, variable, map, constant, font, label, or color definition |
 | `Shift+Enter` | Kodi log | Jump to exception source file and line |
 | `Ctrl+Enter` | Skin XML | Preview skin image |
 | `Ctrl+Shift+Enter` | Skin XML | Switch XML folder (e.g., 1080i to 720p) |

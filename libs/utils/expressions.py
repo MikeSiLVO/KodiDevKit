@@ -22,6 +22,8 @@ _DEFAULT_DYNAMIC_PREFIXES = tuple(
         "$addon[",
         "$escvar[",
         "$escinfo[",
+        "$map[",
+        "$escmap[",
     )
 )
 
@@ -246,7 +248,7 @@ def flatten_expressions(text: str, expression_map: dict[str, str],
 
 
 _KEYWORD_MACRO_RE = re.compile(
-    r"\$(?:LOCALIZE|NUMBER|INFO|ESCINFO|VAR|ESCVAR|EXP|ADDON|PARAM)\[",
+    r"\$(?:LOCALIZE|NUMBER|INFO|ESCINFO|VAR|ESCVAR|MAP|ESCMAP|EXP|ADDON|PARAM)\[",
     re.IGNORECASE,
 )
 

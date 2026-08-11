@@ -510,7 +510,10 @@ class SkinIndex:
                         inc_name = elem.attrib['content']
                         for param_elem in elem.findall('param'):
                             param_name = param_elem.get('name')
-                            param_value = (param_elem.text or '').strip()
+                            # Attribute first, then tag text (GUIIncludes.cpp:GetParameters)
+                            param_value = param_elem.get('value')
+                            if param_value is None:
+                                param_value = (param_elem.text or '').strip()
                             if param_name and param_value:
                                 params[param_name] = param_value
 
@@ -578,6 +581,7 @@ class SkinIndex:
                 and "$PARAM[" not in text
                 and "$NUMBER[" not in text
                 and "$ADDON[" not in text
+                and "$MAP[" not in text
             ):
                 index['labels_untranslated'].append({
                     'name': text,

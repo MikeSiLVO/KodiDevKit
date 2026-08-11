@@ -19,6 +19,7 @@ from libs.validation import ValidationIds as IdCheck
 from libs.validation import ValidationFont as FontCheck
 from libs.validation import ValidationImage as ImageCheck
 from libs.validation import ValidationInclude as IncludeCheck
+from libs.validation import ValidationMap as MapCheck
 from libs.validation import ValidationExpression as ExpressionCheck
 from libs.validation import XmlInterpreter
 from libs.validation import Context
@@ -49,6 +50,7 @@ class KodiDevKitTestCase(unittest.TestCase):
     FontCheck = FontCheck
     ImageCheck = ImageCheck
     IncludeCheck = IncludeCheck
+    MapCheck = MapCheck
     ExpressionCheck = ExpressionCheck
     XmlInterpreter = XmlInterpreter
     Context = Context
@@ -85,6 +87,7 @@ __all__ = [
     'FontCheck',
     'ImageCheck',
     'IncludeCheck',
+    'MapCheck',
     'ExpressionCheck',
     'XmlInterpreter',
     'Context',

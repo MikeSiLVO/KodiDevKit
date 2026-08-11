@@ -44,7 +44,7 @@ contexts:
           pop: true
         - include: tagStuff
 
-    - match: '(</?)(include|variable|constant|color|expression) (name)="([-_a-zA-Z0-9]+)"'
+    - match: '(</?)(include|variable|constant|color|expression|map) (name)="([-_a-zA-Z0-9]+)"'
       captures:
         1: punctuation.definition.tag.begin.xml
         2: entity.name.tag.localname.xml
@@ -80,6 +80,7 @@ contexts:
     - include: kodiinfolabel
     - include: kodiparam
     - include: kodivariable
+    - include: kodimap
     - include: kodiexpression
     - include: kodiincludeparam
     - include: brackets
@@ -106,6 +107,7 @@ contexts:
         - include: kodiinfolabel
         - include: kodiparam
         - include: kodivariable
+        - include: kodimap
         - include: kodiincludeparam
         - include: brackets
         - include: formatter
@@ -202,6 +204,22 @@ contexts:
           captures:
             1: entity.kodi.variable.end
           pop: true
+        - include: formatter
+
+  kodimap:
+    - match: '(\$)((?:ESC)?MAP)(\[)'
+      name: variable.parameter text.kodi.map.xml
+      captures:
+        1: entity.kodi.map.dollar
+        2: entity.kodi.map.map
+        3: entity.kodi.map.begin
+      push:
+        - meta_scope: storage.type kodi.map
+        - match: '(\])'
+          captures:
+            1: entity.kodi.map.end
+          pop: true
+        - include: kodiparam
         - include: formatter
 
   kodiexpression:

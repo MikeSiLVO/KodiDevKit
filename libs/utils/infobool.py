@@ -35,7 +35,7 @@ _PRESUBSTITUTED = re.compile(r"\$(?:LOCALIZE|NUMBER)\[")
 
 # Label-side macros. Nothing expands them in a boolean condition, so their `[`
 # lands after operand characters and Kodi rejects the whole expression.
-_LABEL_MACRO = re.compile(r"\$(VAR|ESCVAR|INFO|ESCINFO|ADDON)\[", re.IGNORECASE)
+_LABEL_MACRO = re.compile(r"\$(VAR|ESCVAR|INFO|ESCINFO|MAP|ESCMAP|ADDON)\[", re.IGNORECASE)
 
 _PARAM = re.compile(r"\$PARAM\[", re.IGNORECASE)
 _EXP = re.compile(r"\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)

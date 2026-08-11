@@ -48,6 +48,10 @@ class Skin(addon.Addon):
         self.constant_source_map = {}
         # folder -> {name -> (Include, file_path)}
         self.variable_map = {}
+        # folder -> {name -> (Include, file_path)} winning <map> per name
+        self.map_map = {}
+        # folder -> [(Include, file_path)] every <map> in load order, so shadowed ones stay visible
+        self.map_defs = {}
         # folder -> {name -> str (already wrapped in [...])}
         self.expression_map = {}
         # folder -> {name -> (file, line)} for jump-to-definition (expression_map
@@ -336,7 +340,7 @@ class Skin(addon.Addon):
         return os.path.join(self.path, "media")
 
     def update_include_list(self):
-        """Parse every Includes.xml and rebuild the five include maps."""
+        """Parse every Includes.xml and rebuild the include caches."""
         start_time = time.time()
         logger.debug("update_include_list START")
 
@@ -353,6 +357,10 @@ class Skin(addon.Addon):
             self.constant_source_map = {}
         if not hasattr(self, "variable_map"):
             self.variable_map = {}
+        if not hasattr(self, "map_map"):
+            self.map_map = {}
+        if not hasattr(self, "map_defs"):
+            self.map_defs = {}
         if not hasattr(self, "expression_map"):
             self.expression_map = {}
         if not hasattr(self, "expression_source_map"):
@@ -374,6 +382,8 @@ class Skin(addon.Addon):
             self.constant_map[folder] = {}
             self.constant_source_map[folder] = {}
             self.variable_map[folder] = {}
+            self.map_map[folder] = {}
+            self.map_defs[folder] = []
             self.expression_map[folder] = {}
             self.expression_source_map[folder] = {}
 
@@ -388,6 +398,7 @@ class Skin(addon.Addon):
                     len(self.default_map.get(folder, {})) +
                     len(self.constant_map.get(folder, {})) +
                     len(self.variable_map.get(folder, {})) +
+                    len(self.map_map.get(folder, {})) +
                     len(self.expression_map.get(folder, {})))
             if prev != curr:
                 logger.info("Include caches: %d total items in '%s' folder.", curr, folder)
@@ -405,7 +416,7 @@ class Skin(addon.Addon):
         """Load `xml_file` and any files it references into the five maps.
 
         Mirrors CGUIIncludes::Load_Internal: <include>, <default>, <constant>,
-        <variable>, <expression>.
+        <variable>, <expression>, <map>.
         """
         if not hasattr(self, "include_map"):
             self.include_map = {}
@@ -417,6 +428,10 @@ class Skin(addon.Addon):
             self.constant_source_map = {}
         if not hasattr(self, "variable_map"):
             self.variable_map = {}
+        if not hasattr(self, "map_map"):
+            self.map_map = {}
+        if not hasattr(self, "map_defs"):
+            self.map_defs = {}
         if not hasattr(self, "expression_map"):
             self.expression_map = {}
         if not hasattr(self, "expression_source_map"):
@@ -444,6 +459,10 @@ class Skin(addon.Addon):
             self.constant_source_map[folder] = {}
         if folder not in self.variable_map:
             self.variable_map[folder] = {}
+        if folder not in self.map_map:
+            self.map_map[folder] = {}
+        if folder not in self.map_defs:
+            self.map_defs[folder] = []
         if folder not in self.expression_map:
             self.expression_map[folder] = {}
         if folder not in self.expression_source_map:
@@ -454,6 +473,7 @@ class Skin(addon.Addon):
         self._load_expressions(root, folder, xml_file)
         self._load_variables(root, folder, xml_file)
         self._load_includes(root, folder, xml_file)
+        self._load_maps(root, folder, xml_file)
 
         # Recurse into <include file="..."/> references (CGUIIncludes::LoadIncludes)
         for node in root.findall("include"):
@@ -493,6 +513,18 @@ class Skin(addon.Addon):
             name = node.attrib.get("name")
             if name and node.find("*") is not None:
                 self.variable_map[folder][name] = (node, xml_file)
+
+    def _load_maps(self, root, folder, xml_file):
+        """Index <map name="X"> entries (CSkinMapManager::LoadMaps).
+
+        Every definition is kept in load order; a repeat name replaces the
+        previous winner (SkinMapManager.cpp:47-56).
+        """
+        for node in root.findall("map"):
+            self.map_defs[folder].append((node, xml_file))
+            name = node.attrib.get("name")
+            if name:
+                self.map_map[folder][name] = (node, xml_file)
 
     def _load_includes(self, root, folder, xml_file):
         """Index <include name="X"> entries with their default params
@@ -552,7 +584,7 @@ class Skin(addon.Addon):
         return list(self.constant_map.get(folder, {}).keys())
 
     def return_node(self, keyword=None, folder=False):
-        """Look up `keyword` as font, include, variable, default, constant, or expression.
+        """Look up `keyword` as font, include, variable, map, default, constant, or expression.
 
         Strips any param tail (`Name,arg1,arg2` -> `Name`). Returns
         {"name", "content", "file", "line", "type"} or None.
@@ -581,6 +613,17 @@ class Skin(addon.Addon):
         variables_for_folder = self.variable_map.get(folder, {})
         if lookup_name in variables_for_folder:
             node, file_path = variables_for_folder[lookup_name]
+            return {
+                "name": lookup_name,
+                "content": node,
+                "file": file_path,
+                "line": node.sourceline if hasattr(node, 'sourceline') else 0,
+                "type": node.tag
+            }
+
+        maps_for_folder = self.map_map.get(folder, {})
+        if lookup_name in maps_for_folder:
+            node, file_path = maps_for_folder[lookup_name]
             return {
                 "name": lookup_name,
                 "content": node,
@@ -621,6 +664,32 @@ class Skin(addon.Addon):
             }
 
         return None
+
+    def lookup_skin_map(self, folder, map_name, key, _visited=None):
+        """What `key` maps to in `map_name`, or `key` itself.
+
+        Mirrors CSkinMapManager::Lookup (SkinMapManager.cpp:93-125): own entries
+        first, then the `ref` chain, with the same cycle guard.
+        """
+        visited = _visited or []
+        if map_name in visited:
+            logger.warning("Skin map '%s' has a circular ref chain", map_name)
+            return key
+        visited = visited + [map_name]
+
+        entry = self.map_map.get(folder, {}).get(map_name)
+        if entry is None:
+            return key
+
+        node, _file = entry
+        for child in node.findall("entry"):
+            if child.attrib.get("key") == key and child.text is not None:
+                return child.text
+
+        ref = node.attrib.get("ref")
+        if ref:
+            return self.lookup_skin_map(folder, ref, key, visited)
+        return key
 
     def get_expanded_root(self, path, folder):
         """Parse `path` and apply Kodi's resolve pipeline (uncached).

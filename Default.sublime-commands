@@ -21,6 +21,7 @@
 
     {"caption": "KodiDevKit: Check Variables", "command": "kodidevkit_check_variables", "args": { "check_type": "variable"}},
     {"caption": "KodiDevKit: Check Includes", "command": "kodidevkit_check_variables", "args": { "check_type": "include"}},
+    {"caption": "KodiDevKit: Check Maps", "command": "kodidevkit_check_variables", "args": { "check_type": "map"}},
     {"caption": "KodiDevKit: Check Fonts", "command": "kodidevkit_check_variables", "args": { "check_type": "font"}},
     {"caption": "KodiDevKit: Check Labels", "command": "kodidevkit_check_variables", "args": { "check_type": "label"}},
     {"caption": "KodiDevKit: Check Images", "command": "kodidevkit_check_variables", "args": { "check_type": "image" }},

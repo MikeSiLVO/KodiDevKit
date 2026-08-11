@@ -5,6 +5,7 @@ from .ids import ValidationIds
 from .label import ValidationLabel
 from .include import ValidationInclude
 from .variable import ValidationVariable
+from .skinmap import ValidationMap
 from .expression import ValidationExpression
 from .filecheck import ValidationFileCheck
 from .interpreter import XmlInterpreter, Context
@@ -32,6 +33,7 @@ from .hierarchy import (
     GROUP_TYPES,
     CONTAINER_TYPES,
     ALL_LAYOUT_TAGS,
+    MAP_CHILDREN,
 )
 
 __all__ = [
@@ -41,6 +43,7 @@ __all__ = [
     'ValidationLabel',
     'ValidationInclude',
     'ValidationVariable',
+    'ValidationMap',
     'ValidationExpression',
     'ValidationFileCheck',
     'XmlInterpreter',
@@ -64,4 +67,5 @@ __all__ = [
     'GROUP_TYPES',
     'CONTAINER_TYPES',
     'ALL_LAYOUT_TAGS',
+    'MAP_CHILDREN',
 ]

@@ -141,7 +141,7 @@ class ValidationLabel:
             return False
         if "$INFO[" in text or "$VAR[" in text or "$PARAM[" in text:
             return False
-        if "$NUMBER[" in text or "$ADDON[" in text:
+        if "$NUMBER[" in text or "$ADDON[" in text or "$MAP[" in text:
             return False
 
         if not text[0].isalpha():

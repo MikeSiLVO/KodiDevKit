@@ -79,9 +79,9 @@ LAYOUT_CHILDREN = frozenset({"control", "include"})
 CONTENT_CHILDREN = frozenset({"item", "include"})
 
 # <includes> root element (GUIIncludes.cpp:88-99).
-# Five child types loaded by Load_Internal().
+# Child types loaded by Load_Internal(); <map> since Kodi 22.
 INCLUDES_CHILDREN = frozenset({
-    "include", "default", "constant", "variable", "expression",
+    "include", "default", "constant", "variable", "expression", "map",
 })
 
 # Font.xml hierarchy (GUIFontManager.cpp:67, 426-510).
@@ -98,6 +98,10 @@ FONT_CHILDREN = frozenset({
 # <variable> children (GUIIncludes.cpp:160-168, 244-257).
 # Only <value> children with optional condition attribute.
 VARIABLE_CHILDREN = frozenset({"value"})
+
+# <map> children (SkinMapManager.cpp:22-40).
+# Only <entry key="..."> children; anything else is skipped.
+MAP_CHILDREN = frozenset({"entry"})
 
 
 __all__ = [
@@ -116,4 +120,5 @@ __all__ = [
     "FONTSET_CHILDREN",
     "FONT_CHILDREN",
     "VARIABLE_CHILDREN",
+    "MAP_CHILDREN",
 ]

@@ -27,6 +27,9 @@ class NavigationMixin(CheckerMixin):
         if not self.addon or not keyword:
             return False
         kw = str(keyword).strip()
+        # Caret lands in a whole `$MAP[Name, ListItem.X]` body; the name is the first arg.
+        if "," in kw:
+            kw = kw.split(",", 1)[0].strip()
 
         if kw.isdigit():
             for po_file in self.get_po_files():
@@ -91,6 +94,15 @@ class NavigationMixin(CheckerMixin):
                 "file": file_path,
                 "line": line,
                 "content": self.addon.expression_map.get(folder, {}).get(name, ""),
+            })
+
+        for name, (node, file_path) in getattr(self.addon, "map_map", {}).get(folder, {}).items():
+            result.append({
+                "name": name,
+                "type": "map",
+                "file": file_path,
+                "line": getattr(node, "sourceline", 0) or 0,
+                "content": node,
             })
 
         const_source = getattr(self.addon, "constant_source_map", {}).get(folder, {})

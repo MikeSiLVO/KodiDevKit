@@ -16,6 +16,11 @@ CATEGORY_DESCRIPTIONS = {
         "<strong>Errors:</strong> Include referenced but not defined, or defined but never used. "
         "Both block Kodi repo submission."
     ),
+    "Maps": (
+        "<strong>Errors:</strong> $MAP[] naming a map that is not defined, a map or entry Kodi "
+        "silently skips, a broken or circular <code>ref</code>, or a map nothing uses. "
+        "Skin maps need Kodi 22 (Piers)."
+    ),
     "Labels": (
         "<strong>Errors:</strong> Numeric label ID not found in translation files &mdash; will show as empty text in Kodi. "
         "<strong>Warnings:</strong> Hardcoded text or possible missing $INFO[] wrapper. "
@@ -69,6 +74,19 @@ _SUBTYPE_RULES = [
     ("Control ID", "UNDEFINED"),
     ("Please use", "USE NAME"),
     ("Unused variable", "UNUSED"),
+    ("Unused map", "UNUSED"),
+    ("Duplicate map name", "DUPLICATE"),
+    ("Duplicate entry key", "DUPLICATE"),
+    ("Circular map reference", "CIRCULAR REF"),
+    ("references a map that is not defined", "UNDEFINED REF"),
+    ("has no name attribute", "NO NAME"),
+    ("has no key attribute", "NO KEY"),
+    ("has no value", "NO VALUE"),
+    ("has no usable entries", "NO ENTRIES"),
+    ("padded with whitespace", "WHITESPACE"),
+    ("$MAP[ is missing", "BAD BRACKETS"),
+    ("$MAP[] needs both", "BAD SYNTAX"),
+    ("Skin maps need Kodi", "UNSUPPORTED"),
     ("not defined", "UNDEFINED"),
     ("Unused include", "UNUSED"),
     ("is not a valid child", "INVALID TAG"),

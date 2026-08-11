@@ -18,6 +18,7 @@ from libs.validation.hierarchy import (
     FONTSET_CHILDREN,
     FONT_CHILDREN,
     VARIABLE_CHILDREN,
+    MAP_CHILDREN,
 )
 
 
@@ -83,8 +84,8 @@ class TestContentChildren(unittest.TestCase):
 
 
 class TestIncludesChildren(unittest.TestCase):
-    def test_five_types(self):
-        expected = {"include", "default", "constant", "variable", "expression"}
+    def test_loaded_types(self):
+        expected = {"include", "default", "constant", "variable", "expression", "map"}
         self.assertEqual(INCLUDES_CHILDREN, frozenset(expected))
 
 
@@ -105,6 +106,11 @@ class TestFontsHierarchy(unittest.TestCase):
 class TestVariableChildren(unittest.TestCase):
     def test_only_value(self):
         self.assertEqual(VARIABLE_CHILDREN, frozenset({"value"}))
+
+
+class TestMapChildren(unittest.TestCase):
+    def test_only_entry(self):
+        self.assertEqual(MAP_CHILDREN, frozenset({"entry"}))
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from ..validation import ValidationIds
 from ..validation import ValidationLabel
 from ..validation import ValidationInclude
 from ..validation import ValidationVariable
+from ..validation import ValidationMap
 from ..validation import ValidationFileCheck
 from ..validation.suppress import scan_skin
 from ..validation.interpreter import XmlInterpreter
@@ -200,6 +201,7 @@ class CheckerMixin:
 
         checks_simple = {
             "variable": self.check_variables,
+            "map": self.check_maps,
             "include": self.check_includes,
             "font": self.check_fonts,
             "label": self.check_labels,
@@ -276,6 +278,14 @@ class CheckerMixin:
 
         checker = ValidationVariable(self.addon)
         return self._muted("Variables", checker.check(progress_callback=progress_callback))
+
+    def check_maps(self, progress_callback=None):
+        """Find malformed, undefined, or unused skin maps."""
+        if not self.addon:
+            return self._no_issues("map")
+
+        checker = ValidationMap(self.addon)
+        return self._muted("Maps", checker.check(progress_callback=progress_callback))
 
     def check_includes(self, progress_callback=None):
         """Check undefined/unused includes."""

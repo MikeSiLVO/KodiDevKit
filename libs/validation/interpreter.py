@@ -29,6 +29,7 @@ from .hierarchy import (
     FONTSET_CHILDREN,
     FONT_CHILDREN,
     VARIABLE_CHILDREN,
+    MAP_CHILDREN,
 )
 from .constants import (
     SEVERITY_ERROR,
@@ -69,6 +70,7 @@ class Context(Enum):
     FONT = auto()
     INCLUDES = auto()
     VARIABLE = auto()
+    MAP = auto()
 
 
 class XmlInterpreter:
@@ -351,9 +353,13 @@ class XmlInterpreter:
                 )
         else:
             if value not in ALLOWED_VALUES[value_type]:
+                if value.lower() in ALLOWED_VALUES[value_type]:
+                    detail = "must be lowercase"
+                else:
+                    detail = "allowed: " + ", ".join(sorted(ALLOWED_VALUES[value_type]))
                 self._add_issue(
                     node, SEVERITY_ERROR,
-                    f"invalid value for {node.tag}: {value} (must be lowercase)",
+                    f"invalid value for {node.tag}: {value} ({detail})",
                 )
 
     def _validate_brackets(self, node, text: str):
@@ -411,6 +417,8 @@ class XmlInterpreter:
                 )
             elif child.tag == "variable":
                 self._walk_variable(child)
+            elif child.tag == "map":
+                self._walk_map(child)
             elif child.tag == "default":
                 self._walk_default(child)
         self._context_stack.pop()
@@ -431,6 +439,17 @@ class XmlInterpreter:
                 self._add_issue(
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <variable> (only <value>)",
+                )
+        self._context_stack.pop()
+
+    def _walk_map(self, node):
+        """Validate <map> children: only <entry>. (SkinMapManager.cpp:22-40)"""
+        self._context_stack.append(Context.MAP)
+        for child in node:
+            if child.tag not in MAP_CHILDREN:
+                self._add_issue(
+                    child, SEVERITY_WARNING,
+                    f"<{child.tag}> is not valid inside <map> (only <entry>)",
                 )
         self._context_stack.pop()
 

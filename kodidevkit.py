@@ -979,7 +979,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         if "comment" in scope_name:
             comment_text = view.substr(view.extract_scope(region.b))
             if not re.search(
-                r'\$INFO\[|\$VAR\[|\$ESCINFO\[|\$EXP\[|'
+                r'\$INFO\[|\$VAR\[|\$ESCINFO\[|\$EXP\[|\$MAP\[|'
                 r'Window\.|Control\.|Skin\.|String\.|Player\.|Container\.|ListItem\.|'
                 r'\b(?:Is|Has)[A-Za-z_]+',
                 comment_text
@@ -1019,7 +1019,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
         if "[" in token:
             head = token.split("[", 1)[0]
-            if head in {"INFO", "ESCINFO", "VAR", "ESCVAR", "EXP", "LOCALIZE", "ADDON", "$INFO", "$ESCINFO", "$VAR", "$ESCVAR", "$EXP", "$LOCALIZE", "$ADDON"}:
+            if head in {"INFO", "ESCINFO", "VAR", "ESCVAR", "MAP", "ESCMAP", "EXP", "LOCALIZE", "ADDON", "$INFO", "$ESCINFO", "$VAR", "$ESCVAR", "$MAP", "$ESCMAP", "$EXP", "$LOCALIZE", "$ADDON"}:
                 info_type = head.lstrip("$")
                 content = token.split("[", 1)[1].rsplit("]", 1)[0]
                 if info_type == "ADDON":
@@ -1045,6 +1045,21 @@ class KodiDevKit(sublime_plugin.EventListener):
             content = self.get_formatted_include(selected_content, view)
             if content:
                 return content
+
+        if info_type in {"MAP", "ESCMAP"}:
+            body_start = dollar_pos + token.find("[") + 1
+            args = token.split("[", 1)[1].rsplit("]", 1)[0].split(",")
+            map_name = args[0].strip()
+            # Kodi splits the block on every comma, so counting them locates the arg.
+            arg_index = line_text.count(",", body_start, cursor_offset)
+            if arg_index == 0:
+                content = self.get_formatted_include(map_name, view)
+                if content:
+                    return content
+            elif arg_index == 1 and len(args) > 1:
+                preview = self._map_lookup_preview(view, map_name, args[1].strip())
+                if preview:
+                    return preview
 
         if info_type in {"INFO", "ESCINFO"}:
             # If the cursor is inside [COLOR <name>...], let the color lookup handle it
@@ -1187,7 +1202,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             has_operators = any(op in text for op in ['|', '+', '!', '[', ']'])
             if (has_operators
                     and "entity.name.tag" not in view.scope_name(region.b)
-                    and info_type not in {"INFO", "ESCINFO", "VAR", "ESCVAR", "EXP"}):
+                    and info_type not in {"INFO", "ESCINFO", "VAR", "ESCVAR", "MAP", "ESCMAP", "EXP"}):
                 verdict = evaluate_condition(view, text)
                 if verdict:
                     return verdict
@@ -1301,6 +1316,30 @@ class KodiDevKit(sublime_plugin.EventListener):
         return None
 
     @staticmethod
+    def _map_lookup_preview(view, map_name, infolabel):
+        """The infolabel's live value, and what `map_name` turns it into."""
+        if not infolabel or getattr(kodi, '_cooldown_until', 0) > time.time():
+            return None
+
+        result = kodi.request(method="XBMC.GetInfoLabels", params={"labels": [infolabel]})
+        if not result:
+            return None
+        _, value = result["result"].popitem()
+        if not value:
+            return None
+
+        raw = str(value)
+        addon = getattr(INFOS, "addon", None)
+        file_name = view.file_name()
+        lookup = getattr(addon, "lookup_skin_map", None) if addon else None
+        if not lookup or not file_name:
+            return raw
+
+        folder = os.path.basename(os.path.dirname(file_name))
+        mapped = lookup(folder, map_name, raw)
+        return raw if mapped == raw else f"{raw} -> {mapped}"
+
+    @staticmethod
     def find_end_bracket(text, opener, closer, start_pos=0):
         """Find the matching closer for an already-opened bracket.
 
@@ -1395,7 +1434,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             allow_code_wrap=True,
         )
 
-    def _is_definition_name_here(self, view, tag_names=("include", "variable", "constant", "expression")) -> bool:
+    def _is_definition_name_here(self, view, tag_names=("include", "variable", "constant", "expression", "map")) -> bool:
         """True if the caret is inside an opening definition tag (`<include name="...">`).
 
         Used to suppress the tooltip on the definition itself (since the tooltip

@@ -873,7 +873,8 @@ def validate_tag_expression(tag_name, value):
         (False, 'Tag requires literal value, found expression: $VAR[ButtonTexture]')
     """
     has_expression = ('$VAR[' in value or '$INFO[' in value or
-                     '$LOCALIZE[' in value or '$PARAM[' in value)
+                     '$LOCALIZE[' in value or '$PARAM[' in value or
+                     '$MAP[' in value)
 
     if has_expression:
         if supports_expressions(tag_name):
@@ -984,6 +985,7 @@ class ValidationExpression:
 
             has_expression = ('$VAR[' in tag_value or
                             '$INFO[' in tag_value or
+                            '$MAP[' in tag_value or
                             '$LOCALIZE[' in tag_value)
 
             if has_expression:
