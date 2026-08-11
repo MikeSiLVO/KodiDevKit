@@ -42,3 +42,10 @@ Restart Sublime Text after installing.
 ## License
 
 [GNU General Public License v3.0+](https://www.gnu.org/licenses/gpl-3.0)
+
+### Bundled Kodi data
+
+`data/` carries reference data taken from [Kodi](https://github.com/xbmc/xbmc), Copyright (C) Team Kodi, licensed GPL-2.0-or-later and used here under GPL-3.0-or-later:
+
+- `data/kodi/<release>/` - `colors.xml` and `strings.po`, copied verbatim by `scripts/update_kodi_refs.py`.
+- `data/<release>/data.xml` - builtin and boolean-condition names with their descriptions, taken from the Kodi sources and maintained by hand.
