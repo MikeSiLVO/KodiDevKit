@@ -170,8 +170,6 @@
         <bordersize>int</bordersize>
         <info>info</info>
         <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
-        <imagefilter>label</imagefilter>
-        <diffusefilter>label</diffusefilter>
     </control>
     <control type="multiimage" id="int">
         <width>int</width>
@@ -202,6 +200,8 @@
         <textureradiooffdisabled colordiffuse="color" border="coords" diffuse="path">path</textureradiooffdisabled>
         <textureradioon colordiffuse="color" border="coords" diffuse="path">path</textureradioon>
         <textureradiooff colordiffuse="color" border="coords" diffuse="path">path</textureradiooff>
+        <textureradiofocus colordiffuse="color" border="coords" diffuse="path">path</textureradiofocus>
+        <textureradionofocus colordiffuse="color" border="coords" diffuse="path">path</textureradionofocus>
         <selected>condition</selected>
         <onclick condition="condition">builtin</onclick>
         <onback condition="condition">builtin</onback>
@@ -392,6 +392,7 @@
         <title>xxx</title>
         <shadowcolor>color</shadowcolor>
         <urlset>int</urlset>
+        <tagset>xxx</tagset>
         <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
     </control>
@@ -447,7 +448,6 @@
         <scrolltime tween="tween" easing="easing">int</scrolltime>
         <timeblocks>int</timeblocks>
         <rulerunit>int</rulerunit>
-        <minspertimeblock>int</minspertimeblock>
         <orientation>orientation</orientation>
         <onback condition="condition">builtin</onback>
         <viewtype label="label">viewtype</viewtype>

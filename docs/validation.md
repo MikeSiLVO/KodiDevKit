@@ -1,6 +1,6 @@
 # Validation
 
-KodiDevKit validates your skin at two levels: per-file checks on save (XML structure) and full-skin reports covering variables, includes, labels, fonts, IDs, images, and more.
+KodiDevKit validates your skin at two levels: per-file checks on save (XML structure) and full-skin reports covering variables, includes, maps, labels, fonts, IDs, images, and more.
 
 ## Severity levels
 
@@ -20,7 +20,7 @@ KodiDevKit validates in two modes with different defaults:
 - `hide_include_warnings` (default: `true`) suppresses warnings that originate from include content, since an include may be valid in other contexts. Errors from includes are always shown. This is a plugin-wide setting -- it also applies to the results view and the HTML report.
 - Phantoms show navigation links (Next Issue, Dismiss) and group multiple issues per line.
 
-**Full reports** (Command Palette: "KodiDevKit: Generate Validation Report") run 8 checks across the entire skin: Variables, Includes, Labels, Fonts, IDs, Images, XML Validation, and File Integrity. They open in the browser as an interactive HTML page with:
+**Full reports** (Command Palette: "KodiDevKit: Generate Validation Report") run 9 checks across the entire skin: Variables, Includes, Maps, Labels, Fonts, IDs, Images, XML Validation, and File Integrity. They open in the browser as an interactive HTML page with:
 - Toggle buttons for errors, warnings, and include-originated warnings. Errors and warnings show by default; include warnings start hidden, following `hide_include_warnings`.
 - Category sections (Variables, Includes, Labels, etc.) with issue counts and descriptions.
 - Clickable file paths that open the file in Sublime Text at the correct line.
@@ -32,6 +32,7 @@ KodiDevKit validates in two modes with different defaults:
 |---------|-------|
 | KodiDevKit: Check Variables | Variables |
 | KodiDevKit: Check Includes | Includes |
+| KodiDevKit: Check Maps | Maps |
 | KodiDevKit: Check Labels | Labels |
 | KodiDevKit: Check Fonts | Fonts |
 | KodiDevKit: Check Images | Images |
@@ -41,6 +42,27 @@ KodiDevKit validates in two modes with different defaults:
 File Integrity and Expressions do not have individual commands -- they run as part of the full report and on-save validation respectively.
 
 Results open in a read-only results view grouped by file -- double-click a line (or F4 / Shift+F4) to jump to the issue. Useful when you want to run one check without generating a full report.
+
+## Kodi release
+
+Validation targets the release the skin declares in `addon.xml` via `<import addon="xbmc.gui">` -- gui 5.17.0 is Omega, 5.18.0 is Piers. The `kodi_release` setting overrides the detected value.
+
+The release picks the control schema, the window table, the builtin and boolean-condition completions, and the bundled `colors.xml` / `strings.po`, so anything Kodi added in a later release is an error on an older skin.
+
+`scripts/update_kodi_refs.py` refreshes `colors.xml` / `strings.po` from upstream. The builtin and condition lists in `data/<release>/data.xml` are maintained by hand: take new names from the registration maps in `GUIInfoManager.cpp` and `xbmc/interfaces/builtins/`, since doxygen both misses names and keeps ones Kodi has deleted.
+
+Piers-only skinning so far:
+
+| Feature | Surface |
+|---------|---------|
+| Skin maps | `<map>` / `<entry>`, `$MAP[]`, `$ESCMAP[]` |
+| FixedList movement and alignment | `<startmovement>`, `<endmovement>`, `<aligny>` on `fixedlist` |
+| Image scaling filters | `<imagefilter>`, `<diffusefilter>` on `image` (`linear` or `nearest`) |
+| EPG grid block size | `<minspertimeblock>` on `epggrid` |
+| Player bookmarks | `Player.Bookmarks` infolabel, `Player.HasBookmarks` boolean |
+| Stream-select dialogs | `dialogselectvideo` (12300), `dialogselectaudio` (12301), `dialogselectsubtitle` (12302); `selectvideoversion` and `selectvideoextra` are gone |
+| PVR providers, game disc manager | `tvproviders` (10712), `radioproviders` (10713), `gamediscmanager` (10832) |
+| New boolean conditions | `Player.IsLive`, `RetroPlayer.AchievementsLoggedIn`, `RetroPlayer.DiscEjected`, `RetroPlayer.EmptyTray`, `RetroPlayer.SupportsEject` |
 
 ## Validators
 
@@ -73,6 +95,24 @@ Checks `<include>Name</include>` and `<include content="Name">` references again
 - `script-*-includes` -- dynamic script includes
 
 **SkinShortcuts template scanning:** Static `<include>` tags and `content`/`include` attributes in template files are checked against known include names to mark them as used.
+
+### Maps
+
+Checks `$MAP[Name, InfoLabel]` and `$ESCMAP[...]` references against `<map name="...">` definitions. Skin maps arrived in Kodi 22 (Piers); a skin targeting an older release is told so once.
+
+**Errors:**
+- Map referenced but not defined.
+- Map defined but nothing reaches it, directly or through another map's `ref`.
+- `$MAP[]` with fewer than two arguments, or a blank map name or infolabel. Kodi needs both and renders nothing without them.
+- `$MAP[` with no closing `]`. Kodi discards the rest of the label.
+- A definition Kodi silently drops: `<map>` with no `name`, `<entry>` with no `key` or no text, a map with neither entries nor a `ref`.
+- Duplicate map name (the last definition wins) or duplicate `<entry key>` within one map (the first value wins).
+- `ref` naming a map that is not defined, or a `ref` chain that loops back on itself.
+- A `name` or `ref` padded with whitespace. `$MAP[]` trims the name it looks up, so a padded definition can never be reached.
+
+**Warnings:** a child of `<map>` other than `<entry>` (reported by the XML structure check).
+
+Hovering the map name in a `$MAP[]` shows the definition; hovering the infolabel queries the running Kodi and shows the value and what the map turns it into.
 
 ### Labels
 
@@ -158,7 +198,7 @@ Kodi silently ignores all of these structural issues. They are flagged to teach 
 
 ### Expressions (on-save only)
 
-Validates that dynamic expressions (`$VAR[]`, `$INFO[]`, `$LOCALIZE[]`) are only used in tags that support them. This check runs during on-save validation but is not included in full reports.
+Validates that dynamic expressions (`$VAR[]`, `$INFO[]`, `$MAP[]`, `$LOCALIZE[]`) are only used in tags that support them. This check runs during on-save validation but is not included in full reports.
 
 **Errors:**
 - Expression used in a literal-only tag. For example, `<posx>$VAR[XPos]</posx>` is invalid because `<posx>` is parsed with `XMLUtils::GetFloat` which doesn't resolve expressions.

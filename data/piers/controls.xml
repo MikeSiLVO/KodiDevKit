@@ -18,6 +18,7 @@
     - aspect [scale, stretch, center, keep]
     - align [left, center, right]
     - aligny [top, center, bottom]
+    - filter [linear, nearest]
     - tween [quadratic, sine, ...]
     - easing [in, out, inout]
     - viewtype [list, icon, biglist, bigicon, wide, bigwide, wrap, bigwrap, info, biginfo]
@@ -170,8 +171,8 @@
         <bordersize>int</bordersize>
         <info>info</info>
         <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
-        <imagefilter>label</imagefilter>
-        <diffusefilter>label</diffusefilter>
+        <imagefilter>filter</imagefilter>
+        <diffusefilter>filter</diffusefilter>
     </control>
     <control type="multiimage" id="int">
         <width>int</width>
@@ -202,6 +203,8 @@
         <textureradiooffdisabled colordiffuse="color" border="coords" diffuse="path">path</textureradiooffdisabled>
         <textureradioon colordiffuse="color" border="coords" diffuse="path">path</textureradioon>
         <textureradiooff colordiffuse="color" border="coords" diffuse="path">path</textureradiooff>
+        <textureradiofocus colordiffuse="color" border="coords" diffuse="path">path</textureradiofocus>
+        <textureradionofocus colordiffuse="color" border="coords" diffuse="path">path</textureradionofocus>
         <selected>condition</selected>
         <onclick condition="condition">builtin</onclick>
         <onback condition="condition">builtin</onback>
@@ -392,6 +395,7 @@
         <title>xxx</title>
         <shadowcolor>color</shadowcolor>
         <urlset>int</urlset>
+        <tagset>xxx</tagset>
         <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
     </control>
@@ -477,6 +481,9 @@
         <include>list_common</include>
         <focusposition>int</focusposition>
         <movement>int</movement>
+        <startmovement>int</startmovement>
+        <endmovement>int</endmovement>
+        <aligny>aligny</aligny>
     </control>
     <control type="panel" id="int">
         <include>common</include>

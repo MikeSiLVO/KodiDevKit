@@ -87,6 +87,7 @@ ALLOWED_VALUES = {
     "bool": {"true", "false", "yes", "no", "on", "off", "enabled", "disabled"},
     "orientation": {"horizontal", "vertical"},
     "aspect": {"scale", "stretch", "center", "keep"},
+    "filter": {"linear", "nearest"},
     "subtype": {"page", "int", "float", "text"},
     "action": {"volume", "seek", "pvr.seek"},
     "viewtype": {
