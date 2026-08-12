@@ -8,6 +8,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import libs
 from libs.infoprovider import InfoProvider
 
 
@@ -165,7 +166,8 @@ class TestPlayerBookmarks(ReleaseGatedTestCase):
 class TestWindowTableShape(unittest.TestCase):
     """`windows.json` maps one name to one id, which the id lookups rely on."""
 
-    DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    # Resolved from the engine package, which sits beside data/ in both layouts.
+    DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(libs.__file__))), "data")
 
     def _rows(self, release):
         import json
