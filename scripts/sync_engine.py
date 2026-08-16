@@ -9,8 +9,11 @@ suite, minus the parts that only make sense inside the editor.
 Point it at the other tree with --kdk or KDK_ROOT; it defaults to a sibling
 checkout next to this one, then /mnt/c/kdk.
 
-Divergence that is deliberate lives in EXEMPT below. Anything else in a mirrored
-file is drift, which is what forked these two trees before.
+A file either mirrors whole or is listed as one repo's own (FRONTEND, EDITOR_ONLY).
+Anything else differing in a mirrored file is drift, which is what forked these two
+trees before. EXEMPT allows named symbols to differ inside a file that otherwise
+mirrors; prefer moving the divergence into a front-end file over adding an entry,
+because an exempt file is skipped wholesale by --apply and must be ported by hand.
 """
 
 from __future__ import annotations
@@ -38,6 +41,14 @@ SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers")
 # Written to run under either layout, so both repos carry the same file.
 SHARED_SCRIPTS = ("update_kodi_refs.py",)
 
+# Each repo's own front end. Same path in both trees, different contents by design,
+# so there is nothing here to keep in sync.
+FRONTEND = {
+    "libs/infoprovider/loader.py",
+    "libs/infoprovider/provider.py",
+    "libs/reporting/text.py",
+}
+
 # Never leaves KodiDevKit: needs Sublime, mdpopups, or the live-Kodi client.
 EDITOR_ONLY = {
     "libs/sublime", "libs/kodi",
@@ -64,20 +75,7 @@ NEVER_COPY = {
 
 # Mirrored files that legitimately differ, and the symbols allowed to differ.
 # Adding an entry is a decision; a symbol appearing here that isn't listed is drift.
-EXEMPT = {
-    "libs/infoprovider/loader.py": {
-        # sublime.load_resource for packaged installs, with a filesystem fallback.
-        "LoaderMixin.init_addon", "LoaderMixin.load_data", "<module prelude>",
-    },
-    "libs/infoprovider/provider.py": {
-        # Different mixin sets, which is the point of the split, plus the overrides
-        # each front end layers on the shared engine.
-        "InfoProvider.__init__", "InfoProvider.get_check_listitems", "<module prelude>",
-    },
-    "libs/reporting/text.py": {
-        "generate_text_report", "_describe_filters", "issue_visible", "<module prelude>",
-    },
-}
+EXEMPT: dict[str, set[str]] = {}
 
 
 class StripDocs(ast.NodeTransformer):
@@ -170,6 +168,8 @@ def pairs(kdk: Path):
             rel = src.relative_to(HERE).as_posix()
             if "__pycache__" in rel:
                 continue
+            if rel in FRONTEND:
+                continue
             if any(rel == e or rel.startswith(e + "/") for e in EDITOR_ONLY):
                 continue
             yield rel, src, kdk / "src" / "kdk" / rel
@@ -239,8 +239,8 @@ def apply(kdk: Path) -> int:
         print(f"  {rel} -> {dst.relative_to(kdk)}")
         copied += 1
     print(f"{copied} file(s) mirrored" if copied else "already in sync")
-    skipped = len(EXEMPT) + len(NEVER_COPY)
-    print(f"{skipped} file(s) skipped as deliberately divergent; port those by hand.")
+    if EXEMPT:
+        print(f"{len(EXEMPT)} file(s) hold exempt symbols and were skipped; port those by hand.")
     return _verify_importable(kdk)
 
 
