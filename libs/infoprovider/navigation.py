@@ -8,6 +8,7 @@ import logging
 from lxml import etree as ET
 
 from .. import utils
+from ..validation.include import resolve_include_file
 from .checker import CheckerMixin
 
 from typing import Any
@@ -32,7 +33,7 @@ class NavigationMixin(CheckerMixin):
             kw = kw.split(",", 1)[0].strip()
 
         if kw.lower().endswith(".xml"):
-            path = self._xml_file_in_folder(kw, folder)
+            path, _ = resolve_include_file(self.addon, folder, kw)
             if path:
                 return "%s:1" % path
 
@@ -84,24 +85,6 @@ class NavigationMixin(CheckerMixin):
 
         logger.info("no node with name %s found", kw)
         return False
-
-    def _xml_file_in_folder(self, filename, folder):
-        """Path of `filename` in the skin's `folder`, matched case-sensitively.
-
-        Kodi reads loose skin files through the OS, so a reference whose case does not match
-        the file works on Windows and fails on Linux. Comparing against the real directory
-        entries keeps the jump honest on either host.
-        """
-        if not folder:
-            return None
-        directory = os.path.join(self.addon.path, folder)
-        try:
-            entries = os.listdir(directory)
-        except OSError:
-            return None
-        if filename in entries:
-            return os.path.join(directory, filename)
-        return None
 
     def _get_includes_for_folder(self, folder):
         """Engine's list plus the expression/constant entries goto-def needs."""

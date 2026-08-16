@@ -66,6 +66,7 @@ _SUBTYPE_RULES = [
     ("missing required", "MISSING TAG"),
     ("no unicode", "NO UNICODE"),
     ("Missing font file", "MISSING FILE"),
+    ("Missing include file", "MISSING FILE"),
     ("Label not defined", "UNDEFINED"),
     ("not translated", "NOT TRANSLATED"),
     ("missing $INFO[]", "MISSING INFO"),

@@ -17,6 +17,67 @@ RUNTIME_INCLUDE_PATTERNS = [
     re.compile(r'^script-.*-includes$'),         # Dynamic script includes
 ]
 
+# Written by the script that owns them, so they are absent until the skin runs.
+RUNTIME_INCLUDE_FILE = re.compile(r'^script-.*-includes\.xml$', re.I)
+
+
+_dir_cache = {}
+
+
+def _entries(directory):
+    """Names in `directory`, reread whenever its mtime moves so a renamed file is never missed."""
+    try:
+        stamp = os.stat(directory).st_mtime
+    except OSError:
+        return ()
+    cached = _dir_cache.get(directory)
+    if cached and cached[0] == stamp:
+        return cached[1]
+    try:
+        listing = tuple(os.listdir(directory))
+    except OSError:
+        return ()
+    _dir_cache[directory] = (stamp, listing)
+    return listing
+
+
+def resolve_include_file(addon, folder, filename):
+    """Path an `<include file="...">` reference opens, and the real name when only its case differs."""
+    # Kodi joins the path and opens it through the OS with no case fallback (Skin.cpp:279), so a
+    # mis-cased reference loads on Windows and loads nothing on Linux.
+    ordered = [folder] + [f for f in addon.xml_folders if f != folder]
+    near = None
+    for name in ordered:
+        entries = _entries(os.path.join(addon.path, name))
+        if filename in entries:
+            return os.path.join(addon.path, name, filename), None
+        if near is None:
+            near = next((e for e in entries if e.lower() == filename.lower()), None)
+    return None, near
+
+
+def check_include_file_ref(addon, folder, ref):
+    """Issue for an `<include file="...">` reference Kodi cannot open, without the caller's location."""
+    ref = (ref or "").strip()
+    if not ref or "$" in ref or RUNTIME_INCLUDE_FILE.match(ref):
+        return None
+
+    path, actual = resolve_include_file(addon, folder, ref)
+    if path:
+        return None
+
+    if actual:
+        message = f"Case mismatch for '{ref}' (actual '{actual}')"
+    else:
+        message = f"Missing include file '{ref}'"
+    return {
+        'name': ref,
+        'identifier': ref,
+        'type': 'include',
+        'message': message,
+        'severity': SEVERITY_ERROR,
+    }
+
 
 class ValidationInclude:
     """Validates include definitions and usage in Kodi skins."""

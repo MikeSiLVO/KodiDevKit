@@ -14,6 +14,7 @@ from ..validation import ValidationInclude
 from ..validation import ValidationVariable
 from ..validation import ValidationMap
 from ..validation import ValidationFileCheck
+from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan_skin
 from ..validation.interpreter import XmlInterpreter
 from ..validation.constants import (
@@ -570,6 +571,12 @@ class CheckerMixin:
                 var_name = item.get("name")
                 if var_name:
                     self._variable_cache[var_name] = item
+
+        for node in root.xpath(".//include[@file]"):
+            issue = check_include_file_ref(self.addon, folder, node.attrib["file"])
+            if issue:
+                issue["line"] = node.sourceline
+                listitems.append(issue)
 
         nodes_invalid_type = []
         if self.template_attribs:
