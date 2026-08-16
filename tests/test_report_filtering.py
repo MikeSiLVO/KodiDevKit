@@ -91,5 +91,26 @@ class TestHtmlIncludeTagging(unittest.TestCase):
         self.assertIn('class="sev-toggle" data-filter="include"', doc)
 
 
+class TestQuickPanelFiltering(unittest.TestCase):
+    """`InfoProvider` applies the include-warning filter the panel has no render step for."""
+
+    def _provider(self, hide):
+        from libs.infoprovider import InfoProvider
+
+        provider = InfoProvider()
+        provider.settings = {"hide_include_warnings": hide}
+        provider.check_variables = lambda *a, **k: _report()["all_issues"]["XML Validation"]
+        return provider
+
+    def test_include_warning_hidden_by_default(self):
+        rows = self._provider(True).get_check_listitems("variable")
+        self.assertEqual([r["message"] for r in rows],
+                         ["plain error", "plain warning", "include error"])
+
+    def test_setting_off_keeps_everything(self):
+        rows = self._provider(False).get_check_listitems("variable")
+        self.assertEqual(len(rows), 4)
+
+
 if __name__ == "__main__":
     unittest.main()

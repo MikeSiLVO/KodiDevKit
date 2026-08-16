@@ -8,6 +8,7 @@ from .loader import LoaderMixin
 from .tooltips import TooltipMixin
 from .navigation import NavigationMixin
 from .checker import CheckerMixin
+from ..validation.constants import SEVERITY_ERROR
 
 if TYPE_CHECKING:
     from ..kodi.jsonrpc import KodiJsonrpc
@@ -27,3 +28,12 @@ class InfoProvider(LoaderMixin, TooltipMixin, NavigationMixin, CheckerMixin):
         self.settings: dict = {}
         self.kodi_path: str | None = None
         self.kodi: KodiJsonrpc | None = None
+
+    def get_check_listitems(self, check_type, progress_callback=None):
+        """Engine's rows, minus the include-originated warnings the quick panel hides."""
+        # The panel renders rows as-is, so this can't wait for a report layer.
+        rows = super().get_check_listitems(check_type, progress_callback=progress_callback)
+        if not self.settings.get("hide_include_warnings", True):
+            return rows
+        return [r for r in rows
+                if not (r.get("include_name") and r.get("severity") != SEVERITY_ERROR)]

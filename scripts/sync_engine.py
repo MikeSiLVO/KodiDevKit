@@ -65,34 +65,17 @@ NEVER_COPY = {
 # Mirrored files that legitimately differ, and the symbols allowed to differ.
 # Adding an entry is a decision; a symbol appearing here that isn't listed is drift.
 EXEMPT = {
-    "libs/infoprovider/checker.py": {
-        # kdk filters already-computed results so its GUI toggle is instant.
-        "CheckerMixin.get_check_listitems",
-    },
     "libs/infoprovider/loader.py": {
         # sublime.load_resource for packaged installs, with a filesystem fallback.
         "LoaderMixin.init_addon", "LoaderMixin.load_data", "<module prelude>",
     },
     "libs/infoprovider/provider.py": {
-        # Different mixin sets, which is the point of the split.
-        "InfoProvider.__init__", "<module prelude>",
+        # Different mixin sets, which is the point of the split, plus the overrides
+        # each front end layers on the shared engine.
+        "InfoProvider.__init__", "InfoProvider.get_check_listitems", "<module prelude>",
     },
     "libs/reporting/text.py": {
         "generate_text_report", "_describe_filters", "issue_visible", "<module prelude>",
-    },
-    "libs/skin/skin.py": {
-        # Jump-to-definition data with no kdk consumer.
-        "Skin.__init__", "Skin.update_include_list",
-        "Skin._build_include_param_roles", "Skin.include_param_roles", "Skin.resolve_param_role",
-    },
-    "libs/utils/expressions.py": {
-        "_kodi_macro_mask", "_KEYWORD_MACRO_RE",
-        "extract_expression_at_offset", "split_top_level_commas",
-    },
-    "libs/utils/files.py": {"get_sublime_path"},
-    "libs/utils/infobool.py": {
-        "negation_of", "probe_booleans", "read_probe", "_PERMISSION_GATED",
-        "STATE_TRUE", "STATE_FALSE", "STATE_OFFLINE",
     },
 }
 

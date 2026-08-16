@@ -190,11 +190,7 @@ class CheckerMixin:
             return root
 
     def get_check_listitems(self, check_type, progress_callback=None):
-        """Run the named check and return rows of {"message", "file", "line"}.
-
-        Filters out issues from runtime-generated includes (e.g. those
-        produced by script.skinvariables).
-        """
+        """Dispatch the named `check_type` and return its issue rows; runtime-generated files are filtered out."""
         checks_with_progress = {
             "general": lambda: self.check_values(progress_callback=progress_callback),
             "file": lambda: self.check_values(progress_callback=progress_callback),
@@ -230,12 +226,6 @@ class CheckerMixin:
             row for row in rows
             if not utils.is_runtime_generated_file(row.get("file", ""))
         ]
-
-        if self.settings.get("hide_include_warnings", True):
-            filtered_rows = [
-                row for row in filtered_rows
-                if not (row.get("include_name") and row.get("severity") != SEVERITY_ERROR)
-            ]
 
         return filtered_rows
 
