@@ -142,13 +142,7 @@ class CheckerMixin:
         return [{"message": f"No {kind} issues found", "file": "", "line": 0}]
 
     def resolve_xml(self, path_or_root, *, folder=None, strict=False):
-        """Return a resolved copy of `path_or_root` (path or lxml root).
-
-        Applies Kodi's pipeline (defaults -> constants -> expressions -> includes
-        -> recurse). `folder` overrides the auto-detected include folder. With
-        `strict=True`, parse failures raise; otherwise the original tree is
-        returned so callers can still display something.
-        """
+        """Resolved copy of `path_or_root`; without `strict` a parse failure returns the tree unresolved."""
         from ..skin import Skin
 
         if hasattr(path_or_root, "tag"):
@@ -422,11 +416,7 @@ class CheckerMixin:
         return True
 
     def _validate_variable_values(self, listitems, node, var_text, value_type, folder, tag_name=None):
-        """Check that every <value> inside a `$VAR[...]` definition matches `value_type`.
-
-        Returns True if all values are valid (or validation was skipped),
-        False as soon as any value fails. Issues are appended to `listitems`.
-        """
+        """Check every `<value>` in a `$VAR[...]` definition against `value_type`, appending failures to `listitems`."""
         var_name = utils.extract_variable_name(var_text)
         if not var_name:
             return True  # Not a variable expression

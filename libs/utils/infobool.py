@@ -161,11 +161,9 @@ def probe_booleans(condition: str) -> list[str]:
 
 
 def read_probe(result, condition: str) -> str:
-    """Turn a probe response into one of the STATE_* verdicts.
-
-    Both halves false means Kodi replaced a failed parse with a constant false
-    (InfoExpression.cpp:34-42), the only way to see a parse error over JSON-RPC.
-    """
+    """Turn a probe response into one of the STATE_* verdicts."""
+    # Both halves false means Kodi swapped a failed parse for a constant false
+    # (InfoExpression.cpp:34-42), the only way to see a parse error over JSON-RPC.
     values = (result or {}).get("result")
     if not isinstance(values, dict):
         return STATE_OFFLINE

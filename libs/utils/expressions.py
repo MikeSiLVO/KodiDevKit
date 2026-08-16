@@ -38,14 +38,7 @@ def is_number(text: str) -> bool:
 
 
 def extract_number_value(text: str) -> str | None:
-    """Extract numeric value from $NUMBER[...] expressions; None if not a valid $NUMBER expression.
-
-    Examples:
-        extract_number_value("$NUMBER[25]") -> "25"
-        extract_number_value("$NUMBER[100]") -> "100"
-        extract_number_value("25") -> None (not a $NUMBER expression)
-        extract_number_value("$NUMBER[abc]") -> None (invalid number)
-    """
+    """Numeric value inside `$NUMBER[...]`, or None when `text` is not one."""
     if not isinstance(text, str):
         return None
 
@@ -62,14 +55,7 @@ def extract_number_value(text: str) -> str | None:
 
 
 def extract_variable_name(text: str) -> str | None:
-    """Extract variable name from $VAR[...] or $ESCVAR[...] expressions; None if not a valid expression.
-
-    Examples:
-        extract_variable_name("$VAR[HighlightColor]") -> "HighlightColor"
-        extract_variable_name("$ESCVAR[CustomVar]") -> "CustomVar"
-        extract_variable_name("$VAR[MyVar,param]") -> "MyVar"
-        extract_variable_name("red") -> None (not a variable expression)
-    """
+    """Variable name inside `$VAR[...]` or `$ESCVAR[...]`, or None when `text` is neither."""
     if not isinstance(text, str):
         return None
 
@@ -86,18 +72,8 @@ def extract_variable_name(text: str) -> str | None:
 
 
 def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -> tuple[str, str]:
-    """
-    Replace $PARAM[name] in `text` using values from `params` dict.
-    Missing keys are left unchanged.
-    Parameter values are XML-escaped to preserve entities like & < >.
-
-    Returns:
-        tuple: (resolved_text, resolution_status) where resolution_status is one of:
-            - "NO_PARAMS": No $PARAM references found
-            - "ALL_RESOLVED": All $PARAM references were resolved
-            - "PARTIAL_RESOLVED": Some $PARAM references were resolved, some not
-            - "SINGLE_UNDEFINED": Text contains exactly one $PARAM that was undefined
-    """
+    """Substitute `$PARAM[name]` from `params`, with a status naming how much resolved; unknown names stay put."""
+    # Values are XML-escaped so entities like & < > survive the re-parse.
     if not text or not isinstance(text, str):
         return text, "NO_PARAMS"
     if not params:
@@ -159,22 +135,7 @@ def starts_with_param_reference(text: str) -> bool:
 
 
 def contains_dynamic_expression(text: str) -> bool:
-    """
-    Return True when `text` contains a Kodi runtime expression anywhere in the string.
-
-    This differs from is_dynamic_expression() which only checks if the text STARTS with
-    a dynamic expression. This function checks if ANY dynamic expression appears in the text,
-    such as "800$PARAM[id]", "prefix$VAR[MyVar]suffix", etc.
-
-    Used for validation to skip strict type checking on values that contain dynamic content
-    that will be resolved at runtime (see Kodi GUIIncludes.cpp resolution process).
-
-    Examples:
-        contains_dynamic_expression("$VAR[Foo]") -> True
-        contains_dynamic_expression("800$PARAM[id]") -> True
-        contains_dynamic_expression("prefix$INFO[Label]suffix") -> True
-        contains_dynamic_expression("normalvalue") -> False
-    """
+    """True when a runtime expression appears anywhere in `text`, unlike `is_dynamic_expression` which needs it first."""
     if not isinstance(text, str):
         return False
     if not text:
@@ -185,14 +146,8 @@ def contains_dynamic_expression(text: str) -> bool:
 
 
 def split_top_level_commas(text: str) -> list[str]:
-    """
-    Split `text` on commas that appear outside any `(...)` or `[...]` group.
-
-    Kodi expressions routinely embed commas inside nested calls and macros
-    (``String.IsEqual(Label,$LOCALIZE[40211])``, ``$INFO[Label, , - ]``); a
-    naive ``str.split(',')`` corrupts them. Empty pieces are dropped so
-    callers can pass the result straight to a JSON-RPC ``params`` list.
-    """
+    """Split `text` on commas outside any `(...)` or `[...]`, dropping empty pieces."""
+    # Kodi nests commas inside calls and macros, so a plain str.split(',') corrupts them.
     parts: list[str] = []
     buf: list[str] = []
     depth = 0
@@ -254,14 +209,9 @@ _KEYWORD_MACRO_RE = re.compile(
 
 
 def _kodi_macro_mask(text: str) -> set:
-    """Indices that lie inside a ``$KEYWORD[...]`` macro.
-
-    Kodi's ``Register()`` calls ``ReplaceLocalize`` before parsing booleans
-    (GUIInfoManager.cpp:11441 calls GUIInfoLabel.cpp:276-282), so ``$LOCALIZE[N]``
-    and ``$NUMBER[N]`` are gone by the time ``[`` and ``]`` are interpreted as
-    operators. We extend the same masking to ``$INFO``, ``$VAR``, etc. so a
-    hover on those forms doesn't get fragmented at their inner brackets.
-    """
+    """Indices that lie inside a `$KEYWORD[...]` macro."""
+    # ReplaceLocalize runs before booleans parse (GUIInfoManager.cpp:11441), so these
+    # brackets never reach the operator logic; masking $INFO/$VAR too keeps hovers whole.
     masked: set = set()
     pos = 0
     while pos < len(text):
@@ -284,17 +234,10 @@ def _kodi_macro_mask(text: str) -> set:
 
 
 def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
-    """Return the smallest Kodi boolean sub-expression enclosing `cursor_offset`.
-
-    Implements the grammar from ``InfoExpression.cpp``: operators are exactly
-    ``[ ] ! + |`` (lines 125-139); everything else (including ``( ) , . $``) is
-    operand. ``$LOCALIZE[...]`` / ``$NUMBER[...]`` are masked because Kodi resolves
-    them before parsing. Parens are tracked as depth so a click anywhere inside
-    ``Function(args)`` returns the whole call rather than splitting at an inner
-    operator. ``!`` is a unary prefix and stays attached to the operand it
-    precedes; without that, the boolean we send to Kodi would have the
-    OPPOSITE truth value.
-    """
+    """Smallest Kodi boolean sub-expression enclosing `cursor_offset`."""
+    # Operators are exactly [ ] ! + | (InfoExpression.cpp:125-139); parens count as depth
+    # so a click inside Function(args) returns the whole call. A leading ! must stay
+    # attached, or the boolean sent to Kodi carries the opposite truth value.
     if not line_text:
         return ""
     n = len(line_text)
@@ -353,31 +296,7 @@ def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
 
 
 def get_param_names_in_context(include_node, xpath_pattern: str) -> set[str]:
-    """
-    Extract param names used in specific XML contexts within an include definition.
-
-    This helps distinguish between params used for different purposes:
-    - Params used in <include> tags are include references
-    - Params used in id attributes are control IDs
-    - Params used elsewhere could be labels, paths, colors, etc.
-
-    Args:
-        include_node: lxml Element node of an include definition
-        xpath_pattern: XPath pattern to match specific usages, e.g.:
-            - ".//include/text()" - matches <include>$PARAM[foo]</include>
-            - ".//@id" - matches any id="$PARAM[foo]" attribute
-            - ".//label/text()" - matches <label>$PARAM[foo]</label>
-
-    Returns:
-        Set of param names used in the matched contexts
-
-    Examples:
-        >>> get_param_names_in_context(node, ".//include/text()")
-        {'include', 'content'}
-
-        >>> get_param_names_in_context(node, ".//@id")
-        {'id', 'panel_id', 'button_id'}
-    """
+    """Param names used where `xpath_pattern` matches, which is what tells a control id from a label."""
     if include_node is None:
         return set()
 

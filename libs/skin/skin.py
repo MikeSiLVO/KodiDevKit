@@ -130,20 +130,7 @@ class Skin(addon.Addon):
         return self._resource_loader
 
     def _build_include_param_roles(self):
-        """Scan every <include name=...> body for $PARAM[X] usages and record
-        the role each parameter plays.
-
-        Role is one of:
-            ("tag", tag_name)              -- $PARAM[X] is text of <tag_name>
-            ("attr", attr_name)            -- $PARAM[X] is value of an attribute
-            ("forward", inc_name, pname)   -- $PARAM[X] is forwarded to a nested
-                                              <include content="inc_name">'s
-                                              <param name="pname">
-            "multi"                        -- $PARAM[X] appears in 2+ distinct
-                                              roles (no single context)
-
-        Returns: {folder: {include_name: {param_name: role}}}
-        """
+        """Role each `$PARAM[X]` plays in every include body: `tag`, `attr`, `forward` to a nested include, or `multi`."""
         result = {}
         param_re = re.compile(r"\$PARAM\[([^,\]]+)")
 
@@ -199,8 +186,7 @@ class Skin(addon.Addon):
 
     @property
     def include_param_roles(self):
-        """Lazy `{folder: {include_name: {param_name: role}}}` map. See
-        `_build_include_param_roles` for role tuple shape."""
+        """Lazy per-folder map of include parameter roles, built by `_build_include_param_roles`."""
         if not hasattr(self, "_include_param_roles"):
             self._include_param_roles = None
         if self._include_param_roles is None:
@@ -208,11 +194,7 @@ class Skin(addon.Addon):
         return self._include_param_roles
 
     def resolve_param_role(self, folder, include_name, param_name, _visited=None):
-        """Resolve `<param name=param_name>` inside `<include content=include_name>`
-        to its terminal role, following forwarding chains.
-
-        Returns the role tuple, "multi", or None if unresolved or cyclic.
-        """
+        """Terminal role of a `<param>` on an include reference, following forwarding chains."""
         if _visited is None:
             _visited = set()
         key = (folder, include_name, param_name)
@@ -251,11 +233,7 @@ class Skin(addon.Addon):
         self.fonts, self.font_file = self.resource_loader.load_fonts(self.resolver)
 
     def _load_builtin_controls(self):
-        """Load built-in control IDs from data/kodi_builtin_controls.xml.
-
-        Returns (window_name -> {control_id -> description},
-                 filename -> window_name).
-        """
+        """Kodi's own control IDs per window, plus the filename each window maps to."""
         builtin_controls = {}
         filename_to_window = {}
 
@@ -692,11 +670,7 @@ class Skin(addon.Addon):
         return key
 
     def get_expanded_root(self, path, folder):
-        """Parse `path` and apply Kodi's resolve pipeline (uncached).
-
-        Returns the resolved root, or the unexpanded root on failure, or None
-        if the file can't be parsed.
-        """
+        """Parse `path` and apply Kodi's resolve pipeline, uncached; unexpanded root on failure."""
         root = utils.get_root_from_file(path)
         if root is None:
             return None
@@ -709,12 +683,8 @@ class Skin(addon.Addon):
             return root
 
     def build_include_maps(self, progress_callback=None):
-        """Build the lightweight skin-startup map (includes, fonts, builtin controls).
-
-        Mirrors Kodi's startup phase only; windows are resolved lazily during
-        validation, not here. Cached to disk; rebuilt if the cache is missing
-        or its version differs.
-        """
+        """Build and cache the skin-startup map: includes, fonts, builtin controls."""
+        # Kodi's startup phase only. Windows resolve lazily during validation, not here.
         cache_path = self._get_include_maps_cache_path()
         if cache_path and cache_path.exists():
             try:
@@ -834,11 +804,7 @@ class Skin(addon.Addon):
             logger.debug("Cache cleanup error: %s", e)
 
     def validate_single_file(self, file_path, include_maps=None, progress_callback=None):
-        """Validate one window/include file using lazy resolution.
-
-        Mirrors Kodi's window-activation lifecycle: load, resolve includes,
-        cache resolved tree, validate. Returns {'issues': [...], 'file': path}.
-        """
+        """Validate one window/include file, mirroring Kodi's window-activation lifecycle."""
         if include_maps is None:
             if progress_callback:
                 progress_callback("Loading include maps...")

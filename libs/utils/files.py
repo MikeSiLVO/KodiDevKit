@@ -27,13 +27,8 @@ def eol_info_from_path_patterns(
     includes: list[str] | None = None,
     excludes: list[str] | None = None
 ) -> list[tuple[str, str | None]]:
-    """
-    Return a list of (filepath, eol) where eol is one of:
-      '\r\n' (Windows), '\n' (Unix), '\r' (old Mac), or None (no newline found).
-
-    `excludes` match anywhere in the path; `includes` match its end, so a
-    caller can restrict the scan to text file types.
-    """
+    """Line ending of each matching file, or None where it has no newline."""
+    # excludes match anywhere in the path, includes match its end.
 
     includes = includes or []
     excludes = excludes or []
