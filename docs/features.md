@@ -14,6 +14,8 @@ KodiDevKit shows hover tooltips when the cursor rests on recognized content in K
 
 **Maps** -- Hovering the map name in `$MAP[Name, InfoLabel]` or `$ESCMAP[...]` previews the `<map>` definition. Hovering the infolabel instead fetches its live value and shows what the map turns it into.
 
+**Control defaults** -- Hovering the `type` value of a `<control>` previews the `<default type="...">` block that control inherits, when the skin defines one.
+
 **Fonts** -- Font name references show the font tag information.
 
 **Constants** -- Constant names show the defined value.

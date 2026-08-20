@@ -60,7 +60,7 @@ EDITOR_ONLY = {
 # Test modules covering editor-only features; the rest of tests/ mirrors.
 EDITOR_ONLY_TESTS = {
     "run_tests.py",
-    "test_extract_expression_at_offset.py", "test_hover_condition.py",
+    "test_extract_expression_at_offset.py", "test_hover.py",
     "test_negation_twin_filter.py", "test_report_filtering.py",
     "test_split_top_level_commas.py", "test_include_param_roles.py",
 }

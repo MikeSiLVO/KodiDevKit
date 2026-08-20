@@ -347,7 +347,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
             "Window.IsActive(home)",
         )
 
-    # Real Estuary patterns (.claude/kodi-source/addons/skin.estuary/xml/)
+    # Real Estuary patterns
 
     def test_estuary_compound_with_negation_at_end(self):
         line = '<visible>ListItem.IsFolder + String.IsEqual(ListItem.Label,$LOCALIZE[40211]) + String.IsEmpty(ListItem.Art(fanart)) + !Skin.HasSetting(Disable.Fanart)</visible>'

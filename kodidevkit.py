@@ -1119,6 +1119,15 @@ class KodiDevKit(sublime_plugin.EventListener):
                         if verdict:
                             return verdict
 
+            if (element is not None
+                    and element.tag == "control"
+                    and content == (element.attrib.get("type") or "").strip()):
+                attr_region = view.find(r'type\s*=\s*"[^"]*"', view.line(region).begin())
+                if attr_region and attr_region.contains(region):
+                    default_content = self.get_formatted_default(content, view)
+                    if default_content:
+                        return default_content
+
             if (content.isdigit()
                     and element is not None
                     and any(k in element.attrib for k in {"fallback", "label"})):
@@ -1358,24 +1367,25 @@ class KodiDevKit(sublime_plugin.EventListener):
         return -1
 
     @staticmethod
-    def get_formatted_include(content, view):
-        """Render `content` (an include/font/variable/constant name) as a popup body.
-
-        Resolves nested includes, constants, and expressions, then returns
-        syntax-highlighted HTML. Plain string values (constants, expressions)
-        are shown verbatim with no XML highlighting.
-        """
-        if not INFOS:
+    def _popup_target(view):
+        """The loaded addon and the view's resolution folder, or None."""
+        addon = getattr(INFOS, "addon", None) if INFOS else None
+        if not addon:
             return None
         file_path = view.file_name()
         if not file_path:
             return None
-
-        addon = getattr(INFOS, "addon", None)
-        if not addon:
-            return None
-
         folder = os.path.basename(os.path.dirname(file_path))
+        return (addon, folder) if folder else None
+
+    @staticmethod
+    def get_formatted_include(content, view):
+        """Render `content` (an include/font/variable/constant name) as a popup body."""
+        target = KodiDevKit._popup_target(view)
+        if target is None:
+            return None
+        addon, folder = target
+
         return_node = getattr(addon, "return_node", None)
         if not return_node:
             return None
@@ -1384,12 +1394,28 @@ class KodiDevKit(sublime_plugin.EventListener):
         if not node:
             return None
 
-        content_elem = node['content']
+        return KodiDevKit._render_definition(node['content'], view, folder)
+
+    @staticmethod
+    def get_formatted_default(control_type, view):
+        """Render the `<default type="X">` block a control of that type inherits."""
+        target = KodiDevKit._popup_target(view)
+        if target is None:
+            return None
+        addon, folder = target
+
+        entry = getattr(addon, "default_map", {}).get(folder, {}).get(control_type)
+        if not entry:
+            return None
+
+        return KodiDevKit._render_definition(entry[0], view, folder)
+
+    @staticmethod
+    def _render_definition(content_elem, view, folder):
+        """Resolve a definition body and syntax-highlight it, plain values verbatim."""
         resolve_xml = getattr(INFOS, "resolve_xml", None)
 
-        # Normalize whatever return_node returned to a single lxml root.
-        # Includes/variables/defaults yield an Element; fonts a serialized XML
-        # string; constants/expressions a plain value (handled below).
+        # Element for includes/variables/defaults, XML string for fonts, plain value otherwise.
         if hasattr(content_elem, 'tag'):
             root = content_elem
         else:

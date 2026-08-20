@@ -1,13 +1,16 @@
-"""Tests for the hover verdict path in ``kodidevkit.evaluate_condition``.
+"""Tests for the hover popup paths in ``kodidevkit``.
 
 Sublime, mdpopups and the Kodi connection are stubbed so the popup logic can be
 exercised outside the editor.
 """
 
 import os
+import re
 import sys
 import types
 import unittest
+
+from lxml import etree as ET
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -203,6 +206,113 @@ class TestOperandClause(unittest.TestCase):
 
     def test_negated_item_keeps_the_bang(self):
         self.assertEqual(self._at("!Skin.HasSetting(a) + B", "Skin"), "!Skin.HasSetting(a)")
+
+
+class FakeRegion:
+    """Sublime Region stand-in covering `[a, b)`."""
+
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def begin(self):
+        return self.a
+
+    def end(self):
+        return self.b
+
+    def contains(self, other):
+        return self.a <= other.begin() and other.end() <= self.b
+
+
+class XmlView:
+    """Single-line XML buffer with the caret at a fixed offset."""
+
+    WORD_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+
+    def __init__(self, text, caret, scope):
+        self.text = text
+        self.caret = caret
+        self.scope = scope
+
+    def file_name(self):
+        return "/skin/16x9/Home.xml"
+
+    def sel(self):
+        return [FakeRegion(self.caret, self.caret)]
+
+    def scope_name(self, _pt):
+        return self.scope
+
+    def line(self, _region):
+        return FakeRegion(0, len(self.text))
+
+    def substr(self, region):
+        return self.text[region.begin():region.end()]
+
+    def rowcol(self, pt):
+        return (0, pt)
+
+    def extract_scope(self, pt):
+        start = self.text.rfind('"', 0, pt)
+        end = self.text.find('"', pt)
+        return FakeRegion(start, end + 1)
+
+    def expand_by_class(self, region, _flags, separators):
+        start = end = region.begin()
+        while start > 0 and self.text[start - 1] in self.WORD_CHARS and self.text[start - 1] not in separators:
+            start -= 1
+        while end < len(self.text) and self.text[end] in self.WORD_CHARS and self.text[end] not in separators:
+            end += 1
+        return FakeRegion(start, end)
+
+    def find(self, pattern, start):
+        match = re.compile(pattern).search(self.text, start)
+        return FakeRegion(match.start(), match.end()) if match else None
+
+
+class DefaultsAddon:
+    """Addon stub carrying only the `<default type="X">` map."""
+
+    def __init__(self, defaults):
+        self.default_map = {"16x9": defaults}
+        self.colors = []
+
+
+class TestControlTypeHover(unittest.TestCase):
+    """Hovering `type="X"` on a control shows the `<default type="X">` it inherits."""
+
+    LINE = '<control type="button" id="1">'
+
+    def setUp(self):
+        node = ET.fromstring('<default type="button"><width>100</width></default>')
+        kodidevkit.INFOS.addon = DefaultsAddon({"button": (node, "Defaults.xml")})
+        self.listener = kodidevkit.KodiDevKit()
+        self.listener.tree = object()
+        self.control = ET.fromstring(self.LINE + "</control>")
+        self.listener._element_at_row = lambda _row: self.control
+
+    def _hover(self, word, scope="text.xml.kodi string.quoted.double.xml"):
+        view = XmlView(self.LINE, self.LINE.index(word), scope)
+        return self.listener.get_tooltip(view)
+
+    def test_type_value_shows_the_default_block(self):
+        popup = self._hover("button")
+        self.assertIsNotNone(popup)
+        self.assertIn("<width>100</width>", popup)
+
+    def test_type_without_a_default_shows_nothing(self):
+        kodidevkit.INFOS.addon = DefaultsAddon({})
+        self.assertIsNone(self._hover("button"))
+
+    def test_other_attribute_value_is_untouched(self):
+        self.assertIsNone(self._hover("1"))
+
+    def test_default_definition_itself_is_not_echoed(self):
+        self.listener._element_at_row = lambda _row: ET.fromstring(
+            '<default type="button"><width>100</width></default>'
+        )
+        self.assertIsNone(self._hover("button"))
 
 
 if __name__ == "__main__":
