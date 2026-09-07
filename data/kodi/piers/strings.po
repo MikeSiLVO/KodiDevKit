@@ -3048,12 +3048,12 @@ msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#641"
-msgid "Files with ReplayGain information"
+msgid "Preamp for files with ReplayGain information"
 msgstr ""
 
 #: system/settings/settings.xml
 msgctxt "#642"
-msgid "Files without ReplayGain information"
+msgid "Preamp for files without ReplayGain information"
 msgstr ""
 
 #: system/settings/settings.xml
@@ -14197,7 +14197,9 @@ msgstr ""
 
 #. Value for setting with label #170 "Player / Videos / Adjust display refresh rate"
 #. Value for setting with label #36098 "System / Display / Use 10 bit for SDR"
+#. Value for setting with label #36057 "Send volume commands over CEC"
 #: system/settings/settings.xml
+#: system/peripherals.xml
 msgctxt "#20422"
 msgid "Always"
 msgstr ""
@@ -19421,7 +19423,123 @@ msgctxt "#35280"
 msgid "Select disc"
 msgstr ""
 
-#empty strings from id 35281 to 35504
+#. Heading of the notification shown when the player earns an achievement
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35281"
+msgid "Achievement Unlocked"
+msgstr ""
+
+#. Heading of the notification shown when every achievement of a game has been earned in hardcore mode
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35282"
+msgid "Game mastered"
+msgstr ""
+
+#. Heading of the notification shown when every achievement of a game has been earned
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35283"
+msgid "Game completed"
+msgstr ""
+
+#. Notification shown when a game with achievement support is loaded. {0:d} is the number earned, {1:d} the total
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35284"
+msgid "{0:d} of {1:d} achievements unlocked"
+msgstr ""
+
+#. Message shown when the achievements dialog is opened without being logged in to RetroAchievements
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35285"
+msgid "Log in to RetroAchievements in Settings to use this feature."
+msgstr ""
+
+#. Message shown when the achievements dialog is opened for a game that RetroAchievements has no achievement set for
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35286"
+msgid "This game doesn't support RetroAchievements"
+msgstr ""
+
+#. Label for the button that opens the achievements dialog, and heading of that dialog
+#: addons/skin.estuary/xml/GameOSD.xml
+#: addons/skin.estuary/xml/Includes_Games.xml
+msgctxt "#35287"
+msgid "Achievements"
+msgstr ""
+
+#. Progress through a game's achievements, weighted by point value. {0:d} is a percentage
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35288"
+msgid "{0:d}% complete"
+msgstr ""
+
+#. Date an achievement was earned. {0:s} is a localised date
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35289"
+msgid "Unlocked {0:s}"
+msgstr ""
+
+#. Rarity category of an achievement earned by more than half of players
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35290"
+msgid "Common"
+msgstr ""
+
+#. Rarity category of an achievement earned by 10% to 50% of players
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35291"
+msgid "Uncommon"
+msgstr ""
+
+#. Rarity category of an achievement earned by 2% to 10% of players
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35292"
+msgid "Rare"
+msgstr ""
+
+#. Rarity category of an achievement earned by fewer than 2% of players
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35293"
+msgid "Ultra rare"
+msgstr ""
+
+#. Point value of an achievement, abbreviated to fit the list. {0:d} is the number of points
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35294"
+msgid "{0:d} pts"
+msgstr ""
+
+#. Notification shown after signing in to RetroAchievements. {0:s} is the account name
+#: xbmc/games/GameSettings.cpp
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35295"
+msgid "Logged in as {0:s}"
+msgstr ""
+
+#. Notification shown when RetroAchievements becomes unreachable during play
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35296"
+msgid "Unlocks will be submitted when the connection returns."
+msgstr ""
+
+#. Notification shown when RetroAchievements becomes reachable again
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+msgctxt "#35297"
+msgid "Pending unlocks have been submitted."
+msgstr ""
+
+#. Error message shown when trying to load a compressed savestate in an unsupported version of Kodi
+#: xbmc/games/dialogs/osd/DialogInGameSaves.cpp
+msgctxt "#35298"
+msgid "This savestate is compressed and can't be loaded by this version of Kodi."
+msgstr ""
+
+#. Shown when the achievements dialog is opened before the game has been identified
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35299"
+msgid "Still looking this game up on RetroAchievements..."
+msgstr ""
+
+#empty strings from id 35300 to 35504
 
 #. connection state "host unreachable"
 #: xbmc/pvr/addons/PVRClients.cpp
@@ -19453,7 +19571,20 @@ msgctxt "#35509"
 msgid "Connecting to backend."
 msgstr ""
 
-#empty strings from id 35510 to 35999
+#. Context menu item, and heading of the dialog it opens, for choosing the
+#. emulator a game or a folder of games is opened with
+#: xbmc/games/windows/GUIWindowGames.cpp
+msgctxt "#35510"
+msgid "Default emulator"
+msgstr ""
+
+#. Marks the emulator already set as the default in the list of emulators
+#: xbmc/games/GameUtils.cpp
+msgctxt "#35511"
+msgid "Current"
+msgstr ""
+
+#empty strings from id 35512 to 35999
 
 #: xbmc/peripherals/devices/PeripheralCecAdapter.cpp
 msgctxt "#36000"
@@ -19746,7 +19877,31 @@ msgctxt "#36054"
 msgid "Remote button double press timeout (ms) (0 = off)"
 msgstr ""
 
-#empty strings from id 36055 to 36095
+#. Item list value of setting with label #36009 "Put devices in standby mode when activating the screensaver"
+#: system/peripherals.xml
+msgctxt "#36055"
+msgid "Always"
+msgstr ""
+
+#. Item list value of setting with label #36009 "Put devices in standby mode when activating the screensaver"
+#: system/peripherals.xml
+msgctxt "#36056"
+msgid "Unless media is playing"
+msgstr ""
+
+#. Label of CEC setting volume_control: whether Kodi's volume keys adjust the volume of the amplifier or TV over CEC instead of Kodi's own mixer
+#: system/peripherals.xml
+msgctxt "#36057"
+msgid "Send volume commands over CEC"
+msgstr ""
+
+#. Item list value of setting with label #36057 "Send volume commands over CEC": send them to an amplifier, or to a TV that reports CEC 2.0
+#: system/peripherals.xml
+msgctxt "#36058"
+msgid "Automatic"
+msgstr ""
+
+#empty strings from id 36059 to 36095
 
 #. Label of setting "System / Display / Use system HDR/SDR brightness balance"
 #: system/settings/settings.xml
@@ -20701,16 +20856,16 @@ msgctxt "#36267"
 msgid "Read the ReplayGain information encoded in your audio files by a program such as MP3Gain and normalise the sound levels accordingly."
 msgstr ""
 
-#. Description of setting with label #641 "Files with ReplayGain information"
+#. Description of setting with label #641 "Preamplification level to use for files with encoded ReplayGain information"
 #: system/settings/settings.xml
 msgctxt "#36268"
-msgid "Reference volume (PreAmp level) to use for files with encoded ReplayGain information. Default is 89dB as per standard. Change with caution."
+msgid "Preamplification level to use for files with encoded ReplayGain information."
 msgstr ""
 
-#. Description of setting with label #642 "PreAmp Level - Non ReplayGained files"
+#. Description of setting with label #642 "Preamplification level to use for files without encoded ReplayGain information"
 #: system/settings/settings.xml
 msgctxt "#36269"
-msgid "Reference volume (PreAmp level) to use for files without encoded ReplayGain information. Default is 89dB as per standard. Change with caution."
+msgid "Preamplification level to use for files without encoded ReplayGain information."
 msgstr ""
 
 #. Description of setting with label #643 "Avoid clipping protection on ReplayGained files"
@@ -21739,7 +21894,25 @@ msgctxt "#36445"
 msgid "Select this option to allow using double refresh rates (playing 29.97 FPS video on a 59.94 Hz monitor or playing 30 FPS video on a 60 Hz monitor). You may want to use this option if your monitor doesn't have a 29.97 Hz or 30 Hz mode."
 msgstr ""
 
-#empty strings from id 36446 to 36459
+#. Value of the track order settings #36448 #36450 #36452
+#: system/settings/settings.xml
+msgctxt "#36446"
+msgid "Sorted"
+msgstr ""
+
+#. Name of the setting of the stream order in the stream selection screen and the OSD for video files
+#: system/settings/settings.xml
+msgctxt "#36447"
+msgid "Video file stream display order"
+msgstr ""
+
+#. Description of setting with label #36447 "Video file stream display order"
+#: system/settings/settings.xml
+msgctxt "#36448"
+msgid "Video files only: display order in the stream selection dialogs. [Media] stream order in the media, [Sorted] sorted using the stream attributes[CR]"
+msgstr ""
+
+#empty strings from id 36449 to 36459
 
 #. Description of settings with label #14112 "Enable event logging"
 #: system/settings/settings.xml
@@ -24534,7 +24707,19 @@ msgctxt "#39210"
 msgid "If enabled, Dolby Vision files will have level 5 (active area) metadata overridden to zero offsets. Enable if your display has issues with incorrectly cropped image in Dolby Vision playback."
 msgstr ""
 
-#empty strings from id 39211 to 39899
+#. Title of the setting that skips subtitles whose language matches the audio language
+#: system/settings/settings.xml
+msgctxt "#39211"
+msgid "Don't show subtitles matching the audio language"
+msgstr ""
+
+#. Help text for setting "Don't show subtitles matching the audio language" of label #39211
+#: system/settings/settings.xml
+msgctxt "#39212"
+msgid "Do not turn on subtitles that are in the same language as the audio being played. Forced subtitles are not affected."
+msgstr ""
+
+#empty strings from id 39213 to 39899
 
 #. List formatting: pattern used to join a list of exactly two items, e.g. "A and B"
 #. STR_LIST_AND_TWO
@@ -24718,7 +24903,7 @@ msgstr ""
 #. Remove video version dialog text
 #: xbmc/video/dialogs/GUIDialogVideoManager.cpp
 msgctxt "#40020"
-msgid "Are you sure to remove version \"{0:s}\"?"
+msgid "Are you sure to remove version \"{0:s}\" from the library?"
 msgstr ""
 
 #. Remove item from library text if item has multiple versions
@@ -24854,7 +25039,31 @@ msgctxt "#40042"
 msgid "Found a different version of the movie \"{0:s}\" in playlist {1:s} of {2:s} - length {3:s}. Would you like to convert it into an additional version of the original?"
 msgstr ""
 
-#empty strings with id 40043 to 40201
+#. Ungroup video version dialog title
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40043"
+msgid "Ungroup video version"
+msgstr ""
+
+#. Manage versions, ungroup: ungrouping the default version of a movie is not allowed.
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40044"
+msgid "The default version of a movie cannot be ungrouped. Set a different default version and try again."
+msgstr ""
+
+#. Ungroup video version dialog text
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40045"
+msgid "Are you sure to ungroup version \"{0:s}\"?[CR]It will be turned into a library movie entry."
+msgstr ""
+
+#. Button name for video version ungroup function of the manage versions dialog
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40046"
+msgid "Ungroup"
+msgstr ""
+
+#empty strings with id 40047 to 40201
 
 #. Ignore different video versions settting
 #: system/settings/settings.xml
@@ -24901,6 +25110,7 @@ msgstr ""
 #: addons/skin.estuary/xml/DialogVideoInfo.xml
 #: xbmc/filesystem/VideoDatabaseDirectory.cpp
 #: xbmc/video/windows/GUIWindowVideoNav.cpp
+#: xbmc/video/ContextMenus.h
 #: addons/skin.estuary/xml/Variables.xml
 msgctxt "#40211"
 msgid "Extras"
@@ -25000,7 +25210,19 @@ msgctxt "#40228"
 msgid "After scrape"
 msgstr ""
 
-#empty strings from id 40229 to 40399
+#. "Flatten movie versions" setting
+#: system/settings/settings.xml
+msgctxt "#40229"
+msgid "Flatten movie versions"
+msgstr ""
+
+#. Help for setting Flatten movie versions
+#: system/settings/settings.xml
+msgctxt "#40230"
+msgid "Turn on to show individual versions in the movies view, turn off to group them"
+msgstr ""
+
+#empty strings from id 40231 to 40399
 
 # Video versions
 
@@ -25158,4 +25380,16 @@ msgstr ""
 #: system/settings/settings.xml
 msgctxt "#40802"
 msgid "If enabled, a confirmation dialog will be displayed when files shall be deleted. If disabled, files will be deleted without user confirmation."
+msgstr ""
+
+#. Description of setting with label #246 "Monitor"
+#: system/settings/settings.xml
+msgctxt "#40803"
+msgid "Monitor change may require restart."
+msgstr ""
+
+# Value formatting for ReplayGain Preamp settings
+#: system/settings/settings.xml
+msgctxt "#40804"
+msgid "{0:.1f} dB"
 msgstr ""
