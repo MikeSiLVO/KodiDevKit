@@ -7,10 +7,7 @@ import string
 import logging
 from .. import utils
 from ..kodi import kodi
-try:
-    from ..utils import images as imageparser
-except (ImportError, ModuleNotFoundError):
-    imageparser = None
+from ..utils import images as imageparser
 from ..validation.constants import POS_TAGS
 from .checker import CheckerMixin
 
@@ -200,7 +197,7 @@ class TooltipMixin(CheckerMixin):
 
     def get_image_info(self, path):
         """Return a small HTML snippet with image properties."""
-        if not imageparser or not self.addon:
+        if not self.addon:
             return ""
         imagepath = self.addon.translate_path(path)
         if not os.path.exists(imagepath) or os.path.isdir(imagepath):

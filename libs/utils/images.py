@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import functools
-import imghdr
 import os
 import re
 import struct
@@ -12,30 +11,43 @@ from typing import List, Tuple
 _InfoList = List[Tuple[str, str]]
 
 
+def _image_kind(head: bytes) -> str | None:
+    """Image format read from the file header, None when unrecognized."""
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if head[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    if head[:3] == b"\xff\xd8\xff":
+        return "jpeg"
+    if head[:2] == b"BM":
+        return "bmp"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "webp"
+    if head[:4] in (b"II*\x00", b"MM\x00*"):
+        return "tiff"
+    return None
+
+
 @functools.lru_cache(maxsize=128)
 def get_image_info(fname: str) -> _InfoList:
-    """
-    Return basic info for an image file.
-    Output: list of (key, value), e.g. [("Type", "png"), ("Dimensions", "800x600")].
-    Empty list means unknown or unreadable.
-    """
+    """Get an image's type, dimensions and size as (key, value) pairs, empty when unreadable."""
     if not fname or not os.path.exists(fname):
         return []
 
-    kind = imghdr.what(fname)
     info: _InfoList = []
 
     try:
         with open(fname, "rb") as fh:
             # Read a generous header to cover commented PGM headers.
             head = fh.read(2048)
+            kind = _image_kind(head)
 
-            if kind == "png" and head.startswith(b"\x89PNG\r\n\x1a\n"):
+            if kind == "png":
                 # PNG IHDR is at offset 16..24 (big-endian).
                 width, height = struct.unpack(">II", head[16:24])
                 info = [("Type", "png"), ("Dimensions", f"{width}x{height}")]
 
-            elif kind == "gif" and head[:6] in (b"GIF87a", b"GIF89a"):
+            elif kind == "gif":
                 # GIF width/height at offset 6..10 (little-endian).
                 width, height = struct.unpack("<HH", head[6:10])
                 info = [("Type", "gif"), ("Dimensions", f"{width}x{height}")]
@@ -96,11 +108,7 @@ def get_image_info(fname: str) -> _InfoList:
 
 
 def _match_pgm_header(head: bytes) -> Tuple[int, int, int] | None:
-    """
-    Parse a P5 (binary) PGM header from the initial bytes.
-    Returns (width, height, maxval) or None if not matched.
-    Allows comment lines starting with '#'.
-    """
+    """Parse a P5 PGM header, comments allowed, into (width, height, maxval); None if no match."""
     m = re.search(
         rb"(^P5\s+(?:#.*[\r\n])*\s*"
         rb"(\d+)\s+(?:#.*[\r\n])*\s*"
