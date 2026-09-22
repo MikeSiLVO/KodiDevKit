@@ -195,11 +195,7 @@ class CheckerMixin:
             "font": self.check_fonts,
             "label": self.check_labels,
             "id": self.check_ids,
-            "image": getattr(
-                self,
-                "check_images",
-                lambda: [{"message": "No image issues found", "file": "", "line": 0}],
-            ),
+            "image": self.check_images,
             "filecheck": self.check_file_integrity,
         }
 
