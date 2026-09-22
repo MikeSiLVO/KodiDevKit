@@ -11,24 +11,14 @@ logger = logging.getLogger(__name__)
 
 
 class SkinResources:
-    """Loads skin resources (colors, fonts, media)."""
+    """Reads a skin's colors, fonts and media file list off disk."""
 
     def __init__(self, skin_path: str, xml_folders: List[str]):
         self.skin_path = skin_path
         self.xml_folders = xml_folders
 
     def load_colors(self, system_colors_path: Optional[str] = None) -> Tuple[List[Dict], set]:
-        """Load colors from skin and (optionally) Kodi-core paths.
-
-        Loads from:
-          1) <skin>/colors/*.xml (e.g., defaults.xml)
-          2) `system_colors_path`, already resolved by `kodi_refs.kodi_colors_xml`
-             to either the installed Kodi or a bundled snapshot
-
-        Returns (colors_list, color_labels_set):
-          - colors_list: list of dicts with keys name, line, content, file
-          - color_labels_set: set of color names for quick lookup
-        """
+        """Load the skin's colors/*.xml then Kodi core's; returns the rows and their name set."""
         colors = []
 
         if self.skin_path:
@@ -79,12 +69,7 @@ class SkinResources:
         return colors, color_labels
 
     def load_fonts(self, resolver=None) -> Tuple[Dict[str, List[Dict]], Optional[str]]:
-        """Load fonts by parsing Font.xml/font.xml in each folder.
-
-        Also expands includes inside fontsets using the provided resolver.
-        Returns (fonts_dict, font_file_path) where fonts_dict maps each folder
-        to a list of font dicts, and font_file_path is the last processed file.
-        """
+        """Load each folder's Font.xml, includes expanded; returns fonts per folder, last file."""
         fonts = {}
         font_file = None
 
@@ -103,16 +88,12 @@ class SkinResources:
             if root is None:
                 continue
 
-            # Expand includes in Font.xml (matches fontcheck.py behavior)
-            # This resolves nested includes like Font_Default_Inter -> Font_Default
             if utils.file_needs_expansion(font_file) and resolver:
                 try:
-                    # Resolve includes in each fontset
                     for fontset in root.findall("fontset"):
                         resolver.resolve_includes(fontset, folder)
                 except Exception as e:
                     logger.debug("Failed to expand includes in Font.xml: %s", e)
-                    # Fall back to unexpanded if expansion fails
 
             fontsets = root.findall("fontset")
             if not fontsets:
@@ -130,12 +111,11 @@ class SkinResources:
                     "line": getattr(node, "sourceline", None),
                     "filename_line": getattr(file_el, "sourceline", None),
                     "content": ET.tostring(node, pretty_print=True, encoding="unicode"),
-                    # Spliced-in fonts keep the sourceline of the include's own file
+                    # a spliced font's line number belongs to the include's file
                     "file": node.get("_kdk_inc_file") or font_file_path,
                     "filename": (file_el.text or "").strip(),
                 }
 
-            # After Kodi-style expansion, includes are resolved and fonts are inline
             for fontset in fontsets:
                 for font_node in fontset.findall("font"):
                     font = collect_font(font_node, font_file)
@@ -145,11 +125,7 @@ class SkinResources:
         return fonts, font_file
 
     def load_media_files(self, media_path: str) -> Generator[str, None, None]:
-        """Yield relative paths of all files in `media_path`.
-
-        Skips `studio` and `recordlabel` subdirectories. Paths use forward
-        slashes with no leading slash.
-        """
+        """Yield every media file as a forward-slash relative path, minus studio and recordlabel."""
         for path, _, files in os.walk(media_path):
             if "studio" in path or "recordlabel" in path:
                 continue
@@ -162,10 +138,7 @@ class SkinResources:
                 yield img_path
 
     def get_font_references(self, window_files: Dict[str, List[str]]) -> Optional[Dict[str, List[Dict]]]:
-        """Extract font references from all window files.
-
-        Returns dict[folder -> list of {file, name, line}] or None on error.
-        """
+        """Get every <font> reference per folder as {file, name, line}; None on a parse failure."""
         font_refs = {}
         for folder in self.xml_folders:
             font_refs[folder] = []

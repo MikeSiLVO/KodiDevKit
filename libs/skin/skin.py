@@ -1,4 +1,4 @@
-"""KodiDevKit Sublime Text plugin: Kodi skinning helpers."""
+"""Kodi skin model: the include maps, colors, fonts and resolver for one skin."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from .maps import SkinMaps, INCLUDE_MAPS_VERSION
 from .resolution import SkinResolution
 from .resources import SkinResources
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -33,34 +34,22 @@ class Skin(addon.Addon):
     LANG_OFFSET = 0
 
     def __init__(self, *args, **kwargs):
-        """Load addon.xml, includes, colors, and fonts for the skin at `path`."""
         super().__init__(*args, **kwargs)
         self.type = "skin"
 
-        # Kodi-aligned include caches mirroring CGUIIncludes' five maps.
-        # folder -> {name -> (Include, default_params, file_path)}
-        self.include_map = {}
-        # folder -> {control_type -> (Include, file_path)}
-        self.default_map = {}
-        # folder -> {name -> str}
-        self.constant_map = {}
-        # folder -> {name -> (file, line)} for jump-to-definition.
-        self.constant_source_map = {}
-        # folder -> {name -> (Include, file_path)}
-        self.variable_map = {}
-        # folder -> {name -> (Include, file_path)} winning <map> per name
-        self.map_map = {}
-        # folder -> [(Include, file_path)] every <map> in load order, so shadowed ones stay visible
-        self.map_defs = {}
-        # folder -> {name -> str (already wrapped in [...])}
-        self.expression_map = {}
-        # folder -> {name -> (file, line)} for jump-to-definition (expression_map
-        # only stores the value, not where it came from).
-        self.expression_source_map = {}
+        # the five CGUIIncludes maps plus <map>, keyed by xml folder then name
+        self.include_map: dict[str, dict[str, tuple[Any, dict[str, str], str]]] = {}
+        self.default_map: dict[str, dict[str, tuple[Any, str]]] = {}
+        self.constant_map: dict[str, dict[str, str]] = {}
+        self.constant_source_map: dict[str, dict[str, tuple[str, int]]] = {}
+        self.variable_map: dict[str, dict[str, tuple[Any, str]]] = {}
+        self.map_map: dict[str, dict[str, tuple[Any, str]]] = {}
+        # every <map> in load order, so a shadowed one can still be reported
+        self.map_defs: dict[str, list[tuple[Any, str]]] = {}
+        self.expression_map: dict[str, dict[str, str]] = {}
+        self.expression_source_map: dict[str, dict[str, tuple[str, int]]] = {}
 
-        # folder -> {include_name -> [{'params': {...}, 'file', 'line'}]}
-        # for context-aware validation; built lazily.
-        self.include_usages = {}
+        self.include_usages: dict = {}
         self._include_usages_built = False
 
         self._resolved_windows_cache: dict = {}
@@ -96,7 +85,7 @@ class Skin(addon.Addon):
 
     @property
     def resolver(self) -> "SkinResolution":
-        """Lazy-built include/constant/expression resolver."""
+        """The resolver over this skin's maps, built on first use."""
         if not hasattr(self, '_resolver'):
             self._resolver = None
         if self._resolver is None:
@@ -112,7 +101,7 @@ class Skin(addon.Addon):
 
     @property
     def index_builder(self):
-        """Lazy-built validation index over all windows."""
+        """The index builder over every window, built on first use."""
         if not hasattr(self, '_index_builder'):
             self._index_builder = None
         if self._index_builder is None:
@@ -122,7 +111,7 @@ class Skin(addon.Addon):
 
     @property
     def resource_loader(self) -> "SkinResources":
-        """Lazy-built loader for colors, fonts, and media files."""
+        """The colors, fonts and media reader, built on first use."""
         if not hasattr(self, '_resource_loader'):
             self._resource_loader = None
         if self._resource_loader is None:
@@ -130,7 +119,7 @@ class Skin(addon.Addon):
         return self._resource_loader
 
     def _build_include_param_roles(self):
-        """Role each `$PARAM[X]` plays in every include body: `tag`, `attr`, `forward` to a nested include, or `multi`."""
+        """Role of each $PARAM per include body: tag, attribute, forward to a nested call, multi."""
         result = {}
         param_re = re.compile(r"\$PARAM\[([^,\]]+)")
 
@@ -144,7 +133,6 @@ class Skin(addon.Addon):
                 roles[pname] = "multi"
 
         def role_for(node):
-            # `<param>` inside a nested `<include content="X">` call is a forward.
             parent = node.getparent() if hasattr(node, "getparent") else None
             if (node.tag == "param" and parent is not None
                     and parent.tag == "include" and parent.get("content")):
@@ -159,10 +147,8 @@ class Skin(addon.Addon):
             for inc_name, (inc_node, _defaults, _file) in includes_for_folder.items():
                 roles: dict = {}
                 for node in inc_node.iter():
-                    # Skip the top-level <include> wrapper itself.
                     if node is inc_node:
                         continue
-                    # Skip top-level <param> defaults (no $PARAM in defaults in practice).
                     parent = node.getparent() if hasattr(node, "getparent") else None
                     if (node.tag == "param" and parent is inc_node):
                         continue
@@ -186,7 +172,7 @@ class Skin(addon.Addon):
 
     @property
     def include_param_roles(self):
-        """Lazy per-folder map of include parameter roles, built by `_build_include_param_roles`."""
+        """Per-folder include parameter roles, built on first use."""
         if not hasattr(self, "_include_param_roles"):
             self._include_param_roles = None
         if self._include_param_roles is None:
@@ -194,7 +180,7 @@ class Skin(addon.Addon):
         return self._include_param_roles
 
     def resolve_param_role(self, folder, include_name, param_name, _visited=None):
-        """Terminal role of a `<param>` on an include reference, following forwarding chains."""
+        """Final role of a param on an include call, following forwards to nested includes."""
         if _visited is None:
             _visited = set()
         key = (folder, include_name, param_name)
@@ -216,7 +202,7 @@ class Skin(addon.Addon):
         return role
 
     def _load_colors_and_fonts(self):
-        """Load colors (from defines.xml) and fonts (from Font.xml)."""
+        """Load colors and fonts through the resource reader, dropping the validation index."""
         from ..kodi_refs import kodi_colors_xml
 
         self.validation_index = None
@@ -233,7 +219,7 @@ class Skin(addon.Addon):
         self.fonts, self.font_file = self.resource_loader.load_fonts(self.resolver)
 
     def _load_builtin_controls(self):
-        """Kodi's own control IDs per window, plus the filename each window maps to."""
+        """Kodi's own control ids per window from the bundled data, plus filename to window name."""
         builtin_controls = {}
         filename_to_window = {}
 
@@ -284,17 +270,17 @@ class Skin(addon.Addon):
 
     @property
     def lang_path(self):
-        """Path to the skin's language folder."""
+        """The skin's `language` folder."""
         return os.path.join(self.path, "language")
 
     @property
     def theme_path(self):
-        """Path to the skin's themes folder."""
+        """The skin's `themes` folder."""
         return os.path.join(self.path, "themes")
 
     @property
     def primary_lang_folder(self):
-        """Path to the first folder in `language_folders` setting (created if missing)."""
+        """First language folder from settings, created on disk if missing."""
         lang_folders = self.settings.get("language_folders")
         if not lang_folders:
             lang_folders = ["resource.language.en_gb"]
@@ -306,7 +292,7 @@ class Skin(addon.Addon):
 
     @property
     def default_xml_folder(self):
-        """Folder name of the <res default="true"> entry in addon.xml, or None."""
+        """Folder of the <res default="true"> entry in addon.xml, or None."""
         folder = self.root.find(".//res[@default='true']")
         if folder is not None and "folder" in folder.attrib:
             return folder.attrib["folder"]
@@ -314,11 +300,11 @@ class Skin(addon.Addon):
 
     @property
     def media_path(self):
-        """Path to the skin's media folder."""
+        """The skin's `media` folder."""
         return os.path.join(self.path, "media")
 
     def update_include_list(self):
-        """Parse every Includes.xml and rebuild the include caches."""
+        """Rebuild every folder's maps from its Includes.xml, dropping the validation index."""
         start_time = time.time()
         logger.debug("update_include_list START")
 
@@ -353,8 +339,7 @@ class Skin(addon.Addon):
                      os.path.join(xml_folder, "includes.xml")]
             self.include_files[folder] = []
 
-            # Wipe stale per-folder entries before reloading so renamed/deleted
-            # includes don't linger in long-running Sublime sessions.
+            # start empty so a renamed or deleted include does not linger across reloads
             self.include_map[folder] = {}
             self.default_map[folder] = {}
             self.constant_map[folder] = {}
@@ -391,11 +376,7 @@ class Skin(addon.Addon):
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
     def update_includes(self, xml_file):
-        """Load `xml_file` and any files it references into the five maps.
-
-        Mirrors CGUIIncludes::Load_Internal: <include>, <default>, <constant>,
-        <variable>, <expression>, <map>.
-        """
+        """Load one include file and the files it pulls in, as CGUIIncludes::Load_Internal does."""
         if not hasattr(self, "include_map"):
             self.include_map = {}
         if not hasattr(self, "default_map"):
@@ -453,7 +434,6 @@ class Skin(addon.Addon):
         self._load_includes(root, folder, xml_file)
         self._load_maps(root, folder, xml_file)
 
-        # Recurse into <include file="..."/> references (CGUIIncludes::LoadIncludes)
         for node in root.findall("include"):
             if "file" in node.attrib and node.attrib["file"] != "script-skinshortcuts-includes.xml":
                 include_file = os.path.join(self.path, folder, node.attrib["file"])
@@ -476,8 +456,7 @@ class Skin(addon.Addon):
                     xml_file, node.sourceline if hasattr(node, 'sourceline') else 0)
 
     def _load_expressions(self, root, folder, xml_file):
-        """Index <expression name="X">cond</expression>, wrapped in [...] like Kodi
-        does (GUIIncludes.cpp:119)."""
+        """Index <expression> entries, wrapped in [...] as CGUIIncludes::LoadExpressions does."""
         for node in root.findall("expression"):
             name = node.attrib.get("name")
             if name and node.text:
@@ -493,11 +472,7 @@ class Skin(addon.Addon):
                 self.variable_map[folder][name] = (node, xml_file)
 
     def _load_maps(self, root, folder, xml_file):
-        """Index <map name="X"> entries (CSkinMapManager::LoadMaps).
-
-        Every definition is kept in load order; a repeat name replaces the
-        previous winner (SkinMapManager.cpp:47-56).
-        """
+        """Index <map> entries as CSkinMapManager::LoadMaps does, last definition winning."""
         for node in root.findall("map"):
             self.map_defs[folder].append((node, xml_file))
             name = node.attrib.get("name")
@@ -505,8 +480,7 @@ class Skin(addon.Addon):
                 self.map_map[folder][name] = (node, xml_file)
 
     def _load_includes(self, root, folder, xml_file):
-        """Index <include name="X"> entries with their default params
-        (CGUIIncludes::LoadIncludes)."""
+        """Index <include name> entries with their param defaults (CGUIIncludes::LoadIncludes)."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
             if not name or node.find("*") is None:
@@ -530,15 +504,14 @@ class Skin(addon.Addon):
         self.validation_index = None
 
     def reload(self, path):
-        """Reload caches affected by an edit to `path`."""
+        """Reload whichever caches an edit to the file affects: includes, colors or fonts."""
         folder = path.split(os.sep)[-2]
 
         if folder in self.include_files:
             if path in self.include_files[folder]:
                 self.update_include_list()
             else:
-                # Untracked file may be a previously-broken include just made valid;
-                # peek at the root tag instead of reparsing every window save.
+                # an untracked file may be an include that just became parseable
                 root = utils.get_root_from_file(path)
                 if root is not None and root.tag == "includes":
                     logger.info("Recovered include file detected: %s", path)
@@ -550,23 +523,19 @@ class Skin(addon.Addon):
             self._load_colors_and_fonts()
 
     def get_themes(self):
-        """List subfolder names under `themes/`."""
+        """Get the theme names, one per folder under `themes`."""
         return [folder for folder in os.listdir(os.path.join(self.path, "themes"))]
 
     def build_include_map(self, folder):
-        """Return the include map for `folder`: {name -> (node, params, file)}."""
+        """The folder's include map, name to (node, params, file); already built by the loader."""
         return self.include_map.get(folder, {})
 
     def get_constants(self, folder):
-        """List defined constant names for `folder`."""
+        """Get the constant names defined for the folder."""
         return list(self.constant_map.get(folder, {}).keys())
 
-    def return_node(self, keyword=None, folder=False):
-        """Look up `keyword` as font, include, variable, map, default, constant, or expression.
-
-        Strips any param tail (`Name,arg1,arg2` -> `Name`). Returns
-        {"name", "content", "file", "line", "type"} or None.
-        """
+    def return_node(self, keyword=None, folder=None):
+        """Look up a name as font, include, variable, map, default, constant or expression."""
         if not keyword or not folder:
             return None
 
@@ -644,11 +613,7 @@ class Skin(addon.Addon):
         return None
 
     def lookup_skin_map(self, folder, map_name, key, _visited=None):
-        """What `key` maps to in `map_name`, or `key` itself.
-
-        Mirrors CSkinMapManager::Lookup (SkinMapManager.cpp:93-125): own entries
-        first, then the `ref` chain, with the same cycle guard.
-        """
+        """The key's value: own entries first, then the ref chain, per CSkinMapManager::Lookup."""
         visited = _visited or []
         if map_name in visited:
             logger.warning("Skin map '%s' has a circular ref chain", map_name)
@@ -670,7 +635,7 @@ class Skin(addon.Addon):
         return key
 
     def get_expanded_root(self, path, folder):
-        """Parse `path` and apply Kodi's resolve pipeline, uncached; unexpanded root on failure."""
+        """Parse a file and resolve it in place, uncached; unexpanded tree if resolving fails."""
         root = utils.get_root_from_file(path)
         if root is None:
             return None
@@ -683,8 +648,7 @@ class Skin(addon.Addon):
             return root
 
     def build_include_maps(self, progress_callback=None):
-        """Build and cache the skin-startup map: includes, fonts, builtin controls."""
-        # Kodi's startup phase only. Windows resolve lazily during validation, not here.
+        """Build the skin-start maps and pickle them, or load a pickle whose version matches."""
         cache_path = self._get_include_maps_cache_path()
         if cache_path and cache_path.exists():
             try:
@@ -766,7 +730,7 @@ class Skin(addon.Addon):
         return maps
 
     def _get_include_maps_cache_path(self):
-        """Get path for include maps cache file."""
+        """Get the pickle path for this skin's maps under ~/.kodidevkit/cache."""
         if not hasattr(self, 'path') or not self.path:
             return None
 
@@ -780,7 +744,7 @@ class Skin(addon.Addon):
             return None
 
     def _cleanup_old_cache_files(self, current_cache_path):
-        """Remove old version cache files and stale caches."""
+        """Delete this skin's older-version pickles and any pickle untouched for 30 days."""
         try:
             cache_dir = current_cache_path.parent
             if not cache_dir.exists():
@@ -804,7 +768,7 @@ class Skin(addon.Addon):
             logger.debug("Cache cleanup error: %s", e)
 
     def validate_single_file(self, file_path, include_maps=None, progress_callback=None):
-        """Validate one window/include file, mirroring Kodi's window-activation lifecycle."""
+        """Validate one window file on its own, resolved against the maps as Kodi activates it."""
         if include_maps is None:
             if progress_callback:
                 progress_callback("Loading include maps...")
@@ -849,7 +813,7 @@ class Skin(addon.Addon):
             'ids_defined': {folder: {}},
             'ids_referenced': {folder: {}},
             'window_ids': {folder: []},
-            'view_ids': set(),  # Flat set, not folder-nested
+            'view_ids': set(),
             'fonts_used': {folder: {}},
             'labels_used': {folder: {}},
             'labels_untranslated': [],
@@ -873,7 +837,7 @@ class Skin(addon.Addon):
             'ids_defined': extraction_results['ids_defined'],
             'ids_referenced': extraction_results['ids_referenced'],
             'window_ids': extraction_results['window_ids'],
-            'view_ids': {folder: extraction_results['view_ids']},  # Convert back to folder-nested
+            'view_ids': {folder: extraction_results['view_ids']},
             'window_base_ids': {folder: {basename: window_ids_set}},
             'window_expanded_ids': {folder: {basename: window_ids_set}},
             'window_includes': {folder: {}},
@@ -929,7 +893,7 @@ class Skin(addon.Addon):
         return {'issues': issues, 'file': file_path}
 
     def _get_folder_for_file(self, file_path):
-        """Return the xml folder (e.g. '1080i') containing `file_path`, or None."""
+        """The xml folder the file sits in, or None when it is outside every one."""
         try:
             file_path_obj = Path(file_path)
 

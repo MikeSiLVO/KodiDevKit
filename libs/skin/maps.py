@@ -2,32 +2,22 @@
 
 from __future__ import annotations
 
-# Version for cache invalidation (increment when structure changes)
+# bump when the pickled layout changes so stale caches are discarded
 INCLUDE_MAPS_VERSION = 1
 
 
 class SkinMaps:
-    """
-    Lightweight structure matching Kodi's CGUIIncludes 5-map structure.
-
-    This represents what Kodi loads at skin startup (eager loading):
-    - Includes.xml -> build 5 maps (includes, defaults, constants, variables, expressions)
-    - Font.xml -> fonts_defined
-    - Builtin controls -> builtin_controls
-
-    This is separate from the full ValidationIndex to enable lazy window validation.
-    Windows are validated on-demand using these pre-built maps.
-    """
+    """What Kodi loads at skin start, per folder: the five CGUIIncludes maps, fonts, builtins."""
 
     def __init__(self):
-        self.includes = {}           # {folder: {name: {static, parameterized, ...}}}
-        self.defaults = {}           # {folder: {type: default_attribs}}
-        self.constants = {}          # {folder: {name: value}}
-        self.variables = {}          # {folder: {name: definition}}
-        self.expressions = {}        # {folder: {name: expression}}
+        self.includes = {}
+        self.defaults = {}
+        self.constants = {}
+        self.variables = {}
+        self.expressions = {}
 
-        self.include_files = {}      # {folder: [filenames]} - from <include file="..."/>
-        self.builtin_controls = {}   # {control_id: window_file}
+        self.include_files = {}
+        self.builtin_controls = {}
         self.builtin_filename_map = {}
 
         self.fonts_defined = {}

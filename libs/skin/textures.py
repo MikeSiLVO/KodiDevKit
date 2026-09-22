@@ -11,7 +11,7 @@ logger.propagate = True
 
 
 def texturepacker(media_path, settings, xbt_filename="Textures.xbt"):
-    """Run TexturePacker on `media_path`, writing the output to `xbt_filename` there."""
+    """Run TexturePacker over the media folder, writing the .xbt into it."""
     tp_path = settings.get("texturepacker_path")
     if not tp_path:
         return None

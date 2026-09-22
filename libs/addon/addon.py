@@ -218,7 +218,7 @@ class Addon(object):
         else:
             return os.path.join(self.media_path, path)
 
-    def return_node(self, keyword=None, folder=False):
+    def return_node(self, keyword=None, folder=None):
         """Look up a font or include by name in the folder, ignoring any param tail."""
         if not keyword or not folder:
             return None

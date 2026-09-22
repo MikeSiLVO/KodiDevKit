@@ -16,11 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class SkinResolution:
-    """
-    Resolves includes, constants, expressions, and defaults in Kodi skin XML.
-
-    Matches Kodi's CGUIIncludes resolution pipeline exactly.
-    """
+    """Resolves includes, constants, expressions and defaults the way CGUIIncludes does."""
 
     def __init__(self, include_maps: SkinMaps, skin_path: str):
         self.include_maps = include_maps
@@ -33,20 +29,10 @@ class SkinResolution:
         self.expression_map = include_maps.expressions
 
     def resolve(self, node, folder: str, *, source_file: str = ""):
-        """
-        Main resolution entry point matching Kodi's CGUIIncludes::Resolve (GUIIncludes.cpp:270-287).
-
-        Resolution order:
-        1. SetDefaults - Apply control defaults
-        2. ResolveConstants - Expand constants
-        3. ResolveExpressions - Expand $EXP references (with circular detection)
-        4. ResolveIncludes - Splice includes with $PARAM substitution
-        5. Recurse to children
-        """
+        """Resolve a subtree as CGUIIncludes::Resolve does: defaults, constants, $EXP, includes."""
         if node is None:
             return
 
-        # Store for provenance stamping in resolve_includes
         if source_file:
             self._source_file = source_file
 
@@ -59,13 +45,7 @@ class SkinResolution:
             self.resolve(child, folder)
 
     def set_defaults(self, node, folder: str):
-        """
-        Apply control defaults. Matches CGUIIncludes::SetDefaults (GUIIncludes.cpp:362-389).
-
-        Only applies to <control type="X"> elements.
-        Skips position defaults if control already has posx/posy.
-        Appends default children at END of control.
-        """
+        """Append the control type's default block, as CGUIIncludes::SetDefaults does."""
         if node.tag != "control":
             return
 
@@ -89,16 +69,14 @@ class SkinResolution:
             value = child.tag
             skip = False
 
-            # Skip position defaults if control already has them (Kodi behavior)
             if has_posx and value in ("left", "right", "centerleft", "centerright"):
                 skip = True
             if has_posy and value in ("top", "bottom", "centertop", "centerbottom"):
                 skip = True
 
             if not skip:
-                # Insert at end (Kodi uses InsertEndChild)
                 cloned = copy.deepcopy(child)
-                # Stamp provenance so issues trace back to the control, not Defaults.xml
+                # stamp so issues point at the control, not Defaults.xml
                 if cloned.get("_kdk_call_line") is None:
                     call_line = str(node.sourceline) if node.sourceline else ""
                     call_file = getattr(self, "_source_file", "")
@@ -112,13 +90,7 @@ class SkinResolution:
                 node.append(cloned)
 
     def resolve_constants(self, node, folder: str):
-        """
-        Resolve constants. Matches CGUIIncludes::ResolveConstants (GUIIncludes.cpp:320-342).
-
-        Whitelisted only: a node gets text-resolution iff its tag is in
-        SkinInclude.constant_nodes, else its attributes get value-resolution
-        for any name in SkinInclude.constant_attribs. Never both for one node.
-        """
+        """Expand constants as CGUIIncludes::ResolveConstants: listed tag text, else attributes."""
         if node is None:
             return
 
@@ -134,15 +106,7 @@ class SkinResolution:
                     node.attrib[attr_name] = self._resolve_constant_value(attr_value, constants_for_folder)
 
     def _resolve_constant_value(self, value: str, constant_map: dict) -> str:
-        """
-        Resolve bare constant names via comma-split lookup.
-        Matches CGUIIncludes::ResolveConstant (GUIIncludes.cpp:641-651).
-
-        Splits `value` by ',' then exact-matches each piece against
-        `constant_map` (no $ prefix, no whitespace trim, case-sensitive).
-        Matches are substituted verbatim, non-matches pass through. Pieces
-        are rejoined with ','. Substituted values are NOT re-scanned.
-        """
+        """Swap each comma-split piece that names a constant, like CGUIIncludes::ResolveConstant."""
         if not value:
             return value
         pieces = value.split(",")
@@ -150,18 +114,13 @@ class SkinResolution:
         return ",".join(pieces)
 
     def resolve_expressions(self, node, folder: str):
-        """
-        Resolve expressions. Matches CGUIIncludes::ResolveExpressions (GUIIncludes.cpp:412-431).
-
-        Expands $EXP[name] references in condition attributes and specific node text.
-        """
+        """Expand $EXP as CGUIIncludes::ResolveExpressions: listed tag text, condition attrs."""
         if node is None:
             return
 
         expressions_for_folder = self.expression_map.get(folder, {})
         if not expressions_for_folder:
             return
-
 
         if node.text and node.tag in SkinInclude.exp_nodes:
             node.text = self._resolve_expression_value(node.text, expressions_for_folder, [])
@@ -174,21 +133,11 @@ class SkinResolution:
         """Resolve $EXP[name] references with circular detection."""
         return utils.flatten_expressions(value, expression_map, resolved)[0]
 
-    # Separator for the include-expansion path stamped on spliced <include> nodes.
-    # Tab is XML-attribute-safe and never appears in include names.
+    # tab is attribute-safe and never appears in an include name
     _PATH_SEP = "\t"
 
     def resolve_includes(self, node, folder: str):
-        """
-        Resolve includes. Matches CGUIIncludes::ResolveIncludes (GUIIncludes.cpp:368-469).
-
-        Walks <include> children in document order: a resolvable include is spliced
-        in and the scan restarts from the first include; an unresolvable one (unknown
-        name or a cycle) is left in place and the scan advances to the next sibling.
-        Cycles are detected via the `_kdk_inc_path` stamp, not element identity --
-        id()-based tracking is unreliable because freed element proxies get their
-        address reused by newly spliced nodes (GUIIncludes.cpp:461,466).
-        """
+        """Splice includes as CGUIIncludes::ResolveIncludes does, rescanning from the top."""
         if node is None:
             return
 
@@ -202,8 +151,6 @@ class SkinResolution:
             if not inc_name and include_node.text:
                 inc_name = include_node.text.strip()
 
-            # Collect call-site parameters BEFORE looking up include
-            # (needed to resolve $PARAM in include name - GUIIncludes.cpp:628)
             call_params = {}
             for param in include_node.findall("param"):
                 param_name = param.attrib.get("name")
@@ -214,14 +161,12 @@ class SkinResolution:
                     param_value = param.text.strip()
                 call_params[param_name] = param_value or ""
 
-            # Resolve $PARAM in include name before lookup (matches Kodi GUIIncludes.cpp:628)
-            # Kodi replaces undefined params with empty strings
+            # unknown $PARAM names survive our param pass; Kodi's empties them, so empty for lookup
             if inc_name and "$PARAM[" in inc_name:
                 resolved_name, status = utils.resolve_params_in_text(inc_name, call_params)
                 if status in ("ALL_RESOLVED", "NO_PARAMS"):
                     inc_name = resolved_name
                 else:
-                    # Partially resolved - replace remaining undefined params with empty string
                     param_pattern = re.compile(r"\$PARAM\[\s*(?P<name>[A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
                     param_names = param_pattern.findall(resolved_name)
                     if param_names:
@@ -230,13 +175,13 @@ class SkinResolution:
                     else:
                         inc_name = resolved_name
 
+            # cycle check by stamped path; lxml reuses proxy addresses so id() tracking misfires
             path_attr = include_node.get("_kdk_inc_path")
             path = path_attr.split(self._PATH_SEP) if path_attr else []
 
             include_def = includes_for_folder.get(inc_name) if inc_name else None
 
-            # Unknown include or a cycle: leave node in place, advance to next sibling
-            # (Kodi: include = include->NextSiblingElement("include"), GUIIncludes.cpp:466)
+            # unknown name or a cycle stays in place; the scan moves on
             if include_def is None or inc_name in path:
                 if include_def is None and inc_name:
                     logger.warning("Skin has invalid include: %s", inc_name)
@@ -245,23 +190,20 @@ class SkinResolution:
 
             node_or_obj, default_params, file_path = include_def
 
-            if hasattr(node_or_obj, 'tag'):  # It's an lxml Element
+            if hasattr(node_or_obj, 'tag'):
                 definition = node_or_obj.find("definition")
                 include_body = definition if definition is not None else node_or_obj
                 include_obj = SkinInclude(node=include_body, file=file_path)
             else:
-                include_obj = node_or_obj  # Already an Include object
+                include_obj = node_or_obj
 
-            # Merge params: call-site params override defaults (no overwrites of existing)
-            # Note: call_params already collected earlier for $PARAM resolution in include name
             merged_params = dict(default_params)
             merged_params.update(call_params)
 
             include_element = include_obj.node
 
             inc_file_for_stamp = include_obj.file or ""
-            # Nested includes: trace back to outermost call site in the window file
-            # include_node.sourceline is from the include definition, not the window
+            # nested include: keep the outermost call site in the window file
             existing_stamp = include_node.get("_kdk_call_line")
             if existing_stamp:
                 call_line = existing_stamp
@@ -270,8 +212,7 @@ class SkinResolution:
                 call_line = str(include_node.sourceline) if include_node.sourceline else ""
                 call_file = getattr(self, "_source_file", "")
 
-            # Stamp expanded includes with their ancestry so re-expansion of the same
-            # name (a cycle) is skipped, even across control/recursion boundaries.
+            # ancestry stamp is what the cycle check reads
             child_path_attr = self._PATH_SEP.join(path + [inc_name])
             for child in include_element:
                 cloned_child = copy.deepcopy(child)
@@ -295,14 +236,11 @@ class SkinResolution:
                 self._resolve_params_for_node(cloned_child, merged_params, include_node)
 
             node.remove(include_node)
-            # Restart from the first include so spliced-in includes are processed in
-            # document order (Kodi: include = node->FirstChildElement("include")).
+            # rescan from the first include so spliced ones resolve in document order
             include_node = node.find("include")
 
-
     def _insert_nested(self, parent_node, include_node, inserted_node):
-        """Insert call-site children at `<nested/>` markers
-        (CGUIIncludes::InsertNested, GUIIncludes.cpp:471-504)."""
+        """Put the call's children at the <nested/> marker, as CGUIIncludes::InsertNested does."""
         if inserted_node.tag == "nested":
             nested = inserted_node
             target = parent_node
@@ -323,16 +261,14 @@ class SkinResolution:
                 parent_node.remove(inserted_node)
 
     def _resolve_params_for_node(self, node, params: dict, include_node=None):
-        """Recursively expand `$PARAM[]` in `node`'s attribs and text
-        (CGUIIncludes::ResolveParametersForNode, GUIIncludes.cpp:549-606)."""
+        """Expand $PARAM through a subtree as CGUIIncludes::ResolveParametersForNode does."""
         if node is None:
             return
 
         for attr_name, attr_value in list(node.attrib.items()):
             resolved, status = utils.resolve_params_in_text(attr_value, params)
 
-            # Special case: undefined param in <param value="$PARAM[undefined]" />
-            # (GUIIncludes.cpp:559-568)
+            # a lone undefined $PARAM forwarded as a param value drops the <param>; default wins
             if (status == "SINGLE_UNDEFINED" and
                 node.tag == "param" and
                 attr_name == "value" and
@@ -346,8 +282,7 @@ class SkinResolution:
         if node.text:
             resolved, status = utils.resolve_params_in_text(node.text, params)
 
-            # Special case: undefined param in <param>$PARAM[undefined]</param>
-            # (GUIIncludes.cpp:580-586)
+            # same for the text form
             if (status == "SINGLE_UNDEFINED" and
                 node.tag == "param" and
                 node.getparent() is not None and
@@ -357,14 +292,12 @@ class SkinResolution:
 
             node.text = resolved
 
-        # Recurse to children (save next before recursing, as child might be removed)
-        # (GUIIncludes.cpp:590-605)
         for child in list(node):
             self._resolve_params_for_node(child, params, include_node)
 
     @staticmethod
     def _stamp_descendants(node, call_line: str, inc_name: str, inc_file: str = "", *, call_file: str = ""):
-        """Propagate provenance attributes to all descendants that don't already have them."""
+        """Stamp every unstamped descendant with the call site and include name."""
         for descendant in node.iter():
             if descendant is node:
                 continue
