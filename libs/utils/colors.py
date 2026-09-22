@@ -8,7 +8,7 @@ from typing import Optional
 
 
 def is_kodi_hex(text: str) -> bool:
-    """Check if text is Kodi AARRGGBB hex format (8 hex characters)."""
+    """True when the text is a Kodi AARRGGBB hex color."""
     return len(text) == 8 and all(c in string.hexdigits for c in text)
 
 

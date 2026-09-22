@@ -1,11 +1,5 @@
-"""
-KodiDevKit utilities package.
+"""Shared helpers, re-exported here so callers import one module."""
 
-This package provides organized utility functions for Kodi skinning development.
-All functions are re-exported at the package level for backward compatibility.
-"""
-
-# Re-export all functions from submodules
 from .colors import (
     is_kodi_hex,
     to_hex,

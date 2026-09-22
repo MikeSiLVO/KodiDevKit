@@ -1,4 +1,4 @@
-"""XML parsing and validation utilities for KodiDevKit."""
+"""Cached XML parsing, with a tag-balance pass that locates the real error line."""
 
 import os
 import re
@@ -20,7 +20,7 @@ _xml_parse_cache = {}
 
 
 def _parse_xml_file(xml_file):
-    """Parse XML file and return root. Raises exceptions on error."""
+    """Parse a file into its root; on a syntax error, log it, record it and return None."""
     try:
         return ET.parse(xml_file, PARSER).getroot()
     except XMLSyntaxError as e:
@@ -43,7 +43,7 @@ def _parse_xml_file(xml_file):
 
 
 def _extract_type_attr(text, attr_start, attr_end):
-    """Extract type attribute value from tag content between attr_start..attr_end."""
+    """The type attribute inside the tag span, empty when it has none."""
     idx = text.find('type=', attr_start, attr_end)
     if idx == -1:
         return ""
@@ -57,25 +57,14 @@ def _extract_type_attr(text, attr_start, attr_end):
 
 
 def _check_tag_balance(xml_file):
-    """Stack-based tag balance checker that pinpoints the actual error location.
-
-    Unlike lxml which reports where it detected the problem (usually a closing
-    tag far from the mistake), this walks the file tracking open/close tags and
-    reports the opening tag that has no matching close.
-
-    For <control> siblings with the same type attribute (e.g. multiple
-    grouplist controls), detects the unclosed tag immediately when the next
-    sibling of the same type opens; only group type can self-nest.
-
-    Returns dict with message/line on error, or None if no mismatch found.
-    """
+    """Find the opening tag that is never closed as {message, line}, None when they all match."""
     try:
         with open(xml_file, 'r', encoding='utf-8', errors='replace') as f:
             text = f.read()
     except Exception:
         return None
 
-    stack = []  # (tag_name, line_number, type_attr)
+    stack = []
     i = 0
     line = 1
 
@@ -89,7 +78,6 @@ def _check_tag_balance(xml_file):
             i += 1
             continue
 
-        # Skip comments <!-- ... -->
         if text[i:i+4] == '<!--':
             end = text.find('-->', i + 4)
             if end == -1:
@@ -98,7 +86,6 @@ def _check_tag_balance(xml_file):
             i = end + 3
             continue
 
-        # Skip CDATA <![CDATA[ ... ]]>
         if text[i:i+9] == '<![CDATA[':
             end = text.find(']]>', i + 9)
             if end == -1:
@@ -107,7 +94,6 @@ def _check_tag_balance(xml_file):
             i = end + 3
             continue
 
-        # Skip processing instructions <? ... ?>
         if text[i:i+2] == '<?':
             end = text.find('?>', i + 2)
             if end == -1:
@@ -118,7 +104,6 @@ def _check_tag_balance(xml_file):
 
         tag_start_line = line
 
-        # Closing tag </name>
         if text[i:i+2] == '</':
             end = text.find('>', i + 2)
             if end == -1:
@@ -138,8 +123,6 @@ def _check_tag_balance(xml_file):
             stack.pop()
             continue
 
-        # Opening or self-closing tag
-        # Extract tag name
         j = i + 1
         while j < len(text) and text[j] not in (' ', '\t', '\n', '\r', '>', '/'):
             j += 1
@@ -149,7 +132,7 @@ def _check_tag_balance(xml_file):
             i = j
             continue
 
-        # Scan to end of tag, respecting quoted attributes
+        # attribute values may hold > or a newline
         k = j
         while k < len(text):
             if text[k] == '"':
@@ -173,7 +156,6 @@ def _check_tag_balance(xml_file):
         if k >= len(text):
             return {"message": f"Unterminated tag <{tag_name}>", "line": tag_start_line}
 
-        # Self-closing if ends with />
         self_closing = k > 0 and text[k-1] == '/'
         i = k + 1
 
@@ -183,13 +165,12 @@ def _check_tag_balance(xml_file):
                 type_attr = _extract_type_attr(text, j, k)
                 if stack and stack[-1][0] == "control" and stack[-1][2]:
                     top_type = stack[-1][2]
-                    # Only group/grouplist can contain child controls
+                    # only a group or grouplist nests controls
                     if top_type not in ("group", "grouplist"):
                         return {
                             "message": f"Unclosed <control type=\"{top_type}\">",
                             "line": stack[-1][1],
                         }
-                    # Same non-group type can't self-nest (sibling detection)
                     if (type_attr and top_type == type_attr
                             and type_attr != "group"):
                         return {
@@ -206,14 +187,9 @@ def _check_tag_balance(xml_file):
 
 
 def get_root_from_file(xml_file):
-    """Return XML root node from file with mtime+size-based caching.
-
-    Cache is validated using both mtime and file size to prevent stale caches
-    when files are modified rapidly (within filesystem mtime granularity).
-    This adds zero overhead since os.stat() returns both values.
-    """
+    """Get a file's root node, cached on mtime and size; None when it cannot be parsed."""
     if not os.path.isfile(xml_file):
-        # Truncate to avoid dumping entire XML strings into the log
+        # callers pass XML strings by mistake, so do not log the whole value
         preview = repr(xml_file)[:80]
         logger.debug("get_root_from_file: not a file path: %s...", preview)
         return None
@@ -239,7 +215,6 @@ def get_root_from_file(xml_file):
     parse_duration = time.time() - start_time
     if root is not None:
         _xml_parse_cache[xml_file] = (mtime, size, root)
-        # Only log slow parses (>100ms) to reduce noise
         if parse_duration > 0.1:
             logger.debug("get_root_from_file SUCCESS: file=%s duration=%.3fs", os.path.basename(xml_file), parse_duration)
     else:
@@ -249,7 +224,7 @@ def get_root_from_file(xml_file):
 
 
 def check_brackets(label):
-    """check if all brackets in `label` match, return True / False"""
+    """True when every bracket in the text is closed by its own kind, in order."""
     stack = []
     push_chars, pop_chars = "<({[", ">)}]"
     for c in label:
@@ -267,25 +242,18 @@ def check_brackets(label):
 
 
 def file_needs_expansion(path, max_bytes=FILE_PREVIEW_SIZE):
-    """Quick check if `path` likely needs include/param expansion.
-
-    Reads the first `max_bytes` and looks for `$PARAM[` or `<include`. Used
-    to avoid the expensive expansion pass on static files.
-    """
+    """True when the file's first bytes hold an include or a $PARAM, so it may need resolving."""
     try:
         with open(path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read(max_bytes)
             return '$PARAM[' in content or '<include' in content
     except Exception:
-        # If we can't read the file, assume it needs expansion to be safe
+        # unreadable, so assume it needs the pass
         return True
 
 
 def tree_needs_expansion(root):
-    """True if the already-parsed `root` likely needs expansion.
-
-    Skips a file read; use this when you already have the tree in memory.
-    """
+    """True when a parsed tree holds an include or a dynamic value, so it may need resolving."""
     if root is None:
         return False
 

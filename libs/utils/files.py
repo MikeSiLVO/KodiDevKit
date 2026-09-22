@@ -1,4 +1,4 @@
-"""File operation utilities for KodiDevKit."""
+"""File helpers: line endings, BOMs, zipping an addon, fetching the Kodi addon list."""
 
 from __future__ import annotations
 
@@ -28,8 +28,7 @@ def eol_info_from_path_patterns(
     excludes: list[str] | None = None
 ) -> list[tuple[str, str | None]]:
     """Line ending of each matching file, or None where it has no newline."""
-    # excludes match anywhere in the path, includes match its end.
-
+    # an exclude matches anywhere in the path, an include matches its end
     includes = includes or []
     excludes = excludes or []
 
@@ -63,7 +62,7 @@ def eol_info_from_path_patterns(
         eol = None
         try:
             with open(fp, 'rb') as f:
-                chunk = f.read(1 << 15)  # 32 KiB is plenty to determine EOL
+                chunk = f.read(1 << 15)
                 if b'\r\n' in chunk:
                     eol = '\r\n'
                 elif b'\n' in chunk:
@@ -78,11 +77,7 @@ def eol_info_from_path_patterns(
 
 
 def save_xml(filename: str, root, tab_width: int = 4) -> None:
-    """
-    Save XML node `root` to file `filename`.
-    Uses lxml pretty_print, then converts leading spaces to tabs.
-    """
-
+    """Save a tree pretty-printed, with the leading spaces turned back into tabs."""
     xml_bytes = ET.tostring(root, encoding="UTF-8", xml_declaration=True, pretty_print=True)
     text = xml_bytes.decode("utf-8")
 
@@ -106,15 +101,14 @@ def get_platform() -> str:
         import sublime
         return sublime.platform()
     except ImportError:
-        # `importlib` keeps `platform` off the AST so the package reviewer
-        # doesn't flag a top-level import in this test-only fallback.
+        # imported this way so the addon checker does not read it as a top-level import
         from importlib import import_module
         _plat = import_module("platform")
         return {"Darwin": "osx", "Linux": "linux"}.get(_plat.system(), "windows")
 
 
 def get_sublime_path() -> str | None:
-    """Get command-line path to execute Sublime Text externally."""
+    """Get the command that starts Sublime Text, or None when it cannot be found."""
     plat = get_platform()
     if plat in ("osx", "linux"):
         return "subl"
@@ -124,14 +118,14 @@ def get_sublime_path() -> str | None:
 
 
 def get_absolute_file_paths(directory: str):
-    """Generate absolute file paths for all files in directory (recursive)."""
+    """Yield the absolute path of every file under the directory."""
     for dirpath, _, filenames in os.walk(directory):
         for filename in filenames:
             yield os.path.abspath(os.path.join(dirpath, filename))
 
 
 def make_archive(folderpath: str, archive: str) -> None:
-    """Create zip archive from folder, excluding dev files and hidden files/folders."""
+    """Create the addon zip, leaving out loose media, themes, hidden and build files."""
     file_list = get_absolute_file_paths(folderpath)
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         for addon_file in file_list:
@@ -152,7 +146,7 @@ def make_archive(folderpath: str, archive: str) -> None:
 
 
 def check_bom(filepath: str) -> bool:
-    """Check if file has UTF-8 BOM (Byte Order Mark)."""
+    """True when the file starts with a UTF-8 BOM."""
     file_bytes = min(32, os.path.getsize(filepath))
     with open(filepath, 'rb') as f:
         raw = f.read(file_bytes)
@@ -160,7 +154,7 @@ def check_bom(filepath: str) -> bool:
 
 
 def check_paths(paths: list[str]) -> Optional[str]:
-    """Return first valid path from list, or None if none exist."""
+    """The first path that exists, or None."""
     for path in paths:
         if os.path.exists(path):
             return path
@@ -168,10 +162,7 @@ def check_paths(paths: list[str]) -> Optional[str]:
 
 
 def get_addons(reponame: str, *, timeout: int = 15, max_retries: int = 3) -> dict[str, str]:
-    """
-    Return {addon_id: version} from the Kodi mirror for a given repo name.
-    Retries with simple backoff; logs a traceback on final failure.
-    """
+    """Get {addon id: version} from the Kodi mirror, retrying with backoff; empty when it fails."""
     repo_url = f"https://mirrors.kodi.tv/addons/{reponame}/addons.xml"
     logger.info("Downloading %s addon list", reponame)
 

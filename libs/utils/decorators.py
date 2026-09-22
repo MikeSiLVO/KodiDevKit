@@ -1,4 +1,4 @@
-"""Decorator utilities for KodiDevKit."""
+"""Decorators for retrying, backgrounding and busy-guarding plugin commands."""
 
 from __future__ import annotations
 

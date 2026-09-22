@@ -1,4 +1,4 @@
-"""Validation utilities for KodiDevKit."""
+"""Issue building, id normalizing, and the lookups the checks share."""
 
 import os
 import re
@@ -12,23 +12,17 @@ logger.propagate = True
 
 
 def is_runtime_generated_file(file_path):
-    """True if `file_path` is a script.skinvariables runtime-generated XML."""
+    """True when the file is one an addon writes at runtime, so its contents are not the skin's."""
     if not file_path:
         return False
 
     filename = os.path.basename(file_path).lower()
 
-    # Only script-skinvariables-*.xml files (not skinshortcuts per user preference)
-    # Examples: script-skinvariables-labels-includes.xml, script-skinvariables-images-includes.xml
     return filename.startswith('script-skinvariables-')
 
 
 def normalize_control_id(control_id):
-    """Strip leading zeros from a numeric control id (Kodi parses ids as ints).
-
-    `"05"` and `"5"` both refer to the same control. Non-numeric ids
-    are returned unchanged.
-    """
+    """Strip leading zeros from a numeric id, since Kodi reads ids as ints; others pass through."""
     if not control_id or not isinstance(control_id, str):
         return control_id
 
@@ -54,10 +48,7 @@ _PARAM_PATTERN = re.compile(r'\$PARAM\[([^\]]+)\]')
 
 
 def resolve_param_in_name(name, param_context=None, cache=None):
-    """Replace `$PARAM[name]` in `name` using `param_context` (undefined -> '').
-
-    Optional `cache` dict reuses prior results for the same (name, params) pair.
-    """
+    """Replace $PARAM in a name from the context, emptying unknown ones as Kodi does."""
     if not name or "$PARAM[" not in name:
         return name
 
@@ -82,11 +73,7 @@ def resolve_param_in_name(name, param_context=None, cache=None):
 
 
 def get_all_parameter_contexts(addon, folder):
-    """Return every `$PARAM` context that any include in `folder` is called with.
-
-    Used so a `$PARAM`-bearing name can be tested against every concrete
-    binding to see if any of them resolves to something defined.
-    """
+    """Get every param set the folder's includes take, to try a $PARAM name against each."""
     if not addon._include_usages_built:
         addon.index_builder.build_include_usages()
 
@@ -100,7 +87,7 @@ def get_all_parameter_contexts(addon, folder):
 
 
 def should_report_progress(count, total):
-    """Throttle progress: always first 10, then every 10 (large) or every 3."""
+    """True when this count should be reported: the first ten, then every tenth or third."""
     if count <= 10:
         return True
     if total > 100:
@@ -109,7 +96,7 @@ def should_report_progress(count, total):
 
 
 def deduplicate_issues(issues):
-    """Deduplicate validation issues by (file, line, message) key."""
+    """Drop issues repeating a file, line and message already seen."""
     seen = set()
     result = []
     for issue in issues:
@@ -121,10 +108,7 @@ def deduplicate_issues(issues):
 
 
 def find_unused_items(definitions, references, item_type, skip_filter=None):
-    """Return issue dicts for `definitions` whose name never appears in `references`.
-
-    `skip_filter(node)` lets callers exclude e.g. runtime-generated entries.
-    """
+    """Issues for each definition of that type whose name is never referenced."""
     ref_names = {ref["name"] for ref in references}
     unused = []
 
@@ -147,7 +131,7 @@ def find_unused_items(definitions, references, item_type, skip_filter=None):
 
 
 def find_undefined_items(references, definitions, item_type, skip_filter=None):
-    """Return reference dicts (annotated with a message) whose name has no matching definition."""
+    """References of that type with no definition, each carrying its message."""
     defined_names = {
         node.get("name")
         for node in definitions
@@ -167,8 +151,7 @@ def find_undefined_items(references, definitions, item_type, skip_filter=None):
 
 
 def resolve_include_content(inc, resolve_callback=None):
-    """Return `inc`'s XML body with `$PARAM[...]` placeholders substituted."""
-    # Import here to avoid circular dependency
+    """The include body with its own default params substituted."""
     from .expressions import resolve_params_in_text
 
     if resolve_callback:
@@ -189,15 +172,12 @@ def resolve_include_content(inc, resolve_callback=None):
 
 @lru_cache(maxsize=128)
 def _get_font_name_pattern(font_name):
-    """Cached `<name>font_name</name>` regex used by find_font_line_in_include."""
+    """Cached regex matching a <name> element holding that font name."""
     return re.compile(r"<name>\s*%s\s*</name>" % re.escape(font_name), re.I)
 
 
 def find_font_line_in_include(inc, font_name):
-    """1-based line of the `<font>` block defining `font_name` inside `inc`'s file.
-
-    Falls back to the include's own line if the font can't be located.
-    """
+    """Line of the <font> block defining that font, or the include's own line if not found."""
     path = (inc.get("file") or "").strip()
     if not path or not os.path.isfile(path):
         return int(inc.get("line") or 1)
@@ -207,7 +187,7 @@ def find_font_line_in_include(inc, font_name):
             lines = list(f)
 
         start = max(int(inc.get("line") or 1) - 1, 0)
-        pat = _get_font_name_pattern(font_name)  # Use cached pattern
+        pat = _get_font_name_pattern(font_name)
 
         for i in range(start, len(lines)):
             if pat.search(lines[i]):
@@ -222,15 +202,14 @@ def find_font_line_in_include(inc, font_name):
 
 
 def _is_runtime_placeholder(text):
-    """Check if text contains a runtime placeholder that can't be resolved statically."""
+    """True when the text holds a placeholder only the running addon can fill in."""
     upper = text.upper()
     return "$SKINSHORTCUTS" in upper or "$PROPERTY[" in upper
 
 
 def find_skinshortcuts_template(addon_path):
-    """Path to the SkinShortcuts template (`templates.xml` v3 or `template.xml` v2), or None."""
+    """Path of the shortcuts template, newer name first, or None when the skin ships neither."""
     shortcuts_dir = os.path.join(addon_path, "shortcuts")
-    # v3 first (preferred)
     for filename in ("templates.xml", "template.xml"):
         path = os.path.join(shortcuts_dir, filename)
         if os.path.isfile(path):
@@ -239,12 +218,7 @@ def find_skinshortcuts_template(addon_path):
 
 
 def find_includes_in_skinshortcuts_template(template_path, known_include_names):
-    """Set of skin-include names referenced inside a SkinShortcuts template.
-
-    Scans text bodies plus `content=` / `include=` attributes. References
-    that contain `$SKINSHORTCUTS[...]` or `$PROPERTY[...]` are runtime-only
-    and skipped.
-    """
+    """Known include names the shortcuts template refers to, in text or in an attribute."""
     from .xml import get_root_from_file
 
     if not os.path.isfile(template_path):
@@ -257,7 +231,6 @@ def find_includes_in_skinshortcuts_template(template_path, known_include_names):
     referenced = set()
 
     try:
-        # Text content (v2 property values + v3 <include>Name</include>)
         for text in root.xpath(".//text()"):
             text_stripped = text.strip()
             if not text_stripped or _is_runtime_placeholder(text_stripped):
@@ -266,7 +239,6 @@ def find_includes_in_skinshortcuts_template(template_path, known_include_names):
                 if include_name in text_stripped:
                     referenced.add(include_name)
 
-        # v3: <include content="Name"> and <skinshortcuts include="Name">
         for attr in ("content", "include"):
             for elem in root.xpath(f".//*[@{attr}]"):
                 value = elem.get(attr, "")
@@ -282,11 +254,7 @@ def find_includes_in_skinshortcuts_template(template_path, known_include_names):
 
 
 def find_variables_in_skinshortcuts_template(template_path, known_variable_names):
-    """Set of skin-variable names referenced inside a SkinShortcuts template.
-
-    Scans text bodies and attribute values for `$VAR[Name]` / `$ESCVAR[Name]`,
-    skipping `$SKINSHORTCUTS[...]` / `$PROPERTY[...]` placeholders.
-    """
+    """Known variable names the shortcuts template refers to, in text or in an attribute."""
     from .xml import get_root_from_file
 
     if not os.path.isfile(template_path):
@@ -313,7 +281,6 @@ def find_variables_in_skinshortcuts_template(template_path, known_variable_names
             if text_stripped:
                 _scan(text_stripped)
 
-        # Attribute values (v3 templates use $VAR[] in attributes like colordiffuse)
         for elem in root.iter():
             for value in elem.attrib.values():
                 if "$VAR[" in value.upper() or "$ESCVAR[" in value.upper():
@@ -326,13 +293,7 @@ def find_variables_in_skinshortcuts_template(template_path, known_variable_names
 
 
 def find_variable_definitions_in_skinshortcuts_template(template_path):
-    """Set of `<variable name="...">` names declared inside a SkinShortcuts template.
-
-    These names must be treated as defined even though the skin's own
-    includes don't declare them, since SkinShortcuts emits them into the
-    runtime includes file at boot. Names containing runtime placeholders
-    are skipped (their real name can't be known statically).
-    """
+    """Variable names the shortcuts template declares, which count as defined for the skin."""
     from .xml import get_root_from_file
 
     if not os.path.isfile(template_path):

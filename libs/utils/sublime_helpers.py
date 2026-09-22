@@ -1,4 +1,4 @@
-"""Sublime Text specific helper utilities for KodiDevKit."""
+"""Small helpers that touch the Sublime view: selection text, popups, debug output."""
 
 import json
 import logging
@@ -10,14 +10,14 @@ logger.propagate = True
 
 
 def find_word(view):
-    """return selected text or surrounding text for first selection"""
+    """The first selection's text, or the word under the caret when nothing is selected."""
     for region in view.sel():
         word = view.word(region) if region.begin() == region.end() else region
         return view.substr(word) if not word.empty() else ""
 
 
 def get_node_content(view, flags):
-    """return surrounding text for first selection"""
+    """Text around the first selection, out to the nearest bracket or quote."""
     for region in view.sel():
         try:
             bracket_region = view.expand_by_class(region, flags, '<>"[]')
@@ -29,7 +29,6 @@ def get_node_content(view, flags):
 def jump_to_label_declaration(view, label_id):
     """Insert `label_id` at the cursor and hide the popup (callback for label tooltip links)."""
     view.run_command("insert", {"characters": label_id})
-    # hide only our tooltip
     try:
         if view and view.settings().get("kodidevkit.popup_kind") == "tooltip":
             view.hide_popup()
@@ -39,12 +38,7 @@ def jump_to_label_declaration(view, label_id):
 
 
 def prettyprint(obj) -> None:
-    """
-    JSON pretty print for debug logs:
-    - Stable key order
-    - UTF-8 output with replacement for invalid bytes
-    - Safe for dict/list/str/bytes/None
-    """
+    """Log any value as sorted, readable JSON, falling back to repr."""
     try:
         if isinstance(obj, (bytes, bytearray)):
             try:
@@ -53,7 +47,6 @@ def prettyprint(obj) -> None:
                 obj = obj.decode("utf-8", "replace")
         text = json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2)
     except Exception:
-        # Fallback: safe repr
         try:
             text = repr(obj)
         except Exception:

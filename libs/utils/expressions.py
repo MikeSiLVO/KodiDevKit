@@ -29,7 +29,7 @@ _DEFAULT_DYNAMIC_PREFIXES = tuple(
 
 
 def is_number(text: str) -> bool:
-    """Check if text is a valid finite number."""
+    """True when the text parses as a finite number."""
     try:
         value = float(text)
         return value not in (float('inf'), float('-inf')) and value == value
@@ -72,8 +72,8 @@ def extract_variable_name(text: str) -> str | None:
 
 
 def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -> tuple[str, str]:
-    """Substitute `$PARAM[name]` from `params`, with a status naming how much resolved; unknown names stay put."""
-    # Values are XML-escaped so entities like & < > survive the re-parse.
+    """Substitute $PARAM names from the params, with a status saying how much resolved."""
+    # values are XML-escaped so & < > survive the re-parse; unknown names stay as written
     if not text or not isinstance(text, str):
         return text, "NO_PARAMS"
     if not params:
@@ -112,10 +112,7 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -
 
 
 def is_dynamic_expression(text: str, *, prefixes: Optional[tuple[str, ...]] = None) -> bool:
-    """
-    Return True when `text` starts with a Kodi runtime expression such as
-    $PARAM[], $VAR[], $INFO[], etc. Case-insensitive. Leading whitespace ignored.
-    """
+    """True when the text opens with a Kodi runtime expression such as $VAR or $INFO."""
     if not isinstance(text, str):
         return False
     candidate = text.strip()
@@ -130,12 +127,12 @@ def is_dynamic_expression(text: str, *, prefixes: Optional[tuple[str, ...]] = No
 
 
 def starts_with_param_reference(text: str) -> bool:
-    """Check if text starts with a $PARAM[...] expression."""
+    """True when the text opens with a $PARAM reference."""
     return is_dynamic_expression(text, prefixes=("$param[",))
 
 
 def contains_dynamic_expression(text: str) -> bool:
-    """True when a runtime expression appears anywhere in `text`, unlike `is_dynamic_expression` which needs it first."""
+    """True when a runtime expression appears anywhere, not only at the start."""
     if not isinstance(text, str):
         return False
     if not text:
@@ -146,8 +143,8 @@ def contains_dynamic_expression(text: str) -> bool:
 
 
 def split_top_level_commas(text: str) -> list[str]:
-    """Split `text` on commas outside any `(...)` or `[...]`, dropping empty pieces."""
-    # Kodi nests commas inside calls and macros, so a plain str.split(',') corrupts them.
+    """Split on the commas outside any (...) or [...], dropping empty pieces."""
+    # Kodi nests commas inside calls and macros, so a plain split corrupts them
     parts: list[str] = []
     buf: list[str] = []
     depth = 0
@@ -173,12 +170,7 @@ _EXP_PATTERN = re.compile(r"\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
 
 def flatten_expressions(text: str, expression_map: dict[str, str],
                         _resolved: Optional[list[str]] = None) -> tuple[str, set[str]]:
-    """Expand `$EXP[name]` recursively; returns the text and any undefined names.
-
-    Mirrors CGUIIncludes::FlattenExpression (GUIIncludes.cpp:213-242). Undefined
-    names are left in place, not erased as Kodi does (GUIIncludes.cpp:663), so a
-    caller can tell "no such expression" from a genuinely empty body.
-    """
+    """Expand $EXP per CGUIIncludes::FlattenExpression, keeping unknown names for the caller."""
     if not text:
         return text, set()
 
@@ -209,9 +201,8 @@ _KEYWORD_MACRO_RE = re.compile(
 
 
 def _kodi_macro_mask(text: str) -> set:
-    """Indices that lie inside a `$KEYWORD[...]` macro."""
-    # ReplaceLocalize runs before booleans parse (GUIInfoManager.cpp:11441), so these
-    # brackets never reach the operator logic; masking $INFO/$VAR too keeps hovers whole.
+    """Indices that lie inside a $KEYWORD[...] macro."""
+    # Kodi replaces these before the boolean parses, so their brackets are never operators
     masked: set = set()
     pos = 0
     while pos < len(text):
@@ -234,10 +225,8 @@ def _kodi_macro_mask(text: str) -> set:
 
 
 def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
-    """Smallest Kodi boolean sub-expression enclosing `cursor_offset`."""
-    # Operators are exactly [ ] ! + | (InfoExpression.cpp:125-139); parens count as depth
-    # so a click inside Function(args) returns the whole call. A leading ! must stay
-    # attached, or the boolean sent to Kodi carries the opposite truth value.
+    """Smallest Kodi boolean sub-expression around the offset, its leading ! included."""
+    # operators are [ ] ! + | (InfoExpression::GetOperator); parens hold a call together
     if not line_text:
         return ""
     n = len(line_text)
@@ -296,7 +285,7 @@ def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
 
 
 def get_param_names_in_context(include_node, xpath_pattern: str) -> set[str]:
-    """Param names used where `xpath_pattern` matches, which is what tells a control id from a label."""
+    """Param names used where the xpath matches, which is what tells a control id from a label."""
     if include_node is None:
         return set()
 
