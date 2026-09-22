@@ -16,15 +16,14 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# Extends the engine's own implementations via super(); InfoProvider lists this
-# before CheckerMixin, so the MRO is unchanged.
+# InfoProvider lists this before CheckerMixin, so super() reaches the engine
 class NavigationMixin(CheckerMixin):
     """Handles jump-to-definition for fonts, includes, colors, labels."""
 
     addon: Any
 
     def go_to_tag(self, keyword, folder):
-        """Jump to a definition by ref name or label id."""
+        """Get "path:line" of the include, font, color, label id or file the keyword names."""
         if not self.addon or not keyword:
             return False
         kw = str(keyword).strip()
@@ -51,7 +50,7 @@ class NavigationMixin(CheckerMixin):
                 path = (node.get("file") or "").strip()
                 if path and os.path.basename(path).lower() not in ("font.xml", "fonts.xml"):
                     return "%s:%s" % (path, int(node.get("line") or 0))
-                break  # found matching font; try resolving include below
+                break
 
         if font_node:
             for inc in self._get_includes_for_folder(folder):

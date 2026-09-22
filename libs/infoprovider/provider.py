@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 
 class InfoProvider(LoaderMixin, TooltipMixin, NavigationMixin, CheckerMixin):
+    """Project-wide facade: loading, hovers, navigation and checks over one addon."""
+
     def __init__(self):
         self.addon = None
         self.template_root = None

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoaderMixin:
-    """Handles loading Kodi data, addon initialization, and settings."""
+    """Loads the bundled Kodi data for a release and opens the addon under it."""
 
     addon: Any
     template_root: Any
@@ -36,7 +36,7 @@ class LoaderMixin:
     def load_data(self, kodi_version="omega"):
         """Load control templates (controls.xml) and builtins/conditions (data.xml)."""
         try:
-            import sublime  # packaged load via Sublime API
+            import sublime
 
             controls = sublime.load_resource(
                 f"Packages/KodiDevKit/data/{kodi_version}/controls.xml"
@@ -118,10 +118,7 @@ class LoaderMixin:
             }
 
     def init_addon(self, path):
-        """
-        Scan addon folder and parse skin content etc.
-        If any XML is broken, stop immediately and set _fatal_xml_error.
-        """
+        """Open the addon at the path and parse every window file, stopping at broken XML."""
         from lxml.etree import XMLSyntaxError
 
         self.addon = None
@@ -158,6 +155,7 @@ class LoaderMixin:
                 return
 
     def load_settings(self, settings):
+        """Take the plugin settings and the Kodi path they name."""
         self.settings = settings
         self.kodi_path = settings.get("kodi_path")
         logger.info("kodi path: %s", self.kodi_path)

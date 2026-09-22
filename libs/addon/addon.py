@@ -1,4 +1,4 @@
-"""KodiDevKit Sublime Text plugin: base addon model."""
+"""Kodi addon model shared by the skin and python-addon paths."""
 
 from __future__ import annotations
 
@@ -21,13 +21,7 @@ SETTINGS_FILE = 'kodidevkit.sublime-settings'
 class Addon(object):
     """A Kodi addon: addon.xml metadata, language files, xml folders."""
 
-    # Single source of truth for supported Kodi releases.
-    # When the next Kodi version is cut, append a new dict here.
-    # `github_ref` is consumed by `scripts/update_kodi_refs.py` to fetch
-    # bundled snapshots of Kodi-core `colors.xml` / `strings.po`. Syntax:
-    #   "release:<glob>"    - latest stable release tag (e.g. "release:21.*-Omega")
-    #   "prerelease:<glob>" - latest release tag, prereleases allowed
-    #   "branch:<name>"     - that branch's HEAD (e.g. "branch:master")
+    # github_ref syntax is parsed by scripts/update_kodi_refs.py _resolve_ref
     RELEASES = [
         {"name": "omega", "gui_version": "5.17.0", "github_ref": "release:21.*-Omega"},
         {"name": "piers", "gui_version": "5.18.0", "github_ref": "branch:master"},
@@ -74,17 +68,11 @@ class Addon(object):
         self.update_labels()
 
     def _release_from_addon_xml(self) -> str | None:
-        """Release implied by addon.xml, or None when it carries no usable signal.
-
-        Every release since Matrix declares xbmc.python 3.0.1, so that import
-        cannot tell them apart. Only skins can answer, from their xbmc.gui
-        version, and they override this.
-        """
+        """Release addon.xml implies; None here, only a skin's xbmc.gui version can tell."""
         return None
 
     def _resolve_release(self) -> str:
-        """Kodi release this project targets: explicit setting, then addon.xml,
-        then the newest supported release."""
+        """Kodi release this project targets: the setting, else addon.xml, else the newest."""
         override = str(self.settings.get("kodi_release") or "").strip().lower()
         if override:
             if any(item["name"] == override for item in self.RELEASES):
@@ -95,11 +83,11 @@ class Addon(object):
 
     @property
     def default_xml_folder(self):
-        """returns the fallback xml folder as a string"""
+        """The first xml folder found, used as the fallback."""
         return self.xml_folders[0]
 
     def load_xml_folders(self):
-        """find and load skin xml folder if existing"""
+        """Record the Default/720p or 1080i skin folder when the addon has one."""
         paths = [os.path.join(self.path, "resources", "skins", "Default", "720p"),
                  os.path.join(self.path, "resources", "skins", "Default", "1080i")]
         folder = utils.check_paths(paths)
@@ -108,7 +96,7 @@ class Addon(object):
 
     @property
     def lang_path(self):
-        """returns the add-on language folder path"""
+        """The `resources/language` folder."""
         return os.path.join(self.path, "resources", "language")
 
     @property
@@ -118,7 +106,7 @@ class Addon(object):
 
     @property
     def primary_lang_folder(self):
-        """returns default language folder (first one from settings file)"""
+        """First language folder from settings, created on disk if missing."""
         lang_folders = self.settings.get("language_folders")
         if not lang_folders:
             lang_folders = ["resource.language.en_gb"]
@@ -130,12 +118,12 @@ class Addon(object):
 
     @property
     def media_path(self):
-        """returns the add-on media folder path"""
+        """The skin's `Default/media` folder."""
         return os.path.join(self.path, "resources", "skins", "Default", "media")
 
     @staticmethod
     def by_project(path, settings):
-        """factory, return proper instance based on addon.xml"""
+        """Build a `Skin` or plain `Addon` for the project, decided by the xbmc.python import."""
         xml_file = os.path.join(path, "addon.xml")
         root = utils.get_root_from_file(xml_file)
         if root is None or root.find(".//import[@addon='xbmc.python']") is None:
@@ -145,17 +133,13 @@ class Addon(object):
             return Addon(path=path, settings=settings)
 
     def update_labels(self):
-        """get addon po files and update po files list"""
+        """Reload `po_files` from the language folder."""
         self.po_files = self.get_po_files(self.lang_path)
 
     def get_po_files(self, folder):
-        """
-        Return PO files from Kodi language add-ons under `folder`.
-        Only resource.language.* is considered. No 'English' fallback.
-        """
+        """PO files of the configured resource.language.* add-on, no English fallback."""
         po_files = []
 
-        # Resolve preferred language to resource.language.<code>
         lang = (self.settings.get("language") or "").strip()
         if lang and not lang.startswith("resource.language."):
             lang = lang.lower().replace("-", "_")
@@ -177,7 +161,7 @@ class Addon(object):
         return po_files
 
     def update_xml_files(self):
-        """update list of all include and window xmls"""
+        """Rebuild `window_files`: every .xml per folder except Font.xml."""
         self.window_files = {}
         for path in self.xml_folders:
             xml_folder = os.path.join(self.path, path)
@@ -192,7 +176,7 @@ class Addon(object):
                     self.window_files[path].append(xml_file)
 
     def create_new_label(self, word, filepath):
-        """adds a label to the first pofile from settings (or creates new one if non-existing)"""
+        """Add a label to the first PO file, creating it when none exists; returns the new id."""
         if not self.po_files:
             po_file = utils.create_new_po_file(os.path.join(self.primary_lang_folder, "strings.po"))
             po_file.save()
@@ -221,24 +205,21 @@ class Addon(object):
         return label_id
 
     def attach_occurrence_to_label(self, label_id, rel_path):
-        """Add `rel_path` as an occurrence on the PO entry for `label_id`."""
+        """Record the file as an occurrence on the label's PO entry, skin-range ids only."""
         if 31000 <= int(label_id[1:]) < 33000:
             entry = self.po_files[0].find(label_id, by="msgctxt")
             entry.occurrences.append((rel_path, None))
             self.po_files[0].save()
 
     def translate_path(self, path):
-        """return translated path for textures"""
+        """Absolute path of a texture, resolving special://skin/ or the media folder."""
         if path.startswith("special://skin/"):
             return os.path.join(self.path, path.replace("special://skin/", ""))
         else:
             return os.path.join(self.media_path, path)
 
     def return_node(self, keyword=None, folder=False):
-        """Look up `keyword` as a font or include in `folder`.
-
-        Strips any param tail (`Name,arg1,arg2` -> `Name`).
-        """
+        """Look up a font or include by name in the folder, ignoring any param tail."""
         if not keyword or not folder:
             return None
 
@@ -259,14 +240,14 @@ class Addon(object):
         pass
 
     def get_xml_files(self):
-        """yields absolute paths of all window files"""
+        """Get the absolute path of every window file, yielded one at a time."""
         if self.xml_folders:
             for folder in self.xml_folders:
                 for xml_file in self.window_files[folder]:
                     yield os.path.join(self.path, folder, xml_file)
 
     def bump_version(self, version):
-        """bump addon.xml version and create changelog entry"""
+        """Bump the version in addon.xml and open a blank changelog entry for it."""
         self.root.attrib["version"] = version
         utils.save_xml(self.xml_file, self.root)
         with open(self.changelog_path, "r") as f:
@@ -276,15 +257,12 @@ class Addon(object):
             changelog_file.write("\n".join(contents))
 
     def get_constants(self, folder):
-        """returns empty list because Kodi python add-ons do not support constants yet"""
+        """Get constants; always empty, python add-ons have none."""
         return []
 
     @staticmethod
     def _safe_version_tuple(text):
-        """
-        Return a comparable tuple for dotted version strings.
-        Non-numeric segments terminate parsing; invalid inputs return None.
-        """
+        """Tuple from a dotted version, cut at the first non-numeric part; None if empty."""
         if not text:
             return None
         parts = []

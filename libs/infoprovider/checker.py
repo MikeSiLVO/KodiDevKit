@@ -33,13 +33,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# The Kodi-core snapshot is large and read-only, and the editor re-enters
-# get_po_files on every hover. Keyed by mtime so a refreshed snapshot reloads.
+# every hover re-enters get_po_files; keyed by mtime so a refreshed snapshot reloads
 _CORE_PO_CACHE: dict = {}
 
 
 def _core_po(path):
-    """Parsed Kodi-core strings.po for `path`, reusing the last parse."""
+    """Parsed Kodi-core strings.po at the path, reusing the last parse."""
     try:
         stamp = os.path.getmtime(path)
     except OSError:
@@ -66,7 +65,7 @@ class CheckerMixin:
     _variable_cache: dict
 
     def get_po_files(self) -> list:
-        """Return the skin's PO files plus Kodi-core `strings.po` (from `kodi_path` or bundled snapshot)."""
+        """Get the skin's PO files plus Kodi-core strings.po from kodi_path or the snapshot."""
         from ..kodi_refs import kodi_strings_po
 
         po_files = []
@@ -93,13 +92,13 @@ class CheckerMixin:
         return po_files
 
     def get_color_labels(self) -> set:
-        """Return the addon's color-name set (empty if no addon)."""
+        """Get the color names the skin defines, empty without an addon."""
         if self.addon and hasattr(self.addon, "color_labels"):
             return self.addon.color_labels
         return set()
 
     def _get_includes_for_folder(self, folder: str) -> list:
-        """Flatten the addon's `include_map`/`variable_map`/`default_map` for `folder` into one list of `{name, type, file, line, content, node, [params]}` dicts."""
+        """Flatten the folder's include, variable and default maps into one list of rows."""
         if not self.addon:
             return []
 
@@ -139,10 +138,11 @@ class CheckerMixin:
         return result
 
     def _no_issues(self, kind: str):
+        """Single placeholder row saying the check found nothing."""
         return [{"message": f"No {kind} issues found", "file": "", "line": 0}]
 
     def resolve_xml(self, path_or_root, *, folder=None, strict=False):
-        """Resolved copy of `path_or_root`; without `strict` a parse failure returns the tree unresolved."""
+        """Include-resolved copy of a tree or file; without strict, failures fall back."""
         from ..skin import Skin
 
         if hasattr(path_or_root, "tag"):
@@ -172,19 +172,17 @@ class CheckerMixin:
             return root
 
         try:
-            # Make deep copy to avoid modifying cached/original tree
-            # (kodi_resolve modifies tree in-place per Kodi's CGUIIncludes::Resolve)
+            # resolve() mutates in place, as CGUIIncludes::Resolve does
             resolved_root = copy.deepcopy(root)
             sk.resolver.resolve(resolved_root, f)
             return resolved_root
         except Exception:
             if strict:
                 raise
-            # Fall back to unexpanded tree for display use-cases
             return root
 
     def get_check_listitems(self, check_type, progress_callback=None):
-        """Dispatch the named `check_type` and return its issue rows; runtime-generated files are filtered out."""
+        """Get the rows of the named check, minus those in runtime-generated files."""
         checks_with_progress = {
             "general": lambda: self.check_values(progress_callback=progress_callback),
             "file": lambda: self.check_values(progress_callback=progress_callback),
@@ -197,7 +195,6 @@ class CheckerMixin:
             "font": self.check_fonts,
             "label": self.check_labels,
             "id": self.check_ids,
-            # keep while image checker is under active development
             "image": getattr(
                 self,
                 "check_images",
@@ -235,17 +232,17 @@ class CheckerMixin:
         return cached
 
     def _muted(self, category, issues):
-        """Drop the issues in `category` that a `kdk-ignore` comment mutes."""
+        """Drop the category's issues that a `kdk-ignore` comment mutes."""
         if not self.addon or not issues:
             return issues
         return self.get_suppressions().filter(category, issues)
 
     def get_validation_index(self, progress_callback=None):
-        """Return the cached validation index, building it on first access."""
+        """Get the cached validation index, building it on first access."""
         if not self.addon:
             return None
 
-        # Check if addon supports validation index (real Skin class does, test mocks might not)
+        # test mocks may lack the index
         if not hasattr(self.addon, 'validation_index'):
             return None
         if not hasattr(self.addon, 'index_builder'):
@@ -332,15 +329,12 @@ class CheckerMixin:
 
 
     def check_values(self, progress_callback=None):
-        """
-        Apply check_file to all XML files in the addon.
-        Validates what the skin author actually wrote (unexpanded source).
-        """
+        """Run check_file over every XML file, on the unexpanded source the author wrote."""
         if not self.addon:
             return []
 
         listitems = []
-        xml_files = list(self.addon.get_xml_files())  # Convert generator to list for len()
+        xml_files = list(self.addon.get_xml_files())
         total_files = len(xml_files)
 
         if progress_callback:
@@ -367,10 +361,10 @@ class CheckerMixin:
         return listitems
 
     def _add_issue(self, listitems, node, message, identifier="", severity=SEVERITY_WARNING):
-        """Helper to create and append validation issue dict from XML node."""
+        """Append an issue at the node's line; check_file fills in the file later."""
         issue = utils.create_issue(
             message=message,
-            file="",  # File added later in check_file()
+            file="",
             line=node.sourceline,
             type=node.tag,
             identifier=identifier or node.tag
@@ -379,7 +373,7 @@ class CheckerMixin:
         listitems.append(issue)
 
     def _validate_brackets(self, listitems, node, text):
-        """Helper to validate bracket matching in conditions."""
+        """Report an empty or unbalanced condition; returns whether the text is usable."""
         if not text:
             self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR)
             return False
@@ -392,15 +386,13 @@ class CheckerMixin:
         return True
 
     def _validate_enum_value(self, listitems, node, value, value_type, attr_name=None):
-        """Helper to validate enum values against ALLOWED_VALUES."""
+        """Report a value outside ALLOWED_VALUES for its type; returns whether it passed."""
         if value_type not in ALLOWED_VALUES:
             return True
         if utils.is_dynamic_expression(value):
             return True
 
-        # Check if this enum type should be validated case-insensitively
-        # (matches Kodi behavior: GUIControlFactory.cpp line 1124 for orientation,
-        #  XMLUtils::GetBoolean for bool types)
+        # lowercased by Kodi first (GUIControlFactory.cpp orientation, XMLUtils::GetBoolean)
         if value_type in CASE_INSENSITIVE_ENUMS:
             normalized_value = value.lower()
             if normalized_value not in ALLOWED_VALUES[value_type]:
@@ -416,28 +408,27 @@ class CheckerMixin:
         return True
 
     def _validate_variable_values(self, listitems, node, var_text, value_type, folder, tag_name=None):
-        """Check every `<value>` in a `$VAR[...]` definition against `value_type`, appending failures to `listitems`."""
+        """Check every <value> of the $VAR definition against the tag's value type."""
         var_name = utils.extract_variable_name(var_text)
         if not var_name:
-            return True  # Not a variable expression
+            return True
 
-        # The cache is built once per file in check_file() for fast lookups
         var_def = getattr(self, '_variable_cache', {}).get(var_name)
 
         if not var_def or var_def.get("node") is None:
-            return True  # Variable not found or no XML node - different check handles this
+            return True  # undefined vars are the variable check's job
 
         var_node = var_def.get("node")
         value_nodes = var_node.findall("value")
 
         if not value_nodes:
-            return True  # No values to check
+            return True
 
         all_valid = True
         for value_node in value_nodes:
             value_text = (value_node.text or "").strip()
             if not value_text:
-                continue  # Skip empty values
+                continue
 
             if utils.is_dynamic_expression(value_text):
                 continue
@@ -481,25 +472,18 @@ class CheckerMixin:
         return all_valid
 
     def _can_resolve(self) -> bool:
-        """Check if addon is a Skin with populated include maps."""
+        """Whether the addon is a Skin carrying a resolver."""
         from ..skin import Skin
         return isinstance(self.addon, Skin) and hasattr(self.addon, "resolver")
 
     def _check_file_resolved(self, root, path: str, folder: str) -> list[dict]:
-        """
-        Validate the resolved (include-expanded) tree using XmlInterpreter.
-
-        Deep-copies root, resolves via SkinResolution, then walks the
-        resolved tree checking structural correctness at every nesting level.
-        Skips the expensive deepcopy+resolve for files without includes.
-        """
+        """XmlInterpreter issues over the expanded tree; files without includes are walked as-is."""
         from ..skin import Skin
 
         sk = self.addon
         if not isinstance(sk, Skin):
             return []
 
-        # Skip expensive deepcopy+resolve for static files
         if utils.tree_needs_expansion(root):
             try:
                 walk_root = copy.deepcopy(root)
@@ -525,14 +509,7 @@ class CheckerMixin:
         return issues
 
     def check_file(self, path):
-        """
-        Validate original (unexpanded) XML file for errors.
-        This checks what the skin author actually wrote, before include expansion.
-
-        For skin addons, also runs the resolved-tree interpreter and merges
-        issues with deduplication by (line, message).
-        """
-        # Skip excluded paths from settings (returns None, not [])
+        """Validate one file as written plus the resolved pass for skins; None when excluded."""
         exclude = set(self.settings.get("validation_exclude", ["shortcuts"]))
         path_parts = set(path.replace("\\", "/").split("/"))
         if exclude & path_parts:
@@ -580,8 +557,7 @@ class CheckerMixin:
                 }
             )
 
-        # When interpreter handles resolved tree, skip value checks here to avoid
-        # false positives from $PARAM/$VAR placeholders or bare constant names in unresolved XML
+        # resolved pass checks values; unresolved $PARAM, $VAR and constants would false-positive
         skip_value_checks = self._can_resolve()
 
         seen_singletons = {}
@@ -654,8 +630,7 @@ class CheckerMixin:
                     else:
                         seen.add(tag_low)
 
-            # Attribute name checks always run; value checks defer to the
-            # resolved pass when `skip_value_checks` is set.
+            # attribute names always checked; values wait for the resolved pass when it runs
             for k, v in subnode.attrib.items():
                 if k == "description":
                     continue
@@ -707,11 +682,7 @@ class CheckerMixin:
         return listitems
 
     def file_control_checks(self, root, *, file_path=None):
-        """
-        Yield (control_type, allowed_subnodes, control_node, child_node).
-
-        Optimized to run ONE xpath query per file instead of N queries per control type.
-        """
+        """Yield (control type, allowed tags, control, child) for every child of a typed control."""
         if file_path:
             logger.debug("Running file_control_checks for %s", os.path.basename(file_path))
 

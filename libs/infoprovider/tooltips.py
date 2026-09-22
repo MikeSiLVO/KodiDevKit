@@ -16,10 +16,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-# Extends the engine's own implementations via super(); InfoProvider lists this
-# before CheckerMixin, so the MRO is unchanged.
+# InfoProvider lists this before CheckerMixin, so super() reaches the engine
 class TooltipMixin(CheckerMixin):
-    """Provides tooltip/popup content for the editor."""
+    """HTML for the editor's hover popups: labels, colors, images, positions."""
 
     addon: Any
     settings: dict
@@ -27,7 +26,7 @@ class TooltipMixin(CheckerMixin):
     kodi_path: str | None
 
     def return_label(self, selection):
-        """Return formatted label for id in `selection`."""
+        """HTML rows of every translation of the label id, one per language and source."""
         tooltips = ""
         if not selection.isdigit():
             return ""
@@ -59,7 +58,7 @@ class TooltipMixin(CheckerMixin):
         return tooltips
 
     def return_addon_label(self, addon_id, label_id):
-        """Return formatted label for addon string $ADDON[addon.id label_id]."""
+        """HTML rows for an $ADDON[id label] string, read from the installed addon's PO files."""
         from .. import polib
 
         if not label_id.isdigit():
@@ -132,7 +131,7 @@ class TooltipMixin(CheckerMixin):
         return po_files
 
     def get_colors(self):
-        """get list of all colors (core + addon)"""
+        """Get every color, Kodi core first then the addon's."""
         colors = []
         if kodi.colors:
             colors.extend(kodi.colors)
@@ -175,7 +174,7 @@ class TooltipMixin(CheckerMixin):
             )
 
     def build_translate_label(self, label_id, view):
-        """Return the correct localize expression based on scope."""
+        """Localize expression for the label id, shaped for the scope under the caret."""
         if not self.addon:
             return str(label_id)
 
@@ -196,7 +195,7 @@ class TooltipMixin(CheckerMixin):
             return str(label_id)
 
     def get_image_info(self, path):
-        """Return a small HTML snippet with image properties."""
+        """HTML rows of type, dimensions and size for an image path, empty when unreadable."""
         if not self.addon:
             return ""
         imagepath = self.addon.translate_path(path)
@@ -208,7 +207,7 @@ class TooltipMixin(CheckerMixin):
 
     @staticmethod
     def get_ancestor_info(element):
-        """Collect position-ish attributes from ancestors for a quick summary."""
+        """HTML summary of the position tags found on every ancestor."""
         values = {}
         for anc in element.iterancestors():
             for sib in anc.iterchildren():

@@ -1,4 +1,4 @@
-"""PO file (gettext translation) utilities for KodiDevKit."""
+"""PO file helpers for Kodi language folders."""
 
 import time
 import logging
@@ -12,6 +12,7 @@ logger.propagate = True
 
 
 def get_po_file(po_file_path):
+    """Parsed PO file, or None when it fails to parse."""
     try:
         return pofile(po_file_path)
     except Exception:
@@ -20,7 +21,7 @@ def get_po_file(po_file_path):
 
 
 def create_new_po_file(path=None):
-    """creates a new pofile and returns it (doesnt save yet)"""
+    """Create an unsaved PO file with Kodi-style metadata."""
     po_file = polib.POFile(fpath=path)
     mail = ""
     actual_date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -39,8 +40,7 @@ def create_new_po_file(path=None):
 
 
 def convert_xml_to_po(path):
-    """convert language xmls inside `path` to .po files"""
-    # Import here to avoid circular dependency
+    """Convert a legacy strings.xml into a saved .po file beside it."""
     from ..utils.xml import get_root_from_file
 
     po_file = create_new_po_file(path)
