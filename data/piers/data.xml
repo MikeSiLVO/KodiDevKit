@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Builtins and boolean conditions Kodi 22 registers, 333 and 295 of them.
+<!-- Builtins and boolean conditions Kodi 22 registers, 333 and 298 of them.
      Maintained by hand: check new names against the registration maps in
      GUIInfoManager.cpp and xbmc/interfaces/builtins/, not against the doxygen.
 
@@ -1564,6 +1564,10 @@
             <help>True when the current ListItem is a movie set.</help>
         </item>
         <item>
+            <code>ListItem.IsDefaultVideoVersionName</code>
+            <help>True when the selected item is a video version with default name.</help>
+        </item>
+        <item>
             <code>ListItem.IsEncrypted</code>
             <help>True when the selected programme is encrypted (PVR).</help>
         </item>
@@ -2090,6 +2094,14 @@
         <item>
             <code>RetroPlayer.EmptyTray</code>
             <help>True if the selected disc state is "No disc", False if a disc is selected or the game isn't disc-based.</help>
+        </item>
+        <item>
+            <code>RetroPlayer.HasCheats</code>
+            <help>True if at least one exact filename match was discovered among the cheat packs for the currently-playing game, False otherwise. Multiple matching packs count before selection, as does a matching pack containing no usable cheat entries. Use RetroPlayer.SupportsCheats to check the game client's cheat API capability independently of file matches.</help>
+        </item>
+        <item>
+            <code>RetroPlayer.SupportsCheats</code>
+            <help>True if the currently-playing game client implements the cheat API, False otherwise. This is independent of whether a matching cheat file exists and controls the Cheats OSD item's visibility. Use RetroPlayer.HasCheats to check for discovered matching cheat files.</help>
         </item>
         <item>
             <code>RetroPlayer.SupportsEject</code>
