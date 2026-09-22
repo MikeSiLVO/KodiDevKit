@@ -183,8 +183,8 @@ class ValidationFont:
                     elif not utils.is_dynamic_expression(sz):
                         try:
                             sz_val = int(sz)
-                            if sz_val <= 0:
-                                issues.append(row(f"Font size must be a positive integer, got {sz}", f["file"], f["line"]))
+                            if sz_val < 0:
+                                issues.append(row(f"Font size must not be negative, got {sz}", f["file"], f["line"]))
                         except Exception:
                             issues.append(row(f"Invalid font size '{sz}' for '{nm or '?'}'", f["file"], f["line"]))
 

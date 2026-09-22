@@ -17,6 +17,7 @@ from ..validation import ValidationFileCheck
 from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan_skin
 from ..validation.interpreter import XmlInterpreter
+from ..validation.hierarchy import ALL_LAYOUT_TAGS
 from ..validation.constants import (
     BRACKET_TAGS,
     INCLUDE_DEFINITION_TAGS,
@@ -399,7 +400,11 @@ class CheckerMixin:
         else:
             if value not in ALLOWED_VALUES[value_type]:
                 location = f"{attr_name} attribute" if attr_name else node.tag
-                self._add_issue(listitems, node, f"invalid value for {location}: {value} (must be lowercase)", value, severity=SEVERITY_ERROR)
+                if value.lower() in ALLOWED_VALUES[value_type]:
+                    detail = "must be lowercase"
+                else:
+                    detail = "allowed: " + ", ".join(sorted(ALLOWED_VALUES[value_type]))
+                self._add_issue(listitems, node, f"invalid value for {location}: {value} ({detail})", value, severity=SEVERITY_ERROR)
                 return False
         return True
 
@@ -644,6 +649,9 @@ class CheckerMixin:
                     continue
                 value_type = subnodes[subnode.tag][k]
                 if value_type in ["int", "position"]:
+                    # CGUIListItemLayout falls back to the container size for a non-numeric size
+                    if subnode.tag in ALL_LAYOUT_TAGS and v == "auto":
+                        continue
                     vv = v.rstrip("%r") if value_type == "position" else v
                     number_value = utils.extract_number_value(v)
                     if number_value:

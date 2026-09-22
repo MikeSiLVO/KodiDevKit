@@ -186,7 +186,7 @@ class ValidationInclude:
                 if root is None:
                     continue
 
-                for node in root.xpath(".//include"):
+                for node in root.xpath(".//include[not(@name)]"):
                     if node.text:
                         name = node.text
                         if "file" in node.attrib:

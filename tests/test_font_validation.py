@@ -367,8 +367,31 @@ class TestFontValidation(unittest.TestCase):
         issues = provider.check_fonts()
 
         # Should detect invalid size
-        has_size_error = any("size" in issue["message"].lower() and "positive" in issue["message"].lower() for issue in issues)
+        has_size_error = any("size" in issue["message"].lower() and "negative" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_size_error, "Should detect invalid font size")
+
+    def test_zero_font_size_allowed(self):
+        """Kodi does not reject a size 0 font, so it is not flagged."""
+        self.create_font_file("font.ttf")
+
+        fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<fonts>
+    <fontset id="Default" unicode="true">
+        <font>
+            <name>font13</name>
+            <filename>font.ttf</filename>
+            <size>0</size>
+        </font>
+    </fontset>
+</fonts>
+"""
+        self.create_fonts_xml(fonts_xml)
+        provider = self.init_provider()
+
+        issues = provider.check_fonts()
+
+        size_issues = [i for i in issues if "size" in i["message"].lower()]
+        self.assertEqual(size_issues, [])
 
     def test_duplicate_font_name_in_fontset(self):
         """Test detection of duplicate font name within a fontset."""
