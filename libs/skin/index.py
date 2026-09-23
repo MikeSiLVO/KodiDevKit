@@ -8,6 +8,7 @@ import json
 import time
 import logging
 from pathlib import Path
+import threading
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 from ..utils.xml import get_root_from_file, tree_needs_expansion
@@ -22,6 +23,7 @@ _LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[([0-9].*?)\]")
 _INFOLABEL_WHITELIST = None
 _CONTROL_REGEX_PATTERN = None
 _EXCLUDED_FUNCTIONS = None
+_REGEX_LOCK = threading.Lock()
 
 
 def _load_infolabel_whitelist():
@@ -46,9 +48,16 @@ def _load_infolabel_whitelist():
 def _build_control_regex():
     """Build the Function(123) regex once, with the functions whose number is no control id."""
     global _CONTROL_REGEX_PATTERN, _EXCLUDED_FUNCTIONS
-    if _CONTROL_REGEX_PATTERN is not None and _EXCLUDED_FUNCTIONS is not None:
-        return _CONTROL_REGEX_PATTERN
+    with _REGEX_LOCK:
+        if _CONTROL_REGEX_PATTERN is None or _EXCLUDED_FUNCTIONS is None:
+            _EXCLUDED_FUNCTIONS = _excluded_functions()
+            _CONTROL_REGEX_PATTERN = r'(\w+(?:\.\w+)?)\(([0-9]+)\)'
+            logger.debug(f"Built control regex with {len(_EXCLUDED_FUNCTIONS)} excluded functions")
+    return _CONTROL_REGEX_PATTERN
 
+
+def _excluded_functions():
+    """Function names whose integer argument is not a control id."""
     whitelist = _load_infolabel_whitelist()
 
     # the window_bools map in GUIInfoManager.cpp, lowercased like every lookup
@@ -68,14 +77,7 @@ def _build_control_regex():
         excluded_functions.add(func_entry['function'].lower())
 
     excluded_functions.add('listitem')
-
-    _CONTROL_REGEX_PATTERN = r'(\w+(?:\.\w+)?)\(([0-9]+)\)'
-
-    logger.debug(f"Built control regex with {len(excluded_functions)} excluded functions")
-
-    _EXCLUDED_FUNCTIONS = excluded_functions
-
-    return _CONTROL_REGEX_PATTERN
+    return excluded_functions
 
 
 class SkinIndex:

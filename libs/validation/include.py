@@ -130,7 +130,6 @@ class ValidationInclude:
 
         for pattern in RUNTIME_INCLUDE_PATTERNS:
             if pattern.match(include_name):
-                logger.debug(f"Runtime include pattern match: {include_name}")
                 return True
 
         return False

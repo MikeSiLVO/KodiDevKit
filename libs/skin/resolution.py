@@ -184,7 +184,7 @@ class SkinResolution:
             # unknown name or a cycle stays in place; the scan moves on
             if include_def is None or inc_name in path:
                 if include_def is None and inc_name:
-                    logger.warning("Skin has invalid include: %s", inc_name)
+                    logger.debug("Skin has invalid include: %s", inc_name)
                 include_node = next(include_node.itersiblings("include"), None)
                 continue
 
