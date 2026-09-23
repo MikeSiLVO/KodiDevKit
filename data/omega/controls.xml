@@ -30,8 +30,8 @@
 
     -->
     <control type="group" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <enable>condition</enable>
@@ -58,7 +58,7 @@
     </control>
     <control type="label" id="int">
         <width min="int" max="int">int</width>
-        <height>int</height>
+        <height max="int">int</height>
         <include>common</include>
         <font>font</font>
         <textcolor>color</textcolor>
@@ -81,8 +81,8 @@
         <scrollsuffix>label</scrollsuffix>
     </control>
     <control type="fadelabel" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <scroll>bool</scroll>
         <scrollspeed>int</scrollspeed>
@@ -106,8 +106,8 @@
         <resetonlabelchange>bool</resetonlabelchange>
     </control>
     <control type="scrollbar" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
@@ -124,7 +124,7 @@
     </control>
     <control type="button" id="int">
         <width min="int" max="int">int</width>
-        <height>int</height>
+        <height max="int">int</height>
         <include>common</include>
         <include>button_common</include>
         <include>nav_common</include>
@@ -138,10 +138,10 @@
         <oninfo condition="condition">builtin</oninfo>
     </control>
     <control type="colorbutton" id="int">
-        <width min="int" max="int">int</width>
-        <height>int</height>
-        <colorwidth min="int" max="int">int</colorwidth>
-        <colorheight min="int" max="int">int</colorheight>
+        <width max="int">int</width>
+        <height max="int">int</height>
+        <colorwidth>int</colorwidth>
+        <colorheight>int</colorheight>
         <colorposx>int</colorposx>
         <colorposy>int</colorposy>
         <colorbox>color</colorbox>
@@ -160,8 +160,8 @@
         <oninfo condition="condition">builtin</oninfo>
     </control>
     <control type="image" id="int">
-        <width min="int" max="int">int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <colordiffuse>color</colordiffuse>
         <fadetime>int</fadetime>
@@ -174,8 +174,8 @@
         <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
     </control>
     <control type="multiimage" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <imagepath background="bool" diffuse="path" colordiffuse="color" fallback="path" border="coords">path</imagepath>
         <colordiffuse>color</colordiffuse>
@@ -188,8 +188,8 @@
         <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
     </control>
     <control type="radiobutton" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <include>button_common</include>
@@ -216,8 +216,8 @@
         <radioheight>int</radioheight>
     </control>
     <control type="togglebutton" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width min="int" max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <include>button_common</include>
@@ -234,8 +234,8 @@
         <oninfo condition="condition">builtin</oninfo>
     </control>
     <control type="spincontrol" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <colordiffuse>color</colordiffuse>
@@ -259,8 +259,8 @@
         <showonepage>bool</showonepage>
     </control>
     <control type="spincontrolex" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <include>button_common</include>
@@ -280,8 +280,8 @@
         <onunfocus condition="condition">builtin</onunfocus>
     </control>
     <control type="slider" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <texturesliderbackground colordiffuse="color" border="coords" diffuse="path">path</texturesliderbackground>
@@ -297,8 +297,8 @@
         <orientation>orientation</orientation>
     </control>
     <control type="sliderex" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <include>button_common</include>
@@ -312,8 +312,8 @@
         <onunfocus condition="condition">builtin</onunfocus>
     </control>
     <control type="mover" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturefocus>
         <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturenofocus>
@@ -321,8 +321,8 @@
         <pulseonselect>bool</pulseonselect>
     </control>
     <control type="gamecontroller" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <texture border="coords" flipy="bool" flipx="bool" background="bool" colordiffuse="color" diffuse="path" fallback="path" infill="bool">path</texture>
         <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
@@ -333,8 +333,8 @@
         <peripherallocation>label</peripherallocation>
     </control>
     <control type="progress" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <reveal>bool</reveal>
         <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path">path</texturebg>
@@ -347,8 +347,8 @@
         <info2>info</info2>
     </control>
     <control type="ranges" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <reveal>bool</reveal>
         <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path">path</texturebg>
@@ -360,7 +360,7 @@
         <info>info</info>
     </control>
     <control type="textbox" id="int">
-        <width>int</width>
+        <width max="int">int</width>
         <height min="int" max="int">int</height>
         <include>common</include>
         <colordiffuse>color</colordiffuse>
@@ -383,8 +383,8 @@
         <info>label</info>
     </control>
     <control type="rss" id="int">
-        <width min="int" max="int">int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <scrollspeed>int</scrollspeed>
         <include>common</include>
         <font>font</font>
@@ -399,23 +399,23 @@
         <hitrectcolor>color</hitrectcolor>
     </control>
     <control type="renderaddon" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
     </control>
     <control type="visualisation" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
     </control>
     <control type="videowindow" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
     </control>
     <control type="gamewindow" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <videofilter>label</videofilter>
         <stretchmode>label</stretchmode>
@@ -423,8 +423,8 @@
         <pixels>label</pixels>
     </control>
     <control type="resize" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturefocus>
         <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturenofocus>
@@ -432,8 +432,8 @@
         <pulseonselect>bool</pulseonselect>
     </control>
     <control type="edit" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <include>button_common</include>
@@ -442,8 +442,8 @@
         <password>bool</password>
     </control>
     <control type="epggrid" id="int">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
         <pagecontrol>int</pagecontrol>
@@ -506,8 +506,8 @@
         <include content="include" file="path" condition="condition">include</include>
     </include>
     <include name="list_common">
-        <width>int</width>
-        <height>int</height>
+        <width max="int">int</width>
+        <height max="int">int</height>
         <onup condition="condition">builtin</onup>
         <ondown condition="condition">builtin</ondown>
         <onleft condition="condition">builtin</onleft>

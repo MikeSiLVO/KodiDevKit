@@ -378,8 +378,7 @@ class XmlInterpreter:
 
     @staticmethod
     def _looks_like_unresolved(value: str) -> bool:
-        """Check if value looks like an unresolved constant/variable name (e.g. from script.skinvariables)."""
-        # Bare alphanumeric + underscore/hyphen, no spaces, not a number
+        """True when the value reads as an unresolved constant or variable name, not a number."""
         return bool(value) and not _is_number(value) and all(c.isalnum() or c in "_-." for c in value)
 
     def _validate_typed_attr(self, node, attr_name: str, value: str, value_type: str):
@@ -421,7 +420,23 @@ class XmlInterpreter:
                 self._walk_map(child)
             elif child.tag == "default":
                 self._walk_default(child)
+            elif child.tag == "include":
+                self._walk_include_definition(child)
         self._context_stack.pop()
+
+    def _walk_include_definition(self, node):
+        """Report text beside a <definition>, which Kodi drops (GUIIncludes.cpp:211-213)."""
+        children = list(node)
+        if not any(c.tag == "definition" for c in children):
+            return
+        texts = [(node.text, children[0])]
+        texts += [(c.tail, children[i + 1] if i + 1 < len(children) else c) for i, c in enumerate(children)]
+        for text, anchor in texts:
+            if text and text.strip():
+                self._add_issue(
+                    anchor, SEVERITY_WARNING,
+                    f"Text outside <definition> in include '{node.get('name')}' is ignored: {text.strip()[:40]}",
+                )
 
     def _walk_default(self, node):
         """Validate a <default type="X"> block as a control of type X, at its

@@ -74,6 +74,33 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <enable>false</enable>
 </control>""")
 
+    def test_auto_max_on_any_control(self):
+        """Every control takes an auto size from max, so max is valid everywhere."""
+        self._assert_clean("""
+<control type="image">
+    <width max="300">auto</width>
+</control>
+<control type="list">
+    <height max="570">auto</height>
+</control>""")
+
+    def test_min_only_where_kodi_reads_it(self):
+        """Only grouplist, label, buttons and textbox use min; elsewhere it still warns."""
+        issues = self._issues("""
+<control type="list">
+    <height min="100" max="570">auto</height>
+</control>
+<control type="image">
+    <width min="10">auto</width>
+</control>
+<control type="colorbutton">
+    <colorwidth min="10">40</colorwidth>
+</control>""", "piers")
+        found = sorted(i["message"] for i in issues if "invalid attribute" in i["message"])
+        self.assertEqual(found, ["invalid attribute for <colorwidth>: min",
+                                 "invalid attribute for <height>: min",
+                                 "invalid attribute for <width>: min"])
+
     def test_group_enable(self):
         """A disabled group cannot take focus, so enable is meaningful."""
         self._assert_clean("""
@@ -148,6 +175,28 @@ s        <definition>
     def tearDown(self):
         """Remove the temporary skin."""
         shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_stray_text_reported_where_it_sits(self):
+        """Text beside the definition is reported once, on the line it sits on."""
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.load_data("piers")
+        provider.init_addon(self.test_dir)
+        issues = [i for i in provider.check_values() if "outside <definition>" in i["message"]]
+        self.assertEqual(len(issues), 1, issues)
+        self.assertEqual(issues[0]["line"], 4)
+        self.assertIn("ignored: s", issues[0]["message"])
+
+    def test_text_only_include_not_reported(self):
+        """Without a definition the text is the include's body, spliced in as a value."""
+        with open(os.path.join(self.test_dir, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\n<includes>\n'
+                    '    <include name="Pad">20</include>\n</includes>')
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.load_data("piers")
+        provider.init_addon(self.test_dir)
+        self.assertEqual([i for i in provider.check_values() if "outside <definition>" in i["message"]], [])
 
     def test_stray_text_not_reported_as_undefined(self):
         """The definition's text must not show up as an undefined include."""
