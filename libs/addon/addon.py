@@ -168,7 +168,7 @@ class Addon(object):
             self.window_files[path] = []
             if not os.path.exists(xml_folder):
                 return []
-            for xml_file in os.listdir(xml_folder):
+            for xml_file in sorted(os.listdir(xml_folder)):
                 filename = os.path.basename(xml_file)
                 if not filename.endswith(".xml"):
                     continue

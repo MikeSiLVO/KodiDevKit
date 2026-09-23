@@ -166,6 +166,7 @@ class SkinIndex:
                 for xml_file in self.skin.window_files.get(folder, [])
             ]
 
+            results_by_path = {}
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_path = {
                     executor.submit(self._process_window_file, path, folder): path
@@ -188,43 +189,7 @@ class SkinIndex:
                             progress_callback(f"Parsed {xml_file} ({file_count}/{total_files})")
                             last_progress_time = time.time()
 
-                        results = future.result()
-                        if results:
-                            for font_name, usages in results['fonts_used'][folder].items():
-                                if font_name not in index['fonts_used'][folder]:
-                                    index['fonts_used'][folder][font_name] = []
-                                index['fonts_used'][folder][font_name].extend(usages)
-
-                            for label_id, usages in results['labels_used'][folder].items():
-                                if label_id not in index['labels_used'][folder]:
-                                    index['labels_used'][folder][label_id] = []
-                                index['labels_used'][folder][label_id].extend(usages)
-
-                            index['labels_untranslated'].extend(results['labels_untranslated'])
-
-                            index['ids_defined'][folder].update(results['ids_defined'][folder])
-                            for ref_id, usages in results['ids_referenced'][folder].items():
-                                if ref_id not in index['ids_referenced'][folder]:
-                                    index['ids_referenced'][folder][ref_id] = []
-                                index['ids_referenced'][folder][ref_id].extend(usages)
-
-                            for window_id in results['window_ids'][folder]:
-                                if window_id not in index['window_ids'][folder]:
-                                    index['window_ids'][folder].append(window_id)
-
-                            window_file = os.path.basename(path)
-                            index['window_includes'][folder][window_file] = results['window_includes']
-                            index['window_base_ids'][folder][window_file] = results['base_ids']
-                            if results.get('root_tag') != 'window':
-                                index['non_window_files'][folder].add(window_file)
-
-                            if 'view_ids' in results:
-                                index['view_ids'][folder].update(results['view_ids'])
-
-                            for img_path, usages in results.get('images_referenced', {}).get(folder, {}).items():
-                                if img_path not in index['images_referenced'][folder]:
-                                    index['images_referenced'][folder][img_path] = []
-                                index['images_referenced'][folder][img_path].extend(usages)
+                        results_by_path[path] = future.result()
 
                     if not done and progress_callback:
                         elapsed = time.time() - last_progress_time
@@ -238,6 +203,46 @@ class SkinIndex:
                             else:
                                 progress_callback(f"Processing {files_str} ({file_count}/{total_files} done)")
                             last_progress_time = time.time()
+
+            # merge in file order, not completion order, so issue order is stable across runs
+            for path in file_paths:
+                results = results_by_path.get(path)
+                if results:
+                    for font_name, usages in results['fonts_used'][folder].items():
+                        if font_name not in index['fonts_used'][folder]:
+                            index['fonts_used'][folder][font_name] = []
+                        index['fonts_used'][folder][font_name].extend(usages)
+
+                    for label_id, usages in results['labels_used'][folder].items():
+                        if label_id not in index['labels_used'][folder]:
+                            index['labels_used'][folder][label_id] = []
+                        index['labels_used'][folder][label_id].extend(usages)
+
+                    index['labels_untranslated'].extend(results['labels_untranslated'])
+
+                    index['ids_defined'][folder].update(results['ids_defined'][folder])
+                    for ref_id, usages in results['ids_referenced'][folder].items():
+                        if ref_id not in index['ids_referenced'][folder]:
+                            index['ids_referenced'][folder][ref_id] = []
+                        index['ids_referenced'][folder][ref_id].extend(usages)
+
+                    for window_id in results['window_ids'][folder]:
+                        if window_id not in index['window_ids'][folder]:
+                            index['window_ids'][folder].append(window_id)
+
+                    window_file = os.path.basename(path)
+                    index['window_includes'][folder][window_file] = results['window_includes']
+                    index['window_base_ids'][folder][window_file] = results['base_ids']
+                    if results.get('root_tag') != 'window':
+                        index['non_window_files'][folder].add(window_file)
+
+                    if 'view_ids' in results:
+                        index['view_ids'][folder].update(results['view_ids'])
+
+                    for img_path, usages in results.get('images_referenced', {}).get(folder, {}).items():
+                        if img_path not in index['images_referenced'][folder]:
+                            index['images_referenced'][folder][img_path] = []
+                        index['images_referenced'][folder][img_path].extend(usages)
 
             if progress_callback:
                 progress_callback(f"Processing {len(include_map)} include definitions...")
