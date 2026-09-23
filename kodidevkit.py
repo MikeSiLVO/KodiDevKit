@@ -973,17 +973,11 @@ class KodiDevKit(sublime_plugin.EventListener):
         line = view.line(region)
 
         if "source.python" in scope_name:
-            line_contents = view.substr(line).lower().strip()
-            if ("lang" in line_contents
-                    or "label" in line_contents
-                    or "string" in line_contents):
-                word = view.substr(view.word(region))
-                return_label = getattr(INFOS, "return_label", None)
-                if return_label:
-                    text = return_label(word)
-                    if text:
-                        return text
-            return None
+            python_label_tooltip = getattr(INFOS, "python_label_tooltip", None)
+            if not python_label_tooltip:
+                return None
+            col = region.b - line.begin()
+            return python_label_tooltip(view.substr(line), col, view.file_name() or "") or None
 
         if "text.xml.kodi" not in scope_name:
             return None

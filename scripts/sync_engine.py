@@ -53,6 +53,7 @@ FRONTEND = {
 EDITOR_ONLY = {
     "libs/sublime", "libs/kodi",
     "libs/infoprovider/tooltips.py", "libs/infoprovider/navigation.py",
+    "libs/infoprovider/pystrings.py",
     "libs/reporting/html.py", "libs/reporting/server.py",
     "libs/utils/sublime_helpers.py", "libs/utils/decorators.py",
 }
@@ -61,7 +62,7 @@ EDITOR_ONLY = {
 EDITOR_ONLY_TESTS = {
     "run_tests.py", "test_hover.py",
     "test_negation_twin_filter.py", "test_report_filtering.py",
-    "test_include_param_roles.py",
+    "test_include_param_roles.py", "test_pystrings.py",
 }
 
 # Mirrored files that legitimately differ, and the symbols allowed to differ.

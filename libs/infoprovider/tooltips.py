@@ -10,6 +10,7 @@ from ..kodi import kodi
 from ..utils import images as imageparser
 from ..validation.constants import POS_TAGS
 from .checker import CheckerMixin
+from .pystrings import SOURCE_ADDON, WrapperIndex, dependency_roots, label_at
 
 from typing import Any
 
@@ -24,9 +25,30 @@ class TooltipMixin(CheckerMixin):
     settings: dict
     kodi: Any
     kodi_path: str | None
+    _python_wrappers: WrapperIndex | None = None
 
-    def return_label(self, selection):
-        """HTML rows of every translation of the label id, one per language and source."""
+    def python_label_tooltip(self, line, col, path):
+        """HTML rows for the string id under the cursor in Python, from the strings it reads."""
+        if not self.addon or not self.addon.path:
+            return ""
+        index = self._python_wrappers
+        if index is None or index.root != self.addon.path:
+            roots = dependency_roots(self.addon.path)
+            index = self._python_wrappers = WrapperIndex(self.addon.path, roots)
+        resolver = index.resolver()
+        found = label_at(line, col, lambda callee: resolver.source(path, callee))
+        if not found:
+            return ""
+        addon_id, label_id, source = found
+        if addon_id and addon_id != self.addon.name:
+            return self.return_addon_label(addon_id, label_id)
+        if source != SOURCE_ADDON:
+            return self.return_label(label_id)
+        rows = self.return_label(label_id, addon_only=True)
+        return rows or "<i>Not in this add-on's strings.po</i>"
+
+    def return_label(self, selection, addon_only=False):
+        """HTML rows of every translation of the id, per language and source, or the add-on's."""
         tooltips = ""
         if not selection.isdigit():
             return ""
@@ -36,14 +58,16 @@ class TooltipMixin(CheckerMixin):
             if not hit:
                 continue
             language = po_file.language.replace("resource.language.", "")
+            fpath = str(getattr(po_file, "fpath", "") or "")
+            in_addon = bool(self.addon and self.addon.path and fpath.startswith(self.addon.path))
+            if addon_only and not in_addon:
+                continue
 
             source_label = ""
-            if hasattr(po_file, 'fpath') and po_file.fpath:
-                fpath = str(po_file.fpath)
-                if self.addon and self.addon.path and fpath.startswith(self.addon.path):
-                    source_label = f" <i>({self.addon.type})</i>"
-                elif "resource.language." in fpath:
-                    source_label = " <i>(kodi)</i>"
+            if in_addon:
+                source_label = f" <i>({self.addon.type})</i>"
+            elif "resource.language." in fpath:
+                source_label = " <i>(kodi)</i>"
 
             label_key = (language, source_label, hit.msgstr if hit.msgstr else hit.msgid)
             if label_key in seen_labels:
