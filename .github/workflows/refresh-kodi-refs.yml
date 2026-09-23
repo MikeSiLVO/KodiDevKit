@@ -38,7 +38,7 @@ jobs:
       - name: Fetch upstream snapshots
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/update_kodi_refs.py
+        run: python scripts/refresh.py
 
       # The refresh PR gets no push-triggered CI unless SYNC_TOKEN is set, so
       # prove the new data still validates before anyone is asked to merge it.
@@ -46,7 +46,7 @@ jobs:
         run: python tests/run_tests.py
 
       - name: Mirror the new data into kdk
-        run: python scripts/sync_engine.py --apply --kdk .kdk-checkout
+        run: python scripts/sync.py --apply --kdk .kdk-checkout
 
       # Both halves must land together: the sync job compares KodiDevKit against
       # kdk's default branch, so merging one alone leaves main red.

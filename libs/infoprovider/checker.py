@@ -77,7 +77,7 @@ class CheckerMixin:
 
     def get_po_files(self) -> list:
         """Get the skin's PO files plus Kodi-core strings.po from kodi_path or the snapshot."""
-        from ..kodi_refs import kodi_strings_po
+        from ..coredata import kodi_strings_po
 
         po_files = []
         seen = set()

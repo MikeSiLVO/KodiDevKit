@@ -10,7 +10,7 @@ import sublime_plugin
 
 from .libs.addon.translations import convert_xml_to_po
 
-logger = logging.getLogger("KodiDevKit.po_commands")
+logger = logging.getLogger("KodiDevKit.language")
 
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 

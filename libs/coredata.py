@@ -35,7 +35,7 @@ def _latest_bundled_dir() -> Optional[Path]:
 
 
 def kodi_colors_xml(addon, kodi_path: str | None) -> Optional[str]:
-    """Return a path to `colors.xml` for `addon`'s target release, or `None`."""
+    """Return a path to Kodi-core `colors.xml` for the add-on's release, or None."""
     if kodi_path:
         candidate = os.path.join(kodi_path, "system", "colors.xml")
         if os.path.isfile(candidate):
@@ -49,7 +49,7 @@ def kodi_colors_xml(addon, kodi_path: str | None) -> Optional[str]:
     if target is None:
         logger.warning(
             "No Kodi reference data: core colours will be reported as undefined. "
-            "Set kodi_path or run scripts/update_kodi_refs.py."
+            "Set kodi_path or run scripts/refresh.py."
         )
         return None
 
@@ -58,12 +58,7 @@ def kodi_colors_xml(addon, kodi_path: str | None) -> Optional[str]:
 
 
 def kodi_strings_po(addon, kodi_path: str | None) -> Optional[str]:
-    """Return a path to Kodi-core `strings.po` for `addon`'s target release, or `None`.
-
-    Only English (`resource.language.en_gb`) is bundled; the user's local Kodi may
-    have other languages, but for validation purposes the en_gb msgctxt set is what
-    matters (label IDs are language-independent).
-    """
+    """Return a path to Kodi-core `strings.po` for the add-on's release, or None; en_gb only."""
     if kodi_path:
         candidate = os.path.join(
             kodi_path, "addons", "resource.language.en_gb",
@@ -80,7 +75,7 @@ def kodi_strings_po(addon, kodi_path: str | None) -> Optional[str]:
     if target is None:
         logger.warning(
             "No Kodi reference data: core label ids will be reported as undefined. "
-            "Set kodi_path or run scripts/update_kodi_refs.py."
+            "Set kodi_path or run scripts/refresh.py."
         )
         return None
 

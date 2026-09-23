@@ -3,8 +3,8 @@
 KodiDevKit is canonical. kdk vendors the same `libs/` tree and the same test
 suite, minus the parts that only make sense inside the editor.
 
-    python scripts/sync_engine.py --check   # report drift, non-zero on unexpected drift
-    python scripts/sync_engine.py --apply   # copy canonical -> kdk
+    python scripts/sync.py --check   # report drift, non-zero on unexpected drift
+    python scripts/sync.py --apply   # copy canonical -> kdk
 
 Point it at the other tree with --kdk or KDK_ROOT; it defaults to a sibling
 checkout next to this one, then /mnt/c/kdk.
@@ -31,7 +31,7 @@ HERE = Path(__file__).resolve().parent.parent
 SHARED_LIB_DIRS = ("addon", "infoprovider", "polib", "reporting", "skin", "utils", "validation")
 
 # Modules sitting directly in libs/ rather than a subpackage.
-SHARED_LIB_FILES = ("__init__.py", "kodi_refs.py")
+SHARED_LIB_FILES = ("__init__.py", "coredata.py")
 
 # Reference data drives validation results, so it mirrors too, including the
 # Kodi-core snapshots both repos now commit.
@@ -39,7 +39,7 @@ SHARED_DATA = ("kodi_builtin_controls.xml", "kodi_infolabel_functions.json")
 SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers")
 
 # Written to run under either layout, so both repos carry the same file.
-SHARED_SCRIPTS = ("update_kodi_refs.py",)
+SHARED_SCRIPTS = ("refresh.py",)
 
 # Each repo's own front end. Same path in both trees, different contents by design,
 # so there is nothing here to keep in sync.
@@ -55,7 +55,7 @@ EDITOR_ONLY = {
     "libs/infoprovider/tooltips.py", "libs/infoprovider/navigation.py",
     "libs/infoprovider/pystrings.py",
     "libs/reporting/html.py", "libs/reporting/server.py",
-    "libs/utils/sublime_helpers.py", "libs/utils/decorators.py",
+    "libs/utils/decorators.py",
 }
 
 # Test modules covering editor-only features; the rest of tests/ mirrors.

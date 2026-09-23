@@ -1,6 +1,6 @@
 %YAML 1.2
 ---
-# Internal syntax for the validation results view (assigned by skin_commands).
+# Internal syntax for the validation results view (assigned by skin.py).
 # Not a file type: hidden, no file_extensions. See:
 # https://www.sublimetext.com/docs/syntax.html
 name: KodiDevKit Validation Results

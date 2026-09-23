@@ -23,7 +23,7 @@ SETTINGS_FILE = 'kodidevkit.sublime-settings'
 class Addon(object):
     """A Kodi addon: addon.xml metadata, language files, xml folders."""
 
-    # github_ref syntax is parsed by scripts/update_kodi_refs.py _resolve_ref
+    # github_ref syntax is parsed by scripts/refresh.py _resolve_ref
     RELEASES = [
         {"name": "omega", "gui_version": "5.17.0", "github_ref": "release:21.*-Omega"},
         {"name": "piers", "gui_version": "5.18.0", "github_ref": "branch:master"},

@@ -13,10 +13,10 @@ import sublime
 import sublime_plugin
 
 from .libs.utils.files import get_addons
-from .libs.utils.sublime_helpers import get_node_content
+from .libs.sublime.view import get_node_content
 from .libs.utils.decorators import run_async
 
-logger = logging.getLogger("KodiDevKit.skin_commands")
+logger = logging.getLogger("KodiDevKit.skin")
 
 
 def _infos():
@@ -309,13 +309,7 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
         sublime.set_timeout(lambda: self._show_results(nodes, check_type), 0)
 
     def _show_results(self, nodes, check_type):
-        """Surface validation results once the check finishes (main thread).
-
-        Clean result (empty list or a checker's "No ... issues found"
-        placeholder) shows a dialog; real issues become a navigable results
-        view (double-click / F4 to open). The progress tab is reused so there
-        is no close/open flicker.
-        """
+        """Show the results on the main thread: a dialog when clean, else a results view."""
         self.nodes = nodes
         label = CHECK_LABELS.get(check_type, "Validation")
 
@@ -413,7 +407,7 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
 
 
 class _SearchAndInsertMixin:
-    """Show an `InfoProvider` list in a quick panel; insert the selection. Pair with `WindowCommand`."""
+    """Show an `InfoProvider` list in a quick panel and insert the pick, for a `WindowCommand`."""
     _data_attr = ""  # override in subclass
     window: sublime.Window
 

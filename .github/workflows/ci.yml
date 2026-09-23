@@ -45,7 +45,7 @@ jobs:
         run: |
           hits=$(grep -rn "import sublime" --include=*.py libs \
             | grep -vE "libs/(sublime|kodi)/" \
-            | grep -vE "(tooltips|navigation|sublime_helpers|decorators)\.py" \
+            | grep -vE "(tooltips|navigation|decorators)\.py" \
             | grep -vE "libs/reporting/(html|server)\.py" \
             | grep -vE "libs/(infoprovider/loader|utils/files)\.py" || true)
           if [ -n "$hits" ]; then
@@ -87,4 +87,4 @@ jobs:
       # Fails on any difference in a mirrored file that isn't declared in the
       # script's EXEMPT map. Silent drift here is what forked the two trees.
       - name: Check for engine drift
-        run: python scripts/sync_engine.py --check --kdk .kdk-checkout
+        run: python scripts/sync.py --check --kdk .kdk-checkout

@@ -13,14 +13,14 @@ package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
-from libs import kodi_refs
+from libs import coredata
 from libs.addon.translations import get_po_file
 from libs.addon.addon import Addon
-from libs.kodi_refs import kodi_colors_xml, kodi_strings_po
+from libs.coredata import kodi_colors_xml, kodi_strings_po
 from libs.skin.skin import Skin
 
 # Resolved by the module itself, so this works from either repo layout.
-SNAPSHOTS_PRESENT = kodi_refs._BUNDLED_DATA.is_dir()
+SNAPSHOTS_PRESENT = coredata._BUNDLED_DATA.is_dir()
 
 ADDON_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="skin.reftest" version="1.0.0" name="Ref Test" provider-name="test">
@@ -40,7 +40,7 @@ def make_skin(tmpdir, gui_version="5.18.0"):
 
 @unittest.skipUnless(SNAPSHOTS_PRESENT, "bundled Kodi snapshots not fetched")
 class TestBundledReferences(unittest.TestCase):
-    """kodi_refs falls back to bundled snapshots when kodi_path is unset."""
+    """coredata falls back to bundled snapshots when kodi_path is unset."""
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -96,7 +96,7 @@ class TestBundledReferences(unittest.TestCase):
             )
 
     def test_installed_kodi_wins_over_snapshot(self):
-        """A valid kodi_path outranks the bundle (kodi_refs priority 1)."""
+        """A valid kodi_path outranks the bundle (coredata priority 1)."""
         with tempfile.TemporaryDirectory() as fake_kodi:
             system = os.path.join(fake_kodi, "system")
             os.makedirs(system)

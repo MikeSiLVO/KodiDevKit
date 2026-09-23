@@ -205,7 +205,7 @@ class Skin(Addon):
 
     def _load_colors_and_fonts(self):
         """Load colors and fonts through the resource reader, dropping the validation index."""
-        from ..kodi_refs import kodi_colors_xml
+        from ..coredata import kodi_colors_xml
 
         self.validation_index = None
 

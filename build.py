@@ -13,7 +13,7 @@ from .libs.utils.files import make_archive
 from .libs.utils.decorators import run_async
 from .libs.skin.textures import texturepacker
 
-logger = logging.getLogger("KodiDevKit.build_commands")
+logger = logging.getLogger("KodiDevKit.build")
 
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 

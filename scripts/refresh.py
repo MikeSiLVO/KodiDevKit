@@ -51,13 +51,7 @@ def _gh(url: str) -> bytes:
 
 
 def _resolve_ref(spec: str) -> str:
-    """Resolve a `github_ref` spec to a concrete git ref usable in raw URLs.
-
-    Supported syntax:
-      branch:<name>      - that branch's HEAD
-      release:<glob>     - latest non-prerelease release tag matching glob
-      prerelease:<glob>  - latest release tag matching glob (allows prereleases)
-    """
+    """Resolve a github_ref of branch:NAME, release:GLOB or prerelease:GLOB to a git ref."""
     kind, _, value = spec.partition(":")
     if kind == "branch":
         return value

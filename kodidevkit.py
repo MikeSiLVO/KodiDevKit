@@ -31,7 +31,7 @@ from .libs.utils.infobool import (  # noqa: E402
 )
 from .libs.utils.expressions import extract_expression_at_offset, flatten_expressions  # noqa: E402
 from .libs.utils.xml import get_root_from_file  # noqa: E402
-from .libs.utils.sublime_helpers import jump_to_label_declaration  # noqa: E402
+from .libs.sublime.view import jump_to_label_declaration  # noqa: E402
 from .libs.infoprovider.provider import InfoProvider  # noqa: E402
 from .libs.kodi import kodi  # noqa: E402
 

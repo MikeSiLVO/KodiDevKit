@@ -2,7 +2,6 @@ import os
 from ..utils.files import check_paths
 from ..addon.translations import get_po_file
 from ..utils.xml import get_root_from_file
-from ..utils.sublime_helpers import prettyprint
 from ..utils.decorators import run_async
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -18,6 +17,20 @@ logger = logging.getLogger(__name__)
 APP_NAME = "kodi"
 
 _USER_VISIBLE_METHODS = frozenset({"XBMC.GetInfoBooleans", "XBMC.GetInfoLabels"})
+
+
+def prettyprint(obj) -> None:
+    """Log any value as sorted, readable JSON, falling back to repr."""
+    try:
+        if isinstance(obj, (bytes, bytearray)):
+            obj = obj.decode("utf-8", "replace")
+        text = json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2)
+    except Exception:
+        try:
+            text = repr(obj)
+        except Exception:
+            text = "<unprintable>"
+    logger.debug(text)
 
 
 def _without_negation_twins(result):

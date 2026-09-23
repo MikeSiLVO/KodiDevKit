@@ -49,7 +49,7 @@ Validation targets the release the skin declares in `addon.xml` via `<import add
 
 The release picks the control schema, the window table, the builtin and boolean-condition completions, and the bundled `colors.xml` / `strings.po`, so anything Kodi added in a later release is an error on an older skin.
 
-`scripts/update_kodi_refs.py` refreshes `colors.xml` / `strings.po` from upstream. The builtin and condition lists in `data/<release>/data.xml` are maintained by hand: take new names from the registration maps in `GUIInfoManager.cpp` and `xbmc/interfaces/builtins/`, since doxygen both misses names and keeps ones Kodi has deleted.
+`scripts/refresh.py` refreshes `colors.xml` / `strings.po` from upstream. The builtin and condition lists in `data/<release>/data.xml` are maintained by hand: take new names from the registration maps in `GUIInfoManager.cpp` and `xbmc/interfaces/builtins/`, since doxygen both misses names and keeps ones Kodi has deleted.
 
 Piers-only skinning so far:
 
