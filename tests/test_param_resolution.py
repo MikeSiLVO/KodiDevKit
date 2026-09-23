@@ -12,7 +12,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.base import ValidationTestCase, IncludeCheck
-from libs.skin import Skin
+from libs.skin.skin import Skin
 
 
 class TestParamResolution(ValidationTestCase):

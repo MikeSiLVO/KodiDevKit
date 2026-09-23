@@ -4,7 +4,7 @@ import os
 import re
 import logging
 
-from .. import utils
+from ..utils.xml import file_needs_expansion, get_root_from_file
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -245,13 +245,13 @@ class ValidationLabel:
                         elif processed_count % 3 == 0:
                             progress_callback(f"Scanning {xml_file} ({processed_count}/{total_files})...")
 
-                    root = utils.get_root_from_file(path)
+                    root = get_root_from_file(path)
                     if root is None:
                         continue
 
                     # Expand includes and $PARAM if resolver available
                     # Skip expansion if file contains no dynamic expressions (performance optimization)
-                    if self._resolve_include and utils.file_needs_expansion(path):
+                    if self._resolve_include and file_needs_expansion(path):
                         try:
                             logger.debug("Expanding %s...", os.path.basename(path))
                             root = self._resolve_include(root, folder=folder)

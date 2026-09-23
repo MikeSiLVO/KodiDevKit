@@ -17,7 +17,7 @@ first regression case.
 """
 
 from tests.base import KodiDevKitTestCase
-from libs.utils import split_top_level_commas
+from libs.utils.expressions import split_top_level_commas
 
 
 class SplitTopLevelCommasTests(KodiDevKitTestCase):

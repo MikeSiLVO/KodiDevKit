@@ -13,7 +13,9 @@ CRITICAL DISTINCTION:
 
 import logging
 import os
-from .. import utils
+from ..utils.infobool import STATE_INVALID, check_condition
+from ..utils.expressions import flatten_expressions
+from ..utils.xml import get_root_from_file
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -921,7 +923,7 @@ class ValidationExpression:
                 if progress_callback and checked_files % 5 == 0:
                     progress_callback(f"Checking expressions in {xml_file} ({checked_files}/{sum(len(self.addon.window_files.get(f, [])) for f in self.addon.xml_folders)})...")
 
-                root = utils.get_root_from_file(file_path)
+                root = get_root_from_file(file_path)
                 if root is None:
                     continue
 
@@ -944,12 +946,12 @@ class ValidationExpression:
                 return None
             flattened = condition
         else:
-            flattened, unknown = utils.flatten_expressions(condition, expressions)
+            flattened, unknown = flatten_expressions(condition, expressions)
             if unknown:
                 return f"undefined expression {sorted(unknown)[0]}"
 
-        problem = utils.check_condition(flattened)
-        if not problem or problem[0] != utils.STATE_INVALID:
+        problem = check_condition(flattened)
+        if not problem or problem[0] != STATE_INVALID:
             return None
         return problem[1]
 

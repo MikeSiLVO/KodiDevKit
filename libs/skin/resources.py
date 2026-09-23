@@ -5,7 +5,8 @@ import logging
 from typing import Dict, List, Generator, Optional, Tuple
 from lxml import etree as ET
 
-from .. import utils
+from ..utils.files import check_paths
+from ..utils.xml import file_needs_expansion, get_root_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class SkinResources:
                     if not name.lower().endswith(".xml"):
                         continue
                     file_path = os.path.join(color_dir, name)
-                    root = utils.get_root_from_file(file_path)
+                    root = get_root_from_file(file_path)
                     if root is None:
                         logger.info("Invalid color file: %s", file_path)
                         continue
@@ -44,7 +45,7 @@ class SkinResources:
                     logger.info("found color file %s including %d colors", file_path, added)
 
         if system_colors_path and os.path.isfile(system_colors_path):
-            root = utils.get_root_from_file(system_colors_path)
+            root = get_root_from_file(system_colors_path)
             if root is None:
                 logger.info("Invalid color file: %s", system_colors_path)
             else:
@@ -78,17 +79,17 @@ class SkinResources:
                 os.path.join(self.skin_path, folder, "Font.xml"),
                 os.path.join(self.skin_path, folder, "font.xml"),
             ]
-            font_file = utils.check_paths(paths)
+            font_file = check_paths(paths)
             if not font_file:
                 continue
 
             fonts[folder] = []
 
-            root = utils.get_root_from_file(font_file)
+            root = get_root_from_file(font_file)
             if root is None:
                 continue
 
-            if utils.file_needs_expansion(font_file) and resolver:
+            if file_needs_expansion(font_file) and resolver:
                 try:
                     for fontset in root.findall("fontset"):
                         resolver.resolve_includes(fontset, folder)
@@ -146,7 +147,7 @@ class SkinResources:
                 continue
             for xml_file in window_files[folder]:
                 path = os.path.join(self.skin_path, folder, xml_file)
-                root = utils.get_root_from_file(path)
+                root = get_root_from_file(path)
                 if root is None:
                     return None
                 for node in root.xpath(".//font"):

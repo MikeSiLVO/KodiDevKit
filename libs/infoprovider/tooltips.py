@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import string
 import logging
-from .. import utils
+from ..utils.colors import get_contrast_color
 from ..kodi import kodi
 from ..utils import images as imageparser
 from ..validation.constants import POS_TAGS
@@ -59,7 +59,7 @@ class TooltipMixin(CheckerMixin):
 
     def return_addon_label(self, addon_id, label_id):
         """HTML rows for an $ADDON[id label] string, read from the installed addon's PO files."""
-        from .. import polib
+        from ..polib import polib
 
         if not label_id.isdigit():
             return ""
@@ -146,7 +146,7 @@ class TooltipMixin(CheckerMixin):
         for item in colors:
             if item["name"] == color_string:
                 color_hex = "#" + item["content"][2:]
-                cont_color = utils.get_contrast_color(color_hex)
+                cont_color = get_contrast_color(color_hex)
                 alpha_percent = round(
                     int(item["content"][:2], 16) / (16 * 16) * 100
                 )
@@ -165,7 +165,7 @@ class TooltipMixin(CheckerMixin):
             return color_info
         if all(c in string.hexdigits for c in color_string) and len(color_string) == 8:
             color_hex = "#" + color_string[2:]
-            cont_color = utils.get_contrast_color(color_hex)
+            cont_color = get_contrast_color(color_hex)
             alpha_percent = round(int(color_string[:2], 16) / (16 * 16) * 100)
             return '<a href="test" style="background-color:%s;color:%s">%d %% alpha</a>' % (
                 color_hex,

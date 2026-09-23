@@ -13,26 +13,23 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
-from libs.validation import ValidationVariable as VariableCheck
-from libs.validation import ValidationLabel as LabelCheck
-from libs.validation import ValidationIds as IdCheck
-from libs.validation import ValidationFont as FontCheck
-from libs.validation import ValidationImage as ImageCheck
-from libs.validation import ValidationInclude as IncludeCheck
-from libs.validation import ValidationMap as MapCheck
-from libs.validation import ValidationExpression as ExpressionCheck
-from libs.validation import XmlInterpreter
-from libs.validation import Context
+from libs.validation.variable import ValidationVariable as VariableCheck
+from libs.validation.label import ValidationLabel as LabelCheck
+from libs.validation.ids import ValidationIds as IdCheck
+from libs.validation.font import ValidationFont as FontCheck
+from libs.validation.image import ValidationImage as ImageCheck
+from libs.validation.include import ValidationInclude as IncludeCheck
+from libs.validation.skinmap import ValidationMap as MapCheck
+from libs.validation.expression import ValidationExpression as ExpressionCheck
+from libs.validation.interpreter import XmlInterpreter
+from libs.validation.interpreter import Context
 
 
 from libs.skin.skin import Skin
 from libs.skin.include import SkinInclude
 
 
-from libs.addon import Addon
-
-
-from libs import utils
+from libs.addon.addon import Addon
 
 
 class KodiDevKitTestCase(unittest.TestCase):
@@ -61,8 +58,6 @@ class KodiDevKitTestCase(unittest.TestCase):
 
     # Addon classes
     Addon = Addon
-
-    utils = utils
 
 
 class ValidationTestCase(KodiDevKitTestCase):
@@ -94,5 +89,4 @@ __all__ = [
     'Skin',
     'Include',          # noqa: F822
     'Addon',
-    'utils',
 ]

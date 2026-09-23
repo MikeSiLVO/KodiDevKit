@@ -9,8 +9,8 @@ import logging
 from typing import Any
 from lxml import etree as ET
 
-from .. import utils
-from ..addon import Addon
+from ..utils.xml import get_root_from_file
+from ..addon.addon import Addon
 from ..kodi import kodi
 from ..validation.constants import PARSER
 
@@ -58,10 +58,10 @@ class LoaderMixin:
             path = os.path.normpath(os.path.abspath(__file__))
             folder = os.path.split(path)[0]
 
-            self.template_root = utils.get_root_from_file(
+            self.template_root = get_root_from_file(
                 os.path.join(folder, "..", "..", "data", kodi_version, "controls.xml")
             )
-            root = utils.get_root_from_file(
+            root = get_root_from_file(
                 os.path.join(folder, "..", "..", "data", kodi_version, "data.xml")
             )
             with open(
@@ -146,7 +146,7 @@ class LoaderMixin:
 
         for xml_path in self.addon.get_xml_files():
             try:
-                root = utils.get_root_from_file(xml_path)
+                root = get_root_from_file(xml_path)
                 if root is None:
                     raise XMLSyntaxError("Unparseable file", xml_path, 0, 0)
             except XMLSyntaxError:

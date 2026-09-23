@@ -5,15 +5,25 @@ from __future__ import annotations
 import os
 import copy
 import logging
-from .. import utils
-from ..validation import ValidationFont
-from ..validation import ValidationImage
-from ..validation import ValidationIds
-from ..validation import ValidationLabel
-from ..validation import ValidationInclude
-from ..validation import ValidationVariable
-from ..validation import ValidationMap
-from ..validation import ValidationFileCheck
+from ..utils.xml import check_brackets, get_root_from_file, tree_needs_expansion
+from ..utils.expressions import (
+    contains_dynamic_expression,
+    extract_number_value,
+    extract_variable_name,
+    is_dynamic_expression,
+    is_number,
+)
+from ..utils.validation import create_issue, is_runtime_generated_file
+from ..addon.translations import get_po_file
+from ..utils.colors import is_kodi_hex
+from ..validation.font import ValidationFont
+from ..validation.image import ValidationImage
+from ..validation.ids import ValidationIds
+from ..validation.label import ValidationLabel
+from ..validation.include import ValidationInclude
+from ..validation.variable import ValidationVariable
+from ..validation.skinmap import ValidationMap
+from ..validation.filecheck import ValidationFileCheck
 from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan_skin
 from ..validation.interpreter import XmlInterpreter
@@ -47,7 +57,7 @@ def _core_po(path):
     cached = _CORE_PO_CACHE.get(path)
     if cached and cached[0] == stamp:
         return cached[1]
-    po = utils.get_po_file(path)
+    po = get_po_file(path)
     if po is not None:
         po.language = "resource.language.en_gb"  # type: ignore[attr-defined]
         _CORE_PO_CACHE[path] = (stamp, po)
@@ -144,14 +154,14 @@ class CheckerMixin:
 
     def resolve_xml(self, path_or_root, *, folder=None, strict=False):
         """Include-resolved copy of a tree or file; without strict, failures fall back."""
-        from ..skin import Skin
+        from ..skin.skin import Skin
 
         if hasattr(path_or_root, "tag"):
             root = path_or_root
             src_path = None
         else:
             src_path = str(path_or_root)
-            root = utils.get_root_from_file(src_path)
+            root = get_root_from_file(src_path)
             if root is None:
                 if strict:
                     raise RuntimeError(f"XML parse failed: {src_path}")
@@ -212,7 +222,7 @@ class CheckerMixin:
 
         filtered_rows = [
             row for row in rows
-            if not utils.is_runtime_generated_file(row.get("file", ""))
+            if not is_runtime_generated_file(row.get("file", ""))
         ]
 
         return filtered_rows
@@ -359,7 +369,7 @@ class CheckerMixin:
 
     def _add_issue(self, listitems, node, message, identifier="", severity=SEVERITY_WARNING):
         """Append an issue at the node's line; check_file fills in the file later."""
-        issue = utils.create_issue(
+        issue = create_issue(
             message=message,
             file="",
             line=node.sourceline,
@@ -374,9 +384,9 @@ class CheckerMixin:
         if not text:
             self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR)
             return False
-        if utils.is_dynamic_expression(text):
+        if is_dynamic_expression(text):
             return True
-        if not utils.check_brackets(text):
+        if not check_brackets(text):
             condition = text.replace("  ", "").replace("\t", "")
             self._add_issue(listitems, node, f"Brackets do not match: {condition}", condition, severity=SEVERITY_ERROR)
             return False
@@ -386,7 +396,7 @@ class CheckerMixin:
         """Report a value outside ALLOWED_VALUES for its type; returns whether it passed."""
         if value_type not in ALLOWED_VALUES:
             return True
-        if utils.is_dynamic_expression(value):
+        if is_dynamic_expression(value):
             return True
 
         # lowercased by Kodi first (GUIControlFactory.cpp orientation, XMLUtils::GetBoolean)
@@ -410,7 +420,7 @@ class CheckerMixin:
 
     def _validate_variable_values(self, listitems, node, var_text, value_type, folder, tag_name=None):
         """Check every <value> of the $VAR definition against the tag's value type."""
-        var_name = utils.extract_variable_name(var_text)
+        var_name = extract_variable_name(var_text)
         if not var_name:
             return True
 
@@ -431,12 +441,12 @@ class CheckerMixin:
             if not value_text:
                 continue
 
-            if utils.is_dynamic_expression(value_text):
+            if is_dynamic_expression(value_text):
                 continue
 
             is_valid = True
             if value_type == "color" and getattr(self.addon, "type", None) == "skin":
-                is_valid = value_text in self.get_color_labels() or utils.is_kodi_hex(value_text)
+                is_valid = value_text in self.get_color_labels() or is_kodi_hex(value_text)
                 if not is_valid:
                     location = tag_name if tag_name else node.tag
                     self._add_issue(
@@ -446,10 +456,10 @@ class CheckerMixin:
                     )
             elif value_type in ["int", "position"]:
                 check_val = value_text.rstrip("%r") if value_type == "position" else value_text
-                number_value = utils.extract_number_value(value_text)
+                number_value = extract_number_value(value_text)
                 if number_value:
                     check_val = number_value
-                is_valid = utils.is_number(check_val) or (self.addon and value_text in self.addon.get_constants(folder))
+                is_valid = is_number(check_val) or (self.addon and value_text in self.addon.get_constants(folder))
                 if not is_valid:
                     location = tag_name if tag_name else node.tag
                     self._add_issue(
@@ -474,18 +484,18 @@ class CheckerMixin:
 
     def _can_resolve(self) -> bool:
         """Whether the addon is a Skin carrying a resolver."""
-        from ..skin import Skin
+        from ..skin.skin import Skin
         return isinstance(self.addon, Skin) and hasattr(self.addon, "resolver")
 
     def _check_file_resolved(self, root, path: str, folder: str) -> list[dict]:
         """XmlInterpreter issues over the expanded tree; files without includes are walked as-is."""
-        from ..skin import Skin
+        from ..skin.skin import Skin
 
         sk = self.addon
         if not isinstance(sk, Skin):
             return []
 
-        if utils.tree_needs_expansion(root):
+        if tree_needs_expansion(root):
             try:
                 walk_root = copy.deepcopy(root)
                 sk.resolver.resolve(walk_root, folder, source_file=path)
@@ -516,7 +526,7 @@ class CheckerMixin:
         if exclude & path_parts:
             return None
 
-        root = utils.get_root_from_file(path)
+        root = get_root_from_file(path)
         if root is None:
             return []
 
@@ -543,7 +553,7 @@ class CheckerMixin:
             for node in all_typed_controls:
                 ctrl_type = node.get("type", "").strip()
                 if ctrl_type and ctrl_type.lower() not in allowed_types_lower:
-                    if not utils.is_dynamic_expression(ctrl_type):
+                    if not is_dynamic_expression(ctrl_type):
                         nodes_invalid_type.append(node)
 
         for node in nodes_invalid_type:
@@ -597,7 +607,7 @@ class CheckerMixin:
             if subnode.text and tmpl_val:
                 if not skip_value_checks:
                     self._validate_enum_value(listitems, subnode, subnode.text, tmpl_val)
-                if utils.is_dynamic_expression(subnode.text):
+                if is_dynamic_expression(subnode.text):
                     self._validate_variable_values(listitems, subnode, subnode.text, tmpl_val, folder)
 
             if not skip_value_checks:
@@ -617,7 +627,7 @@ class CheckerMixin:
                     (parent.tag.lower(), parent.attrib.get("type", "").lower()), set()
                 )
                 tag_text = (subnode.text or "").strip()
-                has_dynamic_content = utils.is_dynamic_expression(tag_text)
+                has_dynamic_content = is_dynamic_expression(tag_text)
 
                 if (
                     len(subnode) == 0
@@ -638,12 +648,12 @@ class CheckerMixin:
                 if k not in subnodes[subnode.tag]:
                     self._add_issue(listitems, subnode, f"invalid attribute for <{subnode.tag}>: {k}", k)
                     continue
-                if utils.is_dynamic_expression(v):
+                if is_dynamic_expression(v):
                     value_type = subnodes[subnode.tag].get(k)
                     if value_type:
                         self._validate_variable_values(listitems, subnode, v, value_type, folder, tag_name=k)
                     continue
-                if utils.contains_dynamic_expression(v):
+                if contains_dynamic_expression(v):
                     continue
                 if (v or "").strip() == "" and k in ("target", "sortby", "sortorder", "limit"):
                     continue
@@ -653,13 +663,13 @@ class CheckerMixin:
                     if subnode.tag in ALL_LAYOUT_TAGS and v == "auto":
                         continue
                     vv = v.rstrip("%r") if value_type == "position" else v
-                    number_value = utils.extract_number_value(v)
+                    number_value = extract_number_value(v)
                     if number_value:
                         vv = number_value
-                    if not utils.is_number(vv) and not (self.addon and v in self.addon.get_constants(folder)):
+                    if not is_number(vv) and not (self.addon and v in self.addon.get_constants(folder)):
                         self._add_issue(listitems, subnode, f"invalid integer value for {k}: {v}", v, severity=SEVERITY_ERROR)
                 elif value_type == "color":
-                    if getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels() and not utils.is_kodi_hex(v):
+                    if getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels() and not is_kodi_hex(v):
                         self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR)
                 elif not skip_value_checks:
                     self._validate_enum_value(listitems, subnode, v, value_type, attr_name=k)

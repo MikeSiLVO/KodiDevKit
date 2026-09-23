@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import subprocess
-from .. import utils
+from ..utils.decorators import check_busy, run_async
 import os
 import logging
 
@@ -51,13 +51,13 @@ class KodiAdb:
         self.cmd("adb", ["connect", server_ip])
         self.connected = True
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def adb_connect_async(self, server_ip):
         """Background-thread variant of `adb_connect()`."""
         self.adb_connect(server_ip)
 
-    @utils.check_busy
+    @check_busy
     def adb_reconnect(self, server_ip=""):
         """Disconnect, then reconnect to `server_ip` (defaults to the saved one)."""
         if not server_ip:
@@ -65,7 +65,7 @@ class KodiAdb:
         self.adb_disconnect()
         self.adb_connect(server_ip)
 
-    @utils.run_async
+    @run_async
     def adb_reconnect_async(self, server_ip=""):
         """Background-thread variant of `adb_reconnect()`."""
         self.adb_reconnect(server_ip)
@@ -78,40 +78,40 @@ class KodiAdb:
         self.cmd("adb", ["disconnect"])
         self.connected = False
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def adb_disconnect_async(self):
         """
         disconnect adb devices, async
         """
         self.adb_disconnect()
 
-    @utils.check_busy
+    @check_busy
     def adb_push(self, source, target):
         """`adb push <source> <target>/`."""
         if not target.endswith('/'):
             target += '/'
         self.cmd("adb", ["push", source.replace('\\', '/'), target.replace('\\', '/')])
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def adb_push_async(self, source, target):
         """Background-thread variant of `adb_push()`."""
         self.adb_push(source, target)
 
-    @utils.check_busy
+    @check_busy
     def adb_pull(self, path, target):
         """`adb pull <path> <target>`."""
         self.cmd("adb", ["pull", path, target])
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def adb_pull_async(self, path, target):
         """Background-thread variant of `adb_pull()`."""
         self.adb_pull(path, target)
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def push_to_box(self, addon, all_file=False):
         """Push the addon at `addon` to the device. With `all_file=True`, also pushes textures."""
         logging.warning("push %s to remote" % addon)
@@ -132,7 +132,7 @@ class KodiAdb:
                                  target.replace('\\', '/')])
         logging.warning("All files pushed")
 
-    @utils.run_async
+    @run_async
     def get_log(self, open_function, target):
         """Pull `xbmc.log` to `target` and open it with `open_function`."""
         logging.warning("Pull logs from remote")
@@ -140,8 +140,8 @@ class KodiAdb:
         logging.warning("Finished pulling logs")
         open_function(os.path.join(target, "xbmc.log"))
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def get_screenshot(self, f_open, target):
         """Take a device screenshot, pull it to `target`, then open with `f_open`."""
         logging.warning("Pull screenshot from remote")
@@ -151,8 +151,8 @@ class KodiAdb:
         logging.warning("Finished pulling screenshot")
         f_open(os.path.join(target, "screen.png"))
 
-    @utils.run_async
-    @utils.check_busy
+    @run_async
+    @check_busy
     def clear_cache(self):
         """Delete `<userdata>/temp` on the device."""
         if not self.userdata_folder:
@@ -160,7 +160,7 @@ class KodiAdb:
             return
         self.cmd("adb", ["shell", "rm", "-rf", os.path.join(self.userdata_folder, "temp")])
 
-    @utils.run_async
+    @run_async
     def reboot(self):
         """
         complete device reboot

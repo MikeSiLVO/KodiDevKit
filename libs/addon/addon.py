@@ -6,8 +6,10 @@ import os
 import logging
 from typing import Any
 
-from .. import utils
-from .. import polib
+from ..utils.files import check_paths, save_xml
+from .translations import create_new_po_file, get_po_file
+from ..utils.xml import get_root_from_file
+from ..polib import polib
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -51,7 +53,7 @@ class Addon(object):
         self.path: str = path
 
         self.xml_file = os.path.join(self.path, "addon.xml")
-        root = utils.get_root_from_file(self.xml_file)
+        root = get_root_from_file(self.xml_file)
         if root is None:
             raise ValueError(f"Failed to parse addon.xml at {self.xml_file}")
         self.root = root
@@ -90,7 +92,7 @@ class Addon(object):
         """Record the Default/720p or 1080i skin folder when the addon has one."""
         paths = [os.path.join(self.path, "resources", "skins", "Default", "720p"),
                  os.path.join(self.path, "resources", "skins", "Default", "1080i")]
-        folder = utils.check_paths(paths)
+        folder = check_paths(paths)
         if folder:
             self.xml_folders.append(folder)
 
@@ -125,10 +127,10 @@ class Addon(object):
     def by_project(path, settings):
         """Build a `Skin` or plain `Addon` for the project, decided by the xbmc.python import."""
         xml_file = os.path.join(path, "addon.xml")
-        root = utils.get_root_from_file(xml_file)
+        root = get_root_from_file(xml_file)
         if root is None or root.find(".//import[@addon='xbmc.python']") is None:
-            from .. import skin
-            return skin.Skin(path=path, settings=settings)
+            from ..skin.skin import Skin
+            return Skin(path=path, settings=settings)
         else:
             return Addon(path=path, settings=settings)
 
@@ -148,12 +150,12 @@ class Addon(object):
             lang = "resource.language.en_gb"
 
         for item in [lang]:
-            path = utils.check_paths([
+            path = check_paths([
                 os.path.join(folder, item, "resources", "strings.po"),
                 os.path.join(folder, item, "strings.po"),
             ])
             if path:
-                po = utils.get_po_file(path)
+                po = get_po_file(path)
                 if po:
                     po.language = item  # type: ignore[attr-defined]
                     po_files.append(po)
@@ -178,7 +180,7 @@ class Addon(object):
     def create_new_label(self, word, filepath):
         """Add a label to the first PO file, creating it when none exists; returns the new id."""
         if not self.po_files:
-            po_file = utils.create_new_po_file(os.path.join(self.primary_lang_folder, "strings.po"))
+            po_file = create_new_po_file(os.path.join(self.primary_lang_folder, "strings.po"))
             po_file.save()
             self.po_files.append(po_file)
             logger.critical("New language file created")
@@ -249,7 +251,7 @@ class Addon(object):
     def bump_version(self, version):
         """Bump the version in addon.xml and open a blank changelog entry for it."""
         self.root.attrib["version"] = version
-        utils.save_xml(self.xml_file, self.root)
+        save_xml(self.xml_file, self.root)
         with open(self.changelog_path, "r") as f:
             contents = f.readlines()
         contents = [version, "", "-", "-", "", ""] + contents

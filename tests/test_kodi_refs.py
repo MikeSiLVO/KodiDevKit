@@ -13,10 +13,11 @@ package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
-from libs import kodi_refs, utils
-from libs.addon import Addon
+from libs import kodi_refs
+from libs.addon.translations import get_po_file
+from libs.addon.addon import Addon
 from libs.kodi_refs import kodi_colors_xml, kodi_strings_po
-from libs.skin import Skin
+from libs.skin.skin import Skin
 
 # Resolved by the module itself, so this works from either repo layout.
 SNAPSHOTS_PRESENT = kodi_refs._BUNDLED_DATA.is_dir()
@@ -59,7 +60,7 @@ class TestBundledReferences(unittest.TestCase):
         """A core string id must resolve, or core $LOCALIZE ids read as undefined."""
         path = kodi_strings_po(self.skin, None)
         assert path is not None, "no bundled strings.po resolved"
-        po = utils.get_po_file(path)
+        po = get_po_file(path)
         assert po is not None
         self.assertTrue(
             any(entry.msgctxt == "#13050" for entry in po),

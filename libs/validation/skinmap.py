@@ -5,7 +5,12 @@ from __future__ import annotations
 import os
 import re
 import logging
-from .. import utils
+from ..utils.validation import (
+    find_skinshortcuts_template,
+    get_all_parameter_contexts,
+    resolve_param_in_name,
+    should_report_progress,
+)
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -98,7 +103,7 @@ class ValidationMap:
 
     def _resolve_param_in_map_name(self, map_name, param_context=None):
         """Resolve $PARAM[...] in map names using parameter values."""
-        return utils.resolve_param_in_name(map_name, param_context, self._resolution_cache)
+        return resolve_param_in_name(map_name, param_context, self._resolution_cache)
 
     def _collect_definitions(self, folder):
         """Every `<map>` in load order, with its ref and where it was written."""
@@ -120,13 +125,13 @@ class ValidationMap:
             os.path.join(self.addon.path, folder, xml_file)
             for xml_file in self.addon.window_files.get(folder, [])
         ]
-        template_path = utils.find_skinshortcuts_template(self.addon.path)
+        template_path = find_skinshortcuts_template(self.addon.path)
         if template_path:
             paths.append(template_path)
 
         usages = []
         for count, path in enumerate(paths, 1):
-            if progress_callback and utils.should_report_progress(count, len(paths)):
+            if progress_callback and should_report_progress(count, len(paths)):
                 progress_callback(f"Scanning {os.path.basename(path)} ({count}/{len(paths)})...")
             try:
                 with open(path, encoding="utf8", errors="ignore") as f:
@@ -300,7 +305,7 @@ class ValidationMap:
             raw_name = args[0].strip()
             names = {self._resolve_param_in_map_name(raw_name)}
             if "$PARAM[" in raw_name:
-                for context in utils.get_all_parameter_contexts(self.addon, folder):
+                for context in get_all_parameter_contexts(self.addon, folder):
                     names.add(self._resolve_param_in_map_name(raw_name, context))
 
             referenced.update(names)

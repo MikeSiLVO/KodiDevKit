@@ -1,5 +1,5 @@
 """
-Comprehensive variable validation tests.
+Variable validation tests.
 
 Consolidated from:
 - test_variable_validation.py: Basic variable definition/usage validation
@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Now we can import from base and libs
 from tests.base import ValidationTestCase, VariableCheck
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 
 
 class TestVariableBasicValidation(ValidationTestCase):

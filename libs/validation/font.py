@@ -6,7 +6,9 @@ import os
 import logging
 from lxml import etree as ET
 
-from .. import utils
+from ..utils.xml import file_needs_expansion, get_root_from_file
+from ..utils.validation import find_font_line_in_include, resolve_include_content
+from ..utils.expressions import is_dynamic_expression
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -100,7 +102,7 @@ class ValidationFont:
                     line_no = int(it.get("line") or 0)
                     fn_line = int(it.get("filename_line") or 0) or line_no
 
-                    if filename and not utils.is_dynamic_expression(filename):
+                    if filename and not is_dynamic_expression(filename):
                         rel = filename.replace("\\", "/").strip()
 
                         # Skip validation for resource:// paths (font addon packages)
@@ -180,7 +182,7 @@ class ValidationFont:
 
                     if not sz:
                         issues.append(row(f"Missing <size> for font '{nm or '?'}'", f["file"], f["line"]))
-                    elif not utils.is_dynamic_expression(sz):
+                    elif not is_dynamic_expression(sz):
                         try:
                             sz_val = int(sz)
                             if sz_val < 0:
@@ -216,7 +218,7 @@ class ValidationFont:
 
                     for font_name, usages in fonts_used.items():
                         used_names.add(font_name)
-                        if utils.is_dynamic_expression(font_name):
+                        if is_dynamic_expression(font_name):
                             continue
                         if font_name not in fonts_defined:
                             first_usage = usages[0] if usages else {}
@@ -242,7 +244,7 @@ class ValidationFont:
 
                     for name, path, line in self._iter_used_font_names(folder):
                         used.add(name)
-                        if utils.is_dynamic_expression(name):
+                        if is_dynamic_expression(name):
                             continue
                         if name not in defined:
                             issues.append({"message": f"Font '{name}' is used but not defined in Fonts.xml", "file": path, "line": line, "severity": SEVERITY_ERROR})
@@ -287,12 +289,12 @@ class ValidationFont:
         if not path:
             return out
 
-        root = utils.get_root_from_file(path)
+        root = get_root_from_file(path)
         if root is None:
             return out
 
         # Expand includes and $PARAM in Font.xml if resolver available (with performance check)
-        if self._resolve_include and utils.file_needs_expansion(path):
+        if self._resolve_include and file_needs_expansion(path):
             try:
                 root = self._resolve_include(root, folder=folder)
             except Exception:
@@ -306,7 +308,7 @@ class ValidationFont:
             ln = getattr(fnode, "sourceline", 0) or 0
             src_file = fnode.get("_kdk_inc_file") or src_file
             if include_def and nm:
-                ln = utils.find_font_line_in_include(include_def, nm)
+                ln = find_font_line_in_include(include_def, nm)
                 src_file = include_def.get("file") or src_file
             return {"name": nm, "filename": fn, "size": sz, "file": src_file, "line": ln}
 
@@ -323,7 +325,7 @@ class ValidationFont:
                     continue
                 for inc in self.addon.includes.get(folder, []):
                     if inc.get("type") == "include" and inc.get("name") == inc_name:
-                        content = utils.resolve_include_content(inc, self._resolve_include)
+                        content = resolve_include_content(inc, self._resolve_include)
                         if not content:
                             continue
                         try:
@@ -360,13 +362,13 @@ class ValidationFont:
             if fname.lower() in ("font.xml", "fonts.xml"):
                 continue
             path = os.path.join(xml_dir, fname)
-            root = utils.get_root_from_file(path)
+            root = get_root_from_file(path)
             if root is None:
                 continue
 
             # Expand includes and $PARAM if resolver available (with performance check)
             resolve_fn = self._resolve_include
-            if resolve_fn and utils.file_needs_expansion(path):
+            if resolve_fn and file_needs_expansion(path):
                 try:
                     root = resolve_fn(root, folder=folder)
                 except Exception:
@@ -376,7 +378,7 @@ class ValidationFont:
             for node in root.xpath(".//font"):
                 nm = (node.text or "").strip()
                 # After expansion, skip only dynamic expressions (not simple $PARAM)
-                if not nm or utils.is_dynamic_expression(nm):
+                if not nm or is_dynamic_expression(nm):
                     continue
                 yield nm, path, getattr(node, "sourceline", 0) or 0
 

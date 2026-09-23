@@ -8,7 +8,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 from libs.skin.skin import Skin
 from libs.validation.include import check_include_file_ref, resolve_include_file
 

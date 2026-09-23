@@ -10,7 +10,9 @@ import logging
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
-from .. import utils
+from ..utils.xml import get_root_from_file, tree_needs_expansion
+from ..utils.expressions import is_dynamic_expression
+from ..utils.validation import normalize_control_id
 
 logger = logging.getLogger(__name__)
 
@@ -313,13 +315,13 @@ class SkinIndex:
                 basenames = list(index['window_base_ids'].get(folder, {}).keys())
                 for basename in basenames:
                     path = os.path.join(self.skin.path, folder, basename)
-                    root = utils.get_root_from_file(path)
+                    root = get_root_from_file(path)
                     if root is None:
                         index['window_expanded_ids'][folder][basename] = \
                             index['window_base_ids'][folder].get(basename, set())
                         continue
 
-                    if utils.tree_needs_expansion(root):
+                    if tree_needs_expansion(root):
                         try:
                             resolved = copy.deepcopy(root)
                             self.skin.resolver.resolve(resolved, folder)
@@ -334,17 +336,17 @@ class SkinIndex:
                     expanded_ids = set()
                     for node in resolved.iter('control'):
                         ctrl_id = node.get('id')
-                        if ctrl_id and not utils.is_dynamic_expression(ctrl_id):
-                            expanded_ids.add(utils.normalize_control_id(ctrl_id))
+                        if ctrl_id and not is_dynamic_expression(ctrl_id):
+                            expanded_ids.add(normalize_control_id(ctrl_id))
                     for node in resolved.iter('item'):
                         item_id = node.get('id')
                         if item_id:
-                            expanded_ids.add(utils.normalize_control_id(item_id))
+                            expanded_ids.add(normalize_control_id(item_id))
 
                     for node in resolved.iter('control'):
                         ctrl_id = node.get('id')
                         if ctrl_id and node.find('viewtype') is not None:
-                            index['view_ids'][folder].add(utils.normalize_control_id(ctrl_id))
+                            index['view_ids'][folder].add(normalize_control_id(ctrl_id))
 
                     index['window_expanded_ids'][folder][basename] = expanded_ids
                     resolve_count += 1
@@ -383,7 +385,7 @@ class SkinIndex:
             if "script-skinshortcuts-includes.xml" in path.lower():
                 return None
 
-            root = utils.get_root_from_file(path)
+            root = get_root_from_file(path)
             if root is None:
                 return None
 
@@ -404,7 +406,7 @@ class SkinIndex:
             if 'id' in root.attrib:
                 window_id = root.attrib['id']
                 if window_id:
-                    window_id = utils.normalize_control_id(window_id)
+                    window_id = normalize_control_id(window_id)
                     results['window_ids'][folder].append(window_id)
 
             self._extract_fonts_from_xml(root, path, folder, results)
@@ -426,13 +428,13 @@ class SkinIndex:
             for elem in root.iter('control'):
                 ctrl_id = elem.get('id')
                 if ctrl_id:
-                    ctrl_id = utils.normalize_control_id(ctrl_id)
+                    ctrl_id = normalize_control_id(ctrl_id)
                     results['base_ids'].add(ctrl_id)
 
             for item_elem in root.iter('item'):
                 item_id = item_elem.get('id')
                 if item_id:
-                    item_id = utils.normalize_control_id(item_id)
+                    item_id = normalize_control_id(item_id)
                     results['base_ids'].add(item_id)
 
             has_controls = root.find('.//control[@id]') is not None
@@ -460,7 +462,7 @@ class SkinIndex:
 
             for xml_file in files_to_scan:
                 file_path = os.path.join(self.skin.path, folder, xml_file)
-                root = utils.get_root_from_file(file_path)
+                root = get_root_from_file(file_path)
                 if root is None:
                     continue
 
@@ -496,7 +498,7 @@ class SkinIndex:
         """Extract every static <font> name in the file into the index."""
         for node in root.xpath(".//font"):
             font_name = (node.text or "").strip()
-            if font_name and not utils.is_dynamic_expression(font_name):
+            if font_name and not is_dynamic_expression(font_name):
                 if font_name not in index['fonts_used'][folder]:
                     index['fonts_used'][folder][font_name] = []
                 index['fonts_used'][folder][font_name].append({
@@ -568,7 +570,7 @@ class SkinIndex:
             index['images_referenced'][folder] = {}
 
         def _track(image_path, node, attr=None):
-            if not image_path or utils.is_dynamic_expression(image_path):
+            if not image_path or is_dynamic_expression(image_path):
                 return
             if image_path.startswith('special://skin/'):
                 image_path = image_path[len('special://skin/'):]
@@ -777,7 +779,7 @@ class SkinIndex:
                     }
                     continue
 
-                if utils.is_dynamic_expression(filename):
+                if is_dynamic_expression(filename):
                     index['font_files_checked'][folder][font_name] = {
                         'status': 'dynamic',
                         'detail': None
@@ -841,10 +843,10 @@ class SkinIndex:
             if "id" in node.attrib:
                 control_id = node.attrib["id"]
 
-                if utils.is_dynamic_expression(control_id):
+                if is_dynamic_expression(control_id):
                     continue
 
-                normalized_id = utils.normalize_control_id(control_id)
+                normalized_id = normalize_control_id(control_id)
 
                 # <viewtype> marks a view even when the type attribute is a $PARAM
                 is_view = False
@@ -887,7 +889,7 @@ class SkinIndex:
 
             for match in re.finditer(window_regex, condition_text, re.IGNORECASE):
                 window_id = match.group(1)
-                window_id = utils.normalize_control_id(window_id)
+                window_id = normalize_control_id(window_id)
                 if window_id not in index['ids_referenced'][folder]:
                     index['ids_referenced'][folder][window_id] = []
                 index['ids_referenced'][folder][window_id].append({
@@ -906,7 +908,7 @@ class SkinIndex:
                 if _EXCLUDED_FUNCTIONS and function_name.lower() in _EXCLUDED_FUNCTIONS:
                     continue
 
-                control_id = utils.normalize_control_id(control_id)
+                control_id = normalize_control_id(control_id)
 
                 context = None
                 fn_lower = function_name.lower()
@@ -936,7 +938,7 @@ class SkinIndex:
 
                 for match in re.finditer(window_regex, text, re.IGNORECASE):
                     window_id = match.group(1)
-                    window_id = utils.normalize_control_id(window_id)
+                    window_id = normalize_control_id(window_id)
                     if window_id not in index['ids_referenced'][folder]:
                         index['ids_referenced'][folder][window_id] = []
                     index['ids_referenced'][folder][window_id].append({
@@ -958,7 +960,7 @@ class SkinIndex:
                     if is_delayed_execution:
                         continue
 
-                    control_id = utils.normalize_control_id(control_id)
+                    control_id = normalize_control_id(control_id)
 
                     context = None
                     fn_lower = function_name.lower()

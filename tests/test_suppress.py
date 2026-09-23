@@ -9,7 +9,7 @@ package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 from libs.validation.suppress import scan
 
 ADDON_XML = """<?xml version="1.0" encoding="UTF-8"?>

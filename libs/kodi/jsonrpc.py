@@ -1,5 +1,9 @@
 import os
-from .. import utils
+from ..utils.files import check_paths
+from ..addon.translations import get_po_file
+from ..utils.xml import get_root_from_file
+from ..utils.sublime_helpers import prettyprint
+from ..utils.decorators import run_async
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 import socket
@@ -55,7 +59,7 @@ class KodiJsonrpc:
         except Exception:
             pass
 
-    @utils.run_async
+    @run_async
     def request_async(self, method, params):
         """Fire-and-forget version of `request()` (runs on a worker thread)."""
         return self.request(method, params)
@@ -131,7 +135,7 @@ class KodiJsonrpc:
             elif method in _USER_VISIBLE_METHODS:
                 print(json.dumps(_without_negation_twins(result), indent=2, ensure_ascii=False, sort_keys=True))
             elif debug:
-                utils.prettyprint(result)
+                prettyprint(result)
 
             self._cooldown_until = 0.0
             return result
@@ -155,7 +159,7 @@ class KodiJsonrpc:
         self.colors = []
         if not self.color_file_path or not os.path.exists(self.color_file_path):
             return False
-        root = utils.get_root_from_file(self.color_file_path)
+        root = get_root_from_file(self.color_file_path)
         if root is None:
             return False
         for node in root.findall("color"):
@@ -169,7 +173,7 @@ class KodiJsonrpc:
 
     def get_userdata_folder(self):
         """Detect Kodi's userdata folder for the current OS / portable mode."""
-        from ..utils import get_platform
+        from ..utils.files import get_platform
         _plat = get_platform()
         if _plat == "linux":
             return os.path.join(os.path.expanduser("~"), ".%s" % APP_NAME)
@@ -276,12 +280,12 @@ class KodiJsonrpc:
             scan_folders = folders
 
         for item in scan_folders:
-            path = utils.check_paths([
+            path = check_paths([
                 os.path.join(folder, item, "strings.po"),
                 os.path.join(folder, item, "resources", "strings.po")
             ])
             if path:
-                po_file = utils.get_po_file(path)
+                po_file = get_po_file(path)
                 if po_file:
                     po_file.language = item  # type: ignore[attr-defined]
                     po_files.append(po_file)

@@ -1,5 +1,5 @@
 """
-Comprehensive include/parameter resolution tests.
+Include/parameter resolution tests.
 
 Consolidated from:
 - test_param_forwarding.py: Complex parameter forwarding patterns
@@ -24,9 +24,13 @@ package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
-from libs.infoprovider import InfoProvider
-from libs import utils
-from libs.skin import Skin
+from libs.infoprovider.provider import InfoProvider
+from libs.utils.expressions import (
+    is_dynamic_expression,
+    resolve_params_in_text,
+    starts_with_param_reference,
+)
+from libs.skin.skin import Skin
 from tests.test_utils import kodi_resolve
 
 
@@ -306,25 +310,25 @@ class TestDynamicExpressionUtils(unittest.TestCase):
     """Unit tests for dynamic expression helper functions."""
 
     def test_is_dynamic_expression_detects_tokens(self):
-        self.assertTrue(utils.is_dynamic_expression("$PARAM[foo]"))
-        self.assertTrue(utils.is_dynamic_expression("   $Var[bar]"))
-        self.assertTrue(utils.is_dynamic_expression("$INFO[Window.Property(foo)]"))
-        self.assertFalse(utils.is_dynamic_expression("font13"))
+        self.assertTrue(is_dynamic_expression("$PARAM[foo]"))
+        self.assertTrue(is_dynamic_expression("   $Var[bar]"))
+        self.assertTrue(is_dynamic_expression("$INFO[Window.Property(foo)]"))
+        self.assertFalse(is_dynamic_expression("font13"))
 
     def test_starts_with_param_reference_is_specific(self):
-        self.assertTrue(utils.starts_with_param_reference("$param[item]"))
-        self.assertFalse(utils.starts_with_param_reference("$var[item]"))
+        self.assertTrue(starts_with_param_reference("$param[item]"))
+        self.assertFalse(starts_with_param_reference("$var[item]"))
 
     def test_resolve_params_in_text_handles_defaults(self):
         text = "<label>$PARAM[Value]</label>"
-        resolved, status = utils.resolve_params_in_text(text, {"Value": "Hello"})
+        resolved, status = resolve_params_in_text(text, {"Value": "Hello"})
         self.assertEqual(resolved, "<label>Hello</label>")
         self.assertEqual(status, "ALL_RESOLVED")
 
 
 class TestParamSubstitutionWithSkin(unittest.TestCase):
     """
-    Comprehensive tests for param substitution and include resolution.
+    Tests for param substitution and include resolution.
     Tests various edge cases including nested includes, missing params, and malformed XML.
     """
 

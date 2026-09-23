@@ -18,7 +18,7 @@ def texturepacker(media_path, settings, xbt_filename="Textures.xbt"):
     args = ['-dupecheck',
             '-input "%s"' % media_path,
             '-output "%s"' % os.path.join(media_path, xbt_filename)]
-    from ..utils import get_platform
+    from ..utils.files import get_platform
     if get_platform() == "linux":
         args = ['%s %s' % (tp_path, " ".join(args))]
     else:

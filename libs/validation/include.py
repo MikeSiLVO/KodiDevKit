@@ -5,7 +5,16 @@ import re
 import logging
 import xml.etree.ElementTree as ET
 
-from .. import utils
+from ..utils.validation import (
+    deduplicate_issues,
+    find_includes_in_skinshortcuts_template,
+    find_skinshortcuts_template,
+    get_all_parameter_contexts,
+    resolve_param_in_name,
+    should_report_progress,
+)
+from ..utils.xml import get_root_from_file
+from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -137,7 +146,7 @@ class ValidationInclude:
             return name
 
         if params:
-            resolved_name, status = utils.resolve_params_in_text(name, params)
+            resolved_name, status = resolve_params_in_text(name, params)
             if status in ("ALL_RESOLVED", "NO_PARAMS"):
                 return resolved_name
             name = resolved_name  # Use partially resolved name for next step
@@ -148,18 +157,18 @@ class ValidationInclude:
 
         if param_names:
             empty_params = {pname: "" for pname in param_names}
-            resolved_name, _ = utils.resolve_params_in_text(name, empty_params)
+            resolved_name, _ = resolve_params_in_text(name, empty_params)
             return resolved_name
 
         return name
 
     def _resolve_param_in_include_name(self, inc_name, param_context=None):
         """Resolve $PARAM[...] in include names using parameter values."""
-        return utils.resolve_param_in_name(inc_name, param_context, self._resolution_cache)
+        return resolve_param_in_name(inc_name, param_context, self._resolution_cache)
 
     def _get_all_parameter_contexts(self, folder):
         """Get all parameter contexts where an include might be used."""
-        return utils.get_all_parameter_contexts(self.addon, folder)
+        return get_all_parameter_contexts(self.addon, folder)
 
     def check(self, progress_callback=None):
         """Check undefined/unused includes, counting <fontset>/<include> as usage."""
@@ -178,11 +187,11 @@ class ValidationInclude:
 
             for xml_file in files_list:
                 file_count += 1
-                if progress_callback and utils.should_report_progress(file_count, len(files_list)):
+                if progress_callback and should_report_progress(file_count, len(files_list)):
                     progress_callback(f"Scanning {xml_file} ({file_count}/{len(files_list)})...")
 
                 path = os.path.join(self.addon.path, folder, xml_file)
-                root = utils.get_root_from_file(path)
+                root = get_root_from_file(path)
                 if root is None:
                     continue
 
@@ -257,7 +266,7 @@ class ValidationInclude:
                         if not inc_name or inc_name.startswith("$INFO") or inc_name.startswith("$VAR"):
                             continue  # Skip dynamic expressions
 
-                        resolved_name, status = utils.resolve_params_in_text(inc_name, merged_params)
+                        resolved_name, status = resolve_params_in_text(inc_name, merged_params)
 
                         if (status in ("ALL_RESOLVED", "NO_PARAMS") and
                             resolved_name and
@@ -305,14 +314,14 @@ class ValidationInclude:
                         )
 
             # SkinShortcuts template references (v2: template.xml, v3: templates.xml)
-            template_path = utils.find_skinshortcuts_template(self.addon.path)
+            template_path = find_skinshortcuts_template(self.addon.path)
             if template_path:
                 if progress_callback:
                     progress_callback("Checking SkinShortcuts template...")
 
                 known_includes = set(self.addon.include_map.get(folder, {}).keys())
 
-                template_includes = utils.find_includes_in_skinshortcuts_template(
+                template_includes = find_includes_in_skinshortcuts_template(
                     template_path, known_includes
                 )
 
@@ -436,4 +445,4 @@ class ValidationInclude:
         if progress_callback:
             progress_callback(f"Complete: {len(listitems)} issues ({undefined_count} undefined, {unused_count} unused)")
 
-        return utils.deduplicate_issues(listitems)
+        return deduplicate_issues(listitems)

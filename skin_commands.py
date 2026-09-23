@@ -12,7 +12,9 @@ from xml.sax.saxutils import escape
 import sublime
 import sublime_plugin
 
-from .libs import utils
+from .libs.utils.files import get_addons
+from .libs.utils.sublime_helpers import get_node_content
+from .libs.utils.decorators import run_async
 
 logger = logging.getLogger("KodiDevKit.skin_commands")
 
@@ -444,7 +446,7 @@ class KodidevkitSearchForVisibleConditionCommand(_SearchAndInsertMixin, sublime_
 
 class KodidevkitSearchForJsonCommand(sublime_plugin.WindowCommand):
     """Quick-panel search through Kodi's JSONRPC.Introspect types/methods/notifications."""
-    @utils.run_async
+    @run_async
     def run(self):
         from .libs.kodi import kodi
         result = kodi.request(method="JSONRPC.Introspect")
@@ -583,7 +585,7 @@ class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
         file_name = view.file_name()
         if not file_name:
             return None
-        position = go_to_tag(keyword=utils.get_node_content(view, flags),
+        position = go_to_tag(keyword=get_node_content(view, flags),
                             folder=file_name.split(os.sep)[-2])
         if position:
             self.window.open_file(position, sublime.ENCODED_POSITION)
@@ -602,8 +604,8 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
         view = self.window.active_view()
         if not view:
             return False
-        content = utils.get_node_content(view=view,
-                                         flags=sublime.CLASS_WORD_START | sublime.CLASS_WORD_END)
+        content = get_node_content(view=view,
+                                   flags=sublime.CLASS_WORD_START | sublime.CLASS_WORD_END)
         if not content or ("/" not in content and "\\" not in content):
             return False
         translate_path = getattr(addon, "translate_path", None)
@@ -611,7 +613,7 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
             return False
         return os.path.exists(translate_path(content))
 
-    @utils.run_async
+    @run_async
     def run(self, pack_textures=True):
         infos = _infos()
         if not infos:
@@ -619,8 +621,8 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
         addon = getattr(infos, "addon", None)
         if not addon:
             return None
-        path = utils.get_node_content(view=self.window.active_view(),
-                                      flags=sublime.CLASS_WORD_START | sublime.CLASS_WORD_END)
+        path = get_node_content(view=self.window.active_view(),
+                                flags=sublime.CLASS_WORD_START | sublime.CLASS_WORD_END)
         translate_path = getattr(addon, "translate_path", None)
         if not translate_path:
             return None
@@ -640,7 +642,7 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
         if not addon or not addon.media_path:
             return False
         flags = sublime.CLASS_WORD_START | sublime.CLASS_WORD_END
-        content = utils.get_node_content(self.view, flags)
+        content = get_node_content(self.view, flags)
         if not content:
             return False
         return "/" in content or "\\" in content
@@ -656,7 +658,7 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
         if not translate_path:
             return None
         flags = sublime.CLASS_WORD_START | sublime.CLASS_WORD_END
-        path = utils.get_node_content(self.view, flags)
+        path = get_node_content(self.view, flags)
         imagepath = translate_path(path)
         if not os.path.exists(imagepath):
             return None
@@ -683,7 +685,7 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
 
 class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowCommand):
     """Ask Kodi which window XML is active and open it locally."""
-    @utils.run_async
+    @run_async
     def run(self):
         from .libs.kodi import kodi
         view = self.window.active_view()
@@ -799,7 +801,7 @@ class KodidevkitShowDependenciesCommand(sublime_plugin.WindowCommand):
         api_version = getattr(addon, "api_version", None)
         if not api_version:
             return None
-        addons = utils.get_addons(api_version)
+        addons = get_addons(api_version)
         self.ids = list(addons.keys())
         items = [[aid, addons[aid]] for aid in self.ids]
         self.window.show_quick_panel(

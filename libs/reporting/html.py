@@ -4,7 +4,7 @@ import os
 import html
 from datetime import datetime
 from collections import defaultdict
-from .. import utils
+from ..utils.validation import is_runtime_generated_file
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 CATEGORY_DESCRIPTIONS = {
@@ -136,7 +136,7 @@ def generate_html_report(all_issues, skin_name, skin_path, output_path=None, ser
         runtime_list = []
 
         for issue in issues:
-            if utils.is_runtime_generated_file(issue.get("file", "")):
+            if is_runtime_generated_file(issue.get("file", "")):
                 runtime_list.append(issue)
             else:
                 normal_list.append(issue)

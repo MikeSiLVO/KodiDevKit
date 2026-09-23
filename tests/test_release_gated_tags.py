@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import libs
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 
 
 ADDON_XML = """<?xml version="1.0" encoding="UTF-8"?>

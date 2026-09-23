@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import logging
 
-from .. import utils
+from ..utils.files import check_bom, eol_info_from_path_patterns
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class ValidationFileCheck:
 
         # BOM check
         for path in xml_files:
-            if utils.check_bom(path):
+            if check_bom(path):
                 issues.append({
                     "message": f"found BOM. File: {os.path.basename(path)}",
                     "file": path,
@@ -44,7 +44,7 @@ class ValidationFileCheck:
 
         # Text types only: binaries such as PNGs routinely contain 0D 0A and
         # would otherwise be reported as having Windows line endings.
-        result = utils.eol_info_from_path_patterns(
+        result = eol_info_from_path_patterns(
             [self.addon.path],
             recursive=True,
             includes=['.xml', '.po', '.txt', '.py', '.md'],

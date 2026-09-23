@@ -9,8 +9,9 @@ import logging
 import sublime
 import sublime_plugin
 
-from .libs import utils
-from .libs.skin import texturepacker
+from .libs.utils.files import make_archive
+from .libs.utils.decorators import run_async
+from .libs.skin.textures import texturepacker
 
 logger = logging.getLogger("KodiDevKit.build_commands")
 
@@ -32,7 +33,7 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
         addon = getattr(infos, "addon", None)
         return bool(addon) and addon.type == "skin"
 
-    @utils.run_async
+    @run_async
     def run(self, pack_textures=True):
         infos = _infos()
         if not infos:
@@ -44,8 +45,8 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
         if pack_textures:
             texturepacker(media_path=path,
                           settings=sublime.load_settings(SETTINGS_FILE))
-        utils.make_archive(folderpath=path,
-                           archive=os.path.join(path, os.path.basename(path) + ".zip"))
+        make_archive(folderpath=path,
+                     archive=os.path.join(path, os.path.basename(path) + ".zip"))
         if sublime.ok_cancel_dialog(
                 "Zip file created!\n"
                 "Do you want to show it with a file browser?"):
@@ -85,7 +86,7 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
             return
         self._build_theme_async(index)
 
-    @utils.run_async
+    @run_async
     def _build_theme_async(self, index: int) -> None:
         infos = _infos()
         if not infos:

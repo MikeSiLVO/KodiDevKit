@@ -95,7 +95,7 @@ class TestQuickPanelFiltering(unittest.TestCase):
     """`InfoProvider` applies the include-warning filter the panel has no render step for."""
 
     def _provider(self, hide):
-        from libs.infoprovider import InfoProvider
+        from libs.infoprovider.provider import InfoProvider
 
         provider = InfoProvider()
         provider.settings = {"hide_include_warnings": hide}

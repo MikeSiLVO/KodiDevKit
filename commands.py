@@ -10,14 +10,17 @@ from lxml import etree as ET
 import sublime
 import sublime_plugin
 
-from .libs import utils
+from .libs.utils.files import check_paths, get_sublime_path
+from .libs.addon.translations import get_po_file
+from .libs.utils.decorators import run_async
+from .libs.utils.expressions import split_top_level_commas
 from .libs.kodi import kodi
 
 import subprocess
 
 APP_NAME = "Kodi"
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
-SUBLIME_PATH = utils.get_sublime_path()
+SUBLIME_PATH = get_sublime_path()
 
 FILE_ERROR_PATTERN = re.compile(r'File "(.*?)", line (\d*), in .*')
 TUPLE_ERROR_PATTERN = re.compile(r"', \('(.*?)', (\d+), (\d+), ")
@@ -40,7 +43,7 @@ class KodidevkitOpenKodiLogCommand(sublime_plugin.WindowCommand):
             ])
         paths.append(os.path.join(os.path.expanduser("~"), "Library", "Logs", filename))
 
-        self.log = utils.check_paths(paths)
+        self.log = check_paths(paths)
         if self.log:
             self.window.open_file(self.log)
         else:
@@ -336,12 +339,12 @@ class _KodiQueryPromptMixin:
                                      None,
                                      None)
 
-    @utils.run_async
+    @run_async
     def _on_input(self, input_string):
         from .libs.sublime.logging import ResultsDisplayPanel
 
         self.settings.set(self._settings_key, input_string)
-        words = utils.split_top_level_commas(input_string)
+        words = split_top_level_commas(input_string)
 
         result = kodi.request(method=self._method,
                               params={self._param_key: words})
@@ -392,7 +395,7 @@ class KodidevkitBrowseKodiVfsCommand(sublime_plugin.WindowCommand):
                                      on_select=self.on_done,
                                      selected_index=0)
 
-    @utils.run_async
+    @run_async
     def on_done(self, index):
         if index == -1:
             return None
@@ -510,7 +513,7 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
     """Run every validation check and open the HTML report in a browser."""
 
     def run(self):
-        from .libs.infoprovider import InfoProvider
+        from .libs.infoprovider.provider import InfoProvider
         from .libs.reporting import html as report_generator
         from .libs.reporting import server as report_server
         from .libs.sublime.scratch import ReportProgressView
@@ -819,7 +822,7 @@ class KodidevkitLanguageProbeCommand(sublime_plugin.ApplicationCommand):
             if core_candidates:
                 log.info("[probe] sample core .po: %s", core_candidates[0])
 
-            from .libs.addon import Addon
+            from .libs.addon.addon import Addon
             try:
                 win = sublime.active_window()
                 view = win.active_view() if win else None
@@ -858,7 +861,7 @@ class KodidevkitLanguageProbeCommand(sublime_plugin.ApplicationCommand):
                 log.info("[probe] po_files loaded by Addon: %d", len(getattr(a, "po_files", [])))
 
             if core_candidates:
-                po = utils.get_po_file(core_candidates[0])
+                po = get_po_file(core_candidates[0])
                 log.info("[probe] parse core candidate ok=%s", bool(po))
             else:
                 log.info("[probe] no core .po candidates to parse")

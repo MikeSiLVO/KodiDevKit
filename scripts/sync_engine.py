@@ -59,18 +59,9 @@ EDITOR_ONLY = {
 
 # Test modules covering editor-only features; the rest of tests/ mirrors.
 EDITOR_ONLY_TESTS = {
-    "run_tests.py",
-    "test_extract_expression_at_offset.py", "test_hover.py",
+    "run_tests.py", "test_hover.py",
     "test_negation_twin_filter.py", "test_report_filtering.py",
-    "test_split_top_level_commas.py", "test_include_param_roles.py",
-}
-
-# Re-export modules whose contents track what each tree actually ships. Function
-# comparison can't see a differing `from .x import y`, so these are never copied.
-NEVER_COPY = {
-    "libs/utils/__init__.py",
-    "libs/reporting/__init__.py",
-    "libs/polib/__init__.py",
+    "test_include_param_roles.py",
 }
 
 # Mirrored files that legitimately differ, and the symbols allowed to differ.
@@ -194,9 +185,6 @@ def check(kdk: Path) -> int:
             continue
         a, b = units(src), units(dst)
         differing = {n for n in set(a) & set(b) if a[n] != b[n]} | (set(a) ^ set(b))
-        if rel in NEVER_COPY:
-            exempt_ok += 1
-            continue
         allowed = EXEMPT.get(rel, set())
         unexpected = differing - allowed
         if unexpected:
@@ -215,8 +203,8 @@ def check(kdk: Path) -> int:
         for n in names:
             print(f"      {n}")
     if drifted or missing:
-        auto = [r for r, _ in drifted if r not in EXEMPT and r not in NEVER_COPY] + missing
-        manual = [r for r, _ in drifted if r in EXEMPT or r in NEVER_COPY]
+        auto = [r for r, _ in drifted if r not in EXEMPT] + missing
+        manual = [r for r, _ in drifted if r in EXEMPT]
         print()
         if auto:
             print(f"`--apply` fixes {len(auto)}: " + ", ".join(auto))
@@ -230,7 +218,7 @@ def check(kdk: Path) -> int:
 def apply(kdk: Path) -> int:
     copied = 0
     for rel, src, dst in pairs(kdk):
-        if rel in EXEMPT or rel in NEVER_COPY:
+        if rel in EXEMPT:
             continue
         if dst.exists() and src.read_bytes() == dst.read_bytes():
             continue
@@ -247,9 +235,9 @@ def apply(kdk: Path) -> int:
 def _verify_importable(kdk: Path) -> int:
     """Import kdk's engine in a subprocess; a mirror that breaks it must fail loudly."""
     import subprocess
-    probe = ("import sys; sys.path.insert(0, %r); "
-             "import kdk.libs.skin.skin, kdk.libs.infoprovider.provider, "
-             "kdk.libs.validation, kdk.libs.utils" % str(kdk / "src"))
+    probe = ("import importlib, pkgutil, sys; sys.path.insert(0, %r); import kdk.libs; "
+             "[importlib.import_module(m.name) "
+             "for m in pkgutil.walk_packages(kdk.libs.__path__, 'kdk.libs.')]" % str(kdk / "src"))
     result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
     if result.returncode:
         print("\nMirror left kdk unimportable:")

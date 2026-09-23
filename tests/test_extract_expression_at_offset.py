@@ -11,7 +11,7 @@ sent to ``XBMC.GetInfoBooleans``. Real-world expressions are mined from
 """
 
 from tests.base import KodiDevKitTestCase
-from libs.utils import extract_expression_at_offset
+from libs.utils.expressions import extract_expression_at_offset
 
 
 class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):

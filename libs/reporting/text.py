@@ -5,7 +5,7 @@ Kept free of the `sublime` import so the formatting/filtering is unit-testable.
 
 from typing import Container
 
-from .. import utils
+from ..utils.validation import is_runtime_generated_file
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 
@@ -50,7 +50,7 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
     for category, issues in all_issues_raw.items():
         kept = []
         for issue in issues:
-            if utils.is_runtime_generated_file(issue.get("file", "")):
+            if is_runtime_generated_file(issue.get("file", "")):
                 total_runtime_excluded += 1
                 continue
             if not issue_visible(issue, hidden_severities, hide_include_warnings):

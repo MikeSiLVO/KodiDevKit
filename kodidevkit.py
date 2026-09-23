@@ -19,11 +19,23 @@ import mdpopups
 # Suppress mdpopups verbose logging (must happen before local imports that use logging)
 logging.getLogger('MARKDOWN').setLevel(logging.WARNING)
 
-from .libs import utils  # noqa: E402
-from .libs import infoprovider  # noqa: E402
+from .libs.utils.infobool import (  # noqa: E402
+    STATE_FALSE,
+    STATE_INVALID,
+    STATE_NEEDS_CONTEXT,
+    STATE_OFFLINE,
+    STATE_TRUE,
+    check_condition,
+    probe_booleans,
+    read_probe,
+)
+from .libs.utils.expressions import extract_expression_at_offset, flatten_expressions  # noqa: E402
+from .libs.utils.xml import get_root_from_file  # noqa: E402
+from .libs.utils.sublime_helpers import jump_to_label_declaration  # noqa: E402
+from .libs.infoprovider.provider import InfoProvider  # noqa: E402
 from .libs.kodi import kodi  # noqa: E402
 
-INFOS = infoprovider.InfoProvider()
+INFOS = InfoProvider()
 # sublime.log_commands(True)
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
@@ -117,11 +129,11 @@ EXPANSION_LIMIT = 1200
 
 # Color + word, not emoji: emoji fonts render inconsistently across platforms.
 _VERDICT_TEXT = {
-    utils.STATE_TRUE: ("kdk-true", "TRUE"),
-    utils.STATE_FALSE: ("kdk-false", "FALSE"),
-    utils.STATE_INVALID: ("kdk-invalid", "NOT PARSEABLE"),
-    utils.STATE_NEEDS_CONTEXT: ("kdk-offline", "NEEDS INCLUDE CONTEXT"),
-    utils.STATE_OFFLINE: ("kdk-offline", "KODI UNREACHABLE"),
+    STATE_TRUE: ("kdk-true", "TRUE"),
+    STATE_FALSE: ("kdk-false", "FALSE"),
+    STATE_INVALID: ("kdk-invalid", "NOT PARSEABLE"),
+    STATE_NEEDS_CONTEXT: ("kdk-offline", "NEEDS INCLUDE CONTEXT"),
+    STATE_OFFLINE: ("kdk-offline", "KODI UNREACHABLE"),
 }
 
 # XML's five predefined entities; conditions carry them via &amp; and quotes.
@@ -162,7 +174,7 @@ def _operand_clause(line_text, cursor_offset):
     at = line_text[cursor_offset] if 0 <= cursor_offset < len(line_text) else ""
     if not at or at in _OPERAND_STOP:
         return None
-    return utils.extract_expression_at_offset(line_text, cursor_offset) or None
+    return extract_expression_at_offset(line_text, cursor_offset) or None
 
 
 def _skin_expressions(view):
@@ -185,23 +197,23 @@ def evaluate_condition(view, condition):
     if not condition or not re.search(r"[A-Za-z]", condition):
         return None
 
-    flattened, unknown = utils.flatten_expressions(condition, _skin_expressions(view))
+    flattened, unknown = flatten_expressions(condition, _skin_expressions(view))
     if unknown:
-        return _verdict_html(utils.STATE_INVALID, f"undefined expression {sorted(unknown)[0]}")
+        return _verdict_html(STATE_INVALID, f"undefined expression {sorted(unknown)[0]}")
 
     expansion = flattened if flattened != condition else ""
     if len(flattened) > EXPANSION_LIMIT:
-        return _verdict_html(utils.STATE_OFFLINE, "expression too large to evaluate")
+        return _verdict_html(STATE_OFFLINE, "expression too large to evaluate")
 
-    problem = utils.check_condition(flattened)
+    problem = check_condition(flattened)
     if problem:
         return _verdict_html(*problem)
 
     if getattr(kodi, "_cooldown_until", 0) > time.time():
         return None
     result = kodi.request(method="XBMC.GetInfoBooleans",
-                          params={"booleans": utils.probe_booleans(flattened)})
-    state = utils.read_probe(result, flattened)
+                          params={"booleans": probe_booleans(flattened)})
+    state = read_probe(result, flattened)
 
     body = _verdict_html(state)
     if expansion:
@@ -321,7 +333,7 @@ def _show_fatal_xml_phantom():
     fatal = getattr(INFOS, "_fatal_xml_error", None)
     if not fatal:
         return
-    from .libs.utils import last_xml_errors
+    from .libs.utils.xml import last_xml_errors
     err = last_xml_errors[0] if last_xml_errors else None
     line_num = err.get("line", 1) if err else 1
     msg = err["message"] if err else "File could not be parsed"
@@ -383,8 +395,8 @@ def plugin_loaded():
     global INFOS
     if 'INFOS' not in globals():
         try:
-            infoprovider = import_module('.libs.infoprovider', __package__)
-            INFOS = infoprovider.InfoProvider(settings)
+            provider = import_module('.libs.infoprovider.provider', __package__)
+            INFOS = provider.InfoProvider(settings)
         except Exception:
             INFOS = None
 
@@ -1180,7 +1192,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     return include_content
 
         if element is not None and element.tag == "param":
-            text = utils.extract_expression_at_offset(line_text, cursor_offset) or selected_content.strip()
+            text = extract_expression_at_offset(line_text, cursor_offset) or selected_content.strip()
 
             # Unresolved include params like <param name="visible">$PARAM[visible]</param>
             # have nothing meaningful to look up.
@@ -1526,7 +1538,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                         flags=sublime.COOPERATE_WITH_AUTO_COMPLETE,
                         max_width=w,
                         max_height=h,
-                        on_navigate=lambda href, vv=v: utils.jump_to_label_declaration(vv, href),
+                        on_navigate=lambda href, vv=v: jump_to_label_declaration(vv, href),
                         on_hide=lambda vv=v: vv.settings().erase("kodidevkit.popup_kind"),
                     )
                 ),
@@ -1689,9 +1701,9 @@ class KodiDevKit(sublime_plugin.EventListener):
 
             addon.reload(filename_full)
 
-            from .libs.utils import last_xml_errors
+            from .libs.utils.xml import last_xml_errors
 
-            self.root = utils.get_root_from_file(filename_full)
+            self.root = get_root_from_file(filename_full)
             if self.root is None:
                 # Parse failed: surface the parse error inline as an error phantom.
                 if last_xml_errors:
@@ -1858,7 +1870,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             addon = getattr(INFOS, "addon", None)
             if addon:
                 parse_start = time.time()
-                self.root = utils.get_root_from_file(self.filename)
+                self.root = get_root_from_file(self.filename)
                 self.tree = ET.ElementTree(self.root)
                 self._index_nodes()
                 parse_elapsed = time.time() - parse_start

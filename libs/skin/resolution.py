@@ -6,7 +6,7 @@ import copy
 import re
 import logging
 
-from .. import utils
+from ..utils.expressions import flatten_expressions, resolve_params_in_text
 from ..skin.include import SkinInclude
 
 if TYPE_CHECKING:
@@ -131,7 +131,7 @@ class SkinResolution:
 
     def _resolve_expression_value(self, value: str, expression_map: dict, resolved: list) -> str:
         """Resolve $EXP[name] references with circular detection."""
-        return utils.flatten_expressions(value, expression_map, resolved)[0]
+        return flatten_expressions(value, expression_map, resolved)[0]
 
     # tab is attribute-safe and never appears in an include name
     _PATH_SEP = "\t"
@@ -163,7 +163,7 @@ class SkinResolution:
 
             # unknown $PARAM names survive our param pass; Kodi's empties them, so empty for lookup
             if inc_name and "$PARAM[" in inc_name:
-                resolved_name, status = utils.resolve_params_in_text(inc_name, call_params)
+                resolved_name, status = resolve_params_in_text(inc_name, call_params)
                 if status in ("ALL_RESOLVED", "NO_PARAMS"):
                     inc_name = resolved_name
                 else:
@@ -171,7 +171,7 @@ class SkinResolution:
                     param_names = param_pattern.findall(resolved_name)
                     if param_names:
                         empty_params = {pname: "" for pname in param_names}
-                        inc_name, _ = utils.resolve_params_in_text(resolved_name, empty_params)
+                        inc_name, _ = resolve_params_in_text(resolved_name, empty_params)
                     else:
                         inc_name = resolved_name
 
@@ -266,7 +266,7 @@ class SkinResolution:
             return
 
         for attr_name, attr_value in list(node.attrib.items()):
-            resolved, status = utils.resolve_params_in_text(attr_value, params)
+            resolved, status = resolve_params_in_text(attr_value, params)
 
             # a lone undefined $PARAM forwarded as a param value drops the <param>; default wins
             if (status == "SINGLE_UNDEFINED" and
@@ -280,7 +280,7 @@ class SkinResolution:
             node.attrib[attr_name] = resolved
 
         if node.text:
-            resolved, status = utils.resolve_params_in_text(node.text, params)
+            resolved, status = resolve_params_in_text(node.text, params)
 
             # same for the text form
             if (status == "SINGLE_UNDEFINED" and

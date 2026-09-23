@@ -9,8 +9,10 @@ import copy
 import time
 from pathlib import Path
 
-from .. import utils
-from .. import addon
+from ..utils.files import check_paths
+from ..utils.xml import get_root_from_file, tree_needs_expansion
+from ..utils.validation import normalize_control_id
+from ..addon.addon import Addon
 from ..skin.include import SkinInclude
 from .maps import SkinMaps, INCLUDE_MAPS_VERSION
 from .resolution import SkinResolution
@@ -27,7 +29,7 @@ logger.propagate = True
 FILE_PREVIEW_SIZE = 50_000
 
 
-class Skin(addon.Addon):
+class Skin(Addon):
     """A Kodi skin: includes, colors, fonts, and resolved windows."""
 
     LANG_START_ID = 31000
@@ -230,7 +232,7 @@ class Skin(addon.Addon):
                 logger.warning("Built-in controls file not found: %s", builtin_path)
                 return builtin_controls, filename_to_window
 
-            root = utils.get_root_from_file(str(builtin_path))
+            root = get_root_from_file(str(builtin_path))
             if root is None:
                 logger.warning("Failed to parse built-in controls file")
                 return builtin_controls, filename_to_window
@@ -252,7 +254,7 @@ class Skin(addon.Addon):
                     description = control_elem.get('description', '')
 
                     if control_id:
-                        control_id = utils.normalize_control_id(control_id)
+                        control_id = normalize_control_id(control_id)
                         builtin_controls[window_name][control_id] = description
 
             logger.info("Loaded built-in controls for %d windows", len(builtin_controls))
@@ -350,7 +352,7 @@ class Skin(addon.Addon):
             self.expression_map[folder] = {}
             self.expression_source_map[folder] = {}
 
-            include_file = utils.check_paths(paths)
+            include_file = check_paths(paths)
             if include_file:
                 self.update_includes(include_file)
             else:
@@ -402,7 +404,7 @@ class Skin(addon.Addon):
 
         folder = xml_file.split(os.sep)[-2]
 
-        root = utils.get_root_from_file(xml_file)
+        root = get_root_from_file(xml_file)
         if root is None:
             return []
 
@@ -512,7 +514,7 @@ class Skin(addon.Addon):
                 self.update_include_list()
             else:
                 # an untracked file may be an include that just became parseable
-                root = utils.get_root_from_file(path)
+                root = get_root_from_file(path)
                 if root is not None and root.tag == "includes":
                     logger.info("Recovered include file detected: %s", path)
                     self.update_include_list()
@@ -636,7 +638,7 @@ class Skin(addon.Addon):
 
     def get_expanded_root(self, path, folder):
         """Parse a file and resolve it in place, uncached; unexpanded tree if resolving fails."""
-        root = utils.get_root_from_file(path)
+        root = get_root_from_file(path)
         if root is None:
             return None
 
@@ -791,12 +793,12 @@ class Skin(addon.Addon):
             if progress_callback:
                 progress_callback(f"Loading {basename}...")
 
-            source_root = utils.get_root_from_file(file_path)
+            source_root = get_root_from_file(file_path)
             if source_root is None:
                 logger.warning("Failed to parse file: %s", file_path)
                 return {'issues': [], 'file': file_path}
 
-            if utils.tree_needs_expansion(source_root):
+            if tree_needs_expansion(source_root):
                 if progress_callback:
                     progress_callback(f"Resolving includes in {basename}...")
 
@@ -854,7 +856,10 @@ class Skin(addon.Addon):
         if progress_callback:
             progress_callback(f"Validating {basename}...")
 
-        from ..validation import ValidationIds, ValidationFont, ValidationLabel, ValidationExpression
+        from ..validation.ids import ValidationIds
+        from ..validation.font import ValidationFont
+        from ..validation.label import ValidationLabel
+        from ..validation.expression import ValidationExpression
 
         issues = []
 

@@ -1,5 +1,5 @@
 """
-Comprehensive expression parsing tests.
+Expression parsing tests.
 
 Consolidated from:
 - test_number_expressions.py: $NUMBER[] expression parsing and validation
@@ -21,8 +21,8 @@ package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
-from libs.infoprovider import InfoProvider
-from libs import utils
+from libs.infoprovider.provider import InfoProvider
+from libs.utils.expressions import contains_dynamic_expression, extract_number_value
 
 
 class TestNumberExpressions(unittest.TestCase):
@@ -60,18 +60,18 @@ class TestNumberExpressions(unittest.TestCase):
 
     def test_extract_number_value_valid(self):
         """Test extracting numeric value from valid $NUMBER[] expressions."""
-        self.assertEqual(utils.extract_number_value("$NUMBER[25]"), "25")
-        self.assertEqual(utils.extract_number_value("$NUMBER[100]"), "100")
-        self.assertEqual(utils.extract_number_value("$NUMBER[0]"), "0")
-        self.assertEqual(utils.extract_number_value("$number[50]"), "50")  # case insensitive
+        self.assertEqual(extract_number_value("$NUMBER[25]"), "25")
+        self.assertEqual(extract_number_value("$NUMBER[100]"), "100")
+        self.assertEqual(extract_number_value("$NUMBER[0]"), "0")
+        self.assertEqual(extract_number_value("$number[50]"), "50")  # case insensitive
 
     def test_extract_number_value_invalid(self):
         """Test that invalid $NUMBER[] expressions return None."""
-        self.assertIsNone(utils.extract_number_value("25"))  # not a $NUMBER expression
-        self.assertIsNone(utils.extract_number_value("$NUMBER[abc]"))  # non-numeric
-        self.assertIsNone(utils.extract_number_value("$NUMBER[]"))  # empty
-        self.assertIsNone(utils.extract_number_value("$INFO[25]"))  # different expression
-        self.assertIsNone(utils.extract_number_value(None))  # type: ignore[arg-type]
+        self.assertIsNone(extract_number_value("25"))  # not a $NUMBER expression
+        self.assertIsNone(extract_number_value("$NUMBER[abc]"))  # non-numeric
+        self.assertIsNone(extract_number_value("$NUMBER[]"))  # empty
+        self.assertIsNone(extract_number_value("$INFO[25]"))  # different expression
+        self.assertIsNone(extract_number_value(None))  # type: ignore[arg-type]
 
     def test_number_in_limit_attribute(self):
         """Test that $NUMBER[] in limit attribute validates correctly."""
@@ -188,53 +188,53 @@ class TestContainsDynamicExpression(unittest.TestCase):
 
     def test_embedded_param_expression(self):
         """Test detection of embedded $PARAM[] in value."""
-        self.assertTrue(utils.contains_dynamic_expression("800$PARAM[id]"))
+        self.assertTrue(contains_dynamic_expression("800$PARAM[id]"))
 
     def test_embedded_var_expression(self):
         """Test detection of embedded $VAR[] in value."""
-        self.assertTrue(utils.contains_dynamic_expression("prefix$VAR[MyVar]"))
+        self.assertTrue(contains_dynamic_expression("prefix$VAR[MyVar]"))
 
     def test_embedded_info_expression(self):
         """Test detection of embedded $INFO[] in value."""
-        self.assertTrue(utils.contains_dynamic_expression("text$INFO[Label]suffix"))
+        self.assertTrue(contains_dynamic_expression("text$INFO[Label]suffix"))
 
     def test_plain_value_no_expression(self):
         """Test that plain values without expressions return False."""
-        self.assertFalse(utils.contains_dynamic_expression("normalvalue"))
-        self.assertFalse(utils.contains_dynamic_expression("800"))
-        self.assertFalse(utils.contains_dynamic_expression("plain123"))
+        self.assertFalse(contains_dynamic_expression("normalvalue"))
+        self.assertFalse(contains_dynamic_expression("800"))
+        self.assertFalse(contains_dynamic_expression("plain123"))
 
     def test_full_expression_detected(self):
         """Test that full expressions starting with $ are detected."""
-        self.assertTrue(utils.contains_dynamic_expression("$VAR[test]"))
-        self.assertTrue(utils.contains_dynamic_expression("$PARAM[foo]"))
-        self.assertTrue(utils.contains_dynamic_expression("$INFO[label]"))
+        self.assertTrue(contains_dynamic_expression("$VAR[test]"))
+        self.assertTrue(contains_dynamic_expression("$PARAM[foo]"))
+        self.assertTrue(contains_dynamic_expression("$INFO[label]"))
 
     def test_case_insensitive_detection(self):
         """Test that expression detection is case-insensitive."""
-        self.assertTrue(utils.contains_dynamic_expression("$var[test]"))
-        self.assertTrue(utils.contains_dynamic_expression("$PARAM[test]"))
-        self.assertTrue(utils.contains_dynamic_expression("800$param[id]"))
+        self.assertTrue(contains_dynamic_expression("$var[test]"))
+        self.assertTrue(contains_dynamic_expression("$PARAM[test]"))
+        self.assertTrue(contains_dynamic_expression("800$param[id]"))
 
     def test_addon_expression_detected(self):
         """Test detection of $ADDON[] expressions."""
-        self.assertTrue(utils.contains_dynamic_expression("test$ADDON[foo]"))
+        self.assertTrue(contains_dynamic_expression("test$ADDON[foo]"))
 
     def test_escvar_expression_detected(self):
         """Test detection of $ESCVAR[] expressions."""
-        self.assertTrue(utils.contains_dynamic_expression("prefix$ESCVAR[test]"))
+        self.assertTrue(contains_dynamic_expression("prefix$ESCVAR[test]"))
 
     def test_escinfo_expression_detected(self):
         """Test detection of $ESCINFO[] expressions."""
-        self.assertTrue(utils.contains_dynamic_expression("text$ESCINFO[label]"))
+        self.assertTrue(contains_dynamic_expression("text$ESCINFO[label]"))
 
     def test_empty_string(self):
         """Test that empty strings return False."""
-        self.assertFalse(utils.contains_dynamic_expression(""))
+        self.assertFalse(contains_dynamic_expression(""))
 
     def test_none_value(self):
         """Test that None values return False."""
-        self.assertFalse(utils.contains_dynamic_expression(None))  # type: ignore[arg-type]
+        self.assertFalse(contains_dynamic_expression(None))  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":

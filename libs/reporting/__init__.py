@@ -1,1 +1,1 @@
-"""Reporting package for HTML report generation, HTTP serving, and browser integration."""
+"""Reporting package for validation results."""

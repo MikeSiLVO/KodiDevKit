@@ -12,7 +12,9 @@ import re
 import logging
 from lxml import etree as ET
 
-from .. import utils
+from ..utils.validation import deduplicate_issues, resolve_include_content
+from ..utils.xml import file_needs_expansion, get_root_from_file
+from ..utils.expressions import get_param_names_in_context
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -131,7 +133,7 @@ class ValidationIds:
                                         "severity": SEVERITY_ERROR,
                                     })
 
-            return utils.deduplicate_issues(listitems)
+            return deduplicate_issues(listitems)
 
         window_regex = (
             r"(?:Dialog.Close|Window.IsActive|Window.IsVisible|Window)\(([0-9]+)\)"
@@ -158,12 +160,12 @@ class ValidationIds:
             defines = []
             for xml_file in self.addon.window_files[folder]:
                 path = os.path.join(self.addon.path, folder, xml_file)
-                root = utils.get_root_from_file(path)
+                root = get_root_from_file(path)
                 if root is None:
                     continue
 
                 # Expand includes and $PARAM if resolver available
-                if self._resolve_include and utils.file_needs_expansion(path):
+                if self._resolve_include and file_needs_expansion(path):
                     try:
                         root = self._resolve_include(root, folder=folder)
                     except Exception:
@@ -215,7 +217,7 @@ class ValidationIds:
                     if not include_def:
                         continue
 
-                    params_used_as_ids = utils.get_param_names_in_context(
+                    params_used_as_ids = get_param_names_in_context(
                         include_def.node, ".//@id"
                     )
 
@@ -284,7 +286,7 @@ class ValidationIds:
 
             define_list = [d["name"] for d in defines]
             for inc in self.addon.includes.get(folder, []):
-                content = utils.resolve_include_content(inc, None)
+                content = resolve_include_content(inc, None)
                 if not content:
                     continue
                 try:
@@ -321,7 +323,7 @@ class ValidationIds:
         if progress_callback:
             progress_callback(f"Complete: {error_count} issues ({undefined_count} undefined)")
 
-        return utils.deduplicate_issues(listitems)
+        return deduplicate_issues(listitems)
 
 
 def check(addon, validation_index):

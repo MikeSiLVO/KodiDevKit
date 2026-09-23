@@ -1,5 +1,5 @@
 """
-Comprehensive ID validation tests.
+ID validation tests.
 
 Consolidated from:
 - test_id_validation.py: Basic control and window ID validation
@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Now we can import from base and libs
 from tests.base import ValidationTestCase, IdCheck
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 
 
 class TestBasicIDValidation(ValidationTestCase):
@@ -756,7 +756,7 @@ class TestAlarmClockException(ValidationTestCase):
         index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]  # type: ignore[union-attr]
 
         # Create checker with window IDs
-        from libs.validation import ValidationIds as IdCheck
+        from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         issues = checker.check()
 
@@ -800,7 +800,7 @@ class TestAlarmClockException(ValidationTestCase):
         provider.init_addon(self.test_dir)
 
         index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]
-        from libs.validation import ValidationIds as IdCheck
+        from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         issues = checker.check()
 
@@ -828,7 +828,7 @@ class TestAlarmClockException(ValidationTestCase):
         provider.init_addon(self.test_dir)
 
         index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]
-        from libs.validation import ValidationIds as IdCheck
+        from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         issues = checker.check()
 
@@ -856,7 +856,7 @@ class TestAlarmClockException(ValidationTestCase):
         provider = InfoProvider()
         provider.init_addon(self.test_dir)
 
-        from libs.validation import ValidationIds as IdCheck
+        from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES)
         issues = checker.check()
 
@@ -1159,7 +1159,7 @@ class TestBuiltinControls(unittest.TestCase):
         provider = InfoProvider()
         provider.init_addon(self.test_dir)
 
-        from libs.validation import ValidationIds as IdCheck
+        from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES)
         issues = checker.check()
 
@@ -1202,7 +1202,7 @@ class TestNonWindowRootScope(unittest.TestCase):
         provider.load_data("omega")
         provider.init_addon(self.test_dir)
         index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]
-        from libs.validation import ValidationIds as IdCheck
+        from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         return checker.check()
 

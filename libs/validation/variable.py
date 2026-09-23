@@ -3,7 +3,14 @@
 import os
 import re
 import logging
-from .. import utils
+from ..utils.validation import (
+    find_skinshortcuts_template,
+    find_variable_definitions_in_skinshortcuts_template,
+    find_variables_in_skinshortcuts_template,
+    get_all_parameter_contexts,
+    resolve_param_in_name,
+    should_report_progress,
+)
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -53,11 +60,11 @@ class ValidationVariable:
 
     def _resolve_param_in_variable_name(self, var_name, param_context=None):
         """Resolve $PARAM[...] in variable names using parameter values."""
-        return utils.resolve_param_in_name(var_name, param_context, self._resolution_cache)
+        return resolve_param_in_name(var_name, param_context, self._resolution_cache)
 
     def _get_all_parameter_contexts(self, folder):
         """Get all parameter contexts where a variable might be used."""
-        return utils.get_all_parameter_contexts(self.addon, folder)
+        return get_all_parameter_contexts(self.addon, folder)
 
     def check(self, progress_callback=None):
         """Find undefined or unused variables."""
@@ -75,7 +82,7 @@ class ValidationVariable:
             files_list = self.addon.window_files[folder]
             for xml_file in files_list:
                 file_count += 1
-                if progress_callback and utils.should_report_progress(file_count, len(files_list)):
+                if progress_callback and should_report_progress(file_count, len(files_list)):
                     progress_callback(f"Scanning {xml_file} ({file_count}/{len(files_list)})...")
                 path = os.path.join(self.addon.path, folder, xml_file)
                 with open(path, encoding="utf8", errors="ignore") as f:
@@ -110,14 +117,14 @@ class ValidationVariable:
                         )
 
             # SkinShortcuts template references (v2: template.xml, v3: templates.xml)
-            template_path = utils.find_skinshortcuts_template(self.addon.path)
+            template_path = find_skinshortcuts_template(self.addon.path)
             if template_path:
                 if progress_callback:
                     progress_callback("Checking SkinShortcuts template...")
 
                 known_variables = set(self.addon.variable_map.get(folder, {}).keys())
 
-                template_variables = utils.find_variables_in_skinshortcuts_template(
+                template_variables = find_variables_in_skinshortcuts_template(
                     template_path, known_variables
                 )
 
@@ -145,7 +152,7 @@ class ValidationVariable:
             # runtime -- treat them as defined so $VAR[] refs aren't flagged.
             template_defined_vars = set()
             if template_path:
-                template_defined_vars = utils.find_variable_definitions_in_skinshortcuts_template(
+                template_defined_vars = find_variable_definitions_in_skinshortcuts_template(
                     template_path
                 )
 

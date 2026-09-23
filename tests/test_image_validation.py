@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Now we can import from base and libs
 from tests.base import ValidationTestCase, ImageCheck
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 
 
 class TestImageValidation(ValidationTestCase):

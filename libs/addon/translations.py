@@ -2,8 +2,8 @@
 
 import time
 import logging
-from .. import polib
-from ..polib import pofile
+from ..polib import polib
+from ..polib.polib import pofile
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:

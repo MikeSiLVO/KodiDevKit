@@ -8,7 +8,7 @@ import logging
 import sublime
 import sublime_plugin
 
-from .libs import utils
+from .libs.addon.translations import convert_xml_to_po
 
 logger = logging.getLogger("KodiDevKit.po_commands")
 
@@ -59,7 +59,7 @@ class KodidevkitConvertXmlToPoCommand(sublime_plugin.WindowCommand):
         for item in os.listdir(primary_lang_folder):
             if item.endswith(".xml"):
                 path = os.path.join(primary_lang_folder, item)
-                utils.convert_xml_to_po(path)
+                convert_xml_to_po(path)
 
 
 class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):

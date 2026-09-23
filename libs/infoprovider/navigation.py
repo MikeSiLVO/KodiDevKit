@@ -7,7 +7,7 @@ import re
 import logging
 from lxml import etree as ET
 
-from .. import utils
+from ..utils.validation import find_font_line_in_include, resolve_include_content
 from ..validation.include import resolve_include_file
 from .checker import CheckerMixin
 
@@ -56,14 +56,14 @@ class NavigationMixin(CheckerMixin):
             for inc in self._get_includes_for_folder(folder):
                 if inc.get("type") != "include":
                     continue
-                content = utils.resolve_include_content(inc)
+                content = resolve_include_content(inc)
                 if not content:
                     continue
                 try:
                     root = ET.fromstring(f"<root>{content}</root>")
                     for n in root.findall(".//font/name"):
                         if (n.text or "").strip() == kw:
-                            line = utils.find_font_line_in_include(inc, kw)
+                            line = find_font_line_in_include(inc, kw)
                             return "%s:%s" % (inc.get("file"), line)
                 except Exception:
                     if isinstance(content, str):

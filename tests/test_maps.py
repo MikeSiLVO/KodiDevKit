@@ -8,7 +8,7 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.base import ValidationTestCase, MapCheck
-from libs.infoprovider import InfoProvider
+from libs.infoprovider.provider import InfoProvider
 from libs.validation.interpreter import XmlInterpreter
 from libs.validation.skinmap import extract_map_args
 from libs.utils.xml import PARSER
