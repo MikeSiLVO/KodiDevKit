@@ -7,8 +7,20 @@ from ..utils.decorators import check_busy, run_async
 import os
 import logging
 import posixpath
+import xml.etree.ElementTree as ET
 
 DEFAULT_SETTINGS = {"remote_ip": "localhost"}
+
+
+def _xml_folders(addon_path):
+    """Names of the add-on's xml folders: a skin's res folders, else the script window ones."""
+    script_folders = {"1080i", "720p"}
+    try:
+        root = ET.parse(os.path.join(addon_path, "addon.xml")).getroot()
+    except (ET.ParseError, OSError):
+        return script_folders
+    folders = {os.path.basename(res.get("folder") or "") for res in root.iter("res")} - {""}
+    return folders or script_folders
 
 
 class KodiAdb:
@@ -79,12 +91,13 @@ class KodiAdb:
     @run_async
     @check_busy
     def push_to_box(self, addon, all_file=False):
-        """Push the addon at `addon` to the device. With `all_file=True`, also pushes textures."""
+        """Push the add-on's xml folders to the device, or all of its files."""
         logging.warning("push %s to remote" % addon)
+        xml_folders = _xml_folders(addon)
         for root, _, files in os.walk(addon):
             if ".git" in root.split(os.sep):
                 continue
-            if not all_file and os.path.basename(root) not in ['1080i', '720p']:
+            if not all_file and os.path.basename(root) not in xml_folders:
                 continue
             target = '{}/addons/{}{}'.format(self.userdata_folder,
                                              os.path.basename(addon),
