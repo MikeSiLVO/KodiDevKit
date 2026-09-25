@@ -18,6 +18,81 @@ _server_port = 48273  # Random high port
 _report_data = {}  # Store report data for export
 
 
+def _raise_window(window):
+    """Raise the window; on Windows, flash its taskbar button when focus is refused."""
+    window.bring_to_front()  # type: ignore[attr-defined]
+
+    if sys.platform == 'win32':
+        # Windows can refuse focus; the taskbar flash below covers that
+        try:
+            import ctypes
+            from ctypes import Structure
+            from ctypes.wintypes import DWORD, HWND, UINT
+
+            hwnd = window.hwnd()
+            if hwnd:
+                user32 = ctypes.windll.user32
+
+                SW_RESTORE = 9
+                user32.ShowWindow(hwnd, SW_RESTORE)
+                user32.SetForegroundWindow(hwnd)
+
+                if user32.GetForegroundWindow() != hwnd:
+
+                    class FLASHWINFO(Structure):
+                        _fields_ = [
+                            ('cbSize', UINT),
+                            ('hwnd', HWND),
+                            ('dwFlags', DWORD),
+                            ('uCount', UINT),
+                            ('dwTimeout', DWORD)
+                        ]
+
+                    FLASHW_ALL = 0x00000003
+                    FLASHW_TIMERNOFG = 0x0000000C
+
+                    flash_info = FLASHWINFO()
+                    flash_info.cbSize = ctypes.sizeof(FLASHWINFO)
+                    flash_info.hwnd = hwnd
+                    flash_info.dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG
+                    flash_info.uCount = 3
+                    flash_info.dwTimeout = 0
+
+                    user32.FlashWindowEx(ctypes.byref(flash_info))
+
+                    logger.info("Window focus denied by Windows - flashing taskbar instead")
+
+        except Exception as e:
+            logger.warning(f"Could not activate/flash window: {e}")
+
+    elif sys.platform == 'darwin':
+        try:
+            import subprocess
+            subprocess.run(['osascript', '-e', 'tell application "Sublime Text" to activate'],
+                           check=False, capture_output=True)
+        except Exception as e:
+            logger.warning(f"Could not activate window: {e}")
+    # Linux relies on bring_to_front, which the window manager may ignore
+
+
+def _open_at(file_path, line):
+    """Open the file at the line in the active window, raising it again once loaded."""
+    window = sublime.active_window()
+    if not window:
+        return
+    view = window.open_file(f"{file_path}:{line}:0", sublime.ENCODED_POSITION)
+
+    def focus_view():
+        if view and view.is_loading():
+            sublime.set_timeout(focus_view, 50)
+        elif view:
+            window.focus_view(view)
+            _raise_window(window)
+
+    _raise_window(window)
+    sublime.set_timeout(focus_view, 50)
+
+
 class FileOpenHandler(BaseHTTPRequestHandler):
     """HTTP request handler for opening files in Sublime Text."""
 
@@ -26,7 +101,7 @@ class FileOpenHandler(BaseHTTPRequestHandler):
         logger.info(format % args)
 
     def do_GET(self):
-        """Handle GET requests to open files."""
+        """Handle the open, ping and export requests."""
         parsed = urlparse(self.path)
 
         if parsed.path == '/open':
@@ -35,81 +110,7 @@ class FileOpenHandler(BaseHTTPRequestHandler):
             line = params.get('line', ['1'])[0]
 
             if file_path:
-                def open_file():
-                    window = sublime.active_window()
-                    if window:
-                        view = window.open_file(f"{file_path}:{line}:0", sublime.ENCODED_POSITION)
-
-                        def activate_window():
-                            window.bring_to_front()  # type: ignore[attr-defined]
-
-                            if sys.platform == 'win32':
-                                # Windows: Modern Windows prevents focus stealing for security
-                                # Instead, flash the taskbar to notify the user
-                                try:
-                                    import ctypes
-                                    from ctypes import Structure
-                                    from ctypes.wintypes import DWORD, HWND, UINT
-
-                                    hwnd = window.hwnd()
-                                    if hwnd:
-                                        user32 = ctypes.windll.user32
-
-                                        SW_RESTORE = 9
-                                        user32.ShowWindow(hwnd, SW_RESTORE)
-                                        user32.SetForegroundWindow(hwnd)
-
-                                        if user32.GetForegroundWindow() != hwnd:
-                                            # We don't have focus - flash the taskbar instead
-                                            # This is the proper Windows UX for background notifications
-
-                                            class FLASHWINFO(Structure):
-                                                _fields_ = [
-                                                    ('cbSize', UINT),
-                                                    ('hwnd', HWND),
-                                                    ('dwFlags', DWORD),
-                                                    ('uCount', UINT),
-                                                    ('dwTimeout', DWORD)
-                                                ]
-
-                                            FLASHW_ALL = 0x00000003       # Flash both window and taskbar
-                                            FLASHW_TIMERNOFG = 0x0000000C  # Flash until window comes to foreground
-
-                                            flash_info = FLASHWINFO()
-                                            flash_info.cbSize = ctypes.sizeof(FLASHWINFO)
-                                            flash_info.hwnd = hwnd
-                                            flash_info.dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG
-                                            flash_info.uCount = 3  # Flash 3 times
-                                            flash_info.dwTimeout = 0
-
-                                            user32.FlashWindowEx(ctypes.byref(flash_info))
-
-                                            logger.info("Window focus denied by Windows - flashing taskbar instead")
-
-                                except Exception as e:
-                                    logger.warning(f"Could not activate/flash window: {e}")
-
-                            elif sys.platform == 'darwin':
-                                # macOS: Use osascript to activate
-                                try:
-                                    import subprocess
-                                    subprocess.run(['osascript', '-e', 'tell application "Sublime Text" to activate'],
-                                                 check=False, capture_output=True)
-                                except Exception as e:
-                                    logger.warning(f"Could not activate window: {e}")
-                            # Linux: window.bring_to_front() should work, but depends on window manager
-
-                        def focus_view():
-                            if view and view.is_loading():
-                                sublime.set_timeout(focus_view, 50)
-                            elif view:
-                                window.focus_view(view)
-                                activate_window()
-
-                        activate_window()
-                        sublime.set_timeout(focus_view, 50)
-
-                sublime.set_timeout(open_file, 0)
+                sublime.set_timeout(lambda: _open_at(file_path, line), 0)
 
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
