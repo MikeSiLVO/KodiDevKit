@@ -20,7 +20,7 @@ logger.propagate = True
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 
-class Addon(object):
+class Addon:
     """A Kodi addon: addon.xml metadata, language files, xml folders."""
 
     # github_ref syntax is parsed by scripts/refresh.py _resolve_ref
@@ -32,7 +32,7 @@ class Addon(object):
     LANG_START_ID = 32000
     LANG_OFFSET = 2
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *, path=None, settings=None):
         self.type = "python"
         self.po_files = []
         self.colors = []
@@ -45,9 +45,8 @@ class Addon(object):
         self.includes = {}
         self.api_version = None
 
-        self.settings: dict | Any = kwargs.get("settings") or {}
+        self.settings: dict | Any = settings or {}
 
-        path = kwargs.get("path")
         if not path or not isinstance(path, str):
             raise ValueError("Addon requires 'path' argument as string")
         self.path: str = path
@@ -60,10 +59,8 @@ class Addon(object):
 
         self.api_version = self._resolve_release()
 
-        self.version = self.root.attrib.get("version")
-        for item in self.root.xpath("/addon[@id]"):
-            self.name = item.attrib["id"]
-            break
+        self.version = self.root.get("version")
+        self.name = self.root.get("id")
 
         self.load_xml_folders()
         self.update_xml_files()
@@ -131,8 +128,7 @@ class Addon(object):
         if root is None or root.find(".//import[@addon='xbmc.python']") is None:
             from ..skin.skin import Skin
             return Skin(path=path, settings=settings)
-        else:
-            return Addon(path=path, settings=settings)
+        return Addon(path=path, settings=settings)
 
     def update_labels(self):
         """Reload `po_files` from the language folder."""
@@ -149,16 +145,15 @@ class Addon(object):
         if not lang:
             lang = "resource.language.en_gb"
 
-        for item in [lang]:
-            path = check_paths([
-                os.path.join(folder, item, "resources", "strings.po"),
-                os.path.join(folder, item, "strings.po"),
-            ])
-            if path:
-                po = get_po_file(path)
-                if po:
-                    po.language = item  # type: ignore[attr-defined]
-                    po_files.append(po)
+        path = check_paths([
+            os.path.join(folder, lang, "resources", "strings.po"),
+            os.path.join(folder, lang, "strings.po"),
+        ])
+        if path:
+            po = get_po_file(path)
+            if po:
+                po.language = lang  # type: ignore[attr-defined]
+                po_files.append(po)
 
         return po_files
 
@@ -171,10 +166,7 @@ class Addon(object):
             if not os.path.exists(xml_folder):
                 continue
             for xml_file in sorted(os.listdir(xml_folder)):
-                filename = os.path.basename(xml_file)
-                if not filename.endswith(".xml"):
-                    continue
-                if filename.lower() not in ["font.xml"]:
+                if xml_file.endswith(".xml") and xml_file.lower() != "font.xml":
                     self.window_files[path].append(xml_file)
 
     def create_new_label(self, word, filepath):
@@ -226,7 +218,7 @@ class Addon(object):
         if not keyword or not folder:
             return None
 
-        lookup_name = keyword.split(',')[0] if ',' in keyword else keyword
+        lookup_name = keyword.split(',')[0]
 
         if folder in self.fonts:
             for node in self.fonts[folder]:
@@ -244,10 +236,9 @@ class Addon(object):
 
     def get_xml_files(self):
         """Get the absolute path of every window file, yielded one at a time."""
-        if self.xml_folders:
-            for folder in self.xml_folders:
-                for xml_file in self.window_files[folder]:
-                    yield os.path.join(self.path, folder, xml_file)
+        for folder in self.xml_folders:
+            for xml_file in self.window_files[folder]:
+                yield os.path.join(self.path, folder, xml_file)
 
     def bump_version(self, version):
         """Bump the version in addon.xml and open a blank changelog entry for it."""
