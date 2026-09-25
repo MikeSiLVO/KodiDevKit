@@ -40,6 +40,12 @@ class KodiAdb:
         self.userdata_folder = self.settings.get("remote_userdata_folder")
         self.remote_ip = self.settings.get("remote_ip")
 
+    @property
+    def home_folder(self):
+        """Kodi's home folder on the device, the parent when the setting names userdata itself."""
+        folder = (self.userdata_folder or "").rstrip("/")
+        return posixpath.dirname(folder) if posixpath.basename(folder) == "userdata" else folder
+
     @staticmethod
     def cmd(program, args):
         """Run `program` with `args` via cmd shell, logging output."""
@@ -99,7 +105,7 @@ class KodiAdb:
                 continue
             if not all_file and os.path.basename(root) not in xml_folders:
                 continue
-            target = '{}/addons/{}{}'.format(self.userdata_folder,
+            target = '{}/addons/{}{}'.format(self.home_folder,
                                              os.path.basename(addon),
                                              root.replace(addon, "").replace('\\', '/'))
             self.cmd("adb", ["shell", "mkdir", target])
@@ -115,7 +121,7 @@ class KodiAdb:
     def get_log(self, open_function, target):
         """Get kodi.log from the device and open it."""
         logging.warning("Pull logs from remote")
-        self.adb_pull("%s/temp/kodi.log" % self.userdata_folder, target)
+        self.adb_pull("%s/temp/kodi.log" % self.home_folder, target)
         logging.warning("Finished pulling logs")
         open_function(os.path.join(target, "kodi.log"))
 
@@ -137,7 +143,7 @@ class KodiAdb:
         if not self.userdata_folder:
             logging.warning("remote_userdata_folder not configured")
             return
-        self.cmd("adb", ["shell", "rm", "-rf", posixpath.join(self.userdata_folder, "temp")])
+        self.cmd("adb", ["shell", "rm", "-rf", posixpath.join(self.home_folder, "temp")])
 
     @run_async
     def reboot(self):
