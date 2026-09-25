@@ -167,19 +167,16 @@ class CheckerMixin:
                     raise RuntimeError(f"XML parse failed: {src_path}")
                 return None
 
+        sk = self.addon
+        if not isinstance(sk, Skin):
+            return root
+
         f = folder
         if not f and src_path:
             f = os.path.basename(os.path.dirname(src_path)) or None
-        if not f and self.addon and getattr(self.addon, "default_xml_folder", None):
-            f = self.addon.default_xml_folder
-        if not f and self.addon and getattr(self.addon, "xml_folders", None):
-            f = next(iter(self.addon.xml_folders), None)
-
+        if not f and sk.xml_folders:
+            f = sk.xml_folders[0]
         if not f:
-            return root
-
-        sk = getattr(self, "addon", None)
-        if not sk or not isinstance(sk, Skin):
             return root
 
         try:
