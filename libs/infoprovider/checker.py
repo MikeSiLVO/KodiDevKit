@@ -568,15 +568,7 @@ class CheckerMixin:
         # resolved pass checks values; unresolved $PARAM, $VAR and constants would false-positive
         skip_value_checks = self._can_resolve()
 
-        seen_singletons = {}
-
-        def _seen_for(parent):
-            k = id(parent)
-            s = seen_singletons.get(k)
-            if s is None:
-                s = set()
-                seen_singletons[k] = s
-            return s
+        seen_singletons: dict = {}
 
         for c_type, subnodes, node, subnode in self.file_control_checks(root, file_path=path):
 
@@ -632,7 +624,7 @@ class CheckerMixin:
                     and tag_low not in allowed_multi
                     and not has_dynamic_content
                 ):
-                    seen = _seen_for(parent)
+                    seen = seen_singletons.setdefault(parent, set())
                     if tag_low in seen:
                         self._add_issue(listitems, subnode, f"Invalid multiple tags for {parent.tag}: <{subnode.tag}>")
                     else:
