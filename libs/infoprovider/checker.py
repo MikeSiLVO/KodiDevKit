@@ -13,7 +13,7 @@ from ..utils.expressions import (
     is_dynamic_expression,
     is_number,
 )
-from ..utils.validation import create_issue, is_runtime_generated_file
+from ..utils.validation import create_issue, is_runtime_generated_file, should_report_progress
 from ..addon.translations import get_po_file
 from ..utils.colors import is_kodi_hex
 from ..validation.font import ValidationFont
@@ -191,12 +191,9 @@ class CheckerMixin:
 
     def get_check_listitems(self, check_type, progress_callback=None):
         """Get the rows of the named check, minus those in runtime-generated files."""
-        checks_with_progress = {
-            "general": lambda: self.check_values(progress_callback=progress_callback),
-            "file": lambda: self.check_values(progress_callback=progress_callback),
-        }
-
-        checks_simple = {
+        checks = {
+            "general": self.check_values,
+            "file": self.check_values,
             "variable": self.check_variables,
             "map": self.check_maps,
             "include": self.check_includes,
@@ -206,23 +203,12 @@ class CheckerMixin:
             "image": self.check_images,
             "filecheck": self.check_file_integrity,
         }
-
-        fn = checks_with_progress.get(check_type)
-        if fn:
-            rows = fn() or []
-        else:
-            fn = checks_simple.get(check_type)
-            if not fn:
-                logger.info("[checks] handler missing type=%s", check_type)
-                return [{"message": "Unknown check type", "file": "", "line": 0}]
-            rows = fn() or []
-
-        filtered_rows = [
-            row for row in rows
-            if not is_runtime_generated_file(row.get("file", ""))
-        ]
-
-        return filtered_rows
+        fn = checks.get(check_type)
+        if not fn:
+            logger.info("[checks] handler missing type=%s", check_type)
+            return [{"message": "Unknown check type", "file": "", "line": 0}]
+        rows = fn(progress_callback=progress_callback) or []
+        return [row for row in rows if not is_runtime_generated_file(row.get("file", ""))]
 
     def get_suppressions(self):
         """Cached `kdk-ignore` directives for the current skin; rebuilt when the skin reloads."""
@@ -287,10 +273,8 @@ class CheckerMixin:
             return self._no_issues("font")
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        if index:
-            checker = ValidationFont(self.addon, resolve_include_fn=self.resolve_xml, validation_index=index)
-        else:
-            checker = ValidationFont(self.addon, resolve_include_fn=self.resolve_xml)
+        checker = ValidationFont(self.addon, resolve_include_fn=self.resolve_xml,
+                                 validation_index=index)
         return self._muted("Fonts", checker.check(progress_callback=progress_callback))
 
     def check_ids(self, progress_callback=None):
@@ -299,10 +283,8 @@ class CheckerMixin:
             return self._no_issues("id")
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        if index:
-            checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES, resolve_include_fn=self.resolve_xml, validation_index=index)
-        else:
-            checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES, resolve_include_fn=self.resolve_xml)
+        checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES,
+                                resolve_include_fn=self.resolve_xml, validation_index=index)
         return self._muted("IDs", checker.check(progress_callback=progress_callback))
 
     def check_labels(self, progress_callback=None):
@@ -311,14 +293,15 @@ class CheckerMixin:
             return self._no_issues("label")
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        if index:
-            checker = ValidationLabel(self.addon, self.get_po_files, resolve_include_fn=self.resolve_xml, validation_index=index)
-        else:
-            checker = ValidationLabel(self.addon, self.get_po_files, resolve_include_fn=self.resolve_xml)
+        checker = ValidationLabel(self.addon, self.get_po_files,
+                                  resolve_include_fn=self.resolve_xml, validation_index=index)
         return self._muted("Labels", checker.check(progress_callback=progress_callback))
 
     def check_file_integrity(self, progress_callback=None):
         """Check for BOM and wrong line endings."""
+        if not self.addon:
+            return self._no_issues("file integrity")
+
         checker = ValidationFileCheck(self.addon)
         return self._muted("File Integrity", checker.check(progress_callback=progress_callback))
 
@@ -330,7 +313,6 @@ class CheckerMixin:
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationImage(self.addon, validation_index=index)
         return self._muted("Images", checker.check(progress_callback=progress_callback))
-
 
     def check_values(self, progress_callback=None):
         """Run check_file over every XML file, on the unexpanded source the author wrote."""
@@ -345,14 +327,9 @@ class CheckerMixin:
             progress_callback(f"Validating {total_files} XML files...")
 
         for index, path in enumerate(xml_files, 1):
-            if progress_callback:
+            if progress_callback and should_report_progress(index, total_files):
                 filename = os.path.basename(path)
-                if index <= 10:
-                    progress_callback(f"Validating {filename} ({index}/{total_files})...")
-                elif total_files > 100 and index % 10 == 0:
-                    progress_callback(f"Validating {filename} ({index}/{total_files})...")
-                elif index % 3 == 0:
-                    progress_callback(f"Validating {filename} ({index}/{total_files})...")
+                progress_callback(f"Validating {filename} ({index}/{total_files})...")
             result = self.check_file(path)
             if result:
                 listitems.extend(result)
