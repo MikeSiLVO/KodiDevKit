@@ -6,6 +6,7 @@ import os
 import logging
 from lxml import etree as ET
 
+from ..utils.files import miscased_name
 from ..utils.xml import file_needs_expansion, get_root_from_file
 from ..utils.validation import find_font_line_in_include, resolve_include_content
 from ..utils.expressions import is_dynamic_expression
@@ -86,6 +87,13 @@ class ValidationFont:
                 pass
 
         issues = []
+
+        for folder in getattr(self.addon, "xml_folders", []):
+            folder_path = os.path.join(self.addon.path, folder)
+            actual = miscased_name(folder_path, "Font.xml")
+            if actual:
+                issues.append(row(f"{actual} must be named Font.xml; Kodi does not load it on Linux",
+                                  os.path.join(folder_path, actual), 1))
 
         total_fonts = sum(len(items) for items in (self.addon.fonts or {}).values()) if getattr(self.addon, "fonts", None) else 0
         total_folders = len(getattr(self.addon, "xml_folders", []))

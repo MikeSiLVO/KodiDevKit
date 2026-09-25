@@ -13,6 +13,7 @@ from ..utils.validation import (
     resolve_param_in_name,
     should_report_progress,
 )
+from ..utils.files import miscased_name
 from ..utils.xml import get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
@@ -180,6 +181,18 @@ class ValidationInclude:
         listitems = []
 
         for folder in self.addon.xml_folders:
+            folder_path = os.path.join(self.addon.path, folder)
+            actual = miscased_name(folder_path, "Includes.xml")
+            if actual:
+                listitems.append({
+                    'name': actual,
+                    'type': 'include',
+                    'file': os.path.join(folder_path, actual),
+                    'line': 1,
+                    'message': f"{actual} must be named Includes.xml; Kodi does not load it on Linux",
+                    'severity': SEVERITY_ERROR,
+                })
+
             var_refs = []
             file_count = 0
             files_list = self.addon.window_files[folder]

@@ -142,6 +142,18 @@ def check_paths(paths: list[str]) -> Optional[str]:
     return None
 
 
+def miscased_name(folder: str, name: str) -> Optional[str]:
+    """On-disk name of the file in the folder when it differs from the name only by case."""
+    try:
+        entries = os.listdir(folder)
+    except OSError:
+        return None
+    for entry in entries:
+        if entry != name and entry.casefold() == name.casefold():
+            return entry
+    return None
+
+
 def get_addons(reponame: str, *, timeout: int = 15, max_retries: int = 3) -> dict[str, str]:
     """Get {addon id: version} from the Kodi mirror, retrying with backoff; empty when it fails."""
     repo_url = f"https://mirrors.kodi.tv/addons/{reponame}/addons.xml"
