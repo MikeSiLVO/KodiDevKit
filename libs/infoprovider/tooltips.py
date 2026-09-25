@@ -17,6 +17,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _is_addon_string_id(label_id):
+    """True when the id sits in a range Kodi reserves for add-on strings (AddonBase.h:1213)."""
+    return 30000 <= label_id <= 30999 or 32000 <= label_id <= 32999
+
+
 # InfoProvider lists this before CheckerMixin, so super() reaches the engine
 class TooltipMixin(CheckerMixin):
     """HTML for the editor's hover popups: labels, colors, images, positions."""
@@ -206,12 +211,12 @@ class TooltipMixin(CheckerMixin):
         if (
             "text.xml.kodi" in scope_name
             and self.addon.type == "python"
-            and 32000 <= label_id <= 33000
+            and _is_addon_string_id(label_id)
         ):
             return "$ADDON[%s %i]" % (self.addon.name, label_id)
         elif "text.xml.kodi" in scope_name:
             return "$LOCALIZE[%i]" % label_id
-        elif "source.python" in scope_name and 32000 <= label_id <= 33000:
+        elif "source.python" in scope_name and _is_addon_string_id(label_id):
             return "ADDON.getLocalizedString(%i)" % label_id
         elif "source.python" in scope_name:
             return "xbmc.getLocalizedString(%i)" % label_id
