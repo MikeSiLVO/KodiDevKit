@@ -156,11 +156,14 @@ class TooltipMixin(CheckerMixin):
                 alpha_percent = round(
                     int(item["content"][:2], 16) / 255 * 100
                 )
+                in_addon = item["file"].startswith(self.addon.path)
+                source = self.addon.type if in_addon else "kodi"
                 color_info += (
-                    '%s&nbsp;<a href="test" style="background-color:%s;color:%s">'
+                    '%s <i>(%s)</i>&nbsp;<a href="test" style="background-color:%s;color:%s">'
                     "%s</a> %d %% alpha<br>"
                     % (
                         os.path.basename(item["file"]),
+                        source,
                         color_hex,
                         cont_color,
                         item["content"],
