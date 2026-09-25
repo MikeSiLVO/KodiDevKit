@@ -24,30 +24,33 @@ CATEGORY_DESCRIPTIONS = {
         "Skin maps need Kodi 22 (Piers)."
     ),
     "Labels": (
-        "<strong>Errors:</strong> Numeric label ID not found in translation files &mdash; will show as empty text in Kodi. "
-        "<strong>Warnings:</strong> Hardcoded text or possible missing $INFO[] wrapper. "
-        "Kodi still renders these, but they cannot be translated."
+        "<strong>Errors:</strong> Label id with no string in the language files. Kodi shows empty text. "
+        "<strong>Warnings:</strong> Hardcoded text, a possible add-on id, or an InfoLabel missing its "
+        "$INFO[] wrapper. Kodi shows these, but they cannot be translated."
     ),
     "Fonts": (
-        "<strong>Errors:</strong> Missing font file, undefined font, missing required elements, no unicode fontset. "
-        "<strong>Warnings:</strong> Case mismatches, unused definitions, cross-fontset inconsistencies. "
-        "Kodi resolves font names case-insensitively so these still work, but indicate sloppy references."
+        "<strong>Errors:</strong> Missing font file, undefined font, missing required tag, or no fontset "
+        "with unicode. "
+        "<strong>Warnings:</strong> Filename case mismatches, unused fonts, fonts missing from some "
+        "fontsets, duplicate names in a fontset, a fontset without font13, and non-TTF files."
     ),
     "IDs": (
-        "<strong>Errors:</strong> Window or control ID referenced but not defined, or numeric window ID used where a name is required."
+        "<strong>Errors:</strong> Window or control id that is not defined, or a Kodi window referenced "
+        "by number where its name should be used."
     ),
     "Images": (
-        "<strong>Errors:</strong> Image file not found on disk &mdash; will render as blank in Kodi. "
-        "<strong>Warnings:</strong> Case mismatches or wrong relative paths. "
-        "Kodi resolves case-insensitively so these still display, but will break on case-sensitive filesystems (Linux)."
+        "<strong>Errors:</strong> Image file not found. Kodi shows nothing. "
+        "<strong>Warnings:</strong> Case mismatch, or the file exists at a different path. Packed "
+        "textures (Textures.xbt) still load with a case mismatch; loose files fail on Linux."
     ),
     "XML Validation": (
-        "<strong>Errors:</strong> Invalid color values, invalid integers, unknown XML tags. "
-        "<strong>Warnings:</strong> Invalid tags, repeated tags that should appear only once, invalid attributes. "
-        "Kodi silently ignores these &mdash; flagged here to teach correct XML structure."
+        "<strong>Errors:</strong> Invalid value (color, number or fixed choice), unknown control type, "
+        "empty or unbalanced condition, or an empty action that needs <code>noop</code>. "
+        "<strong>Warnings:</strong> Tags or attributes Kodi does not read in that place, and tags "
+        "repeated where Kodi reads only one. Kodi ignores these."
     ),
     "File Integrity": (
-        "<strong>Errors:</strong> BOM detected, Windows or Mac line endings. All block Kodi repo submission."
+        "<strong>Errors:</strong> BOM, or Windows or Mac line endings. Both block Kodi repo submission."
     ),
 }
 
