@@ -87,23 +87,24 @@ class TooltipMixin(CheckerMixin):
         return tooltips
 
     def return_addon_label(self, addon_id, label_id):
-        """HTML rows for an $ADDON[id label] string, read from the installed addon's PO files."""
+        """HTML rows for an $ADDON[id label] string, from the addon alongside or under kodi_path."""
         from ..polib import polib
 
         if not label_id.isdigit():
             return ""
 
+        candidates = []
+        if self.addon and self.addon.path:
+            addons_dir = os.path.dirname(os.path.normpath(self.addon.path))
+            candidates.append(os.path.join(addons_dir, addon_id))
         kodi_path = self.settings.get("kodi_path", "")
-        if not kodi_path:
-            return ""
+        if kodi_path:
+            portable = self.settings.get("portable_mode", False)
+            sub = ("portable_data", "addons") if portable else ("addons",)
+            candidates.append(os.path.join(kodi_path, *sub, addon_id))
 
-        portable = self.settings.get("portable_mode", False)
-        if portable:
-            addon_path = os.path.join(kodi_path, "portable_data", "addons", addon_id)
-        else:
-            addon_path = os.path.join(kodi_path, "addons", addon_id)
-
-        if not os.path.exists(addon_path):
+        addon_path = next((p for p in candidates if os.path.isdir(p)), None)
+        if not addon_path:
             return f"<i>Addon not found: {addon_id}</i>"
 
         lang_folders = self.settings.get("language_folders", ["resource.language.en_gb"])
