@@ -113,7 +113,6 @@ class FileOpenHandler(BaseHTTPRequestHandler):
 
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
-                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(b'<html><body><h2>Opening in Sublime Text...</h2><script>window.close();</script></body></html>')
             else:
@@ -148,7 +147,6 @@ class FileOpenHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain; charset=utf-8')
             self.send_header('Content-Disposition', 'attachment; filename="validation_report.txt"')
-            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(text_content.encode('utf-8'))
 
