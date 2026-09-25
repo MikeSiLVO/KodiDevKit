@@ -35,9 +35,7 @@ class KodiAdb:
             command.append(arg)
         logging.warning(" ".join(command))
         try:
-            output = subprocess.check_output(command,
-                                             shell=True,
-                                             stderr=subprocess.STDOUT)
+            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
             logging.warning(output.decode("utf-8").replace('\r', '').replace('\n', ''))
         except subprocess.CalledProcessError as e:
             logging.warning("%s\nErrorCode: %s" % (e, str(e.returncode)))
