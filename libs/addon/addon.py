@@ -207,11 +207,14 @@ class Addon(object):
         return label_id
 
     def attach_occurrence_to_label(self, label_id, rel_path):
-        """Record the file as an occurrence on the label's PO entry, skin-range ids only."""
-        if 31000 <= int(label_id[1:]) < 33000:
-            entry = self.po_files[0].find(label_id, by="msgctxt")
-            entry.occurrences.append((rel_path, None))
-            self.po_files[0].save()
+        """Attach the file as an occurrence to the label, if the add-on's own PO file defines it."""
+        if not self.po_files:
+            return
+        entry = self.po_files[0].find(f"#{label_id}", by="msgctxt")
+        if entry is None or any(path == rel_path for path, _ in entry.occurrences):
+            return
+        entry.occurrences.append((rel_path, None))
+        self.po_files[0].save()
 
     def translate_path(self, path):
         """Absolute path of a texture, resolving special://skin/ or the media folder."""
