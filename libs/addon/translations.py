@@ -37,23 +37,3 @@ def create_new_po_file(path=None):
         'Content-Transfer-Encoding': '8bit',
     }
     return po_file
-
-
-def convert_xml_to_po(path):
-    """Convert a legacy strings.xml into a saved .po file beside it."""
-    from ..utils.xml import get_root_from_file
-
-    po_file = create_new_po_file(path)
-    root = get_root_from_file(path)
-    if root is None:
-        logger.error("convert_xml_to_po: could not parse %s", path)
-        return po_file
-    for item in root.findall("string"):
-        entry = polib.POEntry(
-            msgid=item.text or "",
-            msgstr="",
-            msgctxt="#%s" % item.attrib.get("id", "")
-        )
-        po_file.append(entry)
-    po_file.save()
-    return po_file

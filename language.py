@@ -1,14 +1,11 @@
-"""Language file operations: reload, convert, move labels to PO."""
+"""Language file operations: reload, move labels to PO."""
 
 from __future__ import annotations
 
-import os
 import logging
 
 import sublime
 import sublime_plugin
-
-from .libs.addon.translations import convert_xml_to_po
 
 logger = logging.getLogger("KodiDevKit.language")
 
@@ -35,31 +32,6 @@ class KodidevkitReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
             addon = getattr(infos, "addon", None)
             if addon:
                 addon.update_labels()
-
-
-class KodidevkitConvertXmlToPoCommand(sublime_plugin.WindowCommand):
-    """Convert legacy .xml language files to .po format."""
-
-    def is_visible(self):
-        infos = _infos()
-        if not infos:
-            return False
-        return bool(getattr(infos, "addon", None))
-
-    def run(self):
-        infos = _infos()
-        if not infos:
-            return None
-        addon = getattr(infos, "addon", None)
-        if not addon:
-            return None
-        primary_lang_folder = getattr(addon, "primary_lang_folder", None)
-        if not primary_lang_folder:
-            return None
-        for item in os.listdir(primary_lang_folder):
-            if item.endswith(".xml"):
-                path = os.path.join(primary_lang_folder, item)
-                convert_xml_to_po(path)
 
 
 class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
