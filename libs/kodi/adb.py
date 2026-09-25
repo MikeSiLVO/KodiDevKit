@@ -50,12 +50,6 @@ class KodiAdb:
         self.cmd("adb", ["connect", server_ip])
         self.connected = True
 
-    @run_async
-    @check_busy
-    def adb_connect_async(self, server_ip):
-        """Background-thread variant of `adb_connect()`."""
-        self.adb_connect(server_ip)
-
     @check_busy
     def adb_reconnect(self, server_ip=""):
         """Disconnect, then reconnect to `server_ip` (defaults to the saved one)."""
@@ -77,37 +71,10 @@ class KodiAdb:
         self.cmd("adb", ["disconnect"])
         self.connected = False
 
-    @run_async
-    @check_busy
-    def adb_disconnect_async(self):
-        """
-        disconnect adb devices, async
-        """
-        self.adb_disconnect()
-
-    @check_busy
-    def adb_push(self, source, target):
-        """`adb push <source> <target>/`."""
-        if not target.endswith('/'):
-            target += '/'
-        self.cmd("adb", ["push", source.replace('\\', '/'), target.replace('\\', '/')])
-
-    @run_async
-    @check_busy
-    def adb_push_async(self, source, target):
-        """Background-thread variant of `adb_push()`."""
-        self.adb_push(source, target)
-
     @check_busy
     def adb_pull(self, path, target):
         """`adb pull <path> <target>`."""
         self.cmd("adb", ["pull", path, target])
-
-    @run_async
-    @check_busy
-    def adb_pull_async(self, path, target):
-        """Background-thread variant of `adb_pull()`."""
-        self.adb_pull(path, target)
 
     @run_async
     @check_busy
