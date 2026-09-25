@@ -12,6 +12,9 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.addHandler(logging.NullHandler())
+logger.propagate = True
 
 APP_NAME = "kodi"
 
@@ -44,10 +47,6 @@ def _without_negation_twins(result):
     }
     return {**result, "result": trimmed}
 
-if not logger.handlers:
-    logger.addHandler(logging.NullHandler())
-logger.propagate = True
-
 
 class KodiJsonrpc:
     """JSON-RPC client for a Kodi install: core paths, languages, addons, queries."""
@@ -63,6 +62,7 @@ class KodiJsonrpc:
         self.kodi_path = None
         self.userdata_folder = None
         self._settings_loaded = False
+        self._cooldown_until = 0.0
 
         try:
             self.load_settings(self.settings)
@@ -75,28 +75,14 @@ class KodiJsonrpc:
         return self.request(method, params)
 
     def request(self, method, params=None):
-        """Send a JSON-RPC call to Kodi; return the parsed dict or None on failure."""
-        # Re-read connection settings each call so changes apply immediately.
+        """Request the JSON-RPC method from Kodi; the parsed reply, or None on failure."""
         s = self.settings or {}
-        addr = (s.get("kodi_address") or "").strip()
-        if addr:
-            self.json_url = addr.rstrip("/")
-        else:
-            scheme = (s.get("kodi_scheme") or "http").strip()
-            host = (s.get("kodi_host") or "localhost").strip()
-            try:
-                port = int(s.get("kodi_port", 8080))
-            except Exception:
-                port = 8080
-            self.json_url = f"{scheme}://{host}:{port}"
+        # re-read each call so settings edits apply at once
+        self.json_url = self._url()
 
-        # Stay quiet for a few seconds after a transport failure so we don't
-        # repeatedly freeze the UI when Kodi is unreachable.
-        now = time.time()
-        if now < getattr(self, "_cooldown_until", 0.0):
+        # an unreachable Kodi would freeze the UI on every hover
+        if time.time() < self._cooldown_until:
             logger.debug("Kodi request skipped (cooldown active): %s", method)
-            return None
-        if not self.json_url:
             return None
 
         data = {"jsonrpc": "2.0", "method": method, "id": 1}
@@ -206,27 +192,13 @@ class KodiJsonrpc:
         return [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
 
     def load_settings(self, settings, force: bool = False):
-        """Apply `settings`; rebuild url/paths and re-sync the log level.
-
-        Idempotent: returns immediately if already loaded unless `force=True`.
-        """
-        if getattr(self, "_settings_loaded", False) and not force:
+        """Load the settings into the url, paths and log level; only once unless forced."""
+        if self._settings_loaded and not force:
             return
         self._settings_loaded = True
 
         self.settings = settings or {}
-
-        addr = (self.settings.get("kodi_address") or "").strip()
-        if addr:
-            self.json_url = addr.rstrip("/")
-        else:
-            scheme = (self.settings.get("kodi_scheme") or "http").strip()
-            host = (self.settings.get("kodi_host") or "localhost").strip()
-            try:
-                port = int(self.settings.get("kodi_port", 8080))
-            except Exception:
-                port = 8080
-            self.json_url = f"{scheme}://{host}:{port}"
+        self.json_url = self._url()
 
         self.kodi_path = self.settings.get("kodi_path") or None
         folder = (self.settings.get("userdata_folder") or "").rstrip("/\\")
@@ -235,10 +207,21 @@ class KodiJsonrpc:
         self.userdata_folder = folder or self.get_userdata_folder()
 
         debug_mode = bool(self.settings.get("debug_mode", False))
+        logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
+
+    def _url(self):
+        """Base url of Kodi's web server, from the address or the scheme, host and port."""
+        s = self.settings or {}
+        addr = (s.get("kodi_address") or "").strip()
+        if addr:
+            return addr.rstrip("/")
+        scheme = (s.get("kodi_scheme") or "http").strip()
+        host = (s.get("kodi_host") or "localhost").strip()
         try:
-            logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
-        except Exception:
-            pass
+            port = int(s.get("kodi_port", 8080))
+        except (TypeError, ValueError):
+            port = 8080
+        return f"{scheme}://{host}:{port}"
 
     def update_labels(self):
         """Reload PO files: prefer user-installed languages, fall back to core."""
@@ -253,10 +236,9 @@ class KodiJsonrpc:
         if not folder:
             return []
         po_files = []
-        folders = self.settings.get("language_folders", ["resource.language.en_gb", "English"])
+        folders = self.settings.get("language_folders", ["resource.language.en_gb"])
 
-        # Always include en_gb when scanning core addons, even if the user's
-        # language settings don't list it; core has English regardless.
+        # core always has English, listed or not
         if folder == self.core_addons_path:
             scan_folders = list(dict.fromkeys(folders + ["resource.language.en_gb"]))
         else:
