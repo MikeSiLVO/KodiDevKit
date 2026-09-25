@@ -185,7 +185,7 @@ class KodiJsonrpc:
         self.color_labels = {i["name"] for i in self.colors}
 
     def get_userdata_folder(self):
-        """Detect Kodi's userdata folder for the current OS / portable mode."""
+        """Get Kodi's home folder for the OS and portable mode, the parent of userdata."""
         from ..utils.files import get_platform
         _plat = get_platform()
         if _plat == "linux":
@@ -201,7 +201,7 @@ class KodiJsonrpc:
                     return os.path.join(appdata, APP_NAME)
                 return None
         elif _plat == "osx":
-            return os.path.join(os.path.expanduser("~"), "Application Support", APP_NAME, "userdata")
+            return os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Kodi")
         return None
 
     @property
@@ -262,7 +262,10 @@ class KodiJsonrpc:
             self.json_url = f"{scheme}://{host}:{port}"
 
         self.kodi_path = self.settings.get("kodi_path") or None
-        self.userdata_folder = self.settings.get("userdata_folder") or self.get_userdata_folder()
+        folder = (self.settings.get("userdata_folder") or "").rstrip("/\\")
+        if os.path.basename(folder).lower() == "userdata":
+            folder = os.path.dirname(folder)
+        self.userdata_folder = folder or self.get_userdata_folder()
 
         debug_mode = bool(self.settings.get("debug_mode", False))
         try:
