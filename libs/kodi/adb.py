@@ -132,11 +132,11 @@ class KodiAdb:
 
     @run_async
     def get_log(self, open_function, target):
-        """Pull `xbmc.log` to `target` and open it with `open_function`."""
+        """Get kodi.log from the device and open it."""
         logging.warning("Pull logs from remote")
-        self.adb_pull("%s/temp/xbmc.log" % self.userdata_folder, target)
+        self.adb_pull("%s/temp/kodi.log" % self.userdata_folder, target)
         logging.warning("Finished pulling logs")
-        open_function(os.path.join(target, "xbmc.log"))
+        open_function(os.path.join(target, "kodi.log"))
 
     @run_async
     @check_busy
