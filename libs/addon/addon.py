@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
+import re
 import logging
 from typing import Any
 
-from ..utils.files import check_paths, save_xml
+from ..utils.files import check_paths
 from .translations import create_new_po_file, get_po_file
 from ..utils.xml import get_root_from_file
 from ..polib import polib
@@ -240,15 +241,62 @@ class Addon:
             for xml_file in self.window_files[folder]:
                 yield os.path.join(self.path, folder, xml_file)
 
-    def bump_version(self, version):
-        """Bump the version in addon.xml and open a blank changelog entry for it."""
-        self.root.attrib["version"] = version
-        save_xml(self.xml_file, self.root)
-        with open(self.changelog_path, "r") as f:
-            contents = f.readlines()
-        contents = [version, "", "-", "-", "", ""] + contents
-        with open(self.changelog_path, "w") as changelog_file:
-            changelog_file.write("\n".join(contents))
+    def bump_version(self, version) -> list[tuple[str, int, int]]:
+        """Bump the version in addon.xml and add a blank news entry, plus a changelog.txt one."""
+        with open(self.xml_file, encoding="utf-8", newline="") as f:
+            text = f.read()
+        nl = "\r\n" if "\r\n" in text else "\n"
+        text, count = re.subn(r'(<addon\b[^>]*?\bversion=")[^"]*"',
+                              lambda m: f'{m.group(1)}{version}"', text, count=1)
+        if not count:
+            logger.critical(f"No version attribute on <addon> in {self.xml_file}")
+            return []
+        self.version = version
+        self.root.set("version", version)
+
+        spots = []
+        if os.path.exists(self.changelog_path):
+            with open(self.changelog_path, encoding="utf-8", newline="") as f:
+                changelog = f.read()
+            with open(self.changelog_path, "w", encoding="utf-8", newline="") as f:
+                f.write(f"{version}{nl}- {nl}{nl}{changelog}")
+            spots.append((self.changelog_path, 2, 3))
+
+        news = text.find("<news>")
+        if news >= 0:
+            start = news + len("<news>")
+            rest = text[start:]
+            if rest.startswith("</news>"):
+                entry = f"{version}{nl}- "
+            elif rest.startswith(nl):
+                entry = f"{nl}{version}{nl}- {nl}"
+            else:
+                entry = f"{version}{nl}- {nl}{nl}"
+        else:
+            meta = re.search(r'<extension\s+point="xbmc\.addon\.metadata"[^>]*>', text)
+            close = text.find("</extension>", meta.end()) if meta else -1
+            if meta is None or close < 0:
+                logger.warning("No xbmc.addon.metadata extension in %s for a news entry",
+                               self.xml_file)
+                self._write_text(self.xml_file, text)
+                return spots
+            start = text.rfind(nl, 0, close) + len(nl)
+            if text[start:close].strip():
+                start = close
+            children = re.findall(r"\n([ \t]+)<", text[meta.end():close])
+            indent = children[-1] if children else "\t\t"
+            entry = f"{indent}<news>{nl}{version}{nl}- {nl}{indent}</news>{nl}"
+        text = text[:start] + entry + text[start:]
+        dash = start + entry.index(f"{nl}- ") + len(nl)
+        self._write_text(self.xml_file, text)
+        spots.append((self.xml_file, text.count("\n", 0, dash) + 1, 3))
+        return spots
+
+    @staticmethod
+    def _write_text(path, text):
+        """Write the text back as UTF-8, line endings untouched."""
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
 
     def get_constants(self, folder):
         """Get constants; always empty, python add-ons have none."""

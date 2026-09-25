@@ -76,25 +76,6 @@ def eol_info_from_path_patterns(
     return out
 
 
-def save_xml(filename: str, root, tab_width: int = 4) -> None:
-    """Save a tree pretty-printed, with the leading spaces turned back into tabs."""
-    xml_bytes = ET.tostring(root, encoding="UTF-8", xml_declaration=True, pretty_print=True)
-    text = xml_bytes.decode("utf-8")
-
-    def _detab(line: str) -> str:
-        m = re.match(r"^ +", line)
-        if not m:
-            return line
-        spaces = len(m.group(0))
-        tabs = "\t" * (spaces // tab_width)
-        return tabs + line[spaces:]
-
-    text = "".join(_detab(line) for line in text.splitlines(True))
-
-    with open(filename, "wb") as f:
-        f.write(text.encode("utf-8"))
-
-
 def get_platform() -> str:
     """Return `'linux'`, `'windows'`, or `'osx'`; falls back to stdlib outside Sublime."""
     try:
