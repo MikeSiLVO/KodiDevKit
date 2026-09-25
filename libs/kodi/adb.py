@@ -6,6 +6,7 @@ import subprocess
 from ..utils.decorators import check_busy, run_async
 import os
 import logging
+import posixpath
 
 DEFAULT_SETTINGS = {"remote_ip": "localhost"}
 
@@ -156,7 +157,7 @@ class KodiAdb:
         if not self.userdata_folder:
             logging.warning("remote_userdata_folder not configured")
             return
-        self.cmd("adb", ["shell", "rm", "-rf", os.path.join(self.userdata_folder, "temp")])
+        self.cmd("adb", ["shell", "rm", "-rf", posixpath.join(self.userdata_folder, "temp")])
 
     @run_async
     def reboot(self):
