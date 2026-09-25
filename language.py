@@ -120,6 +120,8 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
                 return None
             label_id = create_new_label(word=self.view.substr(region),
                                        filepath=rel_path)
+            if label_id is None:
+                return None
         else:
             label_id = self.label_ids[index][1:]
             attach_occurrence = getattr(addon, "attach_occurrence_to_label", None)

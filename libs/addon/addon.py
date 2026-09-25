@@ -178,7 +178,7 @@ class Addon(object):
                     self.window_files[path].append(xml_file)
 
     def create_new_label(self, word, filepath):
-        """Add a label to the first PO file, creating it when none exists; returns the new id."""
+        """Add a label to the first PO file, creating it when none exists; None when ids run out."""
         if not self.po_files:
             po_file = create_new_po_file(os.path.join(self.primary_lang_folder, "strings.po"))
             po_file.save()
@@ -186,16 +186,14 @@ class Addon(object):
             logger.critical("New language file created")
         else:
             po_file = self.po_files[0]
-        string_ids = []
-        for entry in po_file:
-            try:
-                string_ids.append(int(entry.msgctxt[1:]))
-            except Exception:
-                string_ids.append(entry.msgctxt)
-        label_id = self.LANG_START_ID
-        for label_id in range(self.LANG_START_ID, self.LANG_START_ID + 1000):
-            if label_id not in string_ids:
-                break
+        used = {entry.msgctxt for entry in po_file}
+        last_id = self.LANG_START_ID + 999
+        label_id = next((i for i in range(self.LANG_START_ID, last_id + 1) if f"#{i}" not in used),
+                        None)
+        if label_id is None:
+            logger.critical(f"No label added: every id from {self.LANG_START_ID} to {last_id} "
+                            f"is taken in {po_file.fpath}")
+            return None
         entry = polib.POEntry(msgid=word,
                               msgstr="",
                               msgctxt="#%s" % label_id,
