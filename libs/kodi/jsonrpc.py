@@ -236,7 +236,8 @@ class KodiJsonrpc:
         """List addon folder names under `<userdata>/addons`."""
         if not self.user_addons_path or not os.path.exists(self.user_addons_path):
             return []
-        return [f for f in os.listdir(self.user_addons_path) if not os.path.isfile(f)]
+        path = self.user_addons_path
+        return [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
 
     def load_settings(self, settings, force: bool = False):
         """Apply `settings`; rebuild url/paths and re-sync the log level.
