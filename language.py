@@ -80,7 +80,13 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
                 if entry.msgctxt not in self.label_ids:
                     self.label_ids.append(entry.msgctxt)
                     self.labels.append([entry.msgid, f"{source} {entry.msgctxt}, {kind}"])
-        self.labels.append(["Create new label", "Add the selected text to the language file"])
+        create = ["Create new label", "Add the selected text to the language file"]
+        if key in by_text:
+            self.label_ids.append(None)
+            self.labels.append(create)
+        else:
+            self.label_ids.insert(0, None)
+            self.labels.insert(0, create)
         sublime.active_window().show_quick_panel(items=self.labels,
                                                  on_select=lambda s: self.on_done(s, region),
                                                  selected_index=0)
@@ -99,7 +105,7 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
         if not file_name:
             return None
         rel_path = file_name.replace(addon.path, "").replace("\\", "/")
-        if index == len(self.label_ids):
+        if self.label_ids[index] is None:
             create_new_label = getattr(addon, "create_new_label", None)
             if not create_new_label:
                 return None
