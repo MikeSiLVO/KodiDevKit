@@ -167,7 +167,7 @@ def set_report_data(all_issues, skin_name, skin_path, timestamp):
 
 def start_server():
     """Start the HTTP server in a background thread."""
-    global _server, _server_port
+    global _server
 
     if _server is not None:
         logger.info("Server already running on port %d", _server_port)
@@ -185,21 +185,18 @@ def start_server():
 
 
 def stop_server():
-    """Stop the HTTP server."""
+    """Stop the HTTP server and release its port."""
     global _server
 
     if _server:
         _server.shutdown()
+        _server.server_close()
         _server = None
         logger.info("Report server stopped")
 
 
 def get_server_port():
     """Get the port number of the running server, or start it."""
-    global _server_port
     if _server is None:
         start_server()
     return _server_port
-
-
-start_server()

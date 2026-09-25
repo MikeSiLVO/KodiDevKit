@@ -365,6 +365,14 @@ def _show_fatal_xml_phantom():
     sublime.set_timeout(_open_and_show, 0)
 
 
+def plugin_unloaded():
+    """Sublime exit point: stop the report server."""
+    import sys
+    server = sys.modules.get(f"{__package__}.libs.reporting.server")
+    if server:
+        server.stop_server()
+
+
 def plugin_loaded():
     """Sublime entry point: load settings, init INFOS, wire reload hooks."""
     import sublime
