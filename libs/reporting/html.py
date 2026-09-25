@@ -4,6 +4,8 @@ import os
 import html
 from datetime import datetime
 from collections import defaultdict
+from pathlib import Path
+from urllib.parse import quote
 from ..utils.validation import is_runtime_generated_file
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -116,7 +118,8 @@ def _classify_subtype(message: str) -> str:
     return ""
 
 
-def generate_html_report(all_issues, skin_name, skin_path, output_path=None, server_port=48273, progress_callback=None, hide_include_warnings=True):
+def generate_html_report(all_issues, skin_name, skin_path, server_port, output_path=None,
+                         progress_callback=None, hide_include_warnings=True):
     """Render `all_issues` to an HTML report and return its path.
 
     `all_issues` is keyed by check name (Variables/Includes/...).
@@ -623,13 +626,10 @@ def _generate_category_section(category, issues, server_port):
         issue_type = issue.get("type", "")
         severity = issue.get("severity", "warning")
 
-        from urllib.parse import quote
-        from pathlib import Path
-
         has_valid_file = file_path and file_path != "Unknown" and os.path.isabs(file_path)
 
         if has_valid_file:
-            localhost_url = f"http://localhost:{server_port}/open?file={quote(file_path)}&line={line}"
+            localhost_url = _open_url(server_port, file_path, line)
             try:
                 file_url = Path(file_path).as_uri()
                 file_link_html = f'<small style="margin-left: 8px;"><a href="{file_url}" class="alt-link" title="Open file: {html.escape(file_path)}">[file]</a></small>'
@@ -640,15 +640,7 @@ def _generate_category_section(category, issues, server_port):
         else:
             file_display = html.escape(file_path) if file_path else "N/A"
 
-        inc_file = issue.get("include_file", "")
-
-        inc_line = issue.get("include_line", 0)
-        if inc_file and inc_line and has_valid_file:
-            inc_url = f"http://localhost:{server_port}/open?file={quote(inc_file)}&line={inc_line}"
-            inc_basename = os.path.basename(inc_file)
-            source_html = f' <a href="{inc_url}" class="file-link inc-source" target="_blank" title="Open {inc_basename} at line {inc_line}">→ {html.escape(inc_basename)}:{inc_line}</a>'
-        else:
-            source_html = ""
+        source_html = _include_source_link(issue, server_port) if has_valid_file else ""
 
         sev_class = f"severity-{severity}"
         inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
@@ -686,11 +678,25 @@ def _generate_category_section(category, issues, server_port):
         </div>"""
 
 
+def _open_url(server_port, file_path, line):
+    """Report-server link that opens the file at the line in Sublime Text."""
+    return f"http://localhost:{server_port}/open?file={quote(file_path)}&line={line}"
+
+
+def _include_source_link(issue, server_port):
+    """Link to the include line an issue came from; empty when it has none."""
+    inc_file = issue.get("include_file", "")
+    inc_line = issue.get("include_line", 0)
+    if not (inc_file and inc_line):
+        return ""
+    inc_basename = os.path.basename(inc_file)
+    return (f' <a href="{_open_url(server_port, inc_file, inc_line)}" class="file-link inc-source"'
+            f' target="_blank" title="Open {inc_basename} at line {inc_line}">'
+            f'→ {html.escape(inc_basename)}:{inc_line}</a>')
+
+
 def _generate_file_section(file_path, issues, server_port):
     """Generate HTML section for issues in a specific file."""
-    from pathlib import Path
-    from urllib.parse import quote
-
     has_valid_file = file_path and file_path != "Unknown" and os.path.isabs(file_path)
 
     if has_valid_file:
@@ -715,16 +721,8 @@ def _generate_file_section(file_path, issues, server_port):
             line = issue.get("line", 0)
             message = issue.get("message", "No message")
             severity = issue.get("severity", "warning")
-            localhost_url = f"http://localhost:{server_port}/open?file={quote(file_path)}&line={line}"
-
-            inc_file = issue.get("include_file", "")
-            inc_line = issue.get("include_line", 0)
-            if inc_file and inc_line:
-                inc_url = f"http://localhost:{server_port}/open?file={quote(inc_file)}&line={inc_line}"
-                inc_basename = os.path.basename(inc_file)
-                source_html = f' <a href="{inc_url}" class="file-link inc-source" target="_blank" title="Open {inc_basename} at line {inc_line}">→ {html.escape(inc_basename)}:{inc_line}</a>'
-            else:
-                source_html = ""
+            localhost_url = _open_url(server_port, file_path, line)
+            source_html = _include_source_link(issue, server_port)
 
             sev_class = f"severity-{severity}"
             inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
@@ -748,7 +746,7 @@ def _generate_file_section(file_path, issues, server_port):
                 </div>""")
 
     first_line = issues[0].get("line", 1) if issues else 1
-    header_localhost_url = f"http://localhost:{server_port}/open?file={quote(file_path)}&line={first_line}"
+    header_localhost_url = _open_url(server_port, file_path, first_line)
 
     file_link_html = f'<small style="margin-left: 8px;"><a href="{file_link}" class="alt-link" title="Open file: {html.escape(file_path)}">[file]</a></small>' if file_link else ''
 
