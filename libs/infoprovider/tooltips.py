@@ -134,30 +134,11 @@ class TooltipMixin(CheckerMixin):
         """Prepend PO files from a live Kodi instance to the engine's own set."""
         po_files = []
         seen = set()
-
-        try:
-            from ..kodi import kodi as kodi_mod
-            if getattr(kodi_mod, "po_files", None):
-                for po in kodi_mod.po_files:
-                    po_id = id(po)
-                    if po_id not in seen:
-                        seen.add(po_id)
-                        po_files.append(po)
-        except Exception:
-            pass
-
-        if self.kodi and hasattr(self.kodi, "po_files"):
-            for po in self.kodi.po_files:  # type: ignore[attr-defined]
-                po_id = id(po)
-                if po_id not in seen:
-                    seen.add(po_id)
-                    po_files.append(po)
-
-        for po in super().get_po_files():
+        live = [po for client in (kodi, self.kodi) for po in getattr(client, "po_files", None) or []]
+        for po in live + super().get_po_files():
             if id(po) not in seen:
                 seen.add(id(po))
                 po_files.append(po)
-
         return po_files
 
     def get_colors(self):
@@ -178,7 +159,7 @@ class TooltipMixin(CheckerMixin):
                 color_hex = "#" + item["content"][2:]
                 cont_color = get_contrast_color(color_hex)
                 alpha_percent = round(
-                    int(item["content"][:2], 16) / (16 * 16) * 100
+                    int(item["content"][:2], 16) / 255 * 100
                 )
                 color_info += (
                     '%s&nbsp;<a href="test" style="background-color:%s;color:%s">'
@@ -196,7 +177,7 @@ class TooltipMixin(CheckerMixin):
         if all(c in string.hexdigits for c in color_string) and len(color_string) == 8:
             color_hex = "#" + color_string[2:]
             cont_color = get_contrast_color(color_hex)
-            alpha_percent = round(int(color_string[:2], 16) / (16 * 16) * 100)
+            alpha_percent = round(int(color_string[:2], 16) / 255 * 100)
             return '<a href="test" style="background-color:%s;color:%s">%d %% alpha</a>' % (
                 color_hex,
                 cont_color,
