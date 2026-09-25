@@ -91,7 +91,7 @@ class LoaderMixin:
         for include in self.template_root.xpath("//include[@name]"):
             for node in self.template_root.xpath("//include[not(@*)]"):
                 if node.text == include.attrib.get("name"):
-                    for child in include.getchildren():
+                    for child in include:
                         node.getparent().append(copy.deepcopy(child))
                     node.getparent().remove(node)
             self.template_root.remove(include)
@@ -113,14 +113,12 @@ class LoaderMixin:
                 attribs[i.tag] = i.attrib
 
             self.template_attribs[ctype] = attribs
-            self.template_values[template.attrib.get("type")] = {
+            self.template_values[ctype] = {
                 i.tag: i.text for i in template.iterchildren()
             }
 
     def init_addon(self, path):
         """Open the addon at the path and parse every window file, stopping at broken XML."""
-        from lxml.etree import XMLSyntaxError
-
         self.addon = None
         self._fatal_xml_error = None
         addon_xml = os.path.join(path, "addon.xml")
@@ -131,8 +129,7 @@ class LoaderMixin:
         self.addon = Addon.by_project(path, self.settings)
 
         try:
-            kodi_ver = getattr(self.addon, "api_version", "omega")
-            self.load_data(kodi_ver)
+            self.load_data(self.addon.api_version)
         except Exception as e:
             logger.warning("Failed to load control schema: %s", e)
 
@@ -141,16 +138,10 @@ class LoaderMixin:
             kodi.update_labels()
         except Exception as e:
             logger.warning("Failed to load Kodi core labels: %s", e)
-        if not self.addon:
-            return
 
         for xml_path in self.addon.get_xml_files():
-            try:
-                root = get_root_from_file(xml_path)
-                if root is None:
-                    raise XMLSyntaxError("Unparseable file", xml_path, 0, 0)
-            except XMLSyntaxError:
-                logger.error("Unparseable file: %s", os.path.basename(xml_path), exc_info=True)
+            if get_root_from_file(xml_path) is None:
+                logger.error("Unparseable file: %s", os.path.basename(xml_path))
                 self._fatal_xml_error = xml_path
                 return
 
