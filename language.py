@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import logging
 
 import sublime
@@ -55,19 +56,31 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
         get_po_files = getattr(infos, "get_po_files", None)
         if not get_po_files:
             return None
-        self.label_ids = []
-        self.labels = []
         region = self.view.sel()[0]
         if region.begin() == region.end():
             logger.critical("Please select the complete label")
             return False
-        word = self.view.substr(region)
+        addon = getattr(infos, "addon", None)
+        own = {id(po) for po in addon.po_files} if addon else set()
+        own_name = "Skin" if addon and addon.type == "skin" else "Add-on"
+        by_text = {}
         for po_file in get_po_files():
+            source = own_name if id(po_file) in own else "Kodi"
             for entry in po_file:
-                if entry.msgid.lower() == word.lower() and entry.msgctxt not in self.label_ids:
+                if entry.msgid:
+                    by_text.setdefault(entry.msgid.lower(), []).append((entry, source))
+
+        key = self.view.substr(region).lower()
+        similar = difflib.get_close_matches(key, list(by_text), n=10, cutoff=0.75)
+        ranked = [(key, "exact")] + [(text, "similar") for text in similar if text != key]
+        self.label_ids = []
+        self.labels = []
+        for text, kind in ranked:
+            for entry, source in by_text.get(text, []):
+                if entry.msgctxt not in self.label_ids:
                     self.label_ids.append(entry.msgctxt)
-                    self.labels.append(["%s (%s)" % (entry.msgid, entry.msgctxt), entry.comment])
-        self.labels.append("Create new label")
+                    self.labels.append([entry.msgid, f"{source} {entry.msgctxt}, {kind}"])
+        self.labels.append(["Create new label", "Add the selected text to the language file"])
         sublime.active_window().show_quick_panel(items=self.labels,
                                                  on_select=lambda s: self.on_done(s, region),
                                                  selected_index=0)
@@ -86,7 +99,7 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
         if not file_name:
             return None
         rel_path = file_name.replace(addon.path, "").replace("\\", "/")
-        if self.labels[index] == "Create new label":
+        if index == len(self.label_ids):
             create_new_label = getattr(addon, "create_new_label", None)
             if not create_new_label:
                 return None
