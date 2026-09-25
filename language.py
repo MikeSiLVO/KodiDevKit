@@ -22,7 +22,7 @@ class KodidevkitReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
     """Command to manually reload language files."""
 
     def run(self):
-        from .libs.kodi import kodi
+        from .libs.kodi.jsonrpc import kodi
         infos = _infos()
         if infos:
             load_settings = getattr(infos, "load_settings", None)

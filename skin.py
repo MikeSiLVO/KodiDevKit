@@ -442,7 +442,7 @@ class KodidevkitSearchForJsonCommand(sublime_plugin.WindowCommand):
     """Quick-panel search through Kodi's JSONRPC.Introspect types/methods/notifications."""
     @run_async
     def run(self):
-        from .libs.kodi import kodi
+        from .libs.kodi.jsonrpc import kodi
         result = kodi.request(method="JSONRPC.Introspect")
 
         if not result or "result" not in result:
@@ -681,7 +681,7 @@ class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowComman
     """Ask Kodi which window XML is active and open it locally."""
     @run_async
     def run(self):
-        from .libs.kodi import kodi
+        from .libs.kodi.jsonrpc import kodi
         view = self.window.active_view()
         if not view:
             return

@@ -33,7 +33,7 @@ from .libs.utils.expressions import extract_expression_at_offset, flatten_expres
 from .libs.utils.xml import get_root_from_file  # noqa: E402
 from .libs.sublime.view import jump_to_label_declaration  # noqa: E402
 from .libs.infoprovider.provider import InfoProvider  # noqa: E402
-from .libs.kodi import kodi  # noqa: E402
+from .libs.kodi.jsonrpc import kodi  # noqa: E402
 
 INFOS = InfoProvider()
 # sublime.log_commands(True)
@@ -313,7 +313,7 @@ def _on_settings_changed():
     try:
         if not INFOS:
             return
-        from .libs.kodi import KodiJsonrpc
+        from .libs.kodi.jsonrpc import KodiJsonrpc
         kodi_client = getattr(INFOS, "kodi", None)
         if kodi_client:
             kodi_client.load_settings(s, force=True)
@@ -1898,7 +1898,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     logger.warning("check_status init_addon SLOW: %.3fs project=%s", init_elapsed, project_folder)
 
             try:
-                from .libs.kodi import KodiJsonrpc
+                from .libs.kodi.jsonrpc import KodiJsonrpc
                 KodiJsonrpc(KodiDevKit.settings).load_settings(KodiDevKit.settings, force=True)
             except Exception:
                 pass

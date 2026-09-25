@@ -11,7 +11,7 @@ from lxml import etree as ET
 
 from ..utils.xml import get_root_from_file
 from ..addon.addon import Addon
-from ..kodi import kodi
+from ..kodi.jsonrpc import kodi
 from ..validation.constants import PARSER
 
 logger = logging.getLogger(__name__)

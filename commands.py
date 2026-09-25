@@ -14,7 +14,7 @@ from .libs.utils.files import check_paths, get_sublime_path
 from .libs.addon.translations import get_po_file
 from .libs.utils.decorators import run_async
 from .libs.utils.expressions import split_top_level_commas
-from .libs.kodi import kodi
+from .libs.kodi.jsonrpc import kodi
 
 import subprocess
 

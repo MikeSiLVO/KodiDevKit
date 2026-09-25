@@ -255,3 +255,6 @@ class KodiJsonrpc:
                     po_file.language = item  # type: ignore[attr-defined]
                     po_files.append(po_file)
         return po_files
+
+
+kodi = KodiJsonrpc()

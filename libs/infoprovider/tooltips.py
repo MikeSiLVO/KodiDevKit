@@ -6,7 +6,7 @@ import os
 import string
 import logging
 from ..utils.colors import get_contrast_color
-from ..kodi import kodi
+from ..kodi.jsonrpc import kodi
 from ..utils import images as imageparser
 from ..validation.constants import POS_TAGS
 from .checker import CheckerMixin
