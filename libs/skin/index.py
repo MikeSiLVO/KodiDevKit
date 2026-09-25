@@ -158,10 +158,6 @@ class SkinIndex:
 
         for folder in self.skin.xml_folders:
             if progress_callback:
-                progress_callback(f"Loading includes for {folder}...")
-            include_map = self.skin.build_include_map(folder)
-
-            if progress_callback:
                 progress_callback(f"Processing {len(self.skin.window_files.get(folder, []))} files in {folder}...")
 
             max_workers = self._get_optimal_workers()
@@ -247,54 +243,6 @@ class SkinIndex:
                         if img_path not in index['images_referenced'][folder]:
                             index['images_referenced'][folder][img_path] = []
                         index['images_referenced'][folder][img_path].extend(usages)
-
-            if progress_callback:
-                progress_callback(f"Processing {len(include_map)} include definitions...")
-            include_count = 0
-            total_includes = len(include_map)
-            for inc_name, inc_tuple in include_map.items():
-                include_count += 1
-                if progress_callback and total_includes > 200:
-                    if include_count % 25 == 0:
-                        progress_callback(f"Processing includes... ({include_count}/{total_includes})")
-                if isinstance(inc_tuple, tuple) and len(inc_tuple) >= 3:
-                    inc_node, _default_params, file_path = inc_tuple
-                elif isinstance(inc_tuple, tuple) and len(inc_tuple) == 2:
-                    inc_node, _default_params = inc_tuple
-                    file_path = getattr(inc_node, 'file', None)
-                else:
-                    inc_node = inc_tuple
-                    file_path = getattr(inc_node, 'file', None)
-
-                if isinstance(inc_node, tuple):
-                    continue
-
-                if hasattr(inc_node, 'node'):
-                    inc_obj = inc_node
-                else:
-                    from ..skin.include import SkinInclude
-                    definition = inc_node.find("definition")
-                    include_body = definition if definition is not None else inc_node
-                    inc_obj = SkinInclude(node=include_body, file=file_path)
-
-                if inc_obj and file_path:
-                    try:
-                        if hasattr(inc_obj, 'cached_fonts'):
-                            for font_name, font_data in inc_obj.cached_fonts.items():  # type: ignore[attr-defined]
-                                if font_name not in index['fonts_used'][folder]:
-                                    index['fonts_used'][folder][font_name] = []
-                                index['fonts_used'][folder][font_name].append(font_data)
-
-                        if hasattr(inc_obj, 'cached_labels'):
-                            for label_id, usages in inc_obj.cached_labels.items():  # type: ignore[attr-defined]
-                                if label_id not in index['labels_used'][folder]:
-                                    index['labels_used'][folder][label_id] = []
-                                index['labels_used'][folder][label_id].extend(usages)
-                    except Exception as e:
-                        logger.debug("Failed to process include %s: %s", inc_name, e)
-
-            if progress_callback:
-                progress_callback(f"Processed {include_count} include definitions")
 
         index['include_to_windows'] = {}
         for folder in self.skin.xml_folders:

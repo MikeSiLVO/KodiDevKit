@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import os
 import re
-import pickle
-import copy
 import time
 from pathlib import Path
 
 from ..utils.files import check_paths
-from ..utils.xml import get_root_from_file, tree_needs_expansion
+from ..utils.xml import get_root_from_file
 from ..utils.validation import normalize_control_id
 from ..addon.addon import Addon
-from ..skin.include import SkinInclude
-from .maps import SkinMaps, INCLUDE_MAPS_VERSION
+from .maps import SkinMaps
 from .resolution import SkinResolution
 from .resources import SkinResources
 import logging
@@ -25,8 +22,6 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
-
-FILE_PREVIEW_SIZE = 50_000
 
 
 class Skin(Addon):
@@ -528,10 +523,6 @@ class Skin(Addon):
         """Get the theme names, one per folder under `themes`."""
         return [folder for folder in os.listdir(os.path.join(self.path, "themes"))]
 
-    def build_include_map(self, folder):
-        """The folder's include map, name to (node, params, file); already built by the loader."""
-        return self.include_map.get(folder, {})
-
     def get_constants(self, folder):
         """Get the constant names defined for the folder."""
         return list(self.constant_map.get(folder, {}).keys())
@@ -635,284 +626,3 @@ class Skin(Addon):
         if ref:
             return self.lookup_skin_map(folder, ref, key, visited)
         return key
-
-    def get_expanded_root(self, path, folder):
-        """Parse a file and resolve it in place, uncached; unexpanded tree if resolving fails."""
-        root = get_root_from_file(path)
-        if root is None:
-            return None
-
-        try:
-            self.resolver.resolve(root, folder)
-            return root
-        except Exception as e:
-            logger.warning("Failed to expand %s: %s", os.path.basename(path), e)
-            return root
-
-    def build_include_maps(self, progress_callback=None):
-        """Build the skin-start maps and pickle them, or load a pickle whose version matches."""
-        cache_path = self._get_include_maps_cache_path()
-        if cache_path and cache_path.exists():
-            try:
-                if progress_callback:
-                    progress_callback("Loading include maps from cache...")
-                with open(cache_path, 'rb') as f:
-                    maps = pickle.load(f)
-
-                if hasattr(maps, 'version') and maps.version == INCLUDE_MAPS_VERSION:
-                    if progress_callback:
-                        progress_callback("Include maps cache loaded")
-                    return maps
-            except Exception as e:
-                logger.warning("Failed to load include maps cache, rebuilding: %s", e)
-
-        if progress_callback:
-            progress_callback("Building include maps (first time)...")
-
-        maps = SkinMaps()
-
-        for folder in self.xml_folders:
-            maps.includes[folder] = {}
-            if folder in self.include_map:
-                for name, (node, default_params, file_path) in self.include_map[folder].items():
-                    definition = node.find("definition")
-                    include_body = definition if definition is not None else node
-                    inc_obj = SkinInclude(node=include_body, file=file_path)
-                    maps.includes[folder][name] = {
-                        'content': inc_obj.content,
-                        'default_params': default_params
-                    }
-
-            maps.defaults[folder] = {}
-            if folder in self.default_map:
-                for ctrl_type, (node, file_path) in self.default_map[folder].items():
-                    inc_obj = SkinInclude(node=node, file=file_path)
-                    maps.defaults[folder][ctrl_type] = inc_obj.content
-
-            maps.constants[folder] = self.constant_map.get(folder, {}).copy()
-
-            maps.variables[folder] = {}
-            if folder in self.variable_map:
-                for name, (node, file_path) in self.variable_map[folder].items():
-                    inc_obj = SkinInclude(node=node, file=file_path)
-                    maps.variables[folder][name] = inc_obj.content
-
-            maps.expressions[folder] = self.expression_map.get(folder, {}).copy()
-
-            include_file_paths = getattr(self, 'include_files', {}).get(folder, [])
-            maps.include_files[folder] = [os.path.basename(p) for p in include_file_paths]
-
-        if hasattr(self, 'fonts') and self.fonts:
-            for folder, font_list in self.fonts.items():
-                maps.fonts_defined[folder] = {}
-                for font_data in font_list:
-                    font_name = font_data.get('name', '').strip()
-                    if font_name:
-                        maps.fonts_defined[folder][font_name] = {
-                            'file': font_data.get('file', ''),
-                            'line': font_data.get('line', 0),
-                            'filename': font_data.get('filename', ''),
-                            'size': font_data.get('size', '')
-                        }
-
-        maps.builtin_controls = self.builtin_controls.copy() if hasattr(self, 'builtin_controls') else {}
-        maps.builtin_filename_map = self.builtin_filename_map.copy() if hasattr(self, 'builtin_filename_map') else {}
-
-        if cache_path:
-            try:
-                cache_path.parent.mkdir(parents=True, exist_ok=True)
-                self._cleanup_old_cache_files(cache_path)
-                with open(cache_path, 'wb') as f:
-                    pickle.dump(maps, f, protocol=pickle.HIGHEST_PROTOCOL)
-                if progress_callback:
-                    progress_callback("Include maps built and cached")
-            except Exception as e:
-                logger.warning("Failed to cache include maps: %s", e)
-
-        return maps
-
-    def _get_include_maps_cache_path(self):
-        """Get the pickle path for this skin's maps under ~/.kodidevkit/cache."""
-        if not hasattr(self, 'path') or not self.path:
-            return None
-
-        try:
-            skin_name = Path(self.path).name.replace('.', '_')
-            cache_dir = Path.home() / '.kodidevkit' / 'cache'
-            cache_filename = f"skin_{skin_name}_include_maps_v{INCLUDE_MAPS_VERSION}.pkl"
-            return cache_dir / cache_filename
-        except Exception as e:
-            logger.warning("Failed to determine include maps cache path: %s", e)
-            return None
-
-    def _cleanup_old_cache_files(self, current_cache_path):
-        """Delete this skin's older-version pickles and any pickle untouched for 30 days."""
-        try:
-            cache_dir = current_cache_path.parent
-            if not cache_dir.exists():
-                return
-
-            skin_name = Path(self.path).name.replace('.', '_')
-            current_prefix = f"skin_{skin_name}_include_maps"
-            current_time = time.time()
-
-            for cache_file in cache_dir.glob("skin_*_include_maps_v*.pkl"):
-                if cache_file.stem.startswith(current_prefix):
-                    version_match = re.search(r'_v(\d+)$', cache_file.stem)
-                    if version_match and int(version_match.group(1)) < INCLUDE_MAPS_VERSION:
-                        cache_file.unlink()
-                        logger.info("Removed old cache version: %s", cache_file.name)
-
-                if current_time - cache_file.stat().st_mtime > 30 * 86400:
-                    cache_file.unlink()
-                    logger.info("Removed stale cache (>30 days): %s", cache_file.name)
-        except Exception as e:
-            logger.debug("Cache cleanup error: %s", e)
-
-    def validate_single_file(self, file_path, include_maps=None, progress_callback=None):
-        """Validate one window file on its own, resolved against the maps as Kodi activates it."""
-        if include_maps is None:
-            if progress_callback:
-                progress_callback("Loading include maps...")
-            include_maps = self.build_include_maps(progress_callback)
-
-        folder = self._get_folder_for_file(file_path)
-        if not folder:
-            logger.warning("Could not determine folder for file: %s", file_path)
-            return {'issues': [], 'file': file_path}
-
-        basename = os.path.basename(file_path)
-
-        cache_key = (folder, basename)
-        if cache_key in self._resolved_windows_cache:
-            if progress_callback:
-                progress_callback(f"Using cached resolution for {basename}...")
-            resolved_root, source_root = self._resolved_windows_cache[cache_key]
-            logger.debug("Using cached resolved XML for %s", basename)
-        else:
-            if progress_callback:
-                progress_callback(f"Loading {basename}...")
-
-            source_root = get_root_from_file(file_path)
-            if source_root is None:
-                logger.warning("Failed to parse file: %s", file_path)
-                return {'issues': [], 'file': file_path}
-
-            if tree_needs_expansion(source_root):
-                if progress_callback:
-                    progress_callback(f"Resolving includes in {basename}...")
-
-                resolved_root = copy.deepcopy(source_root)
-                self.resolver.resolve(resolved_root, folder)
-                logger.debug("Resolved includes in %s", basename)
-            else:
-                resolved_root = source_root
-
-            self._resolved_windows_cache[cache_key] = (resolved_root, source_root)
-            logger.debug("Cached resolved XML for %s", basename)
-
-        extraction_results = {
-            'ids_defined': {folder: {}},
-            'ids_referenced': {folder: {}},
-            'window_ids': {folder: []},
-            'view_ids': set(),
-            'fonts_used': {folder: {}},
-            'labels_used': {folder: {}},
-            'labels_untranslated': [],
-        }
-
-        if progress_callback:
-            progress_callback(f"Extracting IDs from {basename}...")
-
-        self.index_builder._extract_id_definitions_from_xml(resolved_root, file_path, folder, extraction_results)
-
-        if progress_callback:
-            progress_callback(f"Extracting references from {basename}...")
-
-        self.index_builder._extract_id_references_from_xml(source_root, file_path, folder, extraction_results)
-        self.index_builder._extract_fonts_from_xml(source_root, file_path, folder, extraction_results)
-        self.index_builder._extract_labels_from_xml(source_root, file_path, folder, extraction_results)
-
-        window_ids_set = set(extraction_results['ids_defined'][folder].keys())
-
-        single_file_index = {
-            'ids_defined': extraction_results['ids_defined'],
-            'ids_referenced': extraction_results['ids_referenced'],
-            'window_ids': extraction_results['window_ids'],
-            'view_ids': {folder: extraction_results['view_ids']},
-            'window_base_ids': {folder: {basename: window_ids_set}},
-            'window_expanded_ids': {folder: {basename: window_ids_set}},
-            'window_includes': {folder: {}},
-            'include_to_windows': {folder: {}},
-            'include_files': include_maps.include_files,
-            'fonts_defined': include_maps.fonts_defined,
-            'fonts_used': extraction_results['fonts_used'],
-            'labels_used': extraction_results['labels_used'],
-            'labels_untranslated': extraction_results['labels_untranslated'],
-            'builtin_controls': include_maps.builtin_controls,
-            'builtin_filename_map': include_maps.builtin_filename_map,
-        }
-
-        if progress_callback:
-            progress_callback(f"Validating {basename}...")
-
-        from ..validation.ids import ValidationIds
-        from ..validation.font import ValidationFont
-        from ..validation.label import ValidationLabel
-        from ..validation.expression import ValidationExpression
-
-        issues = []
-
-        try:
-            id_checker = ValidationIds(self, window_ids=[], window_names=[], validation_index=single_file_index)
-            id_issues = id_checker.check()
-            issues.extend(id_issues)
-        except Exception as e:
-            logger.error("ID validation failed for %s: %s", basename, e)
-
-        try:
-            font_checker = ValidationFont(self, validation_index=single_file_index)
-            font_issues = font_checker.check()
-            issues.extend(font_issues)
-        except Exception as e:
-            logger.error("Font validation failed for %s: %s", basename, e)
-
-        try:
-            label_checker = ValidationLabel(self, get_po_files_fn=lambda: self.get_po_files(folder), validation_index=single_file_index)
-            label_issues = label_checker.check()
-            issues.extend(label_issues)
-        except Exception as e:
-            logger.error("Label validation failed for %s: %s", basename, e)
-
-        try:
-            expression_checker = ValidationExpression(self, validation_index=single_file_index)
-            expression_issues = expression_checker.check()
-            issues.extend(expression_issues)
-        except Exception as e:
-            logger.error("Expression validation failed for %s: %s", basename, e)
-
-        if progress_callback:
-            issue_count = len(issues)
-            progress_callback(f"Validation complete: {issue_count} issue(s) found")
-
-        return {'issues': issues, 'file': file_path}
-
-    def _get_folder_for_file(self, file_path):
-        """The xml folder the file sits in, or None when it is outside every one."""
-        try:
-            file_path_obj = Path(file_path)
-
-            for folder in self.xml_folders:
-                folder_path = Path(self.path) / folder
-                try:
-                    file_path_obj.relative_to(folder_path)
-                    return folder
-                except ValueError:
-                    continue
-
-            logger.warning("File not in any known XML folder: %s", file_path)
-            return None
-        except Exception as e:
-            logger.error("Error determining folder for file %s: %s", file_path, e)
-            return None
-
