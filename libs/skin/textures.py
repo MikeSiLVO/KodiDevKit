@@ -15,20 +15,14 @@ def texturepacker(media_path, settings, xbt_filename="Textures.xbt"):
     tp_path = settings.get("texturepacker_path")
     if not tp_path:
         return None
-    args = ['-dupecheck',
-            '-input "%s"' % media_path,
-            '-output "%s"' % os.path.join(media_path, xbt_filename)]
-    from ..utils.files import get_platform
-    if get_platform() == "linux":
-        args = ['%s %s' % (tp_path, " ".join(args))]
-    else:
-        args.insert(0, tp_path)
+    args = [tp_path, "-dupecheck",
+            "-input", media_path,
+            "-output", os.path.join(media_path, xbt_filename)]
     with subprocess.Popen(
         args,
         stdout=subprocess.PIPE,
         bufsize=1,
         universal_newlines=True,
-        shell=True,
     ) as p:
         if p.stdout:
             for line in p.stdout:
