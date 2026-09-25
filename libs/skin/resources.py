@@ -126,17 +126,10 @@ class SkinResources:
         return fonts, font_file
 
     def load_media_files(self, media_path: str) -> Generator[str, None, None]:
-        """Yield every media file as a forward-slash relative path, minus studio and recordlabel."""
+        """Yield every media file as a forward-slash path relative to the media folder."""
         for path, _, files in os.walk(media_path):
-            if "studio" in path or "recordlabel" in path:
-                continue
             for filename in files:
-                img_path = os.path.join(path, filename)
-                img_path = img_path.replace(media_path, "").replace("\\", "/")
-                img_path = img_path.lstrip()
-                if img_path.startswith("/"):
-                    img_path = img_path[1:]
-                yield img_path
+                yield os.path.relpath(os.path.join(path, filename), media_path).replace("\\", "/")
 
     def get_font_references(self, window_files: Dict[str, List[str]]) -> Optional[Dict[str, List[Dict]]]:
         """Get every <font> reference per folder as {file, name, line}; None on a parse failure."""
