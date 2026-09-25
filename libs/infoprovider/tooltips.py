@@ -142,13 +142,8 @@ class TooltipMixin(CheckerMixin):
         return po_files
 
     def get_colors(self):
-        """Get every color, Kodi core first then the addon's."""
-        colors = []
-        if kodi.colors:
-            colors.extend(kodi.colors)
-        if self.addon and self.addon.colors:
-            colors.extend(self.addon.colors)
-        return colors
+        """Get every color the addon knows, Kodi core ones included."""
+        return list(self.addon.colors) if self.addon else []
 
     def get_color_info_html(self, color_string):
         """Build a small HTML swatch + info for a color value or name."""

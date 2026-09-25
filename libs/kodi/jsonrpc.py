@@ -1,7 +1,6 @@
 import os
 from ..utils.files import check_paths
 from ..addon.translations import get_po_file
-from ..utils.xml import get_root_from_file
 from ..utils.decorators import run_async
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -60,8 +59,6 @@ class KodiJsonrpc:
 
         self.settings = settings or (sublime.load_settings('kodidevkit.sublime-settings') if sublime else {})
         self.po_files = []
-        self.colors = []
-        self.color_labels = []
         self.json_url = None
         self.kodi_path = None
         self.userdata_folder = None
@@ -167,23 +164,6 @@ class KodiJsonrpc:
             logger.debug("Kodi cooldown set: next retry after %.1fs", 2.0)
             return None
 
-    def get_colors(self):
-        """Parse Kodi's core colors.xml into `self.colors` and `self.color_labels`."""
-        self.colors = []
-        if not self.color_file_path or not os.path.exists(self.color_file_path):
-            return False
-        root = get_root_from_file(self.color_file_path)
-        if root is None:
-            return False
-        for node in root.findall("color"):
-            color = {"name": node.attrib["name"],
-                     "line": node.sourceline,
-                     "content": node.text,
-                     "file": self.color_file_path}
-            self.colors.append(color)
-        logger.info("found color file %s including %i colors", self.color_file_path, len(self.colors))
-        self.color_labels = {i["name"] for i in self.colors}
-
     def get_userdata_folder(self):
         """Get Kodi's home folder for the OS and portable mode, the parent of userdata."""
         from ..utils.files import get_platform
@@ -216,20 +196,6 @@ class KodiJsonrpc:
         """`<kodi_path>/addons` if known, else None."""
         if self.kodi_path:
             return os.path.join(self.kodi_path, "addons")
-        return None
-
-    @property
-    def color_file_path(self):
-        """Path to Kodi's core `system/colors.xml`."""
-        if self.kodi_path:
-            return os.path.join(self.kodi_path, "system", "colors.xml")
-        return None
-
-    @property
-    def default_skin_path(self):
-        """Path to Estuary's xml folder under user addons (used as a sample skin)."""
-        if self.user_addons_path:
-            return os.path.join(self.user_addons_path, "skin.estuary", "xml")
         return None
 
     def get_userdata_addons(self):
