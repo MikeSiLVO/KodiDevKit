@@ -114,7 +114,7 @@ class SkinResolution:
         return ",".join(pieces)
 
     def resolve_expressions(self, node, folder: str):
-        """Expand $EXP as CGUIIncludes::ResolveExpressions: listed tag text, condition attrs."""
+        """Resolve $EXP as CGUIIncludes::ResolveExpressions: listed tag text, else the condition."""
         if node is None:
             return
 
@@ -124,10 +124,11 @@ class SkinResolution:
 
         if node.text and node.tag in SkinInclude.exp_nodes:
             node.text = self._resolve_expression_value(node.text, expressions_for_folder, [])
-
-        for attr_name, attr_value in list(node.attrib.items()):
-            if attr_name in SkinInclude.exp_attribs:
-                node.attrib[attr_name] = self._resolve_expression_value(attr_value, expressions_for_folder, [])
+        else:
+            for attr_name, attr_value in list(node.attrib.items()):
+                if attr_name in SkinInclude.exp_attribs:
+                    node.attrib[attr_name] = self._resolve_expression_value(
+                        attr_value, expressions_for_folder, [])
 
     def _resolve_expression_value(self, value: str, expression_map: dict, resolved: list) -> str:
         """Resolve $EXP[name] references with circular detection."""
