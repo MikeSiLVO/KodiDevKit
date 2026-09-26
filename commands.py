@@ -163,20 +163,6 @@ class KodidevkitGoToOnlineHelpCommand(sublime_plugin.TextCommand):
         webbrowser.open_new(self.CONTROLS[word])
 
 
-class KodidevkitLogCommand(sublime_plugin.TextCommand):
-    """Append a line to a Sublime output panel."""
-
-    def run(self, edit, label, panel_name='example'):
-        window = self.view.window()
-        if not window:
-            return
-        if not hasattr(self, "output_view"):
-            self.output_view = window.create_output_panel(panel_name)
-        self.output_view.insert(edit, self.output_view.size(), label + '\n')
-        self.output_view.show(self.output_view.size())
-        window.run_command("show_panel", {"panel": "output." + panel_name})
-
-
 class KodidevkitCreateElementRowCommand(sublime_plugin.WindowCommand):
     """Prompt for a count, then duplicate the selection that many times via
     KodidevkitReplaceXmlElementsCommand."""
@@ -289,7 +275,7 @@ class KodidevkitSetKodiFolderCommand(sublime_plugin.WindowCommand):
             sublime.load_settings(SETTINGS_FILE).set("kodi_path", path)
             sublime.save_settings(SETTINGS_FILE)
         else:
-            logging.critical("Folder %s does not exist." % path)
+            logger.critical("Folder %s does not exist.", path)
 
 
 class KodidevkitExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):

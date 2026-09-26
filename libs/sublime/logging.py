@@ -1,44 +1,19 @@
-"""Sublime-side log handlers and the results display panel."""
+"""Sublime-side logging: critical records as dialogs, the results panel, the debug log file."""
 
 import sublime
 import logging
 
 
-class SublimeLogHandler(logging.StreamHandler):
-    """Logging handler that routes records to console / output panel / dialogs."""
+class DialogHandler(logging.Handler):
+    """Log handler showing each critical record in a Sublime message dialog."""
 
     def __init__(self):
-        super().__init__()
-        formatter = logging.Formatter('[KodiDevKit] %(asctime)s: %(message)s',
-                                      datefmt='%Y-%m-%d %H:%M:%S')
-        self.setFormatter(formatter)
+        super().__init__(level=logging.CRITICAL)
 
     def emit(self, record):
-        levels = {
-            logging.CRITICAL: self.message,
-            logging.ERROR: self.info,
-            logging.WARNING: self.info,
-            logging.INFO: self.debug,
-            logging.DEBUG: self.debug,
-            logging.NOTSET: self.debug,
-        }
-        log = levels[record.levelno]
-        log(record)
-
-    def flush(self):
-        pass
-
-    def debug(self, record):
-        print(self.format(record))
-
-    def info(self, record):
-        wnd = sublime.active_window()
-        wnd.run_command("kodidevkit_log", {"label": self.format(record).strip()})
-
-    @staticmethod
-    def message(record):
-        """Show `record.msg` in a Sublime message dialog."""
-        sublime.message_dialog(record.msg)
+        """Show the record's formatted message in a dialog, from the main thread."""
+        message = record.getMessage()
+        sublime.set_timeout(lambda: sublime.message_dialog(message), 0)
 
 
 class ResultsDisplayPanel:
@@ -178,15 +153,6 @@ class ResultsDisplayPanel:
             for line in error_message.split('\n'):
                 if line:
                     self.append_msg(line)
-
-
-def config():
-    """Replace the root logger's handlers with our SublimeLogHandler."""
-    logger = logging.getLogger()
-    for hdlr in logger.handlers:
-        logger.removeHandler(hdlr)
-    logger.addHandler(SublimeLogHandler())
-    logger.setLevel(logging.INFO)
 
 
 def enable_file_logging(log_file_path=None):

@@ -283,9 +283,11 @@ def _setup_logging_once():
     if root.level in (logging.NOTSET, logging.WARNING):
         root.setLevel(logging.INFO)
 
+    from .libs.sublime.logging import DialogHandler
     pkg = logging.getLogger("KodiDevKit")
     pkg.propagate = True
     pkg.handlers.clear()
+    pkg.addHandler(DialogHandler())
 
 
 _setup_logging_once()
