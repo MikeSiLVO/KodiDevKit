@@ -107,47 +107,8 @@ def deduplicate_issues(issues):
     return result
 
 
-def find_unused_items(definitions, references, item_type, skip_filter=None):
-    """Issues for each definition of that type whose name is never referenced."""
-    ref_names = {ref["name"] for ref in references}
-    unused = []
-
-    for node in definitions:
-        if node.get("type") == item_type and node.get("name") not in ref_names:
-            if skip_filter and skip_filter(node):
-                continue
-
-            unused.append(
-                create_issue(
-                    f"Unused {item_type}: {node['name']}",
-                    file=node.get("file") or "",
-                    line=node.get("line") or 0,
-                    type=item_type,
-                    name=node["name"]
-                )
-            )
-
-    return unused
 
 
-def find_undefined_items(references, definitions, item_type, skip_filter=None):
-    """References of that type with no definition, each carrying its message."""
-    defined_names = {
-        node.get("name")
-        for node in definitions
-        if node.get("type") == item_type and node.get("name")
-    }
-
-    undefined = []
-    for ref in references:
-        if skip_filter and skip_filter(ref):
-            continue
-
-        if ref["name"] not in defined_names:
-            ref["message"] = f"{item_type.capitalize()} not defined: {ref['name']}"
-            undefined.append(ref)
-
-    return undefined
 
 
 def resolve_include_content(inc, resolve_callback=None):
@@ -157,7 +118,7 @@ def resolve_include_content(inc, resolve_callback=None):
     if resolve_callback:
         return resolve_callback(inc)
 
-    content = inc.get("content") or "" if hasattr(inc, "get") else getattr(inc, "content", "") or ""
+    content = inc.get("content") or ""
     if not content:
         return ""
 

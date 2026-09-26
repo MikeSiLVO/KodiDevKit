@@ -1,12 +1,11 @@
-"""Decorators for retrying, backgrounding and busy-guarding plugin commands."""
+"""Decorators for backgrounding and busy-guarding plugin commands."""
 
 from __future__ import annotations
 
 import logging
 import threading
-import time
 from functools import wraps
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -14,28 +13,6 @@ if not logger.handlers:
 logger.propagate = True
 
 
-def retry(
-    exception_to_check: Type[Exception],
-    tries: int = 4,
-    delay: int = 3,
-    backoff: int = 2
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Retry function on exception with exponential backoff."""
-    def deco_retry(f: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(f)
-        def f_retry(*args: Any, **kwargs: Any) -> Any:
-            mtries, mdelay = tries, delay
-            while mtries > 1:
-                try:
-                    return f(*args, **kwargs)
-                except exception_to_check as e:
-                    logger.info(f"{e}, Retrying in {mdelay} seconds...")
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return f(*args, **kwargs)
-        return f_retry
-    return deco_retry
 
 
 def run_async(func: Callable[..., Any]) -> Callable[..., Any]:

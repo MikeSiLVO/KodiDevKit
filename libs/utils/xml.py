@@ -193,8 +193,6 @@ def get_root_from_file(xml_file):
         preview = repr(xml_file)[:80]
         logger.debug("get_root_from_file: not a file path: %s...", preview)
         return None
-    if not os.path.exists(xml_file):
-        return None
 
     try:
         stat_info = os.stat(xml_file)
