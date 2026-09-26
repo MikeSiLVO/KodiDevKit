@@ -570,39 +570,13 @@ class SkinIndex:
             cf_rel_to_exact = {}
             cf_base_to_relpaths = {}
 
-            search_dirs = [
-                root_dir,
-                os.path.join(root_dir, "media"),
-                os.path.join(root_dir, "resources", "media"),
-                os.path.join(root_dir, "extras"),
-                os.path.join(root_dir, "images"),
-                os.path.join(root_dir, "textures"),
-                os.path.join(root_dir, "fonts"),
-            ]
-
-            for search_dir in search_dirs:
-                if not os.path.isdir(search_dir):
-                    continue
-                for dirpath, _, files in os.walk(search_dir):
-                    for filename in files:
-                        full_path = os.path.join(dirpath, filename)
-                        try:
-                            rel_path = os.path.relpath(full_path, root_dir)
-                        except Exception:
-                            rel_path = os.path.basename(full_path)
-
-                        rel_path = rel_path.replace("\\", "/")
-                        exact_relpaths.add(rel_path)
-
-                        cf_rel = rel_path.casefold()
-                        if cf_rel not in cf_rel_to_exact:
-                            cf_rel_to_exact[cf_rel] = rel_path
-
-                        basename = os.path.basename(rel_path)
-                        cf_base = basename.casefold()
-                        if cf_base not in cf_base_to_relpaths:
-                            cf_base_to_relpaths[cf_base] = set()
-                        cf_base_to_relpaths[cf_base].add(rel_path)
+            for dirpath, _, files in os.walk(root_dir):
+                for filename in files:
+                    rel_path = os.path.relpath(os.path.join(dirpath, filename), root_dir)
+                    rel_path = rel_path.replace("\\", "/")
+                    exact_relpaths.add(rel_path)
+                    cf_rel_to_exact.setdefault(rel_path.casefold(), rel_path)
+                    cf_base_to_relpaths.setdefault(filename.casefold(), set()).add(rel_path)
 
             return exact_relpaths, cf_rel_to_exact, cf_base_to_relpaths
 
