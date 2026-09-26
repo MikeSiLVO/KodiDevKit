@@ -364,13 +364,7 @@ class SkinIndex:
             self._extract_images_from_xml(root, path, folder, results)
 
             for elem in root.iter('include'):
-                inc_name = None
-
-                if elem.text and elem.text.strip():
-                    inc_name = elem.text.strip()
-                elif 'content' in elem.attrib:
-                    inc_name = elem.attrib['content']
-
+                inc_name = elem.get('content') or (elem.text or '').strip()
                 if inc_name:
                     results['window_includes'].append({'name': inc_name})
 
@@ -420,9 +414,7 @@ class SkinIndex:
                     inc_name = None
                     params = {}
 
-                    if elem.text and elem.text.strip():
-                        inc_name = elem.text.strip()
-                    elif 'content' in elem.attrib:
+                    if 'content' in elem.attrib:
                         inc_name = elem.attrib['content']
                         for param_elem in elem.findall('param'):
                             param_name = param_elem.get('name')
@@ -431,6 +423,8 @@ class SkinIndex:
                                 param_value = (param_elem.text or '').strip()
                             if param_name and param_value:
                                 params[param_name] = param_value
+                    elif elem.text and elem.text.strip():
+                        inc_name = elem.text.strip()
 
                     if inc_name:
                         if inc_name not in self.skin.include_usages[folder]:
