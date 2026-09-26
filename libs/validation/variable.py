@@ -11,6 +11,7 @@ from ..utils.validation import (
     resolve_param_in_name,
     should_report_progress,
 )
+from ..utils.expressions import bracket_body
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -21,33 +22,6 @@ def strip_xml_comments(content):
     return re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
 
 
-def extract_variable_name_with_nested_brackets(match_text):
-    r"""Extract variable name from `$VAR[...]`, handling nested brackets (e.g. `$PARAM[...]` inside).
-
-    The simple regex `\$VAR\[(.*?)\]` fails for nested brackets:
-    - Input: `$VAR[Label_Title_C$PARAM[id]3]`
-    - Broken regex captures: `Label_Title_C$PARAM[id` (stops at first `]`)
-    - This function captures: `Label_Title_C$PARAM[id]3`
-
-    Returns an empty string if no matching closing bracket is found.
-    """
-    # Find the start position after $VAR[ or $ESCVAR[
-    start_pos = match_text.find('[')
-    if start_pos == -1:
-        return ''
-
-    bracket_count = 0
-    for i, char in enumerate(match_text[start_pos:], start=start_pos):
-        if char == '[':
-            bracket_count += 1
-        elif char == ']':
-            bracket_count -= 1
-            if bracket_count == 0:
-                # Found the matching closing bracket
-                return match_text[start_pos+1:i]
-
-    # Malformed - no matching closing bracket
-    return ''
 
 
 class ValidationVariable:
@@ -94,7 +68,7 @@ class ValidationVariable:
                 for i, line in enumerate(content_without_comments.splitlines(), 1):
                     for match in re.finditer(var_start_regex, line):
                         match_text = line[match.start():]
-                        raw_name = extract_variable_name_with_nested_brackets(match_text)
+                        raw_name = bracket_body(match_text)
 
                         if not raw_name:
                             continue  # Malformed variable reference

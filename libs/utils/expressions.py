@@ -54,20 +54,32 @@ def extract_number_value(text: str) -> str | None:
     return None
 
 
+def bracket_body(text: str) -> str:
+    """Text inside the first [...], nested brackets included; empty when it never closes."""
+    start = text.find('[')
+    if start == -1:
+        return ''
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == '[':
+            depth += 1
+        elif text[i] == ']':
+            depth -= 1
+            if depth == 0:
+                return text[start + 1:i]
+    return ''
+
+
 def extract_variable_name(text: str) -> str | None:
     """Variable name inside `$VAR[...]` or `$ESCVAR[...]`, or None when `text` is neither."""
     if not isinstance(text, str):
         return None
 
-    match = re.match(r'^\$(ESC)?VAR\[([^\]]+)\]', text.strip(), re.IGNORECASE)
-    if not match:
+    text = text.strip()
+    if not re.match(r'^\$(ESC)?VAR\[', text, re.IGNORECASE):
         return None
 
-    var_name = match.group(2).strip()
-
-    if ',' in var_name:
-        var_name = var_name.split(',')[0].strip()
-
+    var_name = bracket_body(text).split(',')[0].strip()
     return var_name if var_name else None
 
 
