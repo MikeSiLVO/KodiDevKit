@@ -31,6 +31,11 @@ class Skin(Addon):
     LANG_OFFSET = 0
 
     def __init__(self, *args, **kwargs):
+        self._resolver: SkinResolution | None = None
+        self._index_builder = None
+        self._resource_loader: SkinResources | None = None
+        self._include_param_roles = None
+        self._last_include_count: dict[str, int] = {}
         super().__init__(*args, **kwargs)
         self.type = "skin"
 
@@ -49,21 +54,9 @@ class Skin(Addon):
         self.include_usages: dict = {}
         self._include_usages_built = False
 
-        self._resolved_windows_cache: dict = {}
-
-        self.load_xml_folders()
         self.update_include_list()
-
         self._load_colors_and_fonts()
-
-        self.validation_index = None
-
         self.builtin_controls, self.builtin_filename_map = self._load_builtin_controls()
-
-        self._resolver = None
-        self._index_builder = None
-        self._resource_loader = None
-        self._include_param_roles = None
 
     def _release_from_addon_xml(self) -> str | None:
         """Oldest release whose xbmc.gui version satisfies this skin's import."""
@@ -83,8 +76,6 @@ class Skin(Addon):
     @property
     def resolver(self) -> "SkinResolution":
         """The resolver over this skin's maps, built on first use."""
-        if not hasattr(self, '_resolver'):
-            self._resolver = None
         if self._resolver is None:
             include_maps = SkinMaps()
             include_maps.includes = self.include_map
@@ -99,8 +90,6 @@ class Skin(Addon):
     @property
     def index_builder(self):
         """The index builder over every window, built on first use."""
-        if not hasattr(self, '_index_builder'):
-            self._index_builder = None
         if self._index_builder is None:
             from .index import SkinIndex
             self._index_builder = SkinIndex(self)
@@ -109,8 +98,6 @@ class Skin(Addon):
     @property
     def resource_loader(self) -> "SkinResources":
         """The colors, fonts and media reader, built on first use."""
-        if not hasattr(self, '_resource_loader'):
-            self._resource_loader = None
         if self._resource_loader is None:
             self._resource_loader = SkinResources(self.path, self.xml_folders)
         return self._resource_loader
@@ -170,8 +157,6 @@ class Skin(Addon):
     @property
     def include_param_roles(self):
         """Per-folder include parameter roles, built on first use."""
-        if not hasattr(self, "_include_param_roles"):
-            self._include_param_roles = None
         if self._include_param_roles is None:
             self._include_param_roles = self._build_include_param_roles()
         return self._include_param_roles
@@ -305,28 +290,6 @@ class Skin(Addon):
         start_time = time.time()
         logger.debug("update_include_list START")
 
-        if not hasattr(self, "include_files"):
-            self.include_files = {}
-
-        if not hasattr(self, "include_map"):
-            self.include_map = {}
-        if not hasattr(self, "default_map"):
-            self.default_map = {}
-        if not hasattr(self, "constant_map"):
-            self.constant_map = {}
-        if not hasattr(self, "constant_source_map"):
-            self.constant_source_map = {}
-        if not hasattr(self, "variable_map"):
-            self.variable_map = {}
-        if not hasattr(self, "map_map"):
-            self.map_map = {}
-        if not hasattr(self, "map_defs"):
-            self.map_defs = {}
-        if not hasattr(self, "expression_map"):
-            self.expression_map = {}
-        if not hasattr(self, "expression_source_map"):
-            self.expression_source_map = {}
-
         self.validation_index = None
         self._include_param_roles = None
 
@@ -353,7 +316,7 @@ class Skin(Addon):
             else:
                 logger.info("Could not find include file in %s", xml_folder)
 
-            prev = getattr(self, "_last_include_count", {}).get(folder)
+            prev = self._last_include_count.get(folder)
             curr = (len(self.include_map.get(folder, {})) +
                     len(self.default_map.get(folder, {})) +
                     len(self.constant_map.get(folder, {})) +
@@ -362,11 +325,7 @@ class Skin(Addon):
                     len(self.expression_map.get(folder, {})))
             if prev != curr:
                 logger.info("Include caches: %d total items in '%s' folder.", curr, folder)
-                store = getattr(self, "_last_include_count", None)
-                if not isinstance(store, dict):
-                    store = {}
-                    setattr(self, "_last_include_count", store)
-                store[folder] = curr
+                self._last_include_count[folder] = curr
 
         duration = time.time() - start_time
         total_files = sum(len(files) for files in self.include_files.values())
@@ -374,24 +333,6 @@ class Skin(Addon):
 
     def update_includes(self, xml_file):
         """Load one include file and the files it pulls in, as CGUIIncludes::Load_Internal does."""
-        if not hasattr(self, "include_map"):
-            self.include_map = {}
-        if not hasattr(self, "default_map"):
-            self.default_map = {}
-        if not hasattr(self, "constant_map"):
-            self.constant_map = {}
-        if not hasattr(self, "constant_source_map"):
-            self.constant_source_map = {}
-        if not hasattr(self, "variable_map"):
-            self.variable_map = {}
-        if not hasattr(self, "map_map"):
-            self.map_map = {}
-        if not hasattr(self, "map_defs"):
-            self.map_defs = {}
-        if not hasattr(self, "expression_map"):
-            self.expression_map = {}
-        if not hasattr(self, "expression_source_map"):
-            self.expression_source_map = {}
 
         if not os.path.exists(xml_file):
             logger.info("Could not find include file %s", xml_file)
@@ -404,25 +345,6 @@ class Skin(Addon):
             return []
 
         self.include_files[folder].append(xml_file)
-
-        if folder not in self.include_map:
-            self.include_map[folder] = {}
-        if folder not in self.default_map:
-            self.default_map[folder] = {}
-        if folder not in self.constant_map:
-            self.constant_map[folder] = {}
-        if folder not in self.constant_source_map:
-            self.constant_source_map[folder] = {}
-        if folder not in self.variable_map:
-            self.variable_map[folder] = {}
-        if folder not in self.map_map:
-            self.map_map[folder] = {}
-        if folder not in self.map_defs:
-            self.map_defs[folder] = []
-        if folder not in self.expression_map:
-            self.expression_map[folder] = {}
-        if folder not in self.expression_source_map:
-            self.expression_source_map[folder] = {}
 
         self._load_defaults(root, folder, xml_file)
         self._load_constants(root, folder, xml_file)

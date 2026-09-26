@@ -352,13 +352,13 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
 
         skin = Skin.__new__(Skin)
         skin.path = self.root
-        # Initialize 5-map structure
-        skin.include_map = {}
-        skin.default_map = {}
-        skin.constant_map = {}
-        skin.variable_map = {}
-        skin.expression_map = {}
-        skin.include_files = {self.folder_name: []}
+        folder = self.folder_name
+        for name in ("include_map", "default_map", "constant_map", "constant_source_map",
+                     "variable_map", "map_map", "expression_map", "expression_source_map"):
+            setattr(skin, name, {folder: {}})
+        skin.map_defs = {folder: []}
+        skin.include_files = {folder: []}
+        skin._resolver = None
         skin.update_includes(inc_path)
         return skin
 
