@@ -11,6 +11,7 @@ from ..utils.validation import (
     find_skinshortcuts_template,
     get_all_parameter_contexts,
     resolve_param_in_name,
+    shadowed_issues,
     should_report_progress,
 )
 from ..utils.files import miscased_name
@@ -450,6 +451,9 @@ class ValidationInclude:
 
             listitems.extend(undefined_includes)
             listitems.extend(unused_includes)
+            listitems.extend(shadowed_issues(
+                self.addon, folder,
+                ("include", "include without definition", "constant", "expression", "default")))
 
         undefined_count = len([i for i in listitems if "not defined" in i.get("message", "")])
         unused_count = len([i for i in listitems if "Unused" in i.get("message", "")])

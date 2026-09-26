@@ -154,9 +154,11 @@ class TestIncludeParamRoles(unittest.TestCase):
         skin, _ = _make_skin("""
     <include name="WithDefault">
         <param name="visible">true</param>
-        <control type="button">
-            <visible>$PARAM[visible]</visible>
-        </control>
+        <definition>
+            <control type="button">
+                <visible>$PARAM[visible]</visible>
+            </control>
+        </definition>
     </include>
 """)
         role = skin.resolve_param_role("16x9", "WithDefault", "visible")

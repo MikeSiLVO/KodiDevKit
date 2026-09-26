@@ -9,6 +9,7 @@ from ..utils.validation import (
     find_variables_in_skinshortcuts_template,
     get_all_parameter_contexts,
     resolve_param_in_name,
+    shadowed_issues,
     should_report_progress,
 )
 from ..utils.expressions import bracket_body
@@ -200,6 +201,7 @@ class ValidationVariable:
 
             listitems.extend(undefined_vars)
             listitems.extend(unused_vars)
+            listitems.extend(shadowed_issues(self.addon, folder, ("variable",)))
 
         error_count = len(listitems)
         undefined_count = len([i for i in listitems if "not defined" in i.get("message", "")])

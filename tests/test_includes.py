@@ -357,6 +357,7 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
                      "variable_map", "map_map", "expression_map", "expression_source_map"):
             setattr(skin, name, {folder: {}})
         skin.map_defs = {folder: []}
+        skin.shadowed_defs = {folder: []}
         skin.include_files = {folder: []}
         skin._resolver = None
         skin.update_includes(inc_path)
@@ -380,10 +381,12 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
                 <include name="TestInclude">
                     <param name="color" default="red" />
                     <param name="label" default="Default" />
-                    <control type="label">
-                        <textcolor>$PARAM[color]</textcolor>
-                        <label>$PARAM[label]</label>
-                    </control>
+                    <definition>
+                        <control type="label">
+                            <textcolor>$PARAM[color]</textcolor>
+                            <label>$PARAM[label]</label>
+                        </control>
+                    </definition>
                 </include>
             </includes>
         """
@@ -411,9 +414,11 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
                 <include name="TwoParams">
                     <param name="foo" default="one" />
                     <param name="bar" default="two" />
-                    <control type="label">
-                        <label>$PARAM[foo],$PARAM[bar]</label>
-                    </control>
+                    <definition>
+                        <control type="label">
+                            <label>$PARAM[foo],$PARAM[bar]</label>
+                        </control>
+                    </definition>
                 </include>
             </includes>
         """
@@ -465,19 +470,23 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
             <includes>
                 <include name="Inner">
                     <param name="val" default="D" />
-                    <control type="label">
-                        <label>$PARAM[val]</label>
-                    </control>
+                    <definition>
+                        <control type="label">
+                            <label>$PARAM[val]</label>
+                        </control>
+                    </definition>
                 </include>
 
                 <include name="Outer">
                     <param name="outer" default="O" />
-                    <control type="group">
-                        <label>$PARAM[outer]</label>
-                        <include content="Inner">
-                            <param name="val">I</param>
-                        </include>
-                    </control>
+                    <definition>
+                        <control type="group">
+                            <label>$PARAM[outer]</label>
+                            <include content="Inner">
+                                <param name="val">I</param>
+                            </include>
+                        </control>
+                    </definition>
                 </include>
             </includes>
         """
@@ -504,9 +513,11 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
             <includes>
                 <include name="InfoLabelTest">
                     <param name="label" default="$INFO[ListItem.Label]" />
-                    <control type="label">
-                        <label>$PARAM[label]</label>
-                    </control>
+                    <definition>
+                        <control type="label">
+                            <label>$PARAM[label]</label>
+                        </control>
+                    </definition>
                 </include>
             </includes>
         """

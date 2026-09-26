@@ -50,6 +50,10 @@ class Skin(Addon):
         self.map_defs: dict[str, list[tuple[Any, str]]] = {}
         self.expression_map: dict[str, dict[str, str]] = {}
         self.expression_source_map: dict[str, dict[str, tuple[str, int]]] = {}
+        # definitions Kodi drops: a later duplicate of a first-wins name, or params with no body
+        self.shadowed_defs: dict[str, list[dict]] = {}
+        # include files loaded under a condition, which Kodi only reads when it holds
+        self.conditional_files: dict[str, set[str]] = {}
 
         self.include_usages: dict = {}
         self._include_usages_built = False
@@ -309,6 +313,8 @@ class Skin(Addon):
             self.map_defs[folder] = []
             self.expression_map[folder] = {}
             self.expression_source_map[folder] = {}
+            self.shadowed_defs[folder] = []
+            self.conditional_files[folder] = set()
 
             include_file = check_paths(paths)
             if include_file:
@@ -331,7 +337,7 @@ class Skin(Addon):
         total_files = sum(len(files) for files in self.include_files.values())
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
-    def update_includes(self, xml_file):
+    def update_includes(self, xml_file, conditional=False):
         """Load one include file and the files it pulls in, as CGUIIncludes::Load_Internal does."""
 
         if not os.path.exists(xml_file):
@@ -345,50 +351,60 @@ class Skin(Addon):
             return []
 
         self.include_files[folder].append(xml_file)
+        if conditional:
+            self.conditional_files[folder].add(xml_file)
 
         self._load_defaults(root, folder, xml_file)
         self._load_constants(root, folder, xml_file)
         self._load_expressions(root, folder, xml_file)
         self._load_variables(root, folder, xml_file)
-        self._load_includes(root, folder, xml_file)
+        self._load_includes(root, folder, xml_file, conditional)
         self._load_maps(root, folder, xml_file)
 
-        for node in root.findall("include"):
-            if "file" in node.attrib and node.attrib["file"] != "script-skinshortcuts-includes.xml":
-                include_file = os.path.join(self.path, folder, node.attrib["file"])
-                self.update_includes(include_file)
+    def _keep_first(self, kind, table, folder, name, node, xml_file, value):
+        """Store the definition unless the name is taken, as try_emplace; record the loser."""
+        if name in table[folder]:
+            self.shadowed_defs[folder].append({
+                "kind": kind, "name": name, "file": xml_file,
+                "line": getattr(node, "sourceline", 0) or 0,
+            })
+            return False
+        table[folder][name] = value
+        return True
 
     def _load_defaults(self, root, folder, xml_file):
         """Index <default type="X"> entries (CGUIIncludes::LoadDefaults)."""
         for node in root.findall("default"):
             control_type = node.attrib.get("type")
             if control_type and node.find("*") is not None:
-                self.default_map[folder][control_type] = (node, xml_file)
+                self._keep_first("default", self.default_map, folder, control_type, node, xml_file,
+                                 (node, xml_file))
 
     def _load_constants(self, root, folder, xml_file):
         """Index <constant name="X">value</constant> (CGUIIncludes::LoadConstants)."""
         for node in root.findall("constant"):
             name = node.attrib.get("name")
             if name and node.text:
-                self.constant_map[folder][name] = node.text.strip()
-                self.constant_source_map[folder][name] = (
-                    xml_file, node.sourceline if hasattr(node, 'sourceline') else 0)
+                if self._keep_first("constant", self.constant_map, folder, name, node, xml_file,
+                                    node.text.strip()):
+                    self.constant_source_map[folder][name] = (xml_file, node.sourceline or 0)
 
     def _load_expressions(self, root, folder, xml_file):
         """Index <expression> entries, wrapped in [...] as CGUIIncludes::LoadExpressions does."""
         for node in root.findall("expression"):
             name = node.attrib.get("name")
             if name and node.text:
-                self.expression_map[folder][name] = "[" + node.text.strip() + "]"
-                self.expression_source_map[folder][name] = (
-                    xml_file, node.sourceline if hasattr(node, 'sourceline') else 0)
+                if self._keep_first("expression", self.expression_map, folder, name, node, xml_file,
+                                    "[" + node.text.strip() + "]"):
+                    self.expression_source_map[folder][name] = (xml_file, node.sourceline or 0)
 
     def _load_variables(self, root, folder, xml_file):
         """Index <variable name="X"> entries (CGUIIncludes::LoadVariables)."""
         for node in root.findall("variable"):
             name = node.attrib.get("name")
             if name and node.find("*") is not None:
-                self.variable_map[folder][name] = (node, xml_file)
+                self._keep_first("variable", self.variable_map, folder, name, node, xml_file,
+                                 (node, xml_file))
 
     def _load_maps(self, root, folder, xml_file):
         """Index <map> entries as CSkinMapManager::LoadMaps does, last definition winning."""
@@ -398,24 +414,33 @@ class Skin(Addon):
             if name:
                 self.map_map[folder][name] = (node, xml_file)
 
-    def _load_includes(self, root, folder, xml_file):
-        """Index <include name> entries with their param defaults (CGUIIncludes::LoadIncludes)."""
+    def _load_includes(self, root, folder, xml_file, conditional=False):
+        """Index named includes and load <include file> ones in place, as LoadIncludes."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
-            if not name or node.find("*") is None:
-                continue
-
-            params = {}
-            for p in node.findall("param"):
-                param_name = p.attrib.get("name")
-                if not param_name:
+            if name and node.find("*") is not None:
+                definition = node.find("definition")
+                params = {}
+                for p in node.findall("param"):
+                    param_name = p.attrib.get("name")
+                    if not param_name:
+                        continue
+                    param_value = p.attrib.get("default")
+                    if param_value is None and p.text:
+                        param_value = p.text.strip()
+                    params[param_name] = param_value or ""
+                if params and definition is None:
+                    self.shadowed_defs[folder].append({
+                        "kind": "include without definition", "name": name, "file": xml_file,
+                        "line": node.sourceline or 0,
+                    })
                     continue
-                param_value = p.attrib.get("default")
-                if param_value is None and p.text:
-                    param_value = p.text.strip()
-                params[param_name] = param_value or ""
-
-            self.include_map[folder][name] = (node, params, xml_file)
+                self._keep_first("include", self.include_map, folder, name, node, xml_file,
+                                 (node, params, xml_file))
+            elif "file" in node.attrib and node.attrib["file"] != "script-skinshortcuts-includes.xml":
+                nested_conditional = conditional or "condition" in node.attrib
+                self.update_includes(os.path.join(self.path, folder, node.attrib["file"]),
+                                     nested_conditional)
 
     def update_xml_files(self):
         """Refresh window/include file lists and invalidate the validation index."""

@@ -86,6 +86,46 @@ def get_all_parameter_contexts(addon, folder):
     return all_contexts
 
 
+_GENERATED_INCLUDE_FILE = re.compile(r'^script-.*-includes\.xml$', re.I)
+
+
+def _kept_location(addon, folder, kind, name):
+    """File and line of the definition Kodi kept for the name, or None."""
+    if kind == "include":
+        node, _params, path = addon.include_map[folder][name]
+    elif kind in ("variable", "default"):
+        table = addon.variable_map if kind == "variable" else addon.default_map
+        node, path = table[folder][name]
+    else:
+        table = addon.constant_source_map if kind == "constant" else addon.expression_source_map
+        return table[folder].get(name)
+    return path, getattr(node, "sourceline", 0) or 0
+
+
+def shadowed_issues(addon, folder, kinds):
+    """Issues for the definitions of those kinds Kodi drops: later duplicates, bodiless includes."""
+    issues = []
+    optional = getattr(addon, "conditional_files", {}).get(folder, set())
+    for entry in getattr(addon, "shadowed_defs", {}).get(folder, []):
+        kind, name = entry["kind"], entry["name"]
+        if kind not in kinds:
+            continue
+        if kind == "include without definition":
+            message = f"Include '{name}' has <param> but no <definition>, so Kodi ignores it"
+        else:
+            kept = _kept_location(addon, folder, kind, name)
+            # a conditional or generated file overriding another is deliberate, not a duplicate
+            sources = [entry["file"]] + ([kept[0]] if kept else [])
+            if any(p in optional or _GENERATED_INCLUDE_FILE.match(os.path.basename(p))
+                   for p in sources):
+                continue
+            where = f" ({os.path.basename(kept[0])}:{kept[1]})" if kept else ""
+            message = f"Duplicate {kind} '{name}': Kodi uses the first definition{where}"
+        issues.append(create_issue(message, file=entry["file"], line=entry["line"],
+                                   type=kind, name=name, severity="error"))
+    return issues
+
+
 def should_report_progress(count, total):
     """True when this count should be reported: the first ten, then every tenth or third."""
     if count <= 10:
