@@ -71,9 +71,10 @@ def extract_variable_name(text: str) -> str | None:
     return var_name if var_name else None
 
 
-def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -> tuple[str, str]:
+def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *,
+                           escape: bool = False) -> tuple[str, str]:
     """Substitute $PARAM names from the params, with a status saying how much resolved."""
-    # values are XML-escaped so & < > survive the re-parse; unknown names stay as written
+    # escape only text that is re-parsed as XML; unknown names stay as written
     if not text or not isinstance(text, str):
         return text, "NO_PARAMS"
     if not params:
@@ -93,7 +94,7 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None) -
         key = m.group("name")
         val = params.get(key)
         if val is not None:
-            return xml_escape(val)
+            return xml_escape(val) if escape else val
         undefined_params += 1
         return m.group(0)
 

@@ -163,7 +163,7 @@ def resolve_include_content(inc, resolve_callback=None):
 
     params = getattr(inc, "params", None) or {}
     try:
-        resolved_text, _ = resolve_params_in_text(content, params)
+        resolved_text, _ = resolve_params_in_text(content, params, escape=True)
         return resolved_text
     except Exception:
         logger.debug("Failed to resolve params for include %s", getattr(inc, "name", "<unknown>"))
