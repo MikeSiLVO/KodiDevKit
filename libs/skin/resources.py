@@ -11,6 +11,39 @@ from ..utils.xml import file_needs_expansion, get_root_from_file
 logger = logging.getLogger(__name__)
 
 
+def _read_colors(file_path: str) -> Optional[List[Dict]]:
+    """Read one colors file into rows of name, line, value and file; None when unparseable."""
+    root = get_root_from_file(file_path)
+    if root is None:
+        logger.info("Invalid color file: %s", file_path)
+        return None
+    return [{
+        "name": node.attrib.get("name"),
+        "line": getattr(node, "sourceline", None),
+        "content": (node.text or "").strip(),
+        "file": file_path,
+    } for node in root.findall("color")]
+
+
+def _font_row(node, font_file_path: str) -> Optional[Dict]:
+    """Read one <font> into a row; None when it lacks a name, size or filename."""
+    name_el = node.find("name")
+    size_el = node.find("size")
+    file_el = node.find("filename")
+    if name_el is None or size_el is None or file_el is None:
+        return None
+    return {
+        "name": (name_el.text or "").strip(),
+        "size": (size_el.text or "").strip(),
+        "line": getattr(node, "sourceline", None),
+        "filename_line": getattr(file_el, "sourceline", None),
+        "content": ET.tostring(node, pretty_print=True, encoding="unicode"),
+        # a spliced font's line number belongs to the include's file
+        "file": node.get("_kdk_inc_file") or font_file_path,
+        "filename": (file_el.text or "").strip(),
+    }
+
+
 class SkinResources:
     """Reads a skin's colors, fonts and media file list off disk."""
 
@@ -29,36 +62,17 @@ class SkinResources:
                     if not name.lower().endswith(".xml"):
                         continue
                     file_path = os.path.join(color_dir, name)
-                    root = get_root_from_file(file_path)
-                    if root is None:
-                        logger.info("Invalid color file: %s", file_path)
-                        continue
-                    before = len(colors)
-                    for node in root.findall("color"):
-                        colors.append({
-                            "name": node.attrib.get("name"),
-                            "line": getattr(node, "sourceline", None),
-                            "content": (node.text or "").strip(),
-                            "file": file_path,
-                        })
-                    added = len(colors) - before
-                    logger.info("found color file %s including %d colors", file_path, added)
+                    rows = _read_colors(file_path)
+                    if rows is not None:
+                        colors.extend(rows)
+                        logger.info("found color file %s including %d colors", file_path, len(rows))
 
         if system_colors_path and os.path.isfile(system_colors_path):
-            root = get_root_from_file(system_colors_path)
-            if root is None:
-                logger.info("Invalid color file: %s", system_colors_path)
-            else:
-                before = len(colors)
-                for node in root.findall("color"):
-                    colors.append({
-                        "name": node.attrib.get("name"),
-                        "line": getattr(node, "sourceline", None),
-                        "content": (node.text or "").strip(),
-                        "file": system_colors_path,
-                    })
+            rows = _read_colors(system_colors_path)
+            if rows is not None:
+                colors.extend(rows)
                 logger.info("loaded Kodi-core colors from %s (%d entries)",
-                            system_colors_path, len(colors) - before)
+                            system_colors_path, len(rows))
         else:
             logger.info("Kodi-core colors unavailable (resolved path: %s)", system_colors_path)
 
@@ -100,26 +114,9 @@ class SkinResources:
             if not fontsets:
                 continue
 
-            def collect_font(node, font_file_path):
-                name_el = node.find("name")
-                size_el = node.find("size")
-                file_el = node.find("filename")
-                if name_el is None or size_el is None or file_el is None:
-                    return None
-                return {
-                    "name": (name_el.text or "").strip(),
-                    "size": (size_el.text or "").strip(),
-                    "line": getattr(node, "sourceline", None),
-                    "filename_line": getattr(file_el, "sourceline", None),
-                    "content": ET.tostring(node, pretty_print=True, encoding="unicode"),
-                    # a spliced font's line number belongs to the include's file
-                    "file": node.get("_kdk_inc_file") or font_file_path,
-                    "filename": (file_el.text or "").strip(),
-                }
-
             for fontset in fontsets:
                 for font_node in fontset.findall("font"):
-                    font = collect_font(font_node, font_file)
+                    font = _font_row(font_node, font_file)
                     if font:
                         fonts[folder].append(font)
 
@@ -144,7 +141,7 @@ class SkinResources:
                 if root is None:
                     return None
                 for node in root.xpath(".//font"):
-                    if node.getchildren():
+                    if len(node):
                         continue
                     item = {
                         "file": path,

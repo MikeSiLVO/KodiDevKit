@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 _LABEL_TAGS = frozenset(['label', 'altlabel', 'label2', 'hinttext'])
 _LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[([0-9].*?)\]")
+# window_bools in GUIInfoManager.cpp, whose number is a window id
+_WINDOW_REGEX = (r"(?:Window\.IsMedia|Window\.Is(?:Active|Visible|DialogTopmost|ModalDialogTopmost)?"
+                 r"|Window\.(?:Previous|Next)|Dialog\.Close)\(([0-9]+)\)")
 
 _INFOLABEL_WHITELIST = None
 _CONTROL_REGEX_PATTERN = None
@@ -798,51 +801,8 @@ class SkinIndex:
 
     def _extract_id_references_from_xml(self, root, path, folder, index):
         """Extract every window and control id the file's conditions and actions refer to."""
-        # window_bools in GUIInfoManager.cpp, whose number is a window id
-        window_regex = r"(?:Window\.IsMedia|Window\.Is(?:Active|Visible|DialogTopmost|ModalDialogTopmost)?|Window\.(?:Previous|Next)|Dialog\.Close)\(([0-9]+)\)"
-        control_regex = _build_control_regex()
-
         for node in root.xpath(".//*[@condition]"):
-            condition_text = node.attrib.get("condition", "")
-
-            for match in re.finditer(window_regex, condition_text, re.IGNORECASE):
-                window_id = match.group(1)
-                window_id = normalize_control_id(window_id)
-                if window_id not in index['ids_referenced'][folder]:
-                    index['ids_referenced'][folder][window_id] = []
-                index['ids_referenced'][folder][window_id].append({
-                    'file': path,
-                    'line': getattr(node, 'sourceline', 0) or 0,
-                    'type': 'window'
-                })
-
-            for match in re.finditer(control_regex, condition_text, re.IGNORECASE):
-                function_name = match.group(1)
-                control_id = match.group(2)
-
-                if not control_id:
-                    continue
-
-                if _EXCLUDED_FUNCTIONS and function_name.lower() in _EXCLUDED_FUNCTIONS:
-                    continue
-
-                control_id = normalize_control_id(control_id)
-
-                context = None
-                fn_lower = function_name.lower()
-                if fn_lower == 'control.isvisible':
-                    context = 'Control.IsVisible'
-                elif fn_lower == 'control.hasfocus':
-                    context = 'Control.HasFocus'
-
-                if control_id not in index['ids_referenced'][folder]:
-                    index['ids_referenced'][folder][control_id] = []
-                index['ids_referenced'][folder][control_id].append({
-                    'file': path,
-                    'line': getattr(node, 'sourceline', 0) or 0,
-                    'type': 'control',
-                    'context': context
-                })
+            self._record_id_refs(node.attrib.get("condition", ""), node, path, folder, index)
 
         bracket_tags = ["visible", "enable", "usealttexture", "selected", "onclick", "onback"]
         for tag_name in bracket_tags:
@@ -850,48 +810,31 @@ class SkinIndex:
                 text = (node.text or "").strip()
                 if not text:
                     continue
-
                 # an AlarmClock command runs later, maybe in another window
-                is_delayed_execution = bool(re.search(r'\bAlarmClock\s*\(', text, re.IGNORECASE))
+                delayed = bool(re.search(r'\bAlarmClock\s*\(', text, re.IGNORECASE))
+                self._record_id_refs(text, node, path, folder, index, skip_controls=delayed)
 
-                for match in re.finditer(window_regex, text, re.IGNORECASE):
-                    window_id = match.group(1)
-                    window_id = normalize_control_id(window_id)
-                    if window_id not in index['ids_referenced'][folder]:
-                        index['ids_referenced'][folder][window_id] = []
-                    index['ids_referenced'][folder][window_id].append({
-                        'file': path,
-                        'line': getattr(node, 'sourceline', 0) or 0,
-                        'type': 'window'
-                    })
+    @staticmethod
+    def _record_id_refs(text, node, path, folder, index, skip_controls=False):
+        """Record the window and control ids one condition or action text refers to."""
+        refs = index['ids_referenced'][folder]
+        line = getattr(node, 'sourceline', 0) or 0
 
-                for match in re.finditer(control_regex, text, re.IGNORECASE):
-                    function_name = match.group(1)
-                    control_id = match.group(2)
+        for match in re.finditer(_WINDOW_REGEX, text, re.IGNORECASE):
+            window_id = normalize_control_id(match.group(1))
+            refs.setdefault(window_id, []).append({'file': path, 'line': line, 'type': 'window'})
 
-                    if not control_id:
-                        continue
+        if skip_controls:
+            return
 
-                    if _EXCLUDED_FUNCTIONS and function_name.lower() in _EXCLUDED_FUNCTIONS:
-                        continue
-
-                    if is_delayed_execution:
-                        continue
-
-                    control_id = normalize_control_id(control_id)
-
-                    context = None
-                    fn_lower = function_name.lower()
-                    if fn_lower == 'control.isvisible':
-                        context = 'Control.IsVisible'
-                    elif fn_lower == 'control.hasfocus':
-                        context = 'Control.HasFocus'
-
-                    if control_id not in index['ids_referenced'][folder]:
-                        index['ids_referenced'][folder][control_id] = []
-                    index['ids_referenced'][folder][control_id].append({
-                        'file': path,
-                        'line': getattr(node, 'sourceline', 0) or 0,
-                        'type': 'control',
-                        'context': context
-                    })
+        for match in re.finditer(_build_control_regex(), text, re.IGNORECASE):
+            function_name, control_id = match.group(1), match.group(2)
+            if not control_id:
+                continue
+            fn_lower = function_name.lower()
+            if _EXCLUDED_FUNCTIONS and fn_lower in _EXCLUDED_FUNCTIONS:
+                continue
+            context = {'control.isvisible': 'Control.IsVisible',
+                       'control.hasfocus': 'Control.HasFocus'}.get(fn_lower)
+            refs.setdefault(normalize_control_id(control_id), []).append(
+                {'file': path, 'line': line, 'type': 'control', 'context': context})
