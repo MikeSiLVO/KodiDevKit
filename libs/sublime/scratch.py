@@ -6,18 +6,7 @@ import time
 
 
 class ProgressScratchView:
-    """
-    Thread-safe progress scratch view for showing real-time operation progress.
-
-    Usage:
-        progress = ProgressScratchView(window, "Validation Progress", icon="🔍")
-
-        progress.update("Initializing...")
-        progress.update("[1/100] Checking file.xml...")
-
-        progress.finalize("Complete: 23 issues found", close=True)
-        progress.finalize("✅ No issues found", close=False)
-    """
+    """Scratch view showing a long task's progress, safe to update from any thread."""
 
     def __init__(self, window, title, icon="📊"):
         """Create the scratch view in `window` with `title` and tab `icon`."""
@@ -25,6 +14,8 @@ class ProgressScratchView:
         self.title = title
         self.icon = icon
         self._view = None
+        self._spinner_cycle = 0
+        self._animation_timer = None
         self._create_view()
 
     def _create_view(self):
@@ -112,15 +103,20 @@ class ProgressScratchView:
         view.sel().clear()
         view.show(0)
 
-    def finalize(self, message, close=False):
-        """Show the final `message`; close the view after a short delay if `close` is True."""
-        self.update(message)
+    _SPINNER_FRAMES = ['|', '/', '-', '\\']
 
-        if close:
-            # Brief delay before closing so user sees final message
-            sublime.set_timeout(self.close, 500)
-        else:
-            self.update("\nYou can close this tab.")
+    def _spinner_char(self):
+        """The spinner frame for the current cycle."""
+        return self._SPINNER_FRAMES[self._spinner_cycle % len(self._SPINNER_FRAMES)]
+
+    def _start_animation(self):
+        """Start the spinner, which redraws every 200 ms."""
+        self._animation_timer = True
+        sublime.set_timeout(self._animate_spinner, 200)
+
+    def _animate_spinner(self):
+        """Advance the spinner one frame; each progress view redraws itself."""
+        raise NotImplementedError
 
     def is_valid(self):
         """Check if the view is still valid."""
@@ -136,9 +132,6 @@ class ValidationProgressView(ProgressScratchView):
         self.check_type = check_type
         self._created_at = time.time()
         self._min_display_ms = 500  # Hold the progress tab this long so fast checks don't flash
-        self._spinner_cycle = 0
-        self._spinner_frames = ['|', '/', '-', '\\']
-        self._animation_timer = None
         self._current_progress = None  # Store current progress state for animation
 
     def show_file_progress(self, filename, current, total):
@@ -174,7 +167,7 @@ class ValidationProgressView(ProgressScratchView):
             filled = int(bar_width * current / total) if total > 0 else 0
             bar = '█' * filled + '░' * (bar_width - filled)
 
-            spinner_char = self._spinner_frames[self._spinner_cycle % len(self._spinner_frames)]
+            spinner_char = self._spinner_char()
             spinner_display = f"  {spinner_char}"
 
             content = f"""
@@ -193,7 +186,7 @@ class ValidationProgressView(ProgressScratchView):
         elif progress_type == 'message' and len(self._current_progress) == 2:
             _, message = self._current_progress
 
-            spinner_char = self._spinner_frames[self._spinner_cycle % len(self._spinner_frames)]
+            spinner_char = self._spinner_char()
             spinner_display = f"  {spinner_char}"
 
             content = f"""
@@ -212,10 +205,6 @@ class ValidationProgressView(ProgressScratchView):
 
         self.replace_content(content)
 
-    def _start_animation(self):
-        """Start the animation timer for spinner."""
-        self._animation_timer = True  # Mark as started
-        sublime.set_timeout(self._animate_spinner, 200)
 
     def _animate_spinner(self):
         """Animate spinner to show active processing."""
@@ -248,9 +237,6 @@ class ReportProgressView(ProgressScratchView):
         self._min_update_interval = 0.1  # Minimum 100ms between UI updates (prevent spam)
         self._pending_message = None
         self._base_message = ""
-        self._spinner_cycle = 0  # Cycles through spinner frames continuously
-        self._spinner_frames = ['|', '/', '-', '\\']
-        self._animation_timer = None
 
     def set_total_steps(self, total):
         """Set total number of steps for progress bar."""
@@ -295,7 +281,7 @@ class ReportProgressView(ProgressScratchView):
         filled = int(bar_width * step / self._total_steps) if self._total_steps > 0 else 0
         bar = '█' * filled + '░' * (bar_width - filled)
 
-        spinner_char = self._spinner_frames[self._spinner_cycle % len(self._spinner_frames)]
+        spinner_char = self._spinner_char()
         spinner_display = f"  {spinner_char}"
 
         count_match = re.search(r'\((\d+)/(\d+)(?:\s+done)?\)(?:\.\.\.)?$', message)
@@ -329,10 +315,6 @@ class ReportProgressView(ProgressScratchView):
 
         self.replace_content(content)
 
-    def _start_animation(self):
-        """Start the animation timer for active processing indication."""
-        self._animation_timer = True  # Mark as started
-        sublime.set_timeout(self._animate_spinner, 200)  # Start animating immediately
 
     def _animate_spinner(self):
         """Animate spinner near percentage to show active processing."""

@@ -53,16 +53,6 @@ class ResultsDisplayPanel:
         self.panel.run_command("append", {"characters": f'{msg}\n'})
         self.show_panel()
 
-    def info(self, msg):
-        """Append `msg` to the panel and log at INFO."""
-        self.append_msg(msg)
-        logging.info(msg)
-
-    def warning(self, msg):
-        """Append `msg` to the panel and log at WARNING."""
-        self.append_msg(msg)
-        logging.warning(msg)
-
     def _format_dict_items(self, data, key_order=None, indent=""):
         """Render `data` as a list of lines, respecting `key_order` if given."""
         lines = []
