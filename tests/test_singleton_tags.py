@@ -227,5 +227,34 @@ class TestSingletonTags(unittest.TestCase):
         self.assertEqual(len(multiple_tag_issues), 0, "VAR with multiple conditional values should not trigger multiple tag errors")
 
 
+    def _multiple_tag_rows(self, controls):
+        xml_path = os.path.join(self.test_dir, "1080i", "Test.xml")
+        with open(xml_path, "w", encoding="utf-8") as f:
+            f.write(f"<window><controls>{controls}</controls></window>")
+        return [(i["message"], i["severity"]) for i in self.provider.check_file(xml_path)
+                if "Invalid multiple tags" in i.get("message", "")]
+
+    def test_any_read_once_tag_repeated_is_error(self):
+        """Kodi reads one <height> or <font>, so a second is an error."""
+        rows = self._multiple_tag_rows('<control type="label"><height>10</height><height>20</height>'
+                                       '<font>font13</font><font>font12</font></control>')
+        self.assertEqual(rows, [("Invalid multiple tags for control: <height>", "error"),
+                                ("Invalid multiple tags for control: <font>", "error")])
+
+    def test_repeatable_tags_pass(self):
+        """Visible, animation, actions, and fadelabel labels are all read."""
+        rows = self._multiple_tag_rows(
+            '<control type="button"><visible>true</visible><visible>true</visible>'
+            '<onclick>noop</onclick><onclick>noop</onclick>'
+            '<animation effect="fade" end="100">Focus</animation><animation effect="fade" end="0">UnFocus</animation>'
+            '</control><control type="fadelabel"><label>a</label><label>b</label><info>c</info><info>d</info></control>')
+        self.assertEqual(rows, [])
+
+    def test_second_label_outside_fadelabel_is_error(self):
+        """Only fadelabel uses more than the first <label>."""
+        rows = self._multiple_tag_rows('<control type="label"><label>a</label><label>b</label></control>')
+        self.assertEqual(rows, [("Invalid multiple tags for control: <label>", "error")])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -206,10 +206,16 @@ class SkinResolution:
                 call_line = str(include_node.sourceline) if include_node.sourceline else ""
                 call_file = getattr(self, "_source_file", "")
 
+            # Kodi splices a conditional include only when its condition holds at load
+            conditional = "condition" in include_node.attrib or include_node.get("_kdk_inc_cond") == "1"
+
             # ancestry stamp is what the cycle check reads
             child_path_attr = self._PATH_SEP.join(path + [inc_name])
             for child in include_element:
                 cloned_child = copy.deepcopy(child)
+                if conditional:
+                    for element in cloned_child.iter():
+                        element.set("_kdk_inc_cond", "1")
 
                 if call_line and cloned_child.get("_kdk_call_line") is None:
                     cloned_child.set("_kdk_call_line", call_line)

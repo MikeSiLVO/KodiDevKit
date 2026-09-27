@@ -36,7 +36,8 @@ from .constants import (
     SEVERITY_WARNING,
     BRACKET_TAGS,
     NOOP_TAGS,
-    SINGLETON_TAGS,
+    REPEATABLE_TAGS,
+    is_read_copy,
     ALLOWED_MULTI,
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
@@ -248,8 +249,7 @@ class XmlInterpreter:
             return
 
         values = self.template_values.get(control_type, {})
-        seen_singletons: set[str] = set()
-        seen_singleton_sources: dict[str, bool] = {}
+        first_singletons = {}
 
         for child in node:
             tag = child.tag
@@ -299,27 +299,19 @@ class XmlInterpreter:
             allowed_multi = ALLOWED_MULTI.get(
                 (node.tag.lower(), control_type), set()
             )
-            tag_text = (child.text or "").strip()
-            has_dynamic = _is_dynamic(tag_text)
-
             if (
                 len(child) == 0
-                and tag_low in SINGLETON_TAGS
+                and tag_low not in REPEATABLE_TAGS
                 and tag_low not in allowed_multi
-                and not has_dynamic
+                and is_read_copy(child, tag_low)
             ):
-                if tag_low in seen_singletons:
-                    # Allow overrides between include and window XML (Kodi takes first)
-                    current_from_include = child.get("_kdk_inc_name") is not None
-                    first_from_include = seen_singleton_sources.get(tag_low, False)
-                    if not (current_from_include or first_from_include):
-                        self._add_issue(
-                            child, SEVERITY_WARNING,
-                            f"Invalid multiple tags for {node.tag}: <{tag}>",
-                        )
+                first = first_singletons.get(tag_low)
+                if first is None:
+                    # a conditional copy may be absent, so only an unconditional one is sure to win
+                    if child.get("_kdk_inc_cond") != "1":
+                        first_singletons[tag_low] = child
                 else:
-                    seen_singletons.add(tag_low)
-                    seen_singleton_sources[tag_low] = child.get("_kdk_inc_name") is not None
+                    self._report_duplicate(node, first, child)
 
             for attr_name, attr_value in child.attrib.items():
                 if attr_name == "description":
@@ -337,6 +329,22 @@ class XmlInterpreter:
                 value_type = subnodes[tag].get(attr_name)
                 if value_type:
                     self._validate_typed_attr(child, attr_name, attr_value, value_type)
+
+
+    def _report_duplicate(self, control, first, later):
+        """Report a copy of a read-once tag that Kodi drops because an earlier copy wins."""
+        message = f"Invalid multiple tags for {control.tag}: <{later.tag}>"
+        first_inc = first.get("_kdk_inc_name")
+        if later.get("_kdk_inc_name") is not None:
+            # own value beating an include's is an intended override, like a <default>
+            if first_inc is not None or later.get("_kdk_inc_cond") == "1":
+                self._add_issue(later, SEVERITY_WARNING, message)
+        elif first_inc is None:
+            self._add_issue(later, SEVERITY_ERROR, message)
+        elif (later.text or "").strip() == (first.text or "").strip():
+            self._add_issue(later, SEVERITY_WARNING, f"{message}, include '{first_inc}' already sets it")
+        else:
+            self._add_issue(later, SEVERITY_ERROR, f"{message}, ignored because include '{first_inc}' sets it first")
 
     def _validate_enum_value(self, node, value: str, value_type: str):
         """Validate an enum value against ALLOWED_VALUES."""

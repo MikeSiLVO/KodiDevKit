@@ -449,8 +449,92 @@ class TestControlChildValidation(unittest.TestCase):
         """)
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         issues = interp.interpret(root)
-        warnings = [i for i in issues if i["severity"] == SEVERITY_WARNING]
-        self.assertTrue(any("multiple" in w["message"].lower() for w in warnings))
+        self.assertEqual([(i["message"], i["severity"]) for i in issues],
+                         [("Invalid multiple tags for control: <enable>", SEVERITY_ERROR)])
+
+    def test_copies_kodi_skips_are_not_duplicates(self):
+        attribs = {"button": {"label": {}, "height": {}}}
+        values = {"button": {}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="button">
+                    <label _kdk_inc_name="Hidden" _kdk_call_line="4"></label>
+                    <label>$LOCALIZE[186]</label>
+                    <height>50</height>
+                    <height _kdk_inc_name="default type=button" _kdk_call_line="4">60</height>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        self.assertEqual(interp.interpret(root), [])
+
+    def test_conditional_include_copies(self):
+        attribs = {"image": {"fadetime": {}}}
+        values = {"image": {}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="image">
+                    <fadetime _kdk_inc_name="Slow" _kdk_call_line="4" _kdk_inc_cond="1">1800</fadetime>
+                    <fadetime _kdk_inc_name="Fast" _kdk_call_line="5" _kdk_inc_cond="1">400</fadetime>
+                    <fadetime>600</fadetime>
+                </control>
+                <control type="image">
+                    <fadetime>600</fadetime>
+                    <fadetime _kdk_inc_name="Slow" _kdk_call_line="9" _kdk_inc_cond="1">1800</fadetime>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        self.assertEqual([(i["line"], i["severity"]) for i in interp.interpret(root)], [(9, SEVERITY_WARNING)])
+
+    def test_duplicate_severity_follows_which_copy_is_dropped(self):
+        attribs = {"button": {"enable": {}, "selected": {}, "usealttexture": {}}}
+        values = {"button": {}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="button">
+                    <enable _kdk_inc_name="A" _kdk_call_line="4">true</enable>
+                    <enable>true</enable>
+                    <selected>true</selected>
+                    <selected _kdk_inc_name="A" _kdk_call_line="4">false</selected>
+                    <usealttexture _kdk_inc_name="A" _kdk_call_line="4">true</usealttexture>
+                    <usealttexture _kdk_inc_name="B" _kdk_call_line="5">false</usealttexture>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        issues = interp.interpret(root)
+        self.assertEqual([(i["message"], i["severity"], i.get("include_name")) for i in issues], [
+            ("Invalid multiple tags for control: <enable>, include 'A' already sets it", SEVERITY_WARNING, None),
+            ("Invalid multiple tags for control: <usealttexture> (from include 'B')", SEVERITY_WARNING, "B"),
+        ])
+
+    def test_own_value_after_include_is_ignored(self):
+        attribs = {"button": {"enable": {}, "selected": {}}}
+        values = {"button": {}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="button">
+                    <enable _kdk_inc_name="Size" _kdk_call_line="4">true</enable>
+                    <enable>false</enable>
+                    <selected>true</selected>
+                    <selected _kdk_inc_name="Size" _kdk_call_line="4">false</selected>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        issues = interp.interpret(root)
+        self.assertEqual([(i["message"], i["severity"]) for i in issues],
+                         [("Invalid multiple tags for control: <enable>, ignored because include 'Size' "
+                           "sets it first", SEVERITY_ERROR)])
 
 
 class TestUnknownRoot(unittest.TestCase):

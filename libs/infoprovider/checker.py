@@ -32,7 +32,8 @@ from ..validation.constants import (
     BRACKET_TAGS,
     INCLUDE_DEFINITION_TAGS,
     NOOP_TAGS,
-    SINGLETON_TAGS,
+    REPEATABLE_TAGS,
+    is_read_copy,
     ALLOWED_MULTI,
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
@@ -584,7 +585,7 @@ class CheckerMixin:
 
                 if subnode.tag in BRACKET_TAGS:
                     text = (subnode.text or "").strip()
-                    if not self._validate_brackets(listitems, subnode, text):
+                    if (text or subnode.tag not in NOOP_TAGS) and not self._validate_brackets(listitems, subnode, text):
                         continue
 
                 parent = node
@@ -592,18 +593,16 @@ class CheckerMixin:
                 allowed_multi = ALLOWED_MULTI.get(
                     (parent.tag.lower(), parent.attrib.get("type", "").lower()), set()
                 )
-                tag_text = (subnode.text or "").strip()
-                has_dynamic_content = is_dynamic_expression(tag_text)
-
                 if (
                     len(subnode) == 0
-                    and tag_low in SINGLETON_TAGS
+                    and tag_low not in REPEATABLE_TAGS
                     and tag_low not in allowed_multi
-                    and not has_dynamic_content
+                    and is_read_copy(subnode, tag_low)
                 ):
                     seen = seen_singletons.setdefault(parent, set())
                     if tag_low in seen:
-                        self._add_issue(listitems, subnode, f"Invalid multiple tags for {parent.tag}: <{subnode.tag}>")
+                        self._add_issue(listitems, subnode, f"Invalid multiple tags for {parent.tag}: <{subnode.tag}>",
+                                        severity=SEVERITY_ERROR)
                     else:
                         seen.add(tag_low)
 

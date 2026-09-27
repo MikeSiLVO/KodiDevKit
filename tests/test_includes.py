@@ -374,6 +374,20 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
                     del elem.attrib[attr]
         return ET.tostring(root, encoding="unicode")
 
+    def test_conditional_include_copies_are_marked(self):
+        """Copies from a conditional call, and from includes nested in it, carry the mark."""
+        skin = self._create_skin_with_includes("""
+            <includes>
+                <include name="Slow"><fadetime>1800</fadetime><include>Inner</include></include>
+                <include name="Inner"><height>10</height></include>
+                <include name="Plain"><width>5</width></include>
+            </includes>""")
+        root = ET.fromstring('<control type="image"><include condition="Skin.HasSetting(slow)">Slow</include>'
+                             '<include>Plain</include></control>')
+        kodi_resolve(skin, root, self.folder_name)
+        marks = {child.tag: child.get("_kdk_inc_cond") for child in root}
+        self.assertEqual(marks, {"fadetime": "1", "height": "1", "width": None})
+
     def test_basic_param_override(self):
         """Test basic parameter override with defaults."""
         includes_xml = """

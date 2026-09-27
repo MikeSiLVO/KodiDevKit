@@ -65,19 +65,34 @@ POS_TAGS = {
     "depth",
 }
 
-# Tags that should appear at most once per control (per parent control scope)
-SINGLETON_TAGS = {
-    "enable",
-    "usealttexture",
-    "selected",
-    "colordiffuse",
+# Control tags Kodi reads every copy of, any other only once (GUIControlFactory.cpp:582)
+REPEATABLE_TAGS = {
+    "visible", "animation", "include", "description",
+    "onup", "ondown", "onleft", "onright", "onnext", "onprev", "onback", "oninfo",
+    "onclick", "ontextchange", "onfocus", "onunfocus", "altclick",
 }
 
-# Allow multiple child tags for specific control types
+# Repeatable per control type; other controls use only the first <label> or <info>
 ALLOWED_MULTI = {
-    # fadelabel control can contain multiple <label> children
-    ("control", "fadelabel"): {"label"},
+    ("control", "fadelabel"): {"label", "info"},
 }
+
+# Read through GetInfoLabels, which skips an empty copy (GUIControlFactory.cpp:683)
+LABEL_READ_TAGS = {
+    "label", "info", "hinttext", "texture", "imagepath", "videofilter", "stretchmode", "rotation",
+    "pixels", "imagefilter", "diffusefilter", "controllerid", "controlleraddress", "portaddress",
+    "peripherallocation",
+}
+
+
+def is_read_copy(element, tag_low):
+    """Whether Kodi could read this copy of a read-once tag, rather than skip it."""
+    if (element.get("_kdk_inc_name") or "").startswith("default type="):
+        # defaults are appended after everything else, so they only fill gaps
+        return False
+    if tag_low in LABEL_READ_TAGS and not (element.text or "").strip():
+        return any(not a.startswith("_kdk_") for a in element.attrib)
+    return True
 
 # Attribute values with enumerations (normalized to lowercase for efficient case-insensitive lookups)
 ALLOWED_VALUES = {
@@ -131,7 +146,9 @@ __all__ = [
     'INCLUDE_DEFINITION_TAGS',
     'NOOP_TAGS',
     'POS_TAGS',
-    'SINGLETON_TAGS',
+    'REPEATABLE_TAGS',
+    'LABEL_READ_TAGS',
+    'is_read_copy',
     'ALLOWED_MULTI',
     'ALLOWED_VALUES',
     'CASE_INSENSITIVE_ENUMS',
