@@ -292,7 +292,8 @@ class XmlInterpreter:
 
             if tag in BRACKET_TAGS:
                 text = (child.text or "").strip()
-                self._validate_brackets(child, text)
+                if text or tag not in NOOP_TAGS:
+                    self._validate_brackets(child, text)
 
             tag_low = tag.lower()
             allowed_multi = ALLOWED_MULTI.get(

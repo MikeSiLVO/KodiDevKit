@@ -222,9 +222,9 @@ def get_root_from_file(xml_file):
 
 
 def check_brackets(label):
-    """True when every bracket in the text is closed by its own kind, in order."""
+    """True when every round and square bracket in the text is closed by its own kind, in order."""
     stack = []
-    push_chars, pop_chars = "<({[", ">)}]"
+    push_chars, pop_chars = "([", ")]"
     for c in label:
         if c in push_chars:
             stack.append(c)

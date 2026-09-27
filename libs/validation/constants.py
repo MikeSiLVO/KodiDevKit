@@ -84,7 +84,7 @@ ALLOWED_VALUES = {
     "align": {"left", "center", "right", "justify"},
     "grouplistalign": {"left", "center", "right", "justify", "top", "bottom"},
     "aligny": {"top", "center", "bottom"},
-    "bool": {"true", "false", "yes", "no", "on", "off", "enabled", "disabled"},
+    "bool": {"true", "false", "yes", "no", "on", "off", "enabled", "disabled", "0"},
     "orientation": {"horizontal", "vertical"},
     "aspect": {"scale", "stretch", "center", "keep"},
     "filter": {"linear", "nearest"},
@@ -115,9 +115,8 @@ ALLOWED_VALUES = {
     "easing": {"inout", "in", "out"},
 }
 
-# Enum types that Kodi parses case-insensitively
-# (see Kodi source: GUIControlFactory.cpp lines 1124, XMLUtils::GetBoolean)
-CASE_INSENSITIVE_ENUMS = {"bool", "orientation"}
+# Enum types that Kodi parses case-insensitively (see XMLUtils.cpp:213, VisibleEffect.cpp:102)
+CASE_INSENSITIVE_ENUMS = {"bool", "orientation", "tween", "easing", "aspect"}
 
 # XML parser configuration
 PARSER = ET.XMLParser(remove_blank_text=True, remove_comments=True)

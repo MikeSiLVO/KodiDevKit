@@ -76,7 +76,7 @@ LAYOUT_CHILDREN = frozenset({"control", "include"})
 
 # <content> children (StaticProvider.cpp:20-34).
 # Static content contains <item> elements. <include> valid at author time.
-CONTENT_CHILDREN = frozenset({"item", "include"})
+CONTENT_CHILDREN = frozenset({"item", "default", "include"})
 
 # <includes> root element (GUIIncludes.cpp:88-99).
 # Child types loaded by Load_Internal(); <map> since Kodi 22.

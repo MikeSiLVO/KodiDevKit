@@ -79,8 +79,8 @@ class TestLayoutTags(unittest.TestCase):
 
 
 class TestContentChildren(unittest.TestCase):
-    def test_item_and_include(self):
-        self.assertEqual(CONTENT_CHILDREN, frozenset({"item", "include"}))
+    def test_static_provider_tags(self):
+        self.assertEqual(CONTENT_CHILDREN, frozenset({"item", "default", "include"}))
 
 
 class TestIncludesChildren(unittest.TestCase):

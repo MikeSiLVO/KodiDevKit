@@ -171,6 +171,7 @@ class TestContentValidation(unittest.TestCase):
                     <content>
                         <item><label>One</label></item>
                         <item><label>Two</label></item>
+                        <default always="true">1</default>
                     </content>
                 </control>
             </controls>
@@ -363,8 +364,25 @@ class TestControlChildValidation(unittest.TestCase):
         """)
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         issues = interp.interpret(root)
-        errors = [i for i in issues if i["severity"] == SEVERITY_ERROR]
-        self.assertTrue(any("noop" in i["message"] for i in errors))
+        self.assertEqual([i["message"] for i in issues], ["Use 'noop' for empty calls <control>"])
+
+    def test_enum_case_follows_kodi(self):
+        attribs = {"image": {"aspectratio": {}, "animation": {"tween": "tween", "easing": "easing"},
+                             "visible": {}, "wrapmultiline": {}}}
+        values = {"image": {"aspectratio": "aspect", "wrapmultiline": "bool"}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="image">
+                    <aspectratio>Keep</aspectratio>
+                    <animation tween="Sine" easing="Out">focus</animation>
+                    <wrapmultiline>0</wrapmultiline>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        self.assertEqual(interp.interpret(root), [])
 
     def test_bracket_mismatch(self):
         attribs = {"button": {"visible": {}}}
@@ -382,6 +400,22 @@ class TestControlChildValidation(unittest.TestCase):
         issues = interp.interpret(root)
         errors = [i for i in issues if i["severity"] == SEVERITY_ERROR]
         self.assertTrue(any("Brackets" in e["message"] for e in errors))
+
+    def test_brackets_ignore_angle_and_curly(self):
+        attribs = {"button": {"onclick": {}}}
+        values = {"button": {}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="button">
+                    <onclick>RunScript(script.x,{"a":1)</onclick>
+                    <onclick>Skin.SetString(arrow,-&gt;)</onclick>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        self.assertEqual(interp.interpret(root), [])
 
     def test_empty_condition(self):
         attribs = {"button": {"visible": {}}}
