@@ -156,29 +156,27 @@ class TestFontValidation(unittest.TestCase):
         has_font13_error = any("font13" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_font13_error, "Should detect missing font13")
 
-    def test_missing_unicode_fontset(self):
-        """Test detection of missing unicode='true' fontset."""
+    def test_unicode_attribute_obsolete(self):
+        """A unicode attribute is a warning, and leaving it out is fine."""
         self.create_font_file("font.ttf")
+        font = "<font><name>font13</name><filename>font.ttf</filename><size>13</size></font>"
+        self.create_fonts_xml(f'<fonts><fontset id="A" unicode="true">{font}</fontset>'
+                              f'<fontset id="B">{font}</fontset></fonts>')
+        issues = [i for i in self.init_provider().check_fonts() if "unicode" in i["message"].lower()]
+        self.assertEqual([(i["message"], i["severity"]) for i in issues],
+                         [("Obsolete unicode attribute on fontset 'A', Kodi ignores it", "warning")])
 
-        fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<fonts>
-    <fontset id="Default">
-        <font>
-            <name>font13</name>
-            <filename>font.ttf</filename>
-            <size>13</size>
-        </font>
-    </fontset>
-</fonts>
-"""
-        self.create_fonts_xml(fonts_xml)
-        provider = self.init_provider()
-
-        issues = provider.check_fonts()
-
-        # Should detect missing unicode='true'
-        has_unicode_error = any("unicode" in issue["message"].lower() for issue in issues)
-        self.assertTrue(has_unicode_error, "Should detect missing unicode fontset")
+    def test_missing_size_keeps_font(self):
+        """A font without <size> is defined, since Kodi defaults the size to 20."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name>'
+                              '<filename>font.ttf</filename></font>'
+                              '<font><name>Big</name><filename>font.ttf</filename></font>'
+                              '</fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>Big</font>'
+                               '</control></controls></window>')
+        issues = self.init_provider().check_fonts()
+        self.assertFalse([i for i in issues if i.get("severity") == "error"], issues)
 
     def test_missing_font_file(self):
         """Test detection of missing font file."""
@@ -517,6 +515,19 @@ class TestFontValidation(unittest.TestCase):
         # Should detect undefined font usage
         has_undefined_error = any("undefinedfont" in issue["message"].lower() and "not defined" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_undefined_error, "Should detect used but undefined font")
+
+    def test_font_name_case_mismatch(self):
+        """A miscased font name is a case mismatch, not undefined, and the font counts as used."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name>'
+                              '<filename>font.ttf</filename></font>'
+                              '<font><name>Title</name><filename>font.ttf</filename></font>'
+                              '</fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>TITLE</font>'
+                               '</control></controls></window>')
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertIn("Case mismatch in font name 'TITLE' (defined as 'Title')", messages)
+        self.assertFalse([m for m in messages if "not defined" in m or "Unused" in m], messages)
 
     def test_defined_but_unused_font(self):
         """Test detection of font defined but never used."""

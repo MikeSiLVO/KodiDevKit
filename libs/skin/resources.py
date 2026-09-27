@@ -26,15 +26,14 @@ def _read_colors(file_path: str) -> Optional[List[Dict]]:
 
 
 def _font_row(node, font_file_path: str) -> Optional[Dict]:
-    """Read one <font> into a row; None when it lacks a name, size or filename."""
+    """Read one <font> into a row; None when it lacks a name or filename."""
     name_el = node.find("name")
-    size_el = node.find("size")
     file_el = node.find("filename")
-    if name_el is None or size_el is None or file_el is None:
+    if name_el is None or file_el is None:
         return None
     return {
         "name": (name_el.text or "").strip(),
-        "size": (size_el.text or "").strip(),
+        "size": (node.findtext("size") or "").strip(),
         "line": getattr(node, "sourceline", None),
         "filename_line": getattr(file_el, "sourceline", None),
         "content": ET.tostring(node, pretty_print=True, encoding="unicode"),

@@ -18,6 +18,19 @@ logger = logging.getLogger(__name__)
 REQUIRED_FONTS = {"font13"}
 
 
+def _undefined_font_issue(name, defined, folded, file, line):
+    """Issue for a used font name not defined exactly, or None when it is."""
+    if name in defined:
+        return None
+    match = folded.get(name.casefold())
+    if match:
+        # Kodi matches font names case-insensitively, repo review requires the exact name
+        message = f"Case mismatch in font name '{name}' (defined as '{match}')"
+    else:
+        message = f"Font '{name}' is used but not defined in Font.xml"
+    return {"message": message, "file": file, "line": line, "severity": SEVERITY_ERROR}
+
+
 class ValidationFont:
     """Validates font definitions and usage in Kodi skins."""
 
@@ -125,7 +138,7 @@ class ValidationFont:
                         exists = actual is not None
 
                         if exists and actual != rel:
-                            issues.append(row(f"Case mismatch in font filename '{filename}' (actual '{actual}')", file_src, fn_line, SEVERITY_WARNING))
+                            issues.append(row(f"Case mismatch in font filename '{filename}' (actual '{actual}'), Kodi still loads it", file_src, fn_line, SEVERITY_WARNING))
 
                         if not exists and core_files_maps:
                             for d, cmap in core_files_maps:
@@ -135,7 +148,7 @@ class ValidationFont:
                                     if exists and actual_core != base:
                                         issues.append(
                                             row(
-                                                f"Case mismatch in core font filename '{filename}' (actual '{actual_core}')",
+                                                f"Case mismatch in core font filename '{filename}' (actual '{actual_core}'), Kodi still loads it",
                                                 file_src,
                                                 fn_line,
                                                 SEVERITY_WARNING,
@@ -165,8 +178,10 @@ class ValidationFont:
             #     if not fs["fonts"]:
             #         issues.append(row(f"Empty <fontset> '{fs['id']}'", fs["file"], fs["line"]))
 
-            if not any(fs["unicode"] for fs in fontsets):
-                issues.append(row("At least one <fontset> must have unicode='true'", fontsets[0]["file"], fontsets[0]["line"]))
+            for fs in fontsets:
+                if fs["unicode"]:
+                    issues.append(row(f"Obsolete unicode attribute on fontset '{fs['id']}', Kodi ignores it",
+                                      fs["file"], fs["line"], SEVERITY_WARNING))
 
             any_font13 = any(any(f["name"] == "font13" for f in fs["fonts"]) for fs in fontsets)
             if not any_font13:
@@ -188,9 +203,7 @@ class ValidationFont:
                     if not fn:
                         issues.append(row(f"Missing <filename> for font '{nm or '?'}'", f["file"], f["line"]))
 
-                    if not sz:
-                        issues.append(row(f"Missing <size> for font '{nm or '?'}'", f["file"], f["line"]))
-                    elif not is_dynamic_expression(sz):
+                    if sz and not is_dynamic_expression(sz):
                         try:
                             sz_val = int(sz)
                             if sz_val < 0:
@@ -224,18 +237,17 @@ class ValidationFont:
                     fonts_used = self._validation_index.get('fonts_used', {}).get(folder, {})
                     used_names = set()
 
+                    folded = {n.casefold(): n for n in fonts_defined}
                     for font_name, usages in fonts_used.items():
-                        used_names.add(font_name)
+                        exact = font_name in fonts_defined
+                        used_names.add(font_name if exact else folded.get(font_name.casefold(), font_name))
                         if is_dynamic_expression(font_name):
                             continue
-                        if font_name not in fonts_defined:
-                            first_usage = usages[0] if usages else {}
-                            issues.append({
-                                "message": f"Font '{font_name}' is used but not defined in Fonts.xml",
-                                "file": first_usage.get('file', ''),
-                                "line": first_usage.get('line', 0),
-                                "severity": SEVERITY_ERROR,
-                            })
+                        first_usage = usages[0] if usages else {}
+                        issue = _undefined_font_issue(font_name, fonts_defined, folded,
+                                                      first_usage.get('file', ''), first_usage.get('line', 0))
+                        if issue:
+                            issues.append(issue)
 
                     for font_name, font_info in fonts_defined.items():
                         if font_name not in used_names and font_name not in REQUIRED_FONTS:
@@ -250,12 +262,14 @@ class ValidationFont:
                 for folder, defined in defined_map.items():
                     used = set()
 
+                    folded = {n.casefold(): n for n in defined}
                     for name, path, line in self._iter_used_font_names(folder):
-                        used.add(name)
+                        used.add(name if name in defined else folded.get(name.casefold(), name))
                         if is_dynamic_expression(name):
                             continue
-                        if name not in defined:
-                            issues.append({"message": f"Font '{name}' is used but not defined in Fonts.xml", "file": path, "line": line, "severity": SEVERITY_ERROR})
+                        issue = _undefined_font_issue(name, defined, folded, path, line)
+                        if issue:
+                            issues.append(issue)
 
                     for it in (self.addon.fonts.get(folder, []) or []):
                         nm = (it.get("name") or "").strip()
@@ -275,7 +289,7 @@ class ValidationFont:
 
         error_count = len(issues)
         missing_count = len([i for i in issues if "Missing font file" in i.get("message", "")])
-        undefined_count = len([i for i in issues if "not defined in Fonts.xml" in i.get("message", "")])
+        undefined_count = len([i for i in issues if "not defined in Font.xml" in i.get("message", "")])
 
         if progress_callback:
             if error_count > 0:
@@ -322,7 +336,7 @@ class ValidationFont:
 
         for fs in root.findall(".//fontset"):
             fs_id = fs.attrib.get("id") or fs.attrib.get("name") or "fontset"
-            unicode_flag = str(fs.attrib.get("unicode", "")).lower() == "true"
+            unicode_flag = "unicode" in fs.attrib
             fs_line = getattr(fs, "sourceline", 0) or 0
 
             fonts = [add_font_from_node(f, path) for f in fs.findall("font")]
