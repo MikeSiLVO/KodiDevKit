@@ -239,6 +239,24 @@ def check_brackets(label):
     return not stack
 
 
+def param_value(param, value_attr):
+    """Value of one <param>, the attribute before the text (see GUIIncludes.cpp:583)."""
+    value = param.get(value_attr)
+    if value is None:
+        value = (param.text or "").strip()
+    return value
+
+
+def get_params(include, value_attr):
+    """Get an include's named <param> values, keeping the first of each name as Kodi does."""
+    params = {}
+    for param in include.findall("param"):
+        name = param.get("name")
+        if name and name not in params:
+            params[name] = param_value(param, value_attr)
+    return params
+
+
 def file_needs_expansion(path, max_bytes=FILE_PREVIEW_SIZE):
     """True when the file's first bytes hold an include or a $PARAM, so it may need resolving."""
     try:

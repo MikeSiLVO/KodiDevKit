@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 from ..utils.files import check_paths
-from ..utils.xml import get_root_from_file
+from ..utils.xml import get_params, get_root_from_file
 from ..utils.validation import normalize_control_id
 from ..addon.addon import Addon
 from .maps import SkinMaps
@@ -420,16 +420,8 @@ class Skin(Addon):
             name = node.attrib.get("name")
             if name and node.find("*") is not None:
                 definition = node.find("definition")
-                params = {}
-                for p in node.findall("param"):
-                    param_name = p.attrib.get("name")
-                    if not param_name:
-                        continue
-                    param_value = p.attrib.get("default")
-                    if param_value is None and p.text:
-                        param_value = p.text.strip()
-                    params[param_name] = param_value or ""
-                if params and definition is None:
+                params = get_params(node, "default")
+                if node.find("param") is not None and definition is None:
                     self.shadowed_defs[folder].append({
                         "kind": "include without definition", "name": name, "file": xml_file,
                         "line": node.sourceline or 0,

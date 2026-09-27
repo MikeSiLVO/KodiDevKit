@@ -15,7 +15,7 @@ from ..utils.validation import (
     should_report_progress,
 )
 from ..utils.files import miscased_name
-from ..utils.xml import get_root_from_file
+from ..utils.xml import get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
 
@@ -237,8 +237,10 @@ class ValidationInclude:
                         }
                     )
 
-                for include_node in root.xpath(".//include[@content]"):
-                    include_name = include_node.attrib.get("content")
+                for include_node in root.iter("include"):
+                    if "name" in include_node.attrib or "file" in include_node.attrib:
+                        continue
+                    include_name = include_node.get("content") or (include_node.text or "").strip()
                     if not include_name or include_name.startswith("$"):
                         continue
 
@@ -259,12 +261,7 @@ class ValidationInclude:
                     if not include_def:
                         continue
 
-                    call_params = {}
-                    for param_node in include_node.findall("param"):
-                        param_name = param_node.attrib.get("name", "")
-                        param_value = (param_node.text or "").strip()
-                        if param_name and param_value:
-                            call_params[param_name] = param_value
+                    call_params = get_params(include_node, "value")
 
                     # Merge with default params from include definition (Kodi behavior)
                     # Passed params take precedence (GUIIncludes.cpp:439-440)

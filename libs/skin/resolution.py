@@ -7,6 +7,7 @@ import re
 import logging
 
 from ..utils.expressions import flatten_expressions, resolve_params_in_text
+from ..utils.xml import get_params
 from ..skin.include import SkinInclude
 
 if TYPE_CHECKING:
@@ -152,15 +153,7 @@ class SkinResolution:
             if not inc_name and include_node.text:
                 inc_name = include_node.text.strip()
 
-            call_params = {}
-            for param in include_node.findall("param"):
-                param_name = param.attrib.get("name")
-                if not param_name:
-                    continue
-                param_value = param.attrib.get("value")
-                if param_value is None and param.text:
-                    param_value = param.text.strip()
-                call_params[param_name] = param_value or ""
+            call_params = get_params(include_node, "value")
 
             # unknown $PARAM names survive our param pass; Kodi's empties them, so empty for lookup
             if inc_name and "$PARAM[" in inc_name:

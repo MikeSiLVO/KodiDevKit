@@ -11,7 +11,7 @@ from pathlib import Path
 import threading
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
-from ..utils.xml import get_root_from_file, tree_needs_expansion
+from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
 from ..utils.expressions import is_dynamic_expression
 from ..utils.validation import normalize_control_id
 
@@ -419,13 +419,7 @@ class SkinIndex:
 
                     if 'content' in elem.attrib:
                         inc_name = elem.attrib['content']
-                        for param_elem in elem.findall('param'):
-                            param_name = param_elem.get('name')
-                            param_value = param_elem.get('value')
-                            if param_value is None:
-                                param_value = (param_elem.text or '').strip()
-                            if param_name and param_value:
-                                params[param_name] = param_value
+                        params = get_params(elem, "value")
                     elif elem.text and elem.text.strip():
                         inc_name = elem.text.strip()
 

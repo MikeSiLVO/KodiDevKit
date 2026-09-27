@@ -13,7 +13,7 @@ import logging
 from lxml import etree as ET
 
 from ..utils.validation import deduplicate_issues, resolve_include_content
-from ..utils.xml import file_needs_expansion, get_root_from_file
+from ..utils.xml import file_needs_expansion, get_root_from_file, param_value
 from ..utils.expressions import get_param_names_in_context
 from .constants import SEVERITY_ERROR
 
@@ -223,15 +223,15 @@ class ValidationIds:
 
                     for param_node in include_node.findall("param"):
                         param_name = param_node.attrib.get("name", "")
-                        param_value = (param_node.text or "").strip()
+                        value = param_value(param_node, "value")
 
                         if (param_name in params_used_as_ids and
-                            param_value and
-                            not param_value.startswith("$")):
+                            value and
+                            not value.startswith("$")):
 
                             defines.append(
                                 {
-                                    "name": param_value,
+                                    "name": value,
                                     "type": "control",
                                     "file": path,
                                     "line": param_node.sourceline,
