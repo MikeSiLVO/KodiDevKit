@@ -101,6 +101,7 @@ _SUBTYPE_RULES = [
     ("is not valid inside", "INVALID TAG"),
     ("invalid tag for", "INVALID TAG"),
     ("Invalid multiple tags", "DUPLICATE TAG"),
+    ("Redundant <", "REDUNDANT"),
     ("invalid attribute for", "INVALID ATTR"),
     ("invalid value for", "INVALID VALUE"),
     ("Invalid color", "INVALID COLOR"),

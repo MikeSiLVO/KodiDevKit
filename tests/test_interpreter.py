@@ -515,6 +515,30 @@ class TestControlChildValidation(unittest.TestCase):
             ("Invalid multiple tags for control: <usealttexture> (from include 'B')", SEVERITY_WARNING, "B"),
         ])
 
+    def test_own_tag_repeating_default_is_redundant(self):
+        attribs = {"label": {"aligny": {}, "height": {}, "font": {}, "width": {}}}
+        values = {"label": {}}
+        dflt = '_kdk_inc_name="default type=label" _kdk_call_line="3"'
+        root = _parse(f"""
+        <window>
+            <controls>
+                <control type="label">
+                    <aligny>center</aligny>
+                    <height>40</height>
+                    <font _kdk_inc_name="Fonts" _kdk_call_line="3">font12</font>
+                    <font>font12</font>
+                    <aligny {dflt}>center</aligny>
+                    <height {dflt}>66</height>
+                    <font {dflt}>font12</font>
+                </control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        messages = [i["message"] for i in interp.interpret(root)]
+        self.assertIn('Redundant <aligny>: same value as <default type="label">', messages)
+        self.assertFalse([m for m in messages if "Redundant <height>" in m or "Redundant <font>" in m])
+
     def test_own_value_after_include_is_ignored(self):
         attribs = {"button": {"enable": {}, "selected": {}}}
         values = {"button": {}}

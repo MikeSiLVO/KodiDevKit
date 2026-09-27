@@ -74,6 +74,13 @@ class Context(Enum):
     MAP = auto()
 
 
+def _same_value(a, b) -> bool:
+    """Whether two elements have the same text and the same authored attributes."""
+    def attrs(el):
+        return {k: v for k, v in el.attrib.items() if not k.startswith("_kdk_")}
+    return (a.text or "").strip() == (b.text or "").strip() and attrs(a) == attrs(b)
+
+
 class XmlInterpreter:
     """
     Walks a resolved XML tree and validates structural correctness at each level.
@@ -330,6 +337,25 @@ class XmlInterpreter:
                 if value_type:
                     self._validate_typed_attr(child, attr_name, attr_value, value_type)
 
+        self._report_default_repeats(node, control_type)
+
+    def _report_default_repeats(self, control, control_type: str):
+        """Report own tags that set exactly what the control type's <default> would supply."""
+        copies = {}
+        for child in control:
+            if not isinstance(child.tag, str) or len(child) or child.tag.lower() in REPEATABLE_TAGS:
+                continue
+            # without its own posx/posy the control gains the default's left/top family
+            if child.tag not in ("posx", "posy"):
+                copies.setdefault(child.tag, []).append(child)
+        for tag, found in copies.items():
+            defaults = [c for c in found if (c.get("_kdk_inc_name") or "").startswith("default type=")]
+            others = [c for c in found if c not in defaults]
+            if not defaults or len(others) != 1 or others[0].get("_kdk_inc_name") is not None:
+                continue
+            if _same_value(others[0], defaults[0]):
+                self._add_issue(others[0], SEVERITY_WARNING,
+                                f"Redundant <{tag}>: same value as <default type=\"{control_type}\">")
 
     def _report_duplicate(self, control, first, later):
         """Report a copy of a read-once tag that Kodi drops because an earlier copy wins."""
