@@ -67,8 +67,8 @@ class TestXbt(unittest.TestCase):
         os.makedirs(os.path.join(self.path, "media", "icons"))
         self._write("media/icons/b.png", b"png")
         self.assertEqual(self._messages(), [
+            "Kodi repo: Textures.xbt ships beside the source images in media/",
             "Missing image 'Icons/A.png'",
-            "Textures.xbt ships beside the source images in media/; remove it before submitting",
         ])
 
     def test_unreadable_bundle(self):

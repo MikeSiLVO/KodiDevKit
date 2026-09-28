@@ -42,7 +42,7 @@ class ValidationImage:
         issues = []
         if index.get('xbt_beside_sources'):
             issues.append({
-                "message": "Textures.xbt ships beside the source images in media/; remove it before submitting",
+                "message": "Kodi repo: Textures.xbt ships beside the source images in media/",
                 "file": index['xbt_beside_sources'],
                 "line": 0,
                 "severity": SEVERITY_WARNING,

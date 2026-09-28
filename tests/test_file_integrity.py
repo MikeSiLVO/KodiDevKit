@@ -74,11 +74,44 @@ class TestFileIntegrity(unittest.TestCase):
         lang = os.path.join(self.skin_path, "language", "resource.language.en_gb")
         os.makedirs(lang)
         with open(os.path.join(lang, "strings.po"), "wb") as f:
-            f.write(b"\xef\xbb\xbfmsgid \"\"\n")
+            f.write(b"\xef\xbb\xbfmsgid \"\"\nmsgstr \"\"\n")
         with open(os.path.join(self.skin_path, "addon.xml"), "wb") as f:
             f.write(b"\xef\xbb\xbf" + ADDON_XML.encode())
         rows = sorted(os.path.basename(i["file"]) for i in self.issues() if "BOM" in i["message"])
         self.assertEqual(rows, ["addon.xml", "strings.po"])
+
+    def _put(self, rel, data=b"x"):
+        path = os.path.join(self.skin_path, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(data)
+
+    def test_repo_file_rules(self):
+        """Repo-only rules are labeled warnings; a case clash is an error."""
+        self._put("resources/helper.py")
+        self._put("extras/keys.xml", b"<?xml version='1.0'?>\n<keymap><global/></keymap>")
+        self._put("16x9/Home - Copy.xml", b"<window/>")
+        self._put("media/\u00c4rger.png".encode().decode())
+        self._put("16x9/a.xml", b"<window/>")
+        self._put("16x9/A.xml", b"<window/>")
+        rows = sorted((i["severity"], i["message"]) for i in self.issues()
+                      if "BOM" not in i["message"] and "Line Endings" not in i["message"])
+        self.assertEqual(rows, [
+            ("error", "16x9/A.xml differs from 16x9/a.xml only by case; one overwrites the other on Windows and macOS"),
+            ("error", "16x9/a.xml differs from 16x9/A.xml only by case; one overwrites the other on Windows and macOS"),
+            ("warning", "Kodi repo: Home - Copy.xml looks like a leftover, not a skin file"),
+            ("warning", "Kodi repo: media/\u00c4rger.png has a non-ASCII name"),
+            ("warning", "Kodi repo: skins may not ship keymaps (keys.xml)"),
+            ("warning", "Kodi repo: skins may not ship python scripts (helper.py)"),
+        ])
+
+    def test_executable_bit_comes_from_git(self):
+        """The mode git records is what a PR ships."""
+        import subprocess
+        self._put("16x9/Home.xml", b"<window/>")
+        for args in (["init", "-q"], ["add", "-A"], ["update-index", "--chmod=+x", "16x9/Home.xml"]):
+            subprocess.run(["git", "-C", self.skin_path, *args], check=True, capture_output=True)
+        self.assertIn("Kodi repo: Home.xml is marked executable", [i["message"] for i in self.issues()])
 
     def test_crlf_reported(self):
         """A skin-authored file with Windows line endings is an error."""

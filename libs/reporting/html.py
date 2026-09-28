@@ -50,12 +50,15 @@ CATEGORY_DESCRIPTIONS = {
         "repeated where Kodi reads only one. Kodi ignores these."
     ),
     "File Integrity": (
-        "<strong>Errors:</strong> BOM, or Windows or Mac line endings. Both block Kodi repo submission."
+        "<strong>Errors:</strong> BOM, Windows or Mac line endings, 16-bit PNGs TexturePacker cannot "
+        "pack, and file names that differ only by case. "
+        "<strong>Warnings</strong> marked Kodi repo apply only to skins submitted there."
     ),
 }
 
 # Ordered: first match wins
 _SUBTYPE_RULES = [
+    ("Kodi repo:", "REPO RULE"),
     ("must be named", "CASE MISMATCH"),
     ("is not an empty", "NOT EMPTY"),
     ("Missing image", "MISSING"),
