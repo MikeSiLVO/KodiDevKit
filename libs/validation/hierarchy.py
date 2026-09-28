@@ -49,6 +49,12 @@ COORDINATES_CHILDREN = frozenset({
 # by GUIWindow::LoadControl() (GUIWindow.cpp:302).
 GROUP_TYPES = frozenset({"group", "grouplist"})
 
+# Control types whose CanFocus() always returns false (GUIImage.cpp:446, GUILabelControl.cpp:152).
+NEVER_FOCUSABLE = frozenset({
+    "fadelabel", "image", "label", "multiimage", "progress", "ranges", "textbox",
+    "videowindow", "visualisation", "renderaddon",
+})
+
 # Container types (GUIControlFactory.cpp:70-107).
 # These inherit IGUIContainer and use LoadLayout() for itemlayout/focusedlayout.
 CONTAINER_TYPES = frozenset({
@@ -109,6 +115,7 @@ __all__ = [
     "CONTROLS_CHILDREN",
     "COORDINATES_CHILDREN",
     "GROUP_TYPES",
+    "NEVER_FOCUSABLE",
     "CONTAINER_TYPES",
     "STANDARD_LAYOUT_TAGS",
     "EPG_LAYOUT_TAGS",

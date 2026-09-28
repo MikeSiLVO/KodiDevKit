@@ -18,6 +18,7 @@ from .hierarchy import (
     CONTROLS_CHILDREN,
     COORDINATES_CHILDREN,
     GROUP_TYPES,
+    NEVER_FOCUSABLE,
     CONTAINER_TYPES,
     STANDARD_LAYOUT_TAGS,
     EPG_LAYOUT_TAGS,
@@ -72,6 +73,28 @@ class Context(Enum):
     INCLUDES = auto()
     VARIABLE = auto()
     MAP = auto()
+
+
+def _window_controls(scope):
+    """Every <control> below the scope that the window owns, leaving out item layouts."""
+    for child in scope:
+        if child.tag in ALL_LAYOUT_TAGS:
+            continue
+        if child.tag == "control":
+            yield child
+        yield from _window_controls(child)
+
+
+def _can_focus(control) -> bool:
+    """Whether any state of the control lets it take focus (CanFocus overrides in guilib)."""
+    kind = (control.get("type") or "").lower()
+    if kind in NEVER_FOCUSABLE:
+        return False
+    if kind in GROUP_TYPES:
+        children = list(_window_controls(control))
+        # an empty group is one Kodi or an addon fills at runtime
+        return not children or any(_can_focus(c) for c in children)
+    return True
 
 
 def _same_value(a, b) -> bool:
@@ -141,7 +164,24 @@ class XmlInterpreter:
                     child, SEVERITY_WARNING,
                     f"<{tag}> is not a valid child of <window>",
                 )
+        self._check_default_control(node)
+        for group in node.iter("control"):
+            if (group.get("type") or "").lower() in GROUP_TYPES:
+                self._check_default_control(group)
         self._context_stack.pop()
+
+    def _check_default_control(self, scope):
+        """Report a <defaultcontrol> whose every control with that id can never take focus."""
+        default = scope.find("defaultcontrol")
+        target = (default.text or "").strip() if default is not None else ""
+        if not target.isdigit():
+            return
+        matches = [c for c in _window_controls(scope) if (c.get("id") or "").strip() == target]
+        if matches and not any(_can_focus(c) for c in matches):
+            kind = (matches[0].get("type") or "").lower()
+            why = ("a group with no control that can take focus" if kind in GROUP_TYPES
+                   else f"a {kind}, which can never take focus")
+            self._add_issue(default, SEVERITY_ERROR, f"defaultcontrol {target} is {why}")
 
     def _walk_controls(self, node):
         """Validate <controls> children. (GUIWindow.cpp:258-268)"""

@@ -203,6 +203,46 @@ class TestContentValidation(unittest.TestCase):
         self.assertTrue(any("label" in w["message"] and "content" in w["message"] for w in warnings))
 
 
+class TestDefaultControl(unittest.TestCase):
+    """<defaultcontrol> must point at a control that can take focus."""
+
+    def _messages(self, window):
+        attribs = {t: {"defaultcontrol": {}} for t in ("button", "label", "image", "group", "list")}
+        values = {t: {} for t in attribs}
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        return [i["message"] for i in interp.interpret(_parse(window)) if "defaultcontrol" in i["message"]]
+
+    def test_unfocusable_targets(self):
+        self.assertEqual(self._messages("""
+        <window>
+            <defaultcontrol>10</defaultcontrol>
+            <controls>
+                <control type="label" id="10"/>
+                <control type="group" id="20">
+                    <defaultcontrol>21</defaultcontrol>
+                    <control type="group" id="21"><control type="image"/></control>
+                </control>
+            </controls>
+        </window>"""), ["defaultcontrol 10 is a label, which can never take focus",
+                        "defaultcontrol 21 is a group with no control that can take focus"])
+
+    def test_focusable_targets(self):
+        self.assertEqual(self._messages("""
+        <window>
+            <defaultcontrol>10</defaultcontrol>
+            <controls>
+                <control type="group"><defaultcontrol>5</defaultcontrol><control type="grouplist" id="5"/></control>
+                <control type="label" id="10"/>
+                <control type="button" id="10"/>
+                <control type="group" id="20">
+                    <defaultcontrol>50</defaultcontrol>
+                    <control type="list" id="50">
+                        <itemlayout><control type="label" id="60"/></itemlayout>
+                    </control>
+                </control>
+            </controls>
+        </window>"""), [])
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 
