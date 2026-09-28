@@ -22,6 +22,9 @@ def _undefined_font_issue(name, defined, folded, file, line):
     """Issue for a used font name not defined exactly, or None when it is."""
     if name in defined:
         return None
+    if name.lower() in ("-", "noop"):
+        return {"message": f"'{name}' is not an empty font in Kodi; leave the tag out",
+                "file": file, "line": line, "severity": SEVERITY_ERROR}
     match = folded.get(name.casefold())
     if match:
         # Kodi matches font names case-insensitively, repo review requires the exact name

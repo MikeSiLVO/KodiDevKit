@@ -62,7 +62,8 @@ class ValidationImage:
                 if not usages:
                     continue
 
-                if status == 'missing':
+                placeholder = image_path.strip().lower() in ("-", "noop")
+                if status == 'missing' and not placeholder:
                     if has_packed_textures:
                         suppressed_count += 1
                         logger.debug(f"Image not verified (may be in Textures.xbt): {image_path}")
@@ -75,7 +76,16 @@ class ValidationImage:
                     attr = usage.get('attr')
                     attr_suffix = f" in @{attr}" if attr else ""
 
-                    if status == 'missing':
+                    if status == 'missing' and placeholder:
+                        issues.append({
+                            "message": f"'{image_path}'{attr_suffix} is not an empty texture in Kodi; "
+                                       f"leave the value empty",
+                            "file": file_path,
+                            "line": line_num,
+                            "severity": SEVERITY_ERROR,
+                        })
+
+                    elif status == 'missing':
                         issues.append({
                             "message": f"Missing image '{image_path}'{attr_suffix}",
                             "file": file_path,

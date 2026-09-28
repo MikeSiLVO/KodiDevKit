@@ -77,6 +77,15 @@ class TestImageValidation(ValidationTestCase):
         missing_issues = [i for i in issues if "missing" in i.get("message", "").lower()]
         self.assertTrue(len(missing_issues) > 0, "Should detect missing image file")
 
+    def test_dash_and_noop_are_not_empty(self):
+        """'-' and 'noop' as a texture get their own message, not a missing file."""
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="image"><texture>-</texture></control>'
+                    '<control type="image"><texture>noop</texture></control></controls></window>')
+        messages = sorted(i["message"] for i in self._build_checker().check() if i.get("file"))
+        self.assertEqual(messages, ["'-' is not an empty texture in Kodi; leave the value empty",
+                                    "'noop' is not an empty texture in Kodi; leave the value empty"])
+
     def test_existing_image_no_issue(self):
         """Test that existing images don't trigger issues."""
         # Create the image file

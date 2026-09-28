@@ -57,6 +57,7 @@ CATEGORY_DESCRIPTIONS = {
 # Ordered: first match wins
 _SUBTYPE_RULES = [
     ("must be named", "CASE MISMATCH"),
+    ("is not an empty", "NOT EMPTY"),
     ("Missing image", "MISSING"),
     ("Case mismatch for", "CASE MISMATCH"),
     ("Wrong path", "WRONG PATH"),

@@ -529,6 +529,17 @@ class TestFontValidation(unittest.TestCase):
         self.assertIn("Case mismatch in font name 'TITLE' (defined as 'Title')", messages)
         self.assertFalse([m for m in messages if "not defined" in m or "Unused" in m], messages)
 
+    def test_noop_font_is_not_empty(self):
+        """A noop font gets its own message, not undefined."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name>'
+                              '<filename>font.ttf</filename></font></fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>noop</font>'
+                               '</control></controls></window>')
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertIn("'noop' is not an empty font in Kodi; leave the tag out", messages)
+        self.assertFalse([m for m in messages if "not defined" in m])
+
     def test_defined_but_unused_font(self):
         """Test detection of font defined but never used."""
         self.create_font_file("font.ttf")
