@@ -66,9 +66,36 @@ class ValidationFileCheck:
                     "severity": SEVERITY_ERROR,
                 })
 
+        issues.extend(self._sixteen_bit_pngs())
+
         if progress_callback:
             progress_callback(f"Complete: {len(issues)} file encoding issues found")
 
+        return issues
+
+
+    def _sixteen_bit_pngs(self):
+        """PNGs TexturePacker would pack whose IHDR says 16 bits per channel."""
+        issues = []
+        for folder in ("media", "themes"):
+            for dirpath, _dirs, files in os.walk(os.path.join(self.addon.path, folder)):
+                for name in files:
+                    if not name.lower().endswith(".png"):
+                        continue
+                    path = os.path.join(dirpath, name)
+                    try:
+                        with open(path, "rb") as f:
+                            header = f.read(25)
+                    except OSError:
+                        continue
+                    # bit depth follows the 8-byte signature and the IHDR length, type, width, height
+                    if len(header) == 25 and header[12:16] == b"IHDR" and header[24] == 16:
+                        issues.append({
+                            "message": f"16-bit PNG {name}: TexturePacker cannot pack it, save it as 8-bit",
+                            "file": path,
+                            "line": 0,
+                            "severity": SEVERITY_ERROR,
+                        })
         return issues
 
 

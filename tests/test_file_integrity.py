@@ -56,6 +56,19 @@ class TestFileIntegrity(unittest.TestCase):
         provider.init_addon(self.skin_path)
         return provider.check_file_integrity()
 
+    def test_sixteen_bit_png_in_packed_folders(self):
+        """A 16-bit PNG that TexturePacker would pack is an error; elsewhere it is fine."""
+        def png(depth):
+            return b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dIHDR" + b"\x00\x00\x00\x01" * 2 + bytes([depth, 6])
+        for rel, depth in (("media/deep.png", 16), ("media/flat.png", 8), ("themes/dark/deep.png", 16),
+                           ("extras/deep.png", 16)):
+            path = os.path.join(self.skin_path, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(png(depth))
+        rows = sorted(os.path.relpath(i["file"], self.skin_path) for i in self.issues() if "16-bit" in i["message"])
+        self.assertEqual(rows, [os.path.join("media", "deep.png"), os.path.join("themes", "dark", "deep.png")])
+
     def test_crlf_reported(self):
         """A skin-authored file with Windows line endings is an error."""
         self.write("Home.xml", WINDOW_XML, crlf=True)
