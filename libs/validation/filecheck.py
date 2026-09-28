@@ -99,25 +99,6 @@ class ValidationFileCheck:
         return issues
 
 
-    def _shipped_files(self):
-        """Relative paths with their executable bit: git's index in a checkout, else the folder."""
-        root = self.addon.path
-        if os.path.exists(os.path.join(root, ".git")):
-            try:
-                # on Windows a console program opens a window that takes focus from the editor
-                out = subprocess.run(["git", "-C", root, "ls-files", "-s", "-z"], capture_output=True, check=True,
-                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                                     ).stdout.decode("utf-8", "replace")
-                # a PR ships what git tracks, with the mode git records
-                return [(entry.split("\t", 1)[1], entry.startswith("100755")) for entry in out.split("\0") if "\t" in entry]
-            except (OSError, subprocess.CalledProcessError):
-                pass
-        files = []
-        for dirpath, dirs, names in os.walk(root):
-            dirs[:] = [d for d in dirs if d != ".git"]
-            files.extend((os.path.relpath(os.path.join(dirpath, n), root).replace("\\", "/"), False) for n in names)
-        return files
-
     def _repo_file_issues(self):
         """Files Kodi repo review rejects, plus names that clash on case-insensitive systems."""
         issues = []
@@ -126,7 +107,7 @@ class ValidationFileCheck:
             issues.append({"message": message, "file": os.path.join(self.addon.path, rel), "line": 0,
                            "severity": severity})
 
-        files = self._shipped_files()
+        files = shipped_files(self.addon.path)
         by_folded = {}
         for rel, executable in files:
             name = rel.rsplit("/", 1)[-1]
@@ -156,6 +137,25 @@ class ValidationFileCheck:
         except OSError:
             pass
         return issues
+
+
+def shipped_files(root):
+    """Relative paths with their executable bit: git's index in a checkout, else the folder."""
+    if os.path.exists(os.path.join(root, ".git")):
+        try:
+            # on Windows a console program opens a window that takes focus from the editor
+            out = subprocess.run(["git", "-C", root, "ls-files", "-s", "-z"], capture_output=True, check=True,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                                 ).stdout.decode("utf-8", "replace")
+            # a PR ships what git tracks, with the mode git records
+            return [(entry.split("\t", 1)[1], entry.startswith("100755")) for entry in out.split("\0") if "\t" in entry]
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    files = []
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d != ".git"]
+        files.extend((os.path.relpath(os.path.join(dirpath, n), root).replace("\\", "/"), False) for n in names)
+    return files
 
 
 def _is_keymap(path):

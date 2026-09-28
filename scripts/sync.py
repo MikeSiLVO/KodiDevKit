@@ -36,7 +36,7 @@ SHARED_LIB_FILES = ("__init__.py", "coredata.py")
 # Reference data drives validation results, so it mirrors too, including the
 # Kodi-core snapshots both repos now commit.
 SHARED_DATA = ("kodi_builtin_controls.xml",)
-SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers")
+SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers", "addon_schema")
 
 # Written to run under either layout, so both repos carry the same file.
 SHARED_SCRIPTS = ("refresh.py", "windows.py")

@@ -49,6 +49,10 @@ CATEGORY_DESCRIPTIONS = {
         "<strong>Warnings:</strong> Tags or attributes Kodi does not read in that place, and tags "
         "repeated where Kodi reads only one. Kodi ignores these."
     ),
+    "Kodi Repo": (
+        "<strong>Warnings</strong> for what the Kodi repo's add-on checker rejects: addon.xml schema, "
+        "artwork, language files and file types. A skin that never goes to the Kodi repo can ignore them."
+    ),
     "File Integrity": (
         "<strong>Errors:</strong> BOM, Windows or Mac line endings, 16-bit PNGs TexturePacker cannot "
         "pack, and file names that differ only by case. "

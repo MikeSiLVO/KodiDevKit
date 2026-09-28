@@ -454,6 +454,7 @@ class ValidationRunner:
         self._run_check(7, "Images", self.provider.check_images)
         self._run_check(8, "XML Validation", self.provider.check_values)
         self._run_check(9, "File Integrity", self.provider.check_file_integrity)
+        self._run_check(10, "Kodi Repo", self.provider.check_repo)
 
         return self.all_issues
 
@@ -534,7 +535,7 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
         server_port = report_server.get_server_port()
 
         progress = ReportProgressView(self.window)
-        progress.set_total_steps(10)
+        progress.set_total_steps(11)
 
         def update_progress(step, message):
             progress.update_step(step, message)
@@ -548,7 +549,7 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
                 all_issues = runner.run_all()
 
                 total_issues = sum(len(issues) for issues in all_issues.values())
-                update_progress(10, f"Generating report... ({total_issues} issues found)")
+                update_progress(11, f"Generating report... ({total_issues} issues found)")
 
                 if provider.addon and provider.addon.path:
                     skin_name = provider.addon.name if provider.addon.name else os.path.basename(provider.addon.path)
@@ -577,11 +578,11 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
                         elapsed = time.time() - last_update['time']
 
                         if elapsed > 30:
-                            update_progress(10,
+                            update_progress(11,
                                 f"⚠ Report generation taking longer than expected ({int(elapsed)}s)... "
                                 f"If stuck, close this view and check console for errors.")
                         elif elapsed > 10:
-                            update_progress(10,
+                            update_progress(11,
                                 f"Still working on report generation... ({int(elapsed)}s elapsed)")
 
                 import threading
@@ -591,7 +592,7 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
                 def report_progress(message):
                     """Status callback the report generator calls during build."""
                     last_update['time'] = time.time()
-                    update_progress(10, f"Report: {message}")
+                    update_progress(11, f"Report: {message}")
 
                 try:
                     hide_inc = sublime.load_settings(SETTINGS_FILE).get("hide_include_warnings", True)

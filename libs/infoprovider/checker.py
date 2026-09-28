@@ -24,6 +24,7 @@ from ..validation.include import ValidationInclude
 from ..validation.variable import ValidationVariable
 from ..validation.skinmap import ValidationMap
 from ..validation.filecheck import ValidationFileCheck
+from ..validation.repo import ValidationRepo
 from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan_skin
 from ..validation.interpreter import XmlInterpreter
@@ -206,6 +207,7 @@ class CheckerMixin:
             "id": self.check_ids,
             "image": self.check_images,
             "filecheck": self.check_file_integrity,
+            "repo": self.check_repo,
         }
         fn = checks.get(check_type)
         if not fn:
@@ -301,6 +303,14 @@ class CheckerMixin:
         checker = ValidationLabel(self.addon, self.get_po_files,
                                   resolve_include_fn=self.resolve_xml, validation_index=index)
         return self._muted("Labels", checker.check(progress_callback=progress_callback))
+
+    def check_repo(self, progress_callback=None):
+        """Check addon.xml, artwork, language files and file types against the Kodi repo rules."""
+        if not self.addon:
+            return self._no_issues("Kodi repo")
+
+        checker = ValidationRepo(self.addon)
+        return self._muted("Kodi Repo", checker.check(progress_callback=progress_callback))
 
     def check_file_integrity(self, progress_callback=None):
         """Check for BOM and wrong line endings."""

@@ -38,6 +38,7 @@ CHECK_LABELS = {
     "label": "Labels",
     "id": "IDs",
     "filecheck": "File Integrity",
+    "repo": "Kodi Repo",
 }
 
 # Results view navigation (build-output style): a file header line (col 0, ends
