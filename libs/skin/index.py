@@ -17,9 +17,11 @@ logger = logging.getLogger(__name__)
 _LABEL_TAGS = frozenset(['label', 'altlabel', 'label2', 'hinttext'])
 _LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[([0-9].*?)\]")
 _UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
-# window_bools in GUIInfoManager.cpp, whose number is a window id
-_WINDOW_REGEX = (r"(?:Window\.IsMedia|Window\.Is(?:Active|Visible|Topmost|DialogTopmost|ModalDialogTopmost)?"
-                 r"|Window\.(?:Previous|Next)|Dialog\.Close)\(([0-9]+)\)")
+# arguments Kodi passes through CWindowTranslator: window_bools, Window(x) and the window builtins
+_WINDOW_REFS = re.compile(
+    r"\b(?:Window\.(?:IsMedia|Is|IsActive|IsVisible|IsTopmost|IsDialogTopmost|IsModalDialogTopmost"
+    r"|Previous|Next)\(|Window\((?=[^()]*\)\.)|(?:ActivateWindow|ActivateWindowAndFocus|ReplaceWindow"
+    r"|ReplaceWindowAndFocus|Dialog\.Close)\()\s*([^,()\s]+)", re.I)
 # where Kodi reads a control id (GUIInfoManager.cpp:8527, GUIControlBuiltins.cpp:222)
 _CONTROL_REFS = (
     (re.compile(r"\bControl\.(HasFocus|IsVisible|IsEnabled|GetLabel)\(\s*(\d+)\s*\)", re.I), 2),
@@ -787,9 +789,12 @@ class SkinIndex:
         refs = index['ids_referenced'][folder]
         line = getattr(node, 'sourceline', 0) or 0
 
-        for match in re.finditer(_WINDOW_REGEX, text, re.IGNORECASE):
-            window_id = normalize_control_id(match.group(1))
-            refs.setdefault(window_id, []).append({'file': path, 'line': line, 'type': 'window'})
+        for match in _WINDOW_REFS.finditer(text):
+            arg = match.group(1)
+            if arg.isdigit():
+                refs.setdefault(normalize_control_id(arg), []).append({'file': path, 'line': line, 'type': 'window'})
+            elif "$" not in arg and "xml" not in arg.lower() and arg.lower() != "all":
+                refs.setdefault(arg, []).append({'file': path, 'line': line, 'type': 'window_name'})
 
         if skip_controls:
             return

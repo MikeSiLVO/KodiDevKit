@@ -47,6 +47,19 @@ class ValidationIds:
             return None
         return f"Window id: Please use {name} instead of {ref_id}"
 
+    def _window_name_message(self, name):
+        """Problem with a window name, or None when CWindowTranslator::TranslateWindow knows it."""
+        key = name.lower()
+        if key.endswith(".xml"):
+            key = key[:-4]
+        if len(key) > 6 and key.startswith("window"):
+            key = key[6:]
+        if key.startswith("my"):
+            key = key[2:]
+        if key.isdigit() or key in {n.lower() for n in self.window_names if n}:
+            return None
+        return f"Window name not recognized by Kodi: {name}"
+
     def _modeless_files(self, custom, window_files):
         """Window files Kodi may open modeless; addon windows count, since their type is unknown."""
         kodi_names = {name.lower() for name in self.window_filenames if name}
@@ -107,6 +120,8 @@ class ValidationIds:
                         usage_file = usage.get('file', '')
                         if usage.get('type', 'control') == 'window':
                             message = self._window_ref_message(ref_id, window_ids_in_skin, usage_file)
+                        elif usage['type'] == 'window_name':
+                            message = self._window_name_message(ref_id)
                         elif not ref_id:
                             continue
                         else:

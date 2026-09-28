@@ -130,5 +130,18 @@ class TestScope(unittest.TestCase):
                                      '</control></controls></window>')
         self.assertEqual(self._messages(), [])
 
+    def test_window_names_follow_the_translator(self):
+        self._write("16x9/Home.xml", '<window><controls><control type="button">'
+                                     '<onclick>ActivateWindow(Videos,return)</onclick>'
+                                     '<onclick>ActivateWindow(MyVideos)</onclick>'
+                                     '<onclick>ActivateWindow(window10025)</onclick>'
+                                     '<onclick>Dialog.Close(all)</onclick>'
+                                     '<onclick>ActivateWindow(programssettings)</onclick>'
+                                     '<visible>Window.IsActive(MyVideoNav.xml) + '
+                                     '!String.IsEmpty(Window(Hoem).Property(x))</visible>'
+                                     '</control></controls></window>')
+        self.assertEqual(self._messages(), ["Window name not recognized by Kodi: Hoem",
+                                            "Window name not recognized by Kodi: programssettings"])
+
 if __name__ == "__main__":
     unittest.main()
