@@ -26,6 +26,7 @@ class LoaderMixin:
     WINDOW_NAMES: list
     WINDOW_IDS: list
     MODELESS_IDS: set
+    OBSOLETE_WINDOW_FILES: dict
     builtins: list
     conditions: list
     template_attribs: dict
@@ -54,6 +55,9 @@ class LoaderMixin:
                     f"Packages/KodiDevKit/data/{kodi_version}/windows.json"
                 )
             )
+            OBSOLETE = json.loads(
+                sublime.load_resource(f"Packages/KodiDevKit/data/{kodi_version}/obsolete_windows.json")
+            )
 
         except (ImportError, OSError):
             path = os.path.normpath(os.path.abspath(__file__))
@@ -69,6 +73,9 @@ class LoaderMixin:
                 os.path.join(folder, "..", "..", "data", kodi_version, "windows.json"), "r"
             ) as f:
                 WINDOW_MAP = json.load(f)
+            with open(os.path.join(folder, "..", "..", "data", kodi_version, "obsolete_windows.json"),
+                      encoding="utf-8") as f:
+                OBSOLETE = json.load(f)
 
         if root is None:
             raise ValueError(f"Failed to load data.xml for Kodi version {kodi_version}")
@@ -79,6 +86,7 @@ class LoaderMixin:
         self.WINDOW_NAMES = [item[0] for item in WINDOW_MAP]
         self.WINDOW_IDS = [str(item[1]) for item in WINDOW_MAP]
         self.MODELESS_IDS = {str(item[1]) for item in WINDOW_MAP if item[3] == "modeless"}
+        self.OBSOLETE_WINDOW_FILES = OBSOLETE
 
         builtins_elem = root.find("builtins")
         self.builtins = [

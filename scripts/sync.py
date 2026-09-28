@@ -39,7 +39,7 @@ SHARED_DATA = ("kodi_builtin_controls.xml",)
 SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers")
 
 # Written to run under either layout, so both repos carry the same file.
-SHARED_SCRIPTS = ("refresh.py",)
+SHARED_SCRIPTS = ("refresh.py", "windows.py")
 
 # Each repo's own front end. Same path in both trees, different contents by design,
 # so there is nothing here to keep in sync.

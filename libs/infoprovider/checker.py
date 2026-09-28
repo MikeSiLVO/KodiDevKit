@@ -75,6 +75,7 @@ class CheckerMixin:
     WINDOW_IDS: list
     WINDOW_NAMES: list
     WINDOW_FILENAMES: list
+    OBSOLETE_WINDOW_FILES: dict
     MODELESS_IDS: set
     _variable_cache: dict
 
@@ -497,6 +498,20 @@ class CheckerMixin:
 
         return issues
 
+    def _obsolete_window_issue(self, path, folder):
+        """Issue for a window file this Kodi release never loads, unless the skin includes it."""
+        name = os.path.basename(path)
+        if name not in self.OBSOLETE_WINDOW_FILES:
+            return None
+        included = {os.path.basename(f) for f in getattr(self.addon, "include_files", {}).get(folder, [])}
+        if name in included:
+            return None
+        successor = self.OBSOLETE_WINDOW_FILES[name]
+        message = f"{name} is not a window file in this Kodi release"
+        if successor:
+            message += f"; {successor} serves that window"
+        return {"message": message, "file": path, "line": 1, "severity": SEVERITY_ERROR}
+
     def check_file(self, path):
         """Validate one file as written plus the resolved pass for skins; None when excluded."""
         exclude = set(self.settings.get("validation_exclude", ["shortcuts"]))
@@ -510,6 +525,10 @@ class CheckerMixin:
 
         folder = path.split(os.sep)[-2] if os.sep in path else ""
         listitems = []
+
+        obsolete = self._obsolete_window_issue(path, folder)
+        if obsolete:
+            listitems.append(obsolete)
 
         self._variable_cache = {}
         for item in self._get_includes_for_folder(folder):

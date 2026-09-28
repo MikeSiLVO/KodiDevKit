@@ -58,7 +58,7 @@
   ["contextmenu", 10106, "DialogContextMenu.xml", "modal"],
   ["notification", 10107, "DialogNotification.xml", "modeless"],
   ["numericinput", 10109, "DialogNumeric.xml", "modal"],
-  ["gamepadinput", 10110, "DialogSelect.xml", "modal"],
+  ["gamepadinput", 10110, "DialogConfirm.xml", "modal"],
   ["shutdownmenu", 10111, "DialogButtonMenu.xml", "modal"],
   ["playercontrols", 10114, "PlayerControls.xml", "modal"],
   ["playerprocessinfo", 10116, "DialogPlayerProcessInfo.xml", "modal"],
@@ -107,7 +107,7 @@
   ["fullscreenradio", 10801, "", "window"],
   ["fullscreenradiopreview", 10803, "", "window"],
   ["fullscreenradioinput", 10805, "", "window"],
-  ["fullscreengame", 12906, "", "window"],
+  ["fullscreengame", 12906, "VideoFullScreen.xml", "window"],
   ["visualisation", 12006, "MusicVisualisation.xml", "window"],
   ["slideshow", 12007, "SlideShow.xml", "window"],
   ["weather", 12600, "MyWeather.xml", "window"],
@@ -152,5 +152,5 @@
   [null, 10148, "", "modal"],
   [null, 10156, "", "modal"],
   [null, 10611, "DialogSettings.xml", "modal"],
-  [null, 10612, "", "modal"]
+  [null, 10612, "DialogSettings.xml", "modal"]
 ]
