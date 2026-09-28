@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -11,9 +12,20 @@ logger = logging.getLogger(__name__)
 class ValidationImage:
     """Validates image references used by Kodi skins."""
 
-    def __init__(self, addon, validation_index=None):
+    def __init__(self, addon, validation_index=None, window_filenames=()):
         self.addon = addon
         self._validation_index = validation_index
+        self._kodi_files = {name.lower() for name in window_filenames if name}
+
+    def _in_addon_window(self, file_path):
+        """True for a window file an addon opens, which also searches the addon's own media."""
+        name = os.path.basename(file_path).lower()
+        if not self._kodi_files or name in self._kodi_files or name.startswith("custom"):
+            return False
+        index = self._validation_index or {}
+        shared = {n.lower() for folder in index.get('include_files', {}).values() for n in folder}
+        shared |= {n.lower() for folder in index.get('non_window_files', {}).values() for n in folder}
+        return name not in shared
 
     def check(self, progress_callback=None):
         """
@@ -28,19 +40,23 @@ class ValidationImage:
             return [{"message": "Image validation unavailable (no index)", "file": "", "line": 0}]
 
         issues = []
-        suppressed_count = 0
-
-        has_packed_textures = index.get('has_packed_textures', False)
+        if index.get('xbt_beside_sources'):
+            issues.append({
+                "message": "Textures.xbt ships beside the source images in media/; remove it before submitting",
+                "file": index['xbt_beside_sources'],
+                "line": 0,
+                "severity": SEVERITY_WARNING,
+            })
+        if index.get('xbt_unreadable'):
+            issues.append({
+                "message": "Textures.xbt is not a texture bundle Kodi can read",
+                "file": index['xbt_unreadable'],
+                "line": 0,
+                "severity": SEVERITY_ERROR,
+            })
 
         if progress_callback:
             progress_callback("Checking images using cached data...")
-
-        if has_packed_textures:
-            return [{
-                "message": "INFO: Image validation skipped (Textures.xbt detected - cannot verify packed textures)",
-                "file": "",
-                "line": 0
-            }]
 
         image_files_checked = index.get('image_files_checked', {})
         images_referenced = index.get('images_referenced', {})
@@ -63,11 +79,6 @@ class ValidationImage:
                     continue
 
                 placeholder = image_path.strip().lower() in ("-", "noop")
-                if status == 'missing' and not placeholder:
-                    if has_packed_textures:
-                        suppressed_count += 1
-                        logger.debug(f"Image not verified (may be in Textures.xbt): {image_path}")
-                        continue
 
                 # Report for every usage location, not just the first
                 for usage in usages:
@@ -75,6 +86,9 @@ class ValidationImage:
                     line_num = usage.get('line', 0)
                     attr = usage.get('attr')
                     attr_suffix = f" in @{attr}" if attr else ""
+
+                    if status == 'external':
+                        continue
 
                     if status == 'missing' and placeholder:
                         issues.append({
@@ -84,6 +98,9 @@ class ValidationImage:
                             "line": line_num,
                             "severity": SEVERITY_ERROR,
                         })
+
+                    elif status == 'missing' and self._in_addon_window(file_path):
+                        continue
 
                     elif status == 'missing':
                         issues.append({
@@ -111,18 +128,7 @@ class ValidationImage:
                                 "severity": SEVERITY_WARNING,
                             })
 
-        if has_packed_textures and suppressed_count > 0:
-            issues.append({
-                "message": f"INFO: {suppressed_count} image(s) not verified (may be in Textures.xbt)",
-                "file": "",
-                "line": 0
-            })
-
-        error_count = len([i for i in issues if "INFO:" not in i.get("message", "")])
         if progress_callback:
-            if has_packed_textures and suppressed_count > 0:
-                progress_callback(f"Complete: {error_count} issues ({suppressed_count} suppressed by Textures.xbt)")
-            else:
-                progress_callback(f"Complete: {error_count} issues found")
+            progress_callback(f"Complete: {len(issues)} issues found")
 
         return issues or [{"message": "No image issues found", "file": "", "line": 0}]

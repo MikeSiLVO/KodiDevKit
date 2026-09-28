@@ -8,6 +8,7 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
+from ..utils.files import read_xbt_names
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
 from ..utils.expressions import is_dynamic_expression
 from ..utils.validation import normalize_control_id
@@ -558,12 +559,17 @@ class SkinIndex:
 
         exact_relpaths, cf_rel_to_exact, cf_base_to_relpaths = build_fs_index(self.skin.path)
         logger.info(f"  -> Indexed {len(exact_relpaths)} files in media directories")
-        has_packed_textures = self._detect_textures_xbt()
-        if has_packed_textures:
-            logger.info("  -> Textures.xbt detected - missing images may be in archive")
+        xbt_path = os.path.join(self.skin.path, "media", "Textures.xbt")
+        xbt_names = read_xbt_names(xbt_path) if os.path.isfile(xbt_path) else None
+        loose_media = any(p.startswith("media/") and not p.lower().endswith(".xbt") for p in exact_relpaths)
+        # a built skin has only the .xbt, so its media/ references resolve against the archive
+        packed = xbt_names if xbt_names is not None and not loose_media else None
 
-        def normalize_ref(val: str) -> str:
+        def normalize_ref(val: str):
             v = (val or "").strip().replace("\\", "/")
+            # Kodi loads a full path as written (TextureManager.cpp:643), outside the skin
+            if v.startswith("/") or re.match(r"^[A-Za-z]:/", v):
+                return None
 
             if v.startswith("special://skin/"):
                 v = v[len("special://skin/"):]
@@ -580,7 +586,11 @@ class SkinIndex:
 
             return v
 
-        def classify_path(val_norm: str):
+        def classify_path(val_norm):
+            if val_norm is None:
+                return "external", None
+            if packed is not None and val_norm.startswith("media/"):
+                return ("exact", None) if val_norm[len("media/"):].lower() in packed else ("missing", None)
             if val_norm in exact_relpaths:
                 return "exact", None
 
@@ -596,7 +606,8 @@ class SkinIndex:
             return "missing", None
 
         index['image_files_checked'] = {}
-        index['has_packed_textures'] = has_packed_textures
+        index['xbt_beside_sources'] = xbt_path if xbt_names is not None and loose_media else None
+        index['xbt_unreadable'] = xbt_path if os.path.isfile(xbt_path) and xbt_names is None else None
 
         total_images = sum(
             len(imgs) for folder_imgs in index['images_referenced'].values()
@@ -623,20 +634,6 @@ class SkinIndex:
                 }
 
         logger.info(f"  -> Checked {checked_count} unique image references")
-
-    def _detect_textures_xbt(self):
-        """True when the skin ships a Textures.xbt in one of the media folders."""
-        xbt_locations = [
-            os.path.join(self.skin.path, 'media', 'Textures.xbt'),
-            os.path.join(self.skin.path, 'resources', 'media', 'Textures.xbt'),
-            os.path.join(self.skin.path, 'textures', 'Textures.xbt'),
-        ]
-
-        for xbt_path in xbt_locations:
-            if os.path.exists(xbt_path):
-                return True
-
-        return False
 
     def _check_font_files(self, index, progress_callback=None):
         """Classify each font file against the skin's fonts folder; core fonts are checked later."""

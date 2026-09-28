@@ -316,7 +316,7 @@ class CheckerMixin:
             return self._no_issues("image")
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        checker = ValidationImage(self.addon, validation_index=index)
+        checker = ValidationImage(self.addon, validation_index=index, window_filenames=self.WINDOW_FILENAMES)
         return self._muted("Images", checker.check(progress_callback=progress_callback))
 
     def check_values(self, progress_callback=None):

@@ -134,6 +134,26 @@ def check_bom(filepath: str) -> bool:
     return raw.startswith(codecs.BOM_UTF8)
 
 
+def read_xbt_names(path: str) -> Optional[set[str]]:
+    """Lowercased paths packed in an .xbt, read from its index as CXBTFReader::Open does."""
+    try:
+        with open(path, "rb") as f:
+            if f.read(4) != b"XBTF" or f.read(1) < b"2":
+                return None
+            count = int.from_bytes(f.read(4), "little")
+            names = set()
+            for _ in range(count):
+                raw = f.read(256)
+                f.seek(4, 1)
+                frames = int.from_bytes(f.read(4), "little")
+                # width, height, format, packed and unpacked size, duration, offset
+                f.seek(frames * 40, 1)
+                names.add(raw.split(b"\0", 1)[0].decode("utf-8", "replace").replace("\\", "/").lower())
+            return names
+    except OSError:
+        return None
+
+
 def check_paths(paths: list[str]) -> Optional[str]:
     """The first path that exists, or None."""
     for path in paths:
