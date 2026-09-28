@@ -54,6 +54,22 @@ def extract_number_value(text: str) -> str | None:
     return None
 
 
+_LABEL_BLOCKS = re.compile(r"\$(?:LOCALIZE|NUMBER|ADDON|FEATURE|ESCINFO|INFO|ESCVAR|VAR|ESCMAP|MAP)\[")
+
+
+def unclosed_label_block(text: str):
+    """First $INFO[, $VAR[, $LOCALIZE[ or kin whose bracket never closes, or None."""
+    for match in _LABEL_BLOCKS.finditer(text):
+        depth = 0
+        for char in text[match.end() - 1:]:
+            depth += (char == "[") - (char == "]")
+            if depth == 0:
+                break
+        else:
+            return match.group(0)
+    return None
+
+
 def bracket_body(text: str) -> str:
     """Text inside the first [...], nested brackets included; empty when it never closes."""
     start = text.find('[')

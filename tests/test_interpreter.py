@@ -243,6 +243,35 @@ class TestDefaultControl(unittest.TestCase):
             </controls>
         </window>"""), [])
 
+class TestLabelBrackets(unittest.TestCase):
+    """A label block without its ']' is reported with what Kodi does about it."""
+
+    def test_label_blocks(self):
+        attribs = {"label": {"label": {}, "label2": {}, "hinttext": {}}}
+        values = {"label": {}}
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        issues = interp.interpret(_parse("""
+        <window>
+            <controls>
+                <control type="label">
+                    <label>$INFO[ListItem.Label,[B],[/B]] $VAR[Name]</label>
+                    <label2>$INFO[ListItem.Label2</label2>
+                    <hinttext>$LOCALIZE[31000 more</hinttext>
+                </control>
+            </controls>
+        </window>"""))
+        self.assertEqual([i["message"] for i in issues], [
+            "Missing ']' after $INFO[ in <label2>: Kodi drops the rest of the label",
+            "Missing ']' after $LOCALIZE[ in <hinttext>: Kodi shows it as plain text",
+        ])
+
+    def test_variable_value(self):
+        interp = XmlInterpreter(template_attribs={}, template_values={})
+        issues = interp.interpret(_parse(
+            '<includes><variable name="V"><value>$ESCINFO[Player.Title</value></variable></includes>'))
+        self.assertEqual([i["message"] for i in issues],
+                         ["Missing ']' after $ESCINFO[ in <value>: Kodi drops the rest of the label"])
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 

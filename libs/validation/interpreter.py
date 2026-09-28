@@ -37,6 +37,7 @@ from .constants import (
     SEVERITY_WARNING,
     BRACKET_TAGS,
     NOOP_TAGS,
+    LABEL_READ_TAGS,
     REPEATABLE_TAGS,
     is_read_copy,
     ALLOWED_MULTI,
@@ -50,6 +51,7 @@ from ..utils.expressions import (
     is_dynamic_expression as _is_dynamic,
     contains_dynamic_expression as _contains_dynamic,
     is_number as _is_number,
+    unclosed_label_block,
 )
 from ..utils.xml import check_brackets as _check_brackets
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
@@ -73,6 +75,9 @@ class Context(Enum):
     INCLUDES = auto()
     VARIABLE = auto()
     MAP = auto()
+
+
+_LABEL_ENDING = {"$INFO", "$ESCINFO", "$VAR", "$ESCVAR", "$MAP", "$ESCMAP"}
 
 
 def _window_controls(scope):
@@ -342,6 +347,9 @@ class XmlInterpreter:
                 if text or tag not in NOOP_TAGS:
                     self._validate_brackets(child, text)
 
+            if tag.lower() in LABEL_READ_TAGS or tag.lower() in ("label2", "altlabel"):
+                self._validate_label_brackets(child)
+
             tag_low = tag.lower()
             allowed_multi = ALLOWED_MULTI.get(
                 (node.tag.lower(), control_type), set()
@@ -437,6 +445,15 @@ class XmlInterpreter:
                     f"invalid value for {node.tag}: {value} ({detail})",
                 )
 
+    def _validate_label_brackets(self, node):
+        """Report a label block whose ']' is missing, as CGUIInfoLabel::Parse logs it."""
+        prefix = unclosed_label_block(node.text or "")
+        if prefix:
+            # the $INFO family ends the label there (GUIInfoLabel.cpp:429), the rest stay as text
+            effect = ("Kodi drops the rest of the label" if prefix.rstrip("[") in _LABEL_ENDING
+                      else "Kodi shows it as plain text")
+            self._add_issue(node, SEVERITY_ERROR, f"Missing ']' after {prefix} in <{node.tag}>: {effect}")
+
     def _validate_brackets(self, node, text: str):
         """Validate bracket matching in conditions."""
         if not text:
@@ -530,6 +547,8 @@ class XmlInterpreter:
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <variable> (only <value>)",
                 )
+            else:
+                self._validate_label_brackets(child)
         self._context_stack.pop()
 
     def _walk_map(self, node):
