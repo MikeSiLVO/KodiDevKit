@@ -69,6 +69,17 @@ class TestFileIntegrity(unittest.TestCase):
         rows = sorted(os.path.relpath(i["file"], self.skin_path) for i in self.issues() if "16-bit" in i["message"])
         self.assertEqual(rows, [os.path.join("media", "deep.png"), os.path.join("themes", "dark", "deep.png")])
 
+    def test_bom_in_any_text_file(self):
+        """A BOM is reported in strings.po and addon.xml, not only in window files."""
+        lang = os.path.join(self.skin_path, "language", "resource.language.en_gb")
+        os.makedirs(lang)
+        with open(os.path.join(lang, "strings.po"), "wb") as f:
+            f.write(b"\xef\xbb\xbfmsgid \"\"\n")
+        with open(os.path.join(self.skin_path, "addon.xml"), "wb") as f:
+            f.write(b"\xef\xbb\xbf" + ADDON_XML.encode())
+        rows = sorted(os.path.basename(i["file"]) for i in self.issues() if "BOM" in i["message"])
+        self.assertEqual(rows, ["addon.xml", "strings.po"])
+
     def test_crlf_reported(self):
         """A skin-authored file with Windows line endings is an error."""
         self.write("Home.xml", WINDOW_XML, crlf=True)

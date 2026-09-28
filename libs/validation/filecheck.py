@@ -27,21 +27,6 @@ class ValidationFileCheck:
         if not self.addon:
             return issues
 
-        xml_files = list(self.addon.get_xml_files())
-
-        if progress_callback:
-            progress_callback(f"Checking {len(xml_files)} files for BOM and line endings...")
-
-        # BOM check
-        for path in xml_files:
-            if check_bom(path):
-                issues.append({
-                    "message": f"found BOM. File: {os.path.basename(path)}",
-                    "file": path,
-                    "line": 1,
-                    "severity": SEVERITY_ERROR,
-                })
-
         # Text types only: binaries such as PNGs routinely contain 0D 0A and
         # would otherwise be reported as having Windows line endings.
         result = eol_info_from_path_patterns(
@@ -50,6 +35,19 @@ class ValidationFileCheck:
             includes=['.xml', '.po', '.txt', '.py', '.md'],
             excludes=['.svn', '.git'],
         )
+
+        if progress_callback:
+            progress_callback(f"Checking {len(result)} files for BOM and line endings...")
+
+        for path, _eol in result:
+            if check_bom(path):
+                issues.append({
+                    "message": f"found BOM. File: {os.path.basename(path)}",
+                    "file": path,
+                    "line": 1,
+                    "severity": SEVERITY_ERROR,
+                })
+
         for path, eol in result:
             if eol == '\r\n':
                 issues.append({
