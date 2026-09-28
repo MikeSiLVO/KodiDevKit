@@ -104,8 +104,10 @@ class ValidationFileCheck:
         root = self.addon.path
         if os.path.exists(os.path.join(root, ".git")):
             try:
-                out = subprocess.run(["git", "-C", root, "ls-files", "-s", "-z"], capture_output=True,
-                                     check=True).stdout.decode("utf-8", "replace")
+                # on Windows a console program opens a window that takes focus from the editor
+                out = subprocess.run(["git", "-C", root, "ls-files", "-s", "-z"], capture_output=True, check=True,
+                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                                     ).stdout.decode("utf-8", "replace")
                 # a PR ships what git tracks, with the mode git records
                 return [(entry.split("\t", 1)[1], entry.startswith("100755")) for entry in out.split("\0") if "\t" in entry]
             except (OSError, subprocess.CalledProcessError):
