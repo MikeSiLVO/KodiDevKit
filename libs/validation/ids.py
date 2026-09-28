@@ -15,7 +15,7 @@ from lxml import etree as ET
 from ..utils.validation import deduplicate_issues, resolve_include_content
 from ..utils.xml import file_needs_expansion, get_root_from_file, param_value
 from ..utils.expressions import get_param_names_in_context
-from .constants import SEVERITY_ERROR
+from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,33 @@ class ValidationIds:
         if not name or "script-skinshortcuts-includes.xml" in usage_file.replace("\\", "/").lower():
             return None
         return f"Window id: Please use {name} instead of {ref_id}"
+
+    def _custom_window_issues(self, folder, custom_windows):
+        """Custom windows Kodi refuses to load, or whose id sits outside the reviewed range."""
+        issues = []
+        by_id = {}
+        for window_file, window_id in sorted(custom_windows.items()):
+            path = os.path.join(self.addon.path, folder, window_file)
+            if window_id is None or window_id.startswith("root:"):
+                message = ("Custom window has no id, so Kodi does not load it" if window_id is None
+                           else f"Custom window root is <{window_id[5:]}>, not <window>, so Kodi does not load it")
+                issues.append((path, message, SEVERITY_ERROR))
+                continue
+            by_id.setdefault(window_id, []).append(window_file)
+            full_id = str(int(window_id) + 10000)
+            if full_id in self.window_ids:
+                name = self.window_names[self.window_ids.index(full_id)] or full_id
+                issues.append((path, f"Custom window id {window_id} is Kodi's {name} window, so Kodi "
+                                     f"does not load it", SEVERITY_ERROR))
+            elif not 1100 <= int(window_id) <= 1199:
+                issues.append((path, f"Custom window id {window_id} is outside 1100-1199", SEVERITY_WARNING))
+        for window_id, files in by_id.items():
+            for window_file in files if len(files) > 1 else ():
+                others = ", ".join(f for f in files if f != window_file)
+                issues.append((os.path.join(self.addon.path, folder, window_file),
+                               f"Custom window id {window_id} is also used by {others}; Kodi loads one",
+                               SEVERITY_ERROR))
+        return [{"message": m, "file": p, "line": 1, "severity": sev} for p, m, sev in issues]
 
     def _window_name_message(self, name):
         """Problem with a window name, or None when CWindowTranslator::TranslateWindow knows it."""
@@ -89,6 +116,8 @@ class ValidationIds:
         if self._validation_index:
             for folder in self.addon.xml_folders:
                 window_ids_in_skin = self._validation_index.get('window_ids', {}).get(folder, [])
+                listitems.extend(self._custom_window_issues(
+                    folder, self._validation_index.get('custom_windows', {}).get(folder, {})))
                 ids_referenced = self._validation_index.get('ids_referenced', {}).get(folder, {})
 
                 window_expanded_ids = self._validation_index.get('window_expanded_ids', {}).get(folder, {})

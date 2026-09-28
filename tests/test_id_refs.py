@@ -143,5 +143,21 @@ class TestScope(unittest.TestCase):
         self.assertEqual(self._messages(), ["Window name not recognized by Kodi: Hoem",
                                             "Window name not recognized by Kodi: programssettings"])
 
+    def test_custom_window_ids(self):
+        self._write("16x9/Home.xml", "<window><controls/></window>")
+        for name, root in (("Custom_A.xml", "<window>"), ("Custom_B.xml", '<window id="25">'),
+                           ("Custom_C.xml", '<window id="1150">'), ("Custom_D.xml", "<window><id>1150</id>"),
+                           ("Custom_E.xml", '<window id="1300">'), ("Custom_F.xml", '<window id="1101">')):
+            self._write(f"16x9/{name}", f"{root}<controls/></window>")
+        self._write("16x9/Custom_G.xml", '<dialog id="1102"><controls/></dialog>')
+        self.assertEqual(self._messages(), [
+            "Custom window has no id, so Kodi does not load it",
+            "Custom window id 1150 is also used by Custom_C.xml; Kodi loads one",
+            "Custom window id 1150 is also used by Custom_D.xml; Kodi loads one",
+            "Custom window id 1300 is outside 1100-1199",
+            "Custom window id 25 is Kodi's videos window, so Kodi does not load it",
+            "Custom window root is <dialog>, not <window>, so Kodi does not load it",
+        ])
+
 if __name__ == "__main__":
     unittest.main()

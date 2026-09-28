@@ -39,7 +39,7 @@ _WINDOW_SWITCH = re.compile(r"^\s*(?:Close|Dialog\.Close|ActivateWindow|ReplaceW
 
 def custom_window(root, filename):
     """Ids a custom window answers to and whether it is a modeless dialog; nothing otherwise."""
-    if not filename.lower().startswith("custom"):
+    if not filename.lower().startswith("custom") or root.tag.lower() != "window":
         return [], False
     raw = root.get("id")
     if raw is None:
@@ -87,6 +87,7 @@ class SkinIndex:
             'window_expanded_ids': {},
             'non_window_files': {},
             'custom_modeless_files': {},
+            'custom_windows': {},
             'include_files': {},
             'variables_defined': {},
             'images_referenced': {},
@@ -107,6 +108,7 @@ class SkinIndex:
             index['window_expanded_ids'][folder] = {}
             index['non_window_files'][folder] = set()
             index['custom_modeless_files'][folder] = set()
+            index['custom_windows'][folder] = {}
             include_file_paths = getattr(self.skin, 'include_files', {}).get(folder, [])
             index['include_files'][folder] = [os.path.basename(p) for p in include_file_paths]
             index['variables_defined'][folder] = {}
@@ -217,6 +219,8 @@ class SkinIndex:
                         index['non_window_files'][folder].add(window_file)
                     if results.get('custom_modeless'):
                         index['custom_modeless_files'][folder].add(window_file)
+                    if 'custom_id' in results:
+                        index['custom_windows'][folder][window_file] = results['custom_id']
 
                     if 'view_ids' in results:
                         index['view_ids'][folder].update(results['view_ids'])
@@ -338,6 +342,10 @@ class SkinIndex:
 
             window_ids, results['custom_modeless'] = custom_window(root, os.path.basename(path))
             results['window_ids'][folder].extend(window_ids)
+            if os.path.basename(path).lower().startswith("custom"):
+                results['custom_id'] = window_ids[0] if window_ids else None
+                if root.tag.lower() != "window":
+                    results['custom_id'] = "root:" + root.tag
 
             self._extract_fonts_from_xml(root, path, folder, results)
             self._extract_labels_from_xml(root, path, folder, results)
