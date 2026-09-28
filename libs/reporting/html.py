@@ -100,6 +100,7 @@ _SUBTYPE_RULES = [
     ("is not valid for", "INVALID TAG"),
     ("is not valid inside", "INVALID TAG"),
     ("invalid tag for", "INVALID TAG"),
+    ("XML parse error", "PARSE ERROR"),
     ("Invalid multiple tags", "DUPLICATE TAG"),
     ("Redundant <", "REDUNDANT"),
     ("invalid attribute for", "INVALID ATTR"),

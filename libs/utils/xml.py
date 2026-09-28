@@ -42,6 +42,18 @@ def _parse_xml_file(xml_file):
         return None
 
 
+def parse_error_issue(xml_file):
+    """Error row for a file that just failed to parse, at the line the parse error names."""
+    err = next((e for e in last_xml_errors if e["file"] == xml_file), None)
+    return {
+        "message": f"XML parse error: {err['message'] if err else 'file could not be parsed'}",
+        "line": err["line"] if err else 1,
+        "file": xml_file,
+        "severity": "error",
+        "type": "XML",
+    }
+
+
 def _extract_type_attr(text, attr_start, attr_end):
     """The type attribute inside the tag span, empty when it has none."""
     idx = text.find('type=', attr_start, attr_end)

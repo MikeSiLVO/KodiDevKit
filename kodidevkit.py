@@ -335,17 +335,9 @@ def _show_fatal_xml_phantom():
     fatal = getattr(INFOS, "_fatal_xml_error", None)
     if not fatal:
         return
-    from .libs.utils.xml import last_xml_errors
-    err = last_xml_errors[0] if last_xml_errors else None
-    line_num = err.get("line", 1) if err else 1
-    msg = err["message"] if err else "File could not be parsed"
-    issues = [{
-        "message": f"XML parse error: {msg}",
-        "line": line_num,
-        "file": fatal,
-        "severity": "error",
-        "type": "XML",
-    }]
+    from .libs.utils.xml import parse_error_issue
+    issues = [parse_error_issue(fatal)]
+    line_num = issues[0]["line"]
 
     def _open_and_show():
         window = sublime.active_window()
@@ -1706,28 +1698,11 @@ class KodiDevKit(sublime_plugin.EventListener):
 
             addon.reload(filename_full)
 
-            from .libs.utils.xml import last_xml_errors
+            from .libs.utils.xml import parse_error_issue
 
             self.root = get_root_from_file(filename_full)
             if self.root is None:
-                # Parse failed: surface the parse error inline as an error phantom.
-                if last_xml_errors:
-                    err = last_xml_errors[0]
-                    issues = [{
-                        "message": f"XML parse error: {err['message']}",
-                        "line": err.get("line", 1),
-                        "file": filename_full,
-                        "severity": "error",
-                        "type": "XML",
-                    }]
-                else:
-                    issues = [{
-                        "message": f"XML parse error: {os.path.basename(filename_full)} could not be parsed",
-                        "line": 1,
-                        "file": filename_full,
-                        "severity": "error",
-                        "type": "XML",
-                    }]
+                issues = [parse_error_issue(filename_full)]
 
                 def _show_parse_error():
                     self._clear_phantoms(view)
