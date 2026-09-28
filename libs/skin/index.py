@@ -4,11 +4,8 @@ from __future__ import annotations
 import copy
 import os
 import re
-import json
 import time
 import logging
-from pathlib import Path
-import threading
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
@@ -19,68 +16,44 @@ logger = logging.getLogger(__name__)
 
 _LABEL_TAGS = frozenset(['label', 'altlabel', 'label2', 'hinttext'])
 _LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[([0-9].*?)\]")
+_UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
 # window_bools in GUIInfoManager.cpp, whose number is a window id
-_WINDOW_REGEX = (r"(?:Window\.IsMedia|Window\.Is(?:Active|Visible|DialogTopmost|ModalDialogTopmost)?"
+_WINDOW_REGEX = (r"(?:Window\.IsMedia|Window\.Is(?:Active|Visible|Topmost|DialogTopmost|ModalDialogTopmost)?"
                  r"|Window\.(?:Previous|Next)|Dialog\.Close)\(([0-9]+)\)")
+# where Kodi reads a control id (GUIInfoManager.cpp:8527, GUIControlBuiltins.cpp:222)
+_CONTROL_REFS = (
+    (re.compile(r"\bControl\.(HasFocus|IsVisible|IsEnabled|GetLabel)\(\s*(\d+)\s*\)", re.I), 2),
+    (re.compile(r"\bControlGroup\(\s*(\d+)\s*\)", re.I), 1),
+    (re.compile(r"\bControlGroup\(\s*\d+\s*\)\.HasFocus\(\s*(\d+)\s*\)", re.I), 1),
+    (re.compile(r"\bContainer\(\s*(\d+)\s*\)", re.I), 1),
+    (re.compile(r"\b(?:Control\.(?:Message|Move|ResetGroupList|SetFocus|SetHidden|SetVisible)"
+                r"|SetFocus|PageUp|PageDown)\(\s*(\d+)\s*[,)]", re.I), 1),
+    (re.compile(r"\bSendClick\(\s*(\d+)\s*\)", re.I), 1),
+    (re.compile(r"\bSendClick\(\s*[^,()]+,\s*(\d+)\s*\)", re.I), 1),
+)
+# an action after one of these runs against a different window than the file it sits in
+_WINDOW_SWITCH = re.compile(r"^\s*(?:Close|Dialog\.Close|ActivateWindow|ReplaceWindow|Action\(\s*(?:back|close"
+                            r"|previousmenu)\s*\))\b", re.I)
 
-_INFOLABEL_WHITELIST = None
-_CONTROL_REGEX_PATTERN = None
-_EXCLUDED_FUNCTIONS = None
-_REGEX_LOCK = threading.Lock()
-
-
-def _load_infolabel_whitelist():
-    """Load the bundled list of infolabel functions whose number argument is no control id."""
-    global _INFOLABEL_WHITELIST
-    if _INFOLABEL_WHITELIST is not None:
-        return _INFOLABEL_WHITELIST
-
-    whitelist_path = Path(__file__).parent.parent.parent / 'data' / 'kodi_infolabel_functions.json'
-
-    try:
-        with open(whitelist_path, 'r', encoding='utf-8') as f:
-            _INFOLABEL_WHITELIST = json.load(f)
-            logger.debug(f"Loaded InfoLabel whitelist from {whitelist_path}")
-    except Exception as e:
-        logger.warning(f"Failed to load InfoLabel whitelist: {e}")
-        _INFOLABEL_WHITELIST = {'functions_with_integer_params': [], 'standalone_functions_with_integers': []}
-
-    return _INFOLABEL_WHITELIST
-
-
-def _build_control_regex():
-    """Build the Function(123) regex once, with the functions whose number is no control id."""
-    global _CONTROL_REGEX_PATTERN, _EXCLUDED_FUNCTIONS
-    with _REGEX_LOCK:
-        if _CONTROL_REGEX_PATTERN is None or _EXCLUDED_FUNCTIONS is None:
-            _EXCLUDED_FUNCTIONS = _excluded_functions()
-            _CONTROL_REGEX_PATTERN = r'(\w+(?:\.\w+)?)\(([0-9]+)\)'
-            logger.debug(f"Built control regex with {len(_EXCLUDED_FUNCTIONS)} excluded functions")
-    return _CONTROL_REGEX_PATTERN
-
-
-def _excluded_functions():
-    """Function names whose integer argument is not a control id."""
-    whitelist = _load_infolabel_whitelist()
-
-    # the window_bools map in GUIInfoManager.cpp, lowercased like every lookup
-    excluded_functions = {
-        'window', 'window.is', 'window.isactive', 'window.isvisible', 'window.ismedia',
-        'window.isdialogtopmost', 'window.ismodaldialogtopmost', 'window.previous', 'window.next',
-        'dialog.close'
-    }
-
-    for func_entry in whitelist.get('functions_with_integer_params', []):
-        function = func_entry.get('function', '')
-        for param in func_entry.get('params', []):
-            excluded_functions.add(param.lower())
-            excluded_functions.add(f"{function}.{param}".lower())
-
-    for func_entry in whitelist.get('standalone_functions_with_integers', []):
-        excluded_functions.add(func_entry['function'].lower())
-
-    excluded_functions.add('listitem')
-    return excluded_functions
+def custom_window(root, filename):
+    """Ids a custom window answers to and whether it is a modeless dialog; nothing otherwise."""
+    if not filename.lower().startswith("custom"):
+        return [], False
+    raw = root.get("id")
+    if raw is None:
+        raw = root.findtext("id")
+    kind = root.get("type")
+    if kind is None:
+        kind = root.findtext("type") or ""
+    # a dialog with <visible> is modeless unless marked modal (ApplicationSkinHandling.cpp:392)
+    modeless = (kind.strip().lower() == "dialog" and root.find("visible") is not None
+                and (root.get("modality") or "").lower() != "modal")
+    raw = (raw or "").strip()
+    if not raw.isdigit():
+        return [], modeless
+    # Kodi registers it as id + WINDOW_HOME and translates any id below that the same way
+    number = int(raw)
+    return [str(number), str(number + 10000)], modeless
 
 
 class SkinIndex:
@@ -111,6 +84,7 @@ class SkinIndex:
             'window_base_ids': {},
             'window_expanded_ids': {},
             'non_window_files': {},
+            'custom_modeless_files': {},
             'include_files': {},
             'variables_defined': {},
             'images_referenced': {},
@@ -130,6 +104,7 @@ class SkinIndex:
             index['window_base_ids'][folder] = {}
             index['window_expanded_ids'][folder] = {}
             index['non_window_files'][folder] = set()
+            index['custom_modeless_files'][folder] = set()
             include_file_paths = getattr(self.skin, 'include_files', {}).get(folder, [])
             index['include_files'][folder] = [os.path.basename(p) for p in include_file_paths]
             index['variables_defined'][folder] = {}
@@ -238,6 +213,8 @@ class SkinIndex:
                     index['window_base_ids'][folder][window_file] = results['base_ids']
                     if results.get('root_tag') != 'window':
                         index['non_window_files'][folder].add(window_file)
+                    if results.get('custom_modeless'):
+                        index['custom_modeless_files'][folder].add(window_file)
 
                     if 'view_ids' in results:
                         index['view_ids'][folder].update(results['view_ids'])
@@ -288,7 +265,8 @@ class SkinIndex:
 
                     expanded_ids = set()
                     for node in resolved.iter('control'):
-                        ctrl_id = node.get('id')
+                        # a param the call never passed is empty in Kodi
+                        ctrl_id = _UNKNOWN_PARAM.sub("", node.get('id') or "")
                         if ctrl_id and not is_dynamic_expression(ctrl_id):
                             expanded_ids.add(normalize_control_id(ctrl_id))
                     for node in resolved.iter('item'):
@@ -356,11 +334,8 @@ class SkinIndex:
                 'view_ids': set()
             }
 
-            if 'id' in root.attrib:
-                window_id = root.attrib['id']
-                if window_id:
-                    window_id = normalize_control_id(window_id)
-                    results['window_ids'][folder].append(window_id)
+            window_ids, results['custom_modeless'] = custom_window(root, os.path.basename(path))
+            results['window_ids'][folder].extend(window_ids)
 
             self._extract_fonts_from_xml(root, path, folder, results)
             self._extract_labels_from_xml(root, path, folder, results)
@@ -745,11 +720,6 @@ class SkinIndex:
             "sliderex", "panelcontainer", "gamewindow"
         }
 
-        if "id" in root.attrib:
-            window_id = root.attrib["id"]
-            if window_id not in index['window_ids'][folder]:
-                index['window_ids'][folder].append(window_id)
-
         view_types = {'list', 'panel', 'fixedlist', 'wraplist', 'epggrid'}
 
         for node in root.iter():
@@ -806,10 +776,13 @@ class SkinIndex:
                     continue
                 # an AlarmClock command runs later, maybe in another window
                 delayed = bool(re.search(r'\bAlarmClock\s*\(', text, re.IGNORECASE))
-                self._record_id_refs(text, node, path, folder, index, skip_controls=delayed)
+                after_switch = any(_WINDOW_SWITCH.match(prev.text or "")
+                                   for prev in node.itersiblings(tag_name, preceding=True))
+                self._record_id_refs(text, node, path, folder, index, skip_controls=delayed,
+                                     after_switch=after_switch)
 
     @staticmethod
-    def _record_id_refs(text, node, path, folder, index, skip_controls=False):
+    def _record_id_refs(text, node, path, folder, index, skip_controls=False, after_switch=False):
         """Record the window and control ids one condition or action text refers to."""
         refs = index['ids_referenced'][folder]
         line = getattr(node, 'sourceline', 0) or 0
@@ -821,14 +794,15 @@ class SkinIndex:
         if skip_controls:
             return
 
-        for match in re.finditer(_build_control_regex(), text, re.IGNORECASE):
-            function_name, control_id = match.group(1), match.group(2)
-            if not control_id:
-                continue
-            fn_lower = function_name.lower()
-            if _EXCLUDED_FUNCTIONS and fn_lower in _EXCLUDED_FUNCTIONS:
-                continue
-            context = {'control.isvisible': 'Control.IsVisible',
-                       'control.hasfocus': 'Control.HasFocus'}.get(fn_lower)
-            refs.setdefault(normalize_control_id(control_id), []).append(
-                {'file': path, 'line': line, 'type': 'control', 'context': context})
+        for pattern, group in _CONTROL_REFS:
+            for match in pattern.finditer(text):
+                control_id = normalize_control_id(match.group(group))
+                if control_id == "0":
+                    continue
+                context = None
+                if group == 2:
+                    context = {'isvisible': 'Control.IsVisible', 'hasfocus': 'Control.HasFocus'}.get(
+                        match.group(1).lower())
+                refs.setdefault(control_id, []).append(
+                    {'file': path, 'line': line, 'type': 'control', 'context': context,
+                     'after_switch': after_switch})

@@ -610,7 +610,7 @@ class TestWindowScoping(ValidationTestCase):
 
     def test_control_from_different_window_invalid(self):
         """Test that control from different window is correctly flagged."""
-        # DialogA defines control 100
+        # a modal dialog defines control 100
         dialog_a_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -619,10 +619,10 @@ class TestWindowScoping(ValidationTestCase):
         </control>
     </controls>
 </window>"""
-        with open(os.path.join(self.test_dir, "16x9", "DialogA.xml"), "w", encoding="utf-8") as f:
+        with open(os.path.join(self.test_dir, "16x9", "DialogVideoInfo.xml"), "w", encoding="utf-8") as f:
             f.write(dialog_a_xml)
 
-        # DialogB tries to reference control 100 (invalid!)
+        # another modal dialog resolves its own actions against itself
         dialog_b_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -631,16 +631,17 @@ class TestWindowScoping(ValidationTestCase):
         </control>
     </controls>
 </window>"""
-        with open(os.path.join(self.test_dir, "16x9", "DialogB.xml"), "w", encoding="utf-8") as f:
+        with open(os.path.join(self.test_dir, "16x9", "DialogMusicInfo.xml"), "w", encoding="utf-8") as f:
             f.write(dialog_b_xml)
 
         provider = InfoProvider()
+        provider.load_data("piers")
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # SHOULD flag ID 100 as undefined in DialogB
-        dialogb_issues = [i for i in issues if "DialogB.xml" in i.get("file", "") and "100" in i.get("message", "")]
-        self.assertTrue(len(dialogb_issues) > 0, "Should flag control 100 as undefined in DialogB.xml")
+        # SHOULD flag ID 100 as undefined in DialogMusicInfo
+        dialogb_issues = [i for i in issues if "DialogMusicInfo.xml" in i.get("file", "") and "100" in i.get("message", "")]
+        self.assertTrue(len(dialogb_issues) > 0, "Should flag control 100 as undefined in DialogMusicInfo.xml")
 
     def test_nested_includes_valid(self):
         """Test that controls from nested includes are valid."""

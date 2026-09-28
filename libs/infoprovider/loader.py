@@ -25,6 +25,7 @@ class LoaderMixin:
     WINDOW_FILENAMES: list
     WINDOW_NAMES: list
     WINDOW_IDS: list
+    MODELESS_IDS: set
     builtins: list
     conditions: list
     template_attribs: dict
@@ -77,6 +78,7 @@ class LoaderMixin:
         self.WINDOW_FILENAMES = [item[2] for item in WINDOW_MAP]
         self.WINDOW_NAMES = [item[0] for item in WINDOW_MAP]
         self.WINDOW_IDS = [str(item[1]) for item in WINDOW_MAP]
+        self.MODELESS_IDS = {str(item[1]) for item in WINDOW_MAP if item[3] == "modeless"}
 
         builtins_elem = root.find("builtins")
         self.builtins = [

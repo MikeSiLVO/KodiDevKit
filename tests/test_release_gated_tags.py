@@ -164,7 +164,7 @@ class TestPlayerBookmarks(ReleaseGatedTestCase):
 
 
 class TestWindowTableShape(unittest.TestCase):
-    """`windows.json` maps one name to one id, which the id lookups rely on."""
+    """`windows.json` gives each name one id; an id may carry aliases or no name at all."""
 
     # Resolved from the engine package, which sits beside data/ in both layouts.
     DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(libs.__file__))), "data")
@@ -174,22 +174,28 @@ class TestWindowTableShape(unittest.TestCase):
         with open(os.path.join(self.DATA, release, "windows.json"), encoding="utf-8") as f:
             return json.load(f)
 
-    def test_ids_and_names_are_unique(self):
+    def test_names_are_unique(self):
         for release in ("omega", "piers"):
-            rows = self._rows(release)
-            ids = [r[1] for r in rows]
-            names = [r[0] for r in rows]
-            self.assertEqual(len(ids), len(set(ids)), f"{release} has a duplicate window id")
+            names = [r[0] for r in self._rows(release) if r[0] is not None]
             self.assertEqual(len(names), len(set(names)), f"{release} has a duplicate window name")
 
-    def test_rows_are_name_id_filename(self):
+    def test_nameless_ids_are_listed_once(self):
+        for release in ("omega", "piers"):
+            rows = self._rows(release)
+            named = {r[1] for r in rows if r[0] is not None}
+            nameless = [r[1] for r in rows if r[0] is None]
+            self.assertEqual(len(nameless), len(set(nameless)), release)
+            self.assertFalse(named & set(nameless), release)
+
+    def test_rows_are_name_id_filename_kind(self):
         for release in ("omega", "piers"):
             for row in self._rows(release):
-                self.assertEqual(len(row), 3, row)
-                self.assertIsInstance(row[0], str)
+                self.assertEqual(len(row), 4, row)
+                self.assertIsInstance(row[0], (str, type(None)))
                 self.assertIsInstance(row[1], int)
                 # Blank where Kodi resolves the window to no XML of its own.
                 self.assertIsInstance(row[2], str)
+                self.assertIn(row[3], ("window", "modal", "modeless"))
 
 
 if __name__ == "__main__":

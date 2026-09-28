@@ -904,7 +904,8 @@ class KodiDevKit(sublime_plugin.EventListener):
 
         window_names = getattr(INFOS, "WINDOW_NAMES", [])
         for item in window_names:
-            items.append([f"{item}\twindow", item])
+            if item:
+                items.append([f"{item}\twindow", item])
 
         elapsed = time.time() - start
         if elapsed > 0.2:

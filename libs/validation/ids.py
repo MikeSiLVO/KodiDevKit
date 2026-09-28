@@ -22,12 +22,39 @@ logger = logging.getLogger(__name__)
 class ValidationIds:
     """Validates control and window IDs in Kodi skins."""
 
-    def __init__(self, addon, window_ids, window_names, resolve_include_fn=None, validation_index=None):
+    def __init__(self, addon, window_ids, window_names, resolve_include_fn=None, validation_index=None,
+                 window_filenames=(), modeless_ids=()):
         self.addon = addon
         self.window_ids = window_ids
         self.window_names = window_names
+        self.window_filenames = window_filenames
+        self.modeless_ids = modeless_ids
         self._resolve_include = resolve_include_fn
         self._validation_index = validation_index
+
+    def _window_ref_message(self, ref_id, window_ids_in_skin, usage_file):
+        """Problem with a window id reference, or None when it resolves and has no name to use."""
+        if ref_id in window_ids_in_skin:
+            return None
+        # WindowTranslator reads any id up to 9999 as WINDOW_HOME plus that id
+        full_id = str(int(ref_id) + 10000) if ref_id.isdigit() and int(ref_id) <= 9999 else ref_id
+        if full_id in window_ids_in_skin:
+            return None
+        if full_id not in self.window_ids:
+            return f"Window ID not defined: {ref_id}"
+        name = self.window_names[self.window_ids.index(full_id)]
+        if not name or "script-skinshortcuts-includes.xml" in usage_file.replace("\\", "/").lower():
+            return None
+        return f"Window id: Please use {name} instead of {ref_id}"
+
+    def _modeless_files(self, custom, window_files):
+        """Window files Kodi may open modeless; addon windows count, since their type is unknown."""
+        kodi_names = {name.lower() for name in self.window_filenames if name}
+        modeless_names = {name.lower() for name, wid in zip(self.window_filenames, self.window_ids)
+                          if name and wid in self.modeless_ids}
+        return {f for f in window_files
+                if f in custom or f.lower() in modeless_names
+                or (f.lower() not in kodi_names and not f.lower().startswith("custom"))}
 
     def check(self, progress_callback=None):
         """
@@ -57,81 +84,54 @@ class ValidationIds:
                 window_to_ids = {}
                 for window_file in window_expanded_ids:
                     expanded_ids = window_expanded_ids.get(window_file, set())
-                    if expanded_ids:
-                        window_to_ids[window_file] = set(expanded_ids)
-                    else:
-                        # Fall back to raw base IDs if resolution produced nothing
-                        window_to_ids[window_file] = set(window_base_ids.get(window_file, set()))
+                    window_to_ids[window_file] = set(expanded_ids or window_base_ids.get(window_file, set()))
+
+                modeless_files = self._modeless_files(
+                    self._validation_index.get('custom_modeless_files', {}).get(folder, set()), window_to_ids)
+                builtin_controls = self._validation_index.get('builtin_controls', {})
+                builtin_filename_map = self._validation_index.get('builtin_filename_map', {})
+                defined_anywhere = set(self._validation_index.get('ids_defined', {}).get(folder, {}))
+                for ids in window_to_ids.values():
+                    defined_anywhere |= ids
+                for ids in builtin_controls.values():
+                    defined_anywhere |= set(ids)
+                all_view_ids = set()
+                for folder_views in self._validation_index.get('view_ids', {}).values():
+                    all_view_ids.update(folder_views)
+                # shared files and non-window roots have no control scope of their own
+                unscoped = (set(self._validation_index.get('include_files', {}).get(folder, []))
+                            | self._validation_index.get('non_window_files', {}).get(folder, set()))
 
                 for ref_id, usages in ids_referenced.items():
                     for usage in usages:
-                        usage_type = usage.get('type', 'control')
                         usage_file = usage.get('file', '')
-
-                        if usage_type == 'window':
-                            if ref_id in window_ids_in_skin:
-                                continue  # Valid - window ID defined in this skin
-                            elif ref_id in self.window_ids:
-                                # Window ID is from Kodi core - suggest using name instead
-                                if "script-skinshortcuts-includes.xml" not in usage_file.replace("\\", "/").lower():
-                                    windowname = self.window_names[self.window_ids.index(ref_id)]
-                                    listitems.append({
-                                        "message": f"Window id: Please use {windowname} instead of {ref_id}",
-                                        "file": usage_file,
-                                        "line": usage.get('line', 0),
-                                        "severity": SEVERITY_ERROR,
-                                    })
-                            else:
-                                listitems.append({
-                                    "message": f"Window ID not defined: {ref_id}",
-                                    "file": usage_file,
-                                    "line": usage.get('line', 0),
-                                    "severity": SEVERITY_ERROR,
-                                })
+                        if usage.get('type', 'control') == 'window':
+                            message = self._window_ref_message(ref_id, window_ids_in_skin, usage_file)
+                        elif not ref_id:
+                            continue
                         else:
-                            if not ref_id:
-                                continue
-
                             usage_basename = os.path.basename(usage_file)
-
-                            # Shared files (includes) and non-window roots (timers, fonts)
-                            # have no control scope -- their control-ID refs are cross-window.
-                            include_files_list = self._validation_index.get('include_files', {}).get(folder, [])
-                            non_window_files = self._validation_index.get('non_window_files', {}).get(folder, set())
-                            if usage_basename in include_files_list or usage_basename in non_window_files:
+                            window_name = builtin_filename_map.get(usage_basename.lower())
+                            if (usage_basename in unscoped
+                                    or ref_id in window_to_ids.get(usage_basename, set())
+                                    or ref_id in builtin_controls.get(window_name, ())
+                                    or (usage.get('context') in ('Control.IsVisible', 'Control.HasFocus')
+                                        and ref_id in all_view_ids)):
                                 continue
-
-                            window_file = usage_basename
-                            window_ids_set = window_to_ids.get(window_file, set())
-
-                            if ref_id not in window_ids_set:
-                                builtin_controls = self._validation_index.get('builtin_controls', {})
-                                builtin_filename_map = self._validation_index.get('builtin_filename_map', {})
-
-                                window_name = builtin_filename_map.get(window_file.lower())
-
-                                is_builtin = False
-                                if window_name and window_name in builtin_controls:
-                                    if ref_id in builtin_controls[window_name]:
-                                        is_builtin = True
-
-                                usage_context = usage.get('context')
-                                is_global_scope = usage_context in ('Control.IsVisible', 'Control.HasFocus')
-                                is_view_detection = False
-                                if is_global_scope:
-                                    all_view_ids = set()
-                                    for folder_views in self._validation_index.get('view_ids', {}).values():
-                                        all_view_ids.update(folder_views)
-                                    if ref_id in all_view_ids:
-                                        is_view_detection = True
-
-                                if not is_builtin and not is_view_detection:
-                                    listitems.append({
-                                        "message": f"Control ID {ref_id} not defined in {window_file}'s scope",
-                                        "file": usage_file,
-                                        "line": usage.get('line', 0),
-                                        "severity": SEVERITY_ERROR,
-                                    })
+                            if ref_id not in defined_anywhere:
+                                message = f"Control ID {ref_id} not defined"
+                            elif usage_basename in modeless_files or usage.get('after_switch'):
+                                # Kodi resolves it in the topmost modal dialog or the active window
+                                continue
+                            else:
+                                message = f"Control ID {ref_id} not defined in {usage_basename}'s scope"
+                        if message:
+                            listitems.append({
+                                "message": message,
+                                "file": usage_file,
+                                "line": usage.get('line', 0),
+                                "severity": SEVERITY_ERROR,
+                            })
 
             return deduplicate_issues(listitems)
 
