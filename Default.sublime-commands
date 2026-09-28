@@ -27,6 +27,7 @@
     {"caption": "KodiDevKit: Check Images", "command": "kodidevkit_check_variables", "args": { "check_type": "image" }},
     {"caption": "KodiDevKit: Check Control / Window IDs", "command": "kodidevkit_check_variables", "args": { "check_type": "id"}},
     {"caption": "KodiDevKit: Check for invalid Nodes / Attributes", "command": "kodidevkit_check_variables", "args": { "check_type": "general"}},
+    {"caption": "KodiDevKit: Check File Integrity", "command": "kodidevkit_check_variables", "args": { "check_type": "filecheck"}},
     {"caption": "KodiDevKit: Generate Validation Report", "command": "kodidevkit_show_validation_report"},
     {"caption": "KodiDevKit: Open Validation Report", "command": "kodidevkit_open_validation_report"},
 

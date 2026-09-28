@@ -32,6 +32,8 @@ CHECK_LABELS = {
     "file": "File",
     "variable": "Variables",
     "include": "Includes",
+    "map": "Maps",
+    "image": "Images",
     "font": "Fonts",
     "label": "Labels",
     "id": "IDs",
