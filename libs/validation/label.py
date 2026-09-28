@@ -396,14 +396,25 @@ class ValidationLabel:
         if progress_callback:
             progress_callback(f"Checking {len(refs)} label references against translation files...")
 
-        label_ids = []
+        skin_po = {id(po) for po in getattr(self.addon, "po_files", None) or []}
+        skin_ids, core_ids = set(), set()
         for po_file in self._get_po_files():
-            label_ids += [entry.msgctxt for entry in po_file]
+            (skin_ids if id(po_file) in skin_po else core_ids).update(entry.msgctxt for entry in po_file)
+        # Kodi 22 reads a skin's own strings only in this range (addons/Skin.h:32)
+        skin_range_only = getattr(self.addon, "api_version", None) not in (None, "omega")
         for ref in refs:
-            if "#" + ref["name"] not in label_ids:
+            key = "#" + ref["name"]
+            outside = ref["name"].isdigit() and not 31000 <= int(ref["name"]) <= 31999
+            if key not in skin_ids | core_ids:
                 ref["message"] = "Label not defined: %s" % ref["name"]
-                ref["severity"] = SEVERITY_ERROR
-                listitems.append(ref)
+            elif skin_range_only and outside and key in skin_ids:
+                effect = "Kodi's own string" if key in core_ids else "nothing"
+                ref["message"] = (f"Skin string {ref['name']} is outside 31000-31999, so Kodi 22 shows "
+                                  f"{effect} for it")
+            else:
+                continue
+            ref["severity"] = SEVERITY_ERROR
+            listitems.append(ref)
 
         error_count = len(listitems)
         if progress_callback:
