@@ -295,7 +295,7 @@ class ValidationInclude:
             # IMPORTANT: Parse Font.xml fresh (bypassing cache) because skin.get_fonts()
             # modifies the cached root in-place by expanding includes.
             # We need the ORIGINAL XML with <include> tags intact to detect usage.
-            for fname in ("Font.xml", "font.xml", "Fonts.xml"):
+            for fname in ("Font.xml", "font.xml"):
                 font_path = os.path.join(self.addon.path, folder, fname)
                 if not os.path.isfile(font_path):
                     continue

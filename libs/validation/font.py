@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)
 REQUIRED_FONTS = {"font13"}
 
 
-def _undefined_font_issue(name, defined, folded, file, line):
+def _undefined_font_issue(name, defined, folded, file, line, unloaded=()):
     """Issue for a used font name not defined exactly, or None when it is."""
+    if name.casefold() in unloaded:
+        return {"message": f"Font '{name}' is never loaded: Kodi only loads .ttf fonts",
+                "file": file, "line": line, "severity": SEVERITY_ERROR}
     if name in defined:
         return None
     if name.lower() in ("-", "noop"):
@@ -168,7 +171,8 @@ class ValidationFont:
                         if not ext:
                             issues.append(row(f"Warning: font filename has no extension: '{filename}'", file_src, fn_line, SEVERITY_WARNING))
                         elif ext.lower() != ".ttf":
-                            issues.append(row(f"Warning: Non-TTF font file '{filename}' for '{name or '?'}'", file_src, fn_line, SEVERITY_WARNING))
+                            issues.append(row(f"Kodi only loads .ttf fonts, so '{name or '?'}' ({filename}) is never "
+                                              f"loaded", file_src, fn_line))
 
         for folder in getattr(self.addon, "xml_folders", []):
             fontsets = self._parse_fontsets(folder)
@@ -248,7 +252,8 @@ class ValidationFont:
                             continue
                         first_usage = usages[0] if usages else {}
                         issue = _undefined_font_issue(font_name, fonts_defined, folded,
-                                                      first_usage.get('file', ''), first_usage.get('line', 0))
+                                                      first_usage.get('file', ''), first_usage.get('line', 0),
+                                                      self._unloaded_fonts(folder))
                         if issue:
                             issues.append(issue)
 
@@ -270,7 +275,7 @@ class ValidationFont:
                         used.add(name if name in defined else folded.get(name.casefold(), name))
                         if is_dynamic_expression(name):
                             continue
-                        issue = _undefined_font_issue(name, defined, folded, path, line)
+                        issue = _undefined_font_issue(name, defined, folded, path, line, self._unloaded_fonts(folder))
                         if issue:
                             issues.append(issue)
 
@@ -302,11 +307,22 @@ class ValidationFont:
 
         return issues or [{"message": "No font issues found", "file": "", "line": 0}]
 
+    def _unloaded_fonts(self, folder):
+        """Casefolded names whose every definition names a file Kodi will not load, as not .ttf."""
+        loads, skips = set(), set()
+        for font in (getattr(self.addon, "fonts", None) or {}).get(folder, []) or []:
+            name = (font.get("name") or "").strip().casefold()
+            filename = (font.get("filename") or "").strip()
+            if not name or not filename or is_dynamic_expression(filename):
+                continue
+            # URIUtils::HasExtension compares the lowercased name (GUIFontManager.cpp:604)
+            (loads if filename.lower().endswith(".ttf") else skips).add(name)
+        return skips - loads
+
     def _parse_fontsets(self, folder):
         """Return list of fontset dicts with resolved includes."""
         out = []
         candidates = [
-            os.path.join(self.addon.path, folder, "Fonts.xml"),
             os.path.join(self.addon.path, folder, "Font.xml"),
             os.path.join(self.addon.path, folder, "font.xml"),
         ]

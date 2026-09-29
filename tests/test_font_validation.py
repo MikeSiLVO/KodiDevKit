@@ -540,6 +540,20 @@ class TestFontValidation(unittest.TestCase):
         self.assertIn("'noop' is not an empty font in Kodi; leave the tag out", messages)
         self.assertFalse([m for m in messages if "not defined" in m])
 
+    def test_non_ttf_font_is_never_loaded(self):
+        """Kodi loads only .ttf (any case), so an .otf font is an error where defined and where used."""
+        self.create_font_file("font.otf")
+        self.create_font_file("Big.TTF")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name>'
+                              '<filename>Big.TTF</filename></font>'
+                              '<font><name>Fancy</name><filename>font.otf</filename></font></fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>Fancy</font>'
+                               '</control></controls></window>')
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertIn("Kodi only loads .ttf fonts, so 'Fancy' (font.otf) is never loaded", messages)
+        self.assertIn("Font 'Fancy' is never loaded: Kodi only loads .ttf fonts", messages)
+        self.assertFalse([m for m in messages if "font13" in m or "Big.TTF" in m], messages)
+
     def test_defined_but_unused_font(self):
         """Test detection of font defined but never used."""
         self.create_font_file("font.ttf")
