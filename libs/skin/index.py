@@ -22,6 +22,9 @@ _LABEL_BLOCK_MARKERS = ("$INFO[", "$VAR[", "$PARAM[", "$NUMBER[", "$ADDON[", "$M
 _LABEL_ATTRS = {"viewtype": ("label",), "fontset": ("idloc",), "label": ("fallback",), "label2": ("fallback",),
                 "altlabel": ("fallback",), "hinttext": ("fallback",)}
 _UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
+_NAVIGATION_TAGS = ("onup", "ondown", "onleft", "onright", "onnext", "onprev")
+_ACTION_TAGS = frozenset(_NAVIGATION_TAGS + ("onclick", "onback", "onfocus", "onunfocus", "oninfo", "ontextchange",
+                                             "altclick", "onload", "onunload"))
 # arguments Kodi passes through CWindowTranslator: window_bools, Window(x) and the window builtins
 _WINDOW_REFS = re.compile(
     r"\b(?:Window\.(?:IsMedia|Is|IsActive|IsVisible|IsTopmost|IsDialogTopmost|IsModalDialogTopmost"
@@ -93,6 +96,7 @@ class SkinIndex:
             'non_window_files': {},
             'custom_modeless_files': {},
             'custom_windows': {},
+            'custom_dialog_files': {},
             'include_files': {},
             'variables_defined': {},
             'images_referenced': {},
@@ -114,6 +118,7 @@ class SkinIndex:
             index['non_window_files'][folder] = set()
             index['custom_modeless_files'][folder] = set()
             index['custom_windows'][folder] = {}
+            index['custom_dialog_files'][folder] = set()
             include_file_paths = getattr(self.skin, 'include_files', {}).get(folder, [])
             index['include_files'][folder] = [os.path.basename(p) for p in include_file_paths]
             index['variables_defined'][folder] = {}
@@ -224,6 +229,8 @@ class SkinIndex:
                         index['non_window_files'][folder].add(window_file)
                     if results.get('custom_modeless'):
                         index['custom_modeless_files'][folder].add(window_file)
+                    if results.get('custom_dialog'):
+                        index['custom_dialog_files'][folder].add(window_file)
                     if 'custom_id' in results:
                         index['custom_windows'][folder][window_file] = results['custom_id']
 
@@ -356,6 +363,8 @@ class SkinIndex:
             results['window_ids'][folder].extend(window_ids)
             if os.path.basename(path).lower().startswith("custom"):
                 results['custom_id'] = window_ids[0] if window_ids else None
+                kind = root.get("type") or root.findtext("type") or ""
+                results['custom_dialog'] = kind.strip().lower() == "dialog"
                 if root.tag.lower() != "window":
                     results['custom_id'] = "root:" + root.tag
 
@@ -774,7 +783,15 @@ class SkinIndex:
         for node in root.xpath(".//*[@condition]"):
             self._record_id_refs(node.attrib.get("condition", ""), node, path, folder, index)
 
-        bracket_tags = ["visible", "enable", "usealttexture", "selected", "onclick", "onback"]
+        for node in root.iter(*_NAVIGATION_TAGS):
+            target = (node.text or "").strip()
+            # a bare number is where focus moves, in the control's own window (GUIAction.cpp:90)
+            if target.isdigit() and target != "0":
+                index['ids_referenced'][folder].setdefault(normalize_control_id(target), []).append(
+                    {'file': path, 'line': getattr(node, 'sourceline', 0) or 0, 'type': 'control',
+                     'context': 'navigation'})
+
+        bracket_tags = ["visible", "enable", "usealttexture", "selected"] + sorted(_ACTION_TAGS)
         for tag_name in bracket_tags:
             for node in root.xpath(f".//{tag_name}"):
                 text = (node.text or "").strip()
@@ -785,10 +802,10 @@ class SkinIndex:
                 after_switch = any(_WINDOW_SWITCH.match(prev.text or "")
                                    for prev in node.itersiblings(tag_name, preceding=True))
                 self._record_id_refs(text, node, path, folder, index, skip_controls=delayed,
-                                     after_switch=after_switch)
+                                     after_switch=after_switch, unload=tag_name == "onunload")
 
     @staticmethod
-    def _record_id_refs(text, node, path, folder, index, skip_controls=False, after_switch=False):
+    def _record_id_refs(text, node, path, folder, index, skip_controls=False, after_switch=False, unload=False):
         """Record the window and control ids one condition or action text refers to."""
         refs = index['ids_referenced'][folder]
         line = getattr(node, 'sourceline', 0) or 0
@@ -814,4 +831,4 @@ class SkinIndex:
                         match.group(1).lower())
                 refs.setdefault(control_id, []).append(
                     {'file': path, 'line': line, 'type': 'control', 'context': context,
-                     'after_switch': after_switch})
+                     'after_switch': after_switch, 'unload': unload})

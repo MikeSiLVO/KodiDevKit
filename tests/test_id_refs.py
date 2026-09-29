@@ -159,5 +159,26 @@ class TestScope(unittest.TestCase):
             "Custom window root is <dialog>, not <window>, so Kodi does not load it",
         ])
 
+    def test_navigation_targets(self):
+        self._write("16x9/Home.xml", '<window><controls><control type="button" id="50"><onup>51</onup>'
+                                     '<ondown>50</ondown><onclick>SetFocus(52)</onclick></control>'
+                                     '<control type="button" id="60"/></controls></window>')
+        self._write("16x9/DialogSeekBar.xml", '<window><controls><control type="button" id="7">'
+                                              '<onleft>60</onleft></control></controls></window>')
+        self.assertEqual(self._messages(), [
+            "Control ID 51 not defined",
+            "Control ID 52 not defined",
+            "Control ID 60 not defined in DialogSeekBar.xml's scope",
+        ])
+
+    def test_dialog_onunload_targets_the_window_below(self):
+        self._write("16x9/Home.xml", '<window><onunload>SetFocus(61)</onunload><controls>'
+                                     '<control type="button" id="50"/></controls></window>')
+        self._write("16x9/MyVideoNav.xml", '<window><controls><control type="button" id="61"/>'
+                                           '</controls></window>')
+        self._write("16x9/DialogMusicInfo.xml", '<window><onunload>SetFocus(50)</onunload><controls>'
+                                                '<control type="button" id="7"/></controls></window>')
+        self.assertEqual(self._messages(), ["Control ID 61 not defined in Home.xml's scope"])
+
 if __name__ == "__main__":
     unittest.main()

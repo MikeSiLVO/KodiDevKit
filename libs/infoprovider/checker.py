@@ -79,6 +79,7 @@ class CheckerMixin:
     WINDOW_FILENAMES: list
     OBSOLETE_WINDOW_FILES: dict
     MODELESS_IDS: set
+    DIALOG_IDS: set
     _variable_cache: dict
 
     def get_po_files(self) -> list:
@@ -292,7 +293,8 @@ class CheckerMixin:
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES,
                                 resolve_include_fn=self.resolve_xml, validation_index=index,
-                                window_filenames=self.WINDOW_FILENAMES, modeless_ids=self.MODELESS_IDS)
+                                window_filenames=self.WINDOW_FILENAMES, modeless_ids=self.MODELESS_IDS,
+                                dialog_ids=self.DIALOG_IDS)
         return self._muted("IDs", checker.check(progress_callback=progress_callback))
 
     def check_labels(self, progress_callback=None):

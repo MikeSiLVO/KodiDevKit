@@ -26,6 +26,7 @@ class LoaderMixin:
     WINDOW_NAMES: list
     WINDOW_IDS: list
     MODELESS_IDS: set
+    DIALOG_IDS: set
     OBSOLETE_WINDOW_FILES: dict
     builtins: list
     conditions: list
@@ -86,6 +87,7 @@ class LoaderMixin:
         self.WINDOW_NAMES = [item[0] for item in WINDOW_MAP]
         self.WINDOW_IDS = [str(item[1]) for item in WINDOW_MAP]
         self.MODELESS_IDS = {str(item[1]) for item in WINDOW_MAP if item[3] == "modeless"}
+        self.DIALOG_IDS = {str(item[1]) for item in WINDOW_MAP if item[3] != "window"}
         self.OBSOLETE_WINDOW_FILES = OBSOLETE
 
         builtins_elem = root.find("builtins")

@@ -23,12 +23,13 @@ class ValidationIds:
     """Validates control and window IDs in Kodi skins."""
 
     def __init__(self, addon, window_ids, window_names, resolve_include_fn=None, validation_index=None,
-                 window_filenames=(), modeless_ids=()):
+                 window_filenames=(), modeless_ids=(), dialog_ids=()):
         self.addon = addon
         self.window_ids = window_ids
         self.window_names = window_names
         self.window_filenames = window_filenames
         self.modeless_ids = modeless_ids
+        self.dialog_ids = dialog_ids
         self._resolve_include = resolve_include_fn
         self._validation_index = validation_index
 
@@ -130,6 +131,10 @@ class ValidationIds:
 
                 modeless_files = self._modeless_files(
                     self._validation_index.get('custom_modeless_files', {}).get(folder, set()), window_to_ids)
+                dialog_names = {name.lower() for name, wid in zip(self.window_filenames, self.window_ids)
+                                if name and wid in self.dialog_ids}
+                dialog_files = modeless_files | {f for f in window_to_ids if f.lower() in dialog_names} | set(
+                    self._validation_index.get('custom_dialog_files', {}).get(folder, set()))
                 builtin_controls = self._validation_index.get('builtin_controls', {})
                 builtin_filename_map = self._validation_index.get('builtin_filename_map', {})
                 defined_anywhere = set(self._validation_index.get('ids_defined', {}).get(folder, {}))
@@ -162,9 +167,12 @@ class ValidationIds:
                                     or (usage.get('context') in ('Control.IsVisible', 'Control.HasFocus')
                                         and ref_id in all_view_ids)):
                                 continue
+                            # a dialog leaves the stack before its onunload runs (GUIDialog.cpp:106)
+                            unload_below = usage.get('unload') and usage_basename in dialog_files
                             if ref_id not in defined_anywhere:
                                 message = f"Control ID {ref_id} not defined"
-                            elif usage_basename in modeless_files or usage.get('after_switch'):
+                            elif (usage.get('context') != 'navigation'
+                                  and (usage_basename in modeless_files or usage.get('after_switch') or unload_below)):
                                 # Kodi resolves it in the topmost modal dialog or the active window
                                 continue
                             else:
