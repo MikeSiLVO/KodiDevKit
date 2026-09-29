@@ -294,6 +294,29 @@ class TestBoolAttributes(unittest.TestCase):
             'reverse="false" still reverses: Kodi turns it on whenever the attribute is present',
         ])
 
+class TestNumberFields(unittest.TestCase):
+    """A name left in a number field is an undefined constant or a field Kodi never substitutes."""
+
+    def _messages(self, runtime=False):
+        attribs = {"label": {t: {} for t in ("width", "itemgap", "bordersize", "centerleft", "scroll")}}
+        values = {"label": {t: "int" for t in ("width", "itemgap", "bordersize", "centerleft", "scroll")}}
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values, runtime_constants=runtime)
+        return sorted((i["severity"], i["message"]) for i in interp.interpret(_parse("""
+        <window><controls><control type="label">
+            <width>MainWidth</width><itemgap>100%</itemgap><bordersize>12,0,12,0</bordersize>
+            <centerleft>50%</centerleft><scroll>Gap</scroll>
+        </control></controls></window>""")))
+
+    def test_names(self):
+        self.assertEqual(self._messages(), [
+            ("error", "<scroll> value Gap: Kodi does not substitute constants in <scroll>"),
+            ("error", "<width> value MainWidth is not a number or a defined constant"),
+        ])
+
+    def test_runtime_generator_softens_undefined(self):
+        self.assertIn(("warning", "<width> value MainWidth is not a defined constant, unless a runtime "
+                                  "generator adds it"), self._messages(runtime=True))
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 

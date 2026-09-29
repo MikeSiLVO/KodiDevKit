@@ -11,6 +11,7 @@ resolution, and default application), so it sees exactly what Kodi sees.
 from __future__ import annotations
 
 import logging
+import re
 from enum import Enum, auto
 
 from .hierarchy import (
@@ -52,8 +53,10 @@ from ..utils.expressions import (
     is_dynamic_expression as _is_dynamic,
     contains_dynamic_expression as _contains_dynamic,
     is_number as _is_number,
+    extract_number_value,
     unclosed_label_block,
 )
+from ..skin.include import SkinInclude
 from ..utils.xml import check_brackets as _check_brackets
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 
@@ -125,11 +128,15 @@ class XmlInterpreter:
         template_values: dict | None = None,
         file_path: str = "",
         color_labels: set | None = None,
+        runtime_constants: bool = False,
+        constants: set | frozenset = frozenset(),
     ):
         self.template_attribs = template_attribs or {}
         self.template_values = template_values or {}
         self.file_path = file_path
         self.color_labels = color_labels or set()
+        self.runtime_constants = runtime_constants
+        self.constants = constants
         self.issues: list[dict] = []
         self._context_stack: list[Context] = []
 
@@ -332,7 +339,9 @@ class XmlInterpreter:
                 continue
 
             tmpl_val = values.get(tag)
-            if child.text and tmpl_val:
+            if child.text and tmpl_val in ("int", "position"):
+                self._validate_number(child, tag, False, child.text, tmpl_val)
+            elif child.text and tmpl_val:
                 self._validate_enum_value(child, child.text, tmpl_val)
 
             if tag in NOOP_TAGS:
@@ -469,10 +478,37 @@ class XmlInterpreter:
                 f"Brackets do not match: {condition}",
             )
 
+    def _validate_number(self, node, name: str, is_attr: bool, value: str, value_type: str):
+        """Report a number field left holding a name Kodi cannot read as a number."""
+        text = value.strip()
+        where = name if is_attr else f"<{name}>"
+        if not text or _is_dynamic(text) or _contains_dynamic(text) or extract_number_value(text):
+            return
+        # width and height take auto (GUIControlFactory::GetDimension)
+        if not is_attr and name in ("width", "height") and text.lower().startswith("auto"):
+            return
+        if _is_number(text.rstrip("%r") if value_type == "position" else text):
+            return
+        if not self._looks_like_unresolved(text):
+            # tag text also takes %, r and comma lists that the value types do not describe
+            if is_attr:
+                self._add_issue(node, SEVERITY_ERROR, f"invalid integer value for {where}: {text}")
+        elif name not in (SkinInclude.constant_attribs if is_attr else SkinInclude.constant_nodes):
+            self._add_issue(node, SEVERITY_ERROR,
+                            f"{where} value {text}: Kodi does not substitute constants in {where}")
+        elif text in self.constants:
+            # a file walked without resolving still carries the name Kodi substitutes
+            return
+        elif self.runtime_constants:
+            self._add_issue(node, SEVERITY_WARNING,
+                            f"{where} value {text} is not a defined constant, unless a runtime generator adds it")
+        else:
+            self._add_issue(node, SEVERITY_ERROR, f"{where} value {text} is not a number or a defined constant")
+
     @staticmethod
     def _looks_like_unresolved(value: str) -> bool:
-        """True when the value reads as an unresolved constant or variable name, not a number."""
-        return bool(value) and not _is_number(value) and all(c.isalnum() or c in "_-." for c in value)
+        """True when the value reads as a constant name: a letter first, then word characters."""
+        return re.match(r"^[A-Za-z_][\w.-]*$", value) is not None and value.lower() != "auto"
 
     def _validate_typed_attr(self, node, attr_name: str, value: str, value_type: str):
         """Validate typed attribute values (int, color, enum)."""
@@ -480,15 +516,7 @@ class XmlInterpreter:
             return
 
         if value_type in ("int", "position"):
-            check_val = value.rstrip("%r") if value_type == "position" else value
-            if not _is_number(check_val):
-                # Skip values that look like unresolved constants (e.g. from script.skinvariables)
-                if self._looks_like_unresolved(check_val):
-                    return
-                self._add_issue(
-                    node, SEVERITY_ERROR,
-                    f"invalid integer value for {attr_name}: {value}",
-                )
+            self._validate_number(node, attr_name, True, value, value_type)
         elif value_type == "color":
             if not _is_kodi_hex(value) and value not in self.color_labels:
                 self._add_issue(

@@ -502,6 +502,8 @@ class CheckerMixin:
             template_values=self.template_values,
             file_path=path,
             color_labels=self.get_color_labels(),
+            runtime_constants=self._imports_runtime_generator(),
+            constants=set(self.addon.get_constants(folder)) if self.addon else set(),
         )
         issues = interpreter.interpret(walk_root)
 
@@ -524,6 +526,15 @@ class CheckerMixin:
         if successor:
             message += f"; {successor} serves that window"
         return {"message": message, "file": path, "line": 1, "severity": SEVERITY_ERROR}
+
+    def _imports_runtime_generator(self):
+        """Whether addon.xml imports an addon that writes include files at runtime."""
+        try:
+            with open(os.path.join(self.addon.path, "addon.xml"), encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except (OSError, AttributeError, TypeError):
+            return False
+        return any(f'addon="{addon_id}"' in text for addon_id in ("script.skinvariables", "script.skinshortcuts"))
 
     def check_file(self, path):
         """Validate one file as written plus the resolved pass for skins; None when excluded."""
