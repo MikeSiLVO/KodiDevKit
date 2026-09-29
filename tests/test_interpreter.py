@@ -317,6 +317,32 @@ class TestNumberFields(unittest.TestCase):
         self.assertIn(("warning", "<width> value MainWidth is not a defined constant, unless a runtime "
                                   "generator adds it"), self._messages(runtime=True))
 
+class TestDefaultType(unittest.TestCase):
+    """A default is matched by its exact type string."""
+
+    def test_mixed_case_type(self):
+        interp = XmlInterpreter(template_attribs={"label": {}}, template_values={"label": {}})
+        issues = interp.interpret(_parse('<includes><default type="Label"/><default type="label"/></includes>'))
+        self.assertEqual([i["message"] for i in issues],
+                         ['<default type="Label"> applies only to controls written type="Label"; Kodi matches it exactly'])
+
+class TestControlNesting(unittest.TestCase):
+    """Only groups hold child controls, and control types are written lowercase."""
+
+    def test_nested_and_case(self):
+        interp = XmlInterpreter(template_attribs={t: {} for t in ("button", "group", "label")},
+                                template_values={t: {} for t in ("button", "group", "label")})
+        issues = interp.interpret(_parse("""
+        <window><controls>
+            <control type="button"><control type="label"/></control>
+            <control type="group"><control type="Label"/></control>
+            <control type="group"><control type="$PARAM[ListType]"/></control>
+        </controls></window>"""))
+        self.assertEqual(sorted(i["message"] for i in issues), [
+            "<control> inside <control type=button> is ignored; only groups hold controls",
+            'type="Label" should be lowercase; Kodi accepts it, but a <default> only matches the exact string',
+        ])
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 

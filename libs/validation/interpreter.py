@@ -225,7 +225,11 @@ class XmlInterpreter:
 
     def _walk_control(self, node, *, inside_layout: bool):
         """Dispatch a <control> based on its type (group / container / leaf)."""
-        control_type = (node.attrib.get("type") or "").lower().strip()
+        written = (node.attrib.get("type") or "").strip()
+        control_type = written.lower()
+        if written != control_type and "$" not in written:
+            self._add_issue(node, SEVERITY_WARNING, f'type="{written}" should be lowercase; Kodi accepts it, '
+                                                    f'but a <default> only matches the exact string')
 
         if control_type in GROUP_TYPES:
             self._walk_group_control(node, control_type, inside_layout=inside_layout)
@@ -324,6 +328,10 @@ class XmlInterpreter:
             if tag == "include":
                 continue
             if tag == "control":
+                if control_type not in GROUP_TYPES:
+                    # only groups load child controls (GUIWindow.cpp:302)
+                    self._add_issue(child, SEVERITY_WARNING, f"<control> inside <control "
+                                    f"type={control_type}> is ignored; only groups hold controls")
                 continue
             if tag in ALL_LAYOUT_TAGS:
                 continue
@@ -565,7 +573,12 @@ class XmlInterpreter:
         """Validate a <default type="X"> block as a control of type X, at its
         own source. Defaults are the skin's own file, not reusable include
         content, so errors are reported here (not stamped as include warnings)."""
-        control_type = (node.attrib.get("type") or "").lower().strip()
+        written = (node.attrib.get("type") or "").strip()
+        control_type = written.lower()
+        # controls match their type in any case, but a default is looked up by the exact string
+        if written != control_type and "$" not in written:
+            self._add_issue(node, SEVERITY_WARNING, f'<default type="{written}"> applies only to controls '
+                                                    f'written type="{written}"; Kodi matches it exactly')
         if control_type in self.template_attribs:
             self._validate_control_children(node, control_type, inside_layout=False)
 
