@@ -25,6 +25,11 @@ from libs.validation.hierarchy import (
 class TestWindowChildren(unittest.TestCase):
     """Verify WINDOW_CHILDREN matches GUIWindow.cpp:186-268."""
 
+    def test_tags_kodi_stopped_reading_are_gone(self):
+        self.assertNotIn("allowoverlay", WINDOW_CHILDREN)
+        self.assertNotIn("system", COORDINATES_CHILDREN)
+        self.assertNotIn("borderpercent", FONT_CHILDREN)
+
     def test_core_tags_present(self):
         core = {"controls", "defaultcontrol", "backgroundcolor", "visible",
                 "animation", "zorder", "coordinates", "camera", "depth",

@@ -27,8 +27,7 @@ WINDOW_CHILDREN = frozenset({
     "onunload",
     "include",
     "description",  # Silently ignored by Kodi, universal documentation tag
-    # Less common but valid (see GUIWindow.cpp:186-190)
-    "allowoverlay",
+    # read by media windows (GUIMediaWindow.cpp)
     "views",
 })
 
@@ -41,7 +40,6 @@ CONTROLS_CHILDREN = frozenset({"control", "include", "description"})
 COORDINATES_CHILDREN = frozenset({
     "posx", "posy", "left", "top",
     "origin",
-    "system",
 })
 
 # Control types that are groups (GUIControlGroup.h:74, GUIControlGroupList.h).
@@ -98,7 +96,6 @@ FONTSET_CHILDREN = frozenset({"font"})
 FONT_CHILDREN = frozenset({
     "name", "filename", "size", "style",
     "color", "shadow", "aspect", "linespacing",
-    "borderpercent",
 })
 
 # <variable> children (GUIIncludes.cpp:160-168, 244-257).
