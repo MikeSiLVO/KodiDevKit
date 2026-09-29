@@ -40,6 +40,7 @@ from .constants import (
     LABEL_READ_TAGS,
     REPEATABLE_TAGS,
     is_read_copy,
+    attribute_bool_problem,
     ALLOWED_MULTI,
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
@@ -494,6 +495,8 @@ class XmlInterpreter:
                     node, SEVERITY_ERROR,
                     f"Invalid color for {attr_name}: {value}",
                 )
+        elif value_type == "bool" and attribute_bool_problem(attr_name, value):
+            self._add_issue(node, SEVERITY_ERROR, attribute_bool_problem(attr_name, value) or "")
         elif value_type in ALLOWED_VALUES:
             self._validate_enum_value(node, value, value_type)
 

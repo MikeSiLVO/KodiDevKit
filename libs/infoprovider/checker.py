@@ -35,6 +35,7 @@ from ..validation.constants import (
     NOOP_TAGS,
     REPEATABLE_TAGS,
     is_read_copy,
+    attribute_bool_problem,
     ALLOWED_MULTI,
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
@@ -668,6 +669,8 @@ class CheckerMixin:
                 elif value_type == "color":
                     if getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels() and not is_kodi_hex(v):
                         self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR)
+                elif not skip_value_checks and value_type == "bool" and attribute_bool_problem(k, v):
+                    self._add_issue(listitems, subnode, attribute_bool_problem(k, v) or "", v, severity=SEVERITY_ERROR)
                 elif not skip_value_checks:
                     self._validate_enum_value(listitems, subnode, v, value_type, attr_name=k)
 

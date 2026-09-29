@@ -149,6 +149,7 @@ __all__ = [
     'REPEATABLE_TAGS',
     'LABEL_READ_TAGS',
     'is_read_copy',
+    'attribute_bool_problem',
     'ALLOWED_MULTI',
     'ALLOWED_VALUES',
     'CASE_INSENSITIVE_ENUMS',
@@ -156,3 +157,20 @@ __all__ = [
     'SEVERITY_ERROR',
     'SEVERITY_WARNING',
 ]
+
+
+def attribute_bool_problem(attr, value):
+    """How Kodi misreads a bool attribute, or None; each one compares its own spellings by hand."""
+    v = value.strip().lower()
+    if attr in ("flipx", "flipy", "pulse", "loop", "always", "background"):
+        if v not in ("true", "false"):
+            return f'{attr}="{value}" is off: Kodi turns it on only for "true"'
+    elif attr == "scalediffuse":
+        if v not in ("true", "yes", "false", "no"):
+            return f'{attr}="{value}" is off: Kodi turns it on only for "true" or "yes"'
+    elif attr in ("infill", "reversible"):
+        if v not in ("true", "false"):
+            return f'{attr}="{value}" is on: Kodi turns it off only for "false"'
+    elif attr == "reverse" and v in ("false", "no", "off", "0"):
+        return f'reverse="{value}" still reverses: Kodi turns it on whenever the attribute is present'
+    return None

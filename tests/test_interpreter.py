@@ -272,6 +272,28 @@ class TestLabelBrackets(unittest.TestCase):
         self.assertEqual([i["message"] for i in issues],
                          ["Missing ']' after $ESCINFO[ in <value>: Kodi drops the rest of the label"])
 
+class TestBoolAttributes(unittest.TestCase):
+    """Bool attributes follow the spelling each Kodi reader accepts."""
+
+    def test_attribute_spellings(self):
+        attribs = {"image": {"texture": {"flipx": "bool", "infill": "bool", "background": "bool"},
+                             "autoscroll": {"reverse": "bool"}}}
+        interp = XmlInterpreter(template_attribs=attribs, template_values={"image": {}})
+        issues = interp.interpret(_parse("""
+        <window>
+            <controls>
+                <control type="image">
+                    <texture flipx="yes" infill="no" background="true">a.png</texture>
+                    <autoscroll reverse="false">true</autoscroll>
+                </control>
+            </controls>
+        </window>"""))
+        self.assertEqual(sorted(i["message"] for i in issues), [
+            'flipx="yes" is off: Kodi turns it on only for "true"',
+            'infill="no" is on: Kodi turns it off only for "false"',
+            'reverse="false" still reverses: Kodi turns it on whenever the attribute is present',
+        ])
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 
