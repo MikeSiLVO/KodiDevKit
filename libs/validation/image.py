@@ -28,10 +28,7 @@ class ValidationImage:
         return name not in shared
 
     def check(self, progress_callback=None):
-        """
-        Validate image references used by the current skin.
-        Returns list of {"message": str, "file": str, "line": int, "severity": str}.
-        """
+        """Validate image references and texture bundles used by the current skin."""
         if not self.addon:
             return [{"message": "Image checker unavailable (no addon)", "file": "", "line": 0}]
 
@@ -40,17 +37,17 @@ class ValidationImage:
             return [{"message": "Image validation unavailable (no index)", "file": "", "line": 0}]
 
         issues = []
-        if index.get('xbt_beside_sources'):
+        for path in index.get('xbt_beside_sources', []):
             issues.append({
-                "message": "Kodi repo: Textures.xbt ships beside the source images in media/",
-                "file": index['xbt_beside_sources'],
+                "message": f"Kodi repo: {os.path.basename(path)} ships beside the source images in media/",
+                "file": path,
                 "line": 0,
                 "severity": SEVERITY_WARNING,
             })
-        if index.get('xbt_unreadable'):
+        for path in index.get('xbt_unreadable', []):
             issues.append({
-                "message": "Textures.xbt is not a texture bundle Kodi can read",
-                "file": index['xbt_unreadable'],
+                "message": f"{os.path.basename(path)} is not a texture bundle Kodi can read",
+                "file": path,
                 "line": 0,
                 "severity": SEVERITY_ERROR,
             })

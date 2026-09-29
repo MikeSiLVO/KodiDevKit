@@ -614,8 +614,12 @@ class SkinIndex:
             return "missing", None
 
         index['image_files_checked'] = {}
-        index['xbt_beside_sources'] = xbt_path if xbt_names is not None and loose_media else None
-        index['xbt_unreadable'] = xbt_path if os.path.isfile(xbt_path) and xbt_names is None else None
+        media_dir = os.path.join(self.skin.path, "media")
+        bundle_paths = [os.path.join(media_dir, f) for f in (os.listdir(media_dir) if os.path.isdir(media_dir) else [])
+                        if f.lower().endswith(".xbt")]
+        bundles = {p: xbt_names if p == xbt_path else read_xbt_names(p) for p in bundle_paths}
+        index['xbt_beside_sources'] = sorted(p for p, names in bundles.items() if names is not None and loose_media)
+        index['xbt_unreadable'] = sorted(p for p, names in bundles.items() if names is None)
 
         total_images = sum(
             len(imgs) for folder_imgs in index['images_referenced'].values()
