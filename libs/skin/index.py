@@ -16,7 +16,11 @@ from ..utils.validation import normalize_control_id
 logger = logging.getLogger(__name__)
 
 _LABEL_TAGS = frozenset(['label', 'altlabel', 'label2', 'hinttext'])
-_LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[([0-9].*?)\]")
+# the replacer atoi()s the body, so only the leading digits name the string (GUIInfoLabel.cpp)
+_LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[\s*(\d+)")
+_LABEL_BLOCK_MARKERS = ("$INFO[", "$VAR[", "$PARAM[", "$NUMBER[", "$ADDON[", "$MAP[")
+_LABEL_ATTRS = {"viewtype": ("label",), "fontset": ("idloc",), "label": ("fallback",), "label2": ("fallback",),
+                "altlabel": ("fallback",), "hinttext": ("fallback",)}
 _UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
 # arguments Kodi passes through CWindowTranslator: window_bools, Window(x) and the window builtins
 _WINDOW_REFS = re.compile(
@@ -298,6 +302,13 @@ class SkinIndex:
             progress_callback(f"Index built successfully ({file_count} files processed)")
         logger.info("OK: Validation index built successfully (%d files + includes processed)", file_count)
 
+        # Font.xml is no window file, but its fontset idloc attributes are string ids
+        for folder in self.skin.xml_folders:
+            font_path = os.path.join(self.skin.path, folder, "Font.xml")
+            font_root = get_root_from_file(font_path) if os.path.isfile(font_path) else None
+            if font_root is not None:
+                self._extract_labels_from_xml(font_root, font_path, folder, index)
+
         if 'images_referenced' in index:
             self._check_image_files(index, progress_callback)
 
@@ -435,54 +446,42 @@ class SkinIndex:
 
     def _extract_labels_from_xml(self, root, path, folder, index):
         """Extract label ids and untranslated label text in the file into the index."""
-        for element in root.iter():
-            if element.tag not in _LABEL_TAGS:
-                continue
+        used = index['labels_used'][folder]
 
-            text = element.text
-            if not text:
-                continue
+        def use(label_id, element, kind):
+            used.setdefault(label_id, []).append(
+                {'file': path, 'line': getattr(element, 'sourceline', 0) or 0, 'type': kind})
 
-            for match in _LOCALIZE_PATTERN.finditer(text):
-                label_id = match.group(1)
-                if label_id not in index['labels_used'][folder]:
-                    index['labels_used'][folder][label_id] = []
-                index['labels_used'][folder][label_id].append({
-                    'file': path,
-                    'line': getattr(element, 'sourceline', 0) or 0,
-                    'type': element.tag
-                })
-
-            if text.isdigit():
-                label_id = text
-                if label_id not in index['labels_used'][folder]:
-                    index['labels_used'][folder][label_id] = []
-                index['labels_used'][folder][label_id].append({
-                    'file': path,
-                    'line': getattr(element, 'sourceline', 0) or 0,
-                    'type': element.tag
-                })
-
-            elif (
-                len(text) > 2
-                and not text.endswith(".xml")
-                and text[0].isalpha()
-                and not text.startswith("$")
-                and "$INFO[" not in text
-                and "$VAR[" not in text
-                and "$PARAM[" not in text
-                and "$NUMBER[" not in text
-                and "$ADDON[" not in text
-                and "$MAP[" not in text
-            ):
+        def untranslated(text, element, where):
+            if (len(text) > 2 and not text.endswith(".xml") and text[0].isalpha() and not text.startswith("$")
+                    and not any(block in text for block in _LABEL_BLOCK_MARKERS)):
                 index['labels_untranslated'].append({
-                    'name': text,
-                    'type': element.tag,
-                    'file': path,
-                    'identifier': text,
-                    'message': f"Label in <{element.tag}> not translated: {text}",
-                    'line': getattr(element, 'sourceline', 0) or 0
+                    'name': text, 'type': element.tag, 'file': path, 'identifier': text,
+                    'message': f"Label in {where} not translated: {text}",
+                    'line': getattr(element, 'sourceline', 0) or 0,
                 })
+
+        for element in root.iter():
+            if not isinstance(element.tag, str):
+                continue
+            for value in [element.text or ""] + [v for k, v in element.attrib.items() if not k.startswith("_kdk_")]:
+                for match in _LOCALIZE_PATTERN.finditer(value):
+                    use(match.group(1), element, element.tag)
+
+            text = element.text or ""
+            if element.tag in _LABEL_TAGS and text:
+                if text.isdigit():
+                    use(text, element, element.tag)
+                else:
+                    untranslated(text, element, f"<{element.tag}>")
+
+            # attributes Kodi reads as a string id or as label text (GUIControlFactory FilterLabel)
+            for attr in _LABEL_ATTRS.get(element.tag, ()):
+                value = (element.get(attr) or "").strip()
+                if value.isdigit():
+                    use(value, element, f"@{attr}")
+                elif value and attr != "idloc":
+                    untranslated(value, element, f"attribute {attr}")
 
     def _extract_images_from_xml(self, root, path, folder, index):
         """Extract static image paths from texture tags and their attributes into the index."""
