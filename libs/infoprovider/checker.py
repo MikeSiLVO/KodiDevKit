@@ -78,6 +78,7 @@ class CheckerMixin:
     WINDOW_NAMES: list
     WINDOW_FILENAMES: list
     OBSOLETE_WINDOW_FILES: dict
+    INFO_NAMES: dict
     MODELESS_IDS: set
     DIALOG_IDS: set
     _variable_cache: dict
@@ -502,8 +503,9 @@ class CheckerMixin:
             template_values=self.template_values,
             file_path=path,
             color_labels=self.get_color_labels(),
-            runtime_constants=self._imports_runtime_generator(),
+            runtime_generator=self._imports_runtime_generator(),
             constants=set(self.addon.get_constants(folder)) if self.addon else set(),
+            info_names=self.INFO_NAMES,
         )
         issues = interpreter.interpret(walk_root)
 

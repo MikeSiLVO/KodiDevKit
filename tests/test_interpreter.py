@@ -300,7 +300,7 @@ class TestNumberFields(unittest.TestCase):
     def _messages(self, runtime=False):
         attribs = {"label": {t: {} for t in ("width", "itemgap", "bordersize", "centerleft", "scroll")}}
         values = {"label": {t: "int" for t in ("width", "itemgap", "bordersize", "centerleft", "scroll")}}
-        interp = XmlInterpreter(template_attribs=attribs, template_values=values, runtime_constants=runtime)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values, runtime_generator=runtime)
         return sorted((i["severity"], i["message"]) for i in interp.interpret(_parse("""
         <window><controls><control type="label">
             <width>MainWidth</width><itemgap>100%</itemgap><bordersize>12,0,12,0</bordersize>
@@ -342,6 +342,49 @@ class TestControlNesting(unittest.TestCase):
             "<control> inside <control type=button> is ignored; only groups hold controls",
             'type="Label" should be lowercase; Kodi accepts it, but a <default> only matches the exact string',
         ])
+
+class TestConditions(unittest.TestCase):
+    """Conditions Kodi cannot parse, or whose operand has no info, always read false."""
+
+    NAMES = {"categories": {"window": {"isvisible"}, "player": {"hasvideo"}}, "listitem_aliases": set(),
+             "platforms": set(), "players": {}}
+
+    def messages(self, xml, runtime_generator=False):
+        interp = XmlInterpreter(template_attribs={"button": {"visible": {}}, "label": {}},
+                                template_values={"button": {}, "label": {}}, info_names=self.NAMES,
+                                runtime_generator=runtime_generator)
+        return sorted(i["message"] for i in interp.interpret(_parse(xml)) if "reads false" in i["message"]
+                      or "runtime generator" in i["message"])
+
+    def test_tag_the_control_ignores(self):
+        self.assertEqual(self.messages(
+            '<window><controls><control type="label"><selected>Player.HasVidoe</selected></control>'
+            '</controls></window>'), [])
+
+    def test_expression_from_runtime_generator(self):
+        xml = '<window><controls><control type="button"><visible>$EXP[gen]</visible></control></controls></window>'
+        self.assertEqual(self.messages(xml, runtime_generator=True),
+                         ["Condition uses an unknown expression gen, unless a runtime generator defines it: $EXP[gen]"])
+        self.assertEqual(self.messages(xml), [
+            "Kodi cannot parse this condition (unknown expression gen), it always reads false: $EXP[gen]"])
+
+    def test_window_conditions(self):
+        self.assertEqual(self.messages("""
+        <window><controls>
+            <control type="button"><visible>!Window.IsVisble(1114) + Player.HasVideo</visible></control>
+            <control type="button"><visible>Player.HasVideo +</visible></control>
+            <control type="button"><visible>$PARAM[x]</visible></control>
+        </controls></window>"""), [
+            "Kodi cannot parse this condition (missing operand), it always reads false: Player.HasVideo +",
+            "Kodi has no info 'Window.IsVisble(1114)', it always reads false",
+        ])
+
+    def test_variable_value_condition(self):
+        self.assertEqual(self.messages("""
+        <includes><variable name="v">
+            <value condition="Player.HasVidoe">a</value>
+            <value condition="$EXP[e]">b</value>
+        </variable></includes>"""), ["Kodi has no info 'Player.HasVidoe', it always reads false"])
 
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""

@@ -37,6 +37,7 @@ from .constants import (
     SEVERITY_ERROR,
     SEVERITY_WARNING,
     BRACKET_TAGS,
+    CONDITION_TAGS,
     NOOP_TAGS,
     LABEL_READ_TAGS,
     REPEATABLE_TAGS,
@@ -58,6 +59,7 @@ from ..utils.expressions import (
 )
 from ..skin.include import SkinInclude
 from ..utils.xml import check_brackets as _check_brackets
+from ..utils.infobool import STATE_INVALID, check_condition, unknown_infos
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,10 @@ def _same_value(a, b) -> bool:
     return (a.text or "").strip() == (b.text or "").strip() and attrs(a) == attrs(b)
 
 
+# control children read by the loader itself rather than listed per type in controls.xml
+_STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAGS | INCLUDE_DEFINITION_TAGS
+
+
 class XmlInterpreter:
     """
     Walks a resolved XML tree and validates structural correctness at each level.
@@ -128,15 +134,17 @@ class XmlInterpreter:
         template_values: dict | None = None,
         file_path: str = "",
         color_labels: set | None = None,
-        runtime_constants: bool = False,
+        runtime_generator: bool = False,
         constants: set | frozenset = frozenset(),
+        info_names: dict | None = None,
     ):
         self.template_attribs = template_attribs or {}
         self.template_values = template_values or {}
         self.file_path = file_path
         self.color_labels = color_labels or set()
-        self.runtime_constants = runtime_constants
+        self.runtime_generator = runtime_generator
         self.constants = constants
+        self.info_names = info_names
         self.issues: list[dict] = []
         self._context_stack: list[Context] = []
 
@@ -151,6 +159,7 @@ class XmlInterpreter:
         tag = root.tag
         if tag == "window":
             self._walk_window(root)
+            self._validate_window_conditions(root)
         elif tag == "includes":
             self._walk_includes(root)
         elif tag == "fonts":
@@ -486,6 +495,44 @@ class XmlInterpreter:
                 f"Brackets do not match: {condition}",
             )
 
+    def _validate_window_conditions(self, root):
+        """Check every condition tag and `condition` attribute in a resolved window."""
+        for node in root.iter():
+            if not isinstance(node.tag, str):
+                continue
+            parent = node.getparent()
+            if parent is not None and parent.tag == "control":
+                taken = self.template_attribs.get((parent.get("type") or "").lower())
+                # a tag the control does not take is never read, so neither is its condition
+                if taken is not None and node.tag not in taken and node.tag not in _STRUCTURAL_TAGS:
+                    continue
+            if node.tag in CONDITION_TAGS and node.text and node.text.strip():
+                self._validate_condition(node, node.text, resolved=True)
+            condition = node.get("condition")
+            if condition:
+                self._validate_condition(node, condition, resolved=True)
+
+    def _validate_condition(self, node, condition: str, *, resolved: bool):
+        """Report a condition Kodi cannot parse, or an operand it has no info for."""
+        text = condition.strip()
+        if not text or "$PARAM" in text.upper() or (not resolved and "$EXP[" in text.upper()):
+            return
+        # unbalanced brackets are already reported by the bracket check
+        if not _check_brackets(text):
+            return
+        short = text if len(text) <= 60 else text[:60] + "..."
+        problem = check_condition(text)
+        if problem and problem[0] == STATE_INVALID:
+            if self.runtime_generator and problem[1].startswith("unknown expression"):
+                self._add_issue(node, SEVERITY_WARNING, f"Condition uses an {problem[1]}, "
+                                                        f"unless a runtime generator defines it: {short}")
+            else:
+                self._add_issue(node, SEVERITY_ERROR,
+                                f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}")
+            return
+        for operand in unknown_infos(text, self.info_names) if self.info_names else []:
+            self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false")
+
     def _validate_number(self, node, name: str, is_attr: bool, value: str, value_type: str):
         """Report a number field left holding a name Kodi cannot read as a number."""
         text = value.strip()
@@ -507,7 +554,7 @@ class XmlInterpreter:
         elif text in self.constants:
             # a file walked without resolving still carries the name Kodi substitutes
             return
-        elif self.runtime_constants:
+        elif self.runtime_generator:
             self._add_issue(node, SEVERITY_WARNING,
                             f"{where} value {text} is not a defined constant, unless a runtime generator adds it")
         else:
@@ -593,6 +640,9 @@ class XmlInterpreter:
                 )
             else:
                 self._validate_label_brackets(child)
+                condition = child.get("condition")
+                if condition:
+                    self._validate_condition(child, condition, resolved=False)
         self._context_stack.pop()
 
     def _walk_map(self, node):

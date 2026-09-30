@@ -10,6 +10,9 @@ CONTROL_TAGS = {
     "wraplist", "scrollbar", "visualisation", "grouplist", "sliderex", "panelcontainer"
 }
 
+# text Kodi registers as a boolean condition, besides any `condition` attribute
+CONDITION_TAGS = frozenset({"visible", "enable", "usealttexture", "selected", "expression"})
+
 # Tags whose text is a bracketed condition that must balance
 BRACKET_TAGS = {"visible", "enable", "usealttexture", "selected", "expression", "onclick", "onback"}
 
@@ -143,6 +146,7 @@ SEVERITY_WARNING = "warning"
 __all__ = [
     'CONTROL_TAGS',
     'BRACKET_TAGS',
+    'CONDITION_TAGS',
     'INCLUDE_DEFINITION_TAGS',
     'NOOP_TAGS',
     'POS_TAGS',
