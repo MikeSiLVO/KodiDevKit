@@ -43,6 +43,8 @@ Restart Sublime Text after installing.
 
 [GNU General Public License v3.0+](https://www.gnu.org/licenses/gpl-3.0)
 
+Based on the original [KodiDevKit](https://github.com/phil65/KodiDevKit) by Philipp Temminghoff (phil65), Copyright (C) 2015-2019, licensed GPL-3.0-or-later.
+
 ### Bundled Kodi data
 
 `data/` carries reference data taken from [Kodi](https://github.com/xbmc/xbmc), Copyright (C) Team Kodi, licensed GPL-2.0-or-later and used here under GPL-3.0-or-later:
@@ -51,3 +53,4 @@ Restart Sublime Text after installing.
 - `data/<release>/data.xml` - builtin and boolean-condition names with their descriptions, taken from the Kodi sources and maintained by hand.
 - `data/<release>/infonames.json` - the infolabel and boolean-condition names Kodi's parser accepts, taken from the Kodi sources.
 - `data/<release>/windows.json` and `obsolete_windows.json` - window names, ids and files, taken from the Kodi sources.
+- `data/addon_schema/` - addon.xml schemas copied verbatim from [kodi-addon-checker](https://github.com/xbmc/addon-check), Copyright (C) Team Kodi, licensed GPL-3.0-only.
