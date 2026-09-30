@@ -150,6 +150,80 @@ def check_condition(condition: str) -> tuple[str, str] | None:
     return None
 
 
+def info_name_sets(raw: dict) -> dict:
+    """An infonames.json table with its name lists as sets, the shape `is_known_info` reads."""
+    return {**raw, "categories": {c: set(v) for c, v in raw["categories"].items()},
+            "listitem_aliases": set(raw["listitem_aliases"]), "platforms": set(raw["platforms"]),
+            "players": {p: set(v) for p, v in raw["players"].items()}}
+
+
+def split_info(operand: str) -> list[tuple[str, str]]:
+    """Cut an operand into `(name, params)` parts at top-level dots (GUIInfoManager.cpp:10983)."""
+    parts = []
+    name, params, depth = "", "", 0
+    for char in operand:
+        if char == "(":
+            depth += 1
+            if depth == 1:
+                continue
+        elif char == ")" and depth:
+            depth -= 1
+            if not depth:
+                continue
+        elif char == "." and not depth:
+            if name:
+                parts.append((name.lower(), params))
+            name, params = "", ""
+            continue
+        if depth:
+            params += char
+        else:
+            name += char
+    if name:
+        parts.append((name.lower(), params))
+    return parts
+
+
+def operands(condition: str) -> list[str]:
+    """Trimmed operands of a condition, cut at every operator as InfoExpression::Parse does."""
+    return [op.strip() for op in re.split(r"[\[\]!+|]", condition) if op.strip()]
+
+
+def is_known_info(operand: str, names: dict) -> bool:
+    """Whether Kodi gives `operand` an info id, params unchecked (GUIInfoManager.cpp:11069)."""
+    parts = [name for name, _ in split_info(operand)]
+    if len(parts) == 1:
+        return parts[0] in ("true", "false", "yes", "no")
+    categories = names["categories"]
+    if len(parts) == 2:
+        category = "listitem" if parts[0] in names["listitem_aliases"] else parts[0]
+        return parts[1] in categories.get(category, ())
+    if len(parts) in (3, 4):
+        first, second, third = parts[:3]
+        if first == "system" and second == "platform":
+            return third in names["platforms"]
+        if first in names["players"] and second in ("position", "offset"):
+            return third in names["players"][first]
+        if first == "container" and (second == "listitem" or second in names["listitem_aliases"]):
+            return third in categories["listitem"]
+        if first == "control":
+            return second in categories["control"]
+    return False
+
+
+_MACRO = re.compile(r"\$[A-Za-z]+\[[^\[\]]*\]")
+
+
+def unknown_infos(condition: str, names: dict) -> list[str]:
+    """Operands Kodi registers as info 0, which always read false; macro ones are left alone."""
+    while True:
+        blanked = _MACRO.sub("$", condition)
+        if blanked == condition:
+            break
+        condition = blanked
+    return [op for op in operands(condition) if "$" not in op and not is_known_info(op, names)]
+
+
 def negation_of(condition: str) -> str:
     """The bracketed negation Kodi evaluates alongside `condition`."""
     return f"![{condition}]"

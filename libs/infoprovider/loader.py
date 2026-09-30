@@ -9,6 +9,7 @@ import logging
 from typing import Any
 from lxml import etree as ET
 
+from ..utils.infobool import info_name_sets
 from ..utils.xml import get_root_from_file
 from ..addon.addon import Addon
 from ..kodi.jsonrpc import kodi
@@ -28,6 +29,7 @@ class LoaderMixin:
     MODELESS_IDS: set
     DIALOG_IDS: set
     OBSOLETE_WINDOW_FILES: dict
+    INFO_NAMES: dict
     builtins: list
     conditions: list
     template_attribs: dict
@@ -59,6 +61,9 @@ class LoaderMixin:
             OBSOLETE = json.loads(
                 sublime.load_resource(f"Packages/KodiDevKit/data/{kodi_version}/obsolete_windows.json")
             )
+            INFO_NAMES = json.loads(
+                sublime.load_resource(f"Packages/KodiDevKit/data/{kodi_version}/infonames.json")
+            )
 
         except (ImportError, OSError):
             path = os.path.normpath(os.path.abspath(__file__))
@@ -77,6 +82,9 @@ class LoaderMixin:
             with open(os.path.join(folder, "..", "..", "data", kodi_version, "obsolete_windows.json"),
                       encoding="utf-8") as f:
                 OBSOLETE = json.load(f)
+            with open(os.path.join(folder, "..", "..", "data", kodi_version, "infonames.json"),
+                      encoding="utf-8") as f:
+                INFO_NAMES = json.load(f)
 
         if root is None:
             raise ValueError(f"Failed to load data.xml for Kodi version {kodi_version}")
@@ -89,6 +97,7 @@ class LoaderMixin:
         self.MODELESS_IDS = {str(item[1]) for item in WINDOW_MAP if item[3] == "modeless"}
         self.DIALOG_IDS = {str(item[1]) for item in WINDOW_MAP if item[3] != "window"}
         self.OBSOLETE_WINDOW_FILES = OBSOLETE
+        self.INFO_NAMES = info_name_sets(INFO_NAMES)
 
         builtins_elem = root.find("builtins")
         self.builtins = [

@@ -49,3 +49,5 @@ Restart Sublime Text after installing.
 
 - `data/kodi/<release>/` - `colors.xml` and `strings.po`, copied verbatim by `scripts/refresh.py`.
 - `data/<release>/data.xml` - builtin and boolean-condition names with their descriptions, taken from the Kodi sources and maintained by hand.
+- `data/<release>/infonames.json` - the infolabel and boolean-condition names Kodi's parser accepts, taken from the Kodi sources.
+- `data/<release>/windows.json` and `obsolete_windows.json` - window names, ids and files, taken from the Kodi sources.

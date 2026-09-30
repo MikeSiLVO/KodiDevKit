@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Builtins and boolean conditions Kodi 22 registers, 333 and 298 of them.
+<!-- Builtins and boolean conditions Kodi 22 registers, 333 and 282 of them.
      Maintained by hand: check new names against the registration maps in
      GUIInfoManager.cpp and xbmc/interfaces/builtins/, not against the doxygen.
 
@@ -1345,11 +1345,11 @@
     <conditions>
         <item>
             <code>Addon.SettingBool(addon_id,setting_id)</code>
-            <help>True if the setting setting_id belonging to the addon with the id addon_id is True, False otherwise.</help>
+            <help>True if the setting `setting_id` belonging to the addon with the id `addon_id` is True, False otherwise.</help>
         </item>
         <item>
-            <code>Container(id).Column</code>
-            <help>The column number of the focused position in a panel container.</help>
+            <code>Container(id).Column(parameter)</code>
+            <help>True if the column number of the focused position matches the specified parameter.</help>
         </item>
         <item>
             <code>Container(id).HasFocus(item_number)</code>
@@ -1381,15 +1381,19 @@
         </item>
         <item>
             <code>Container(id).OnScrollNext</code>
-            <help>True if the container with id (or current container if id is omitted) is scrolling to the next item. Differs from \ref Container_OnNext "OnNext" in that \ref Container_OnNext "OnNext" triggers on movement even if there is no scroll involved.</help>
+            <help>True if the container with id (or current container if id is omitted) is scrolling to the next item. Differs from ref Container_OnNext "OnNext" in that ref Container_OnNext "OnNext" triggers on movement even if there is no scroll involved.</help>
         </item>
         <item>
             <code>Container(id).OnScrollPrevious</code>
-            <help>True if the container with id (or current container if id is omitted) is scrolling to the previous item. Differs from \ref Container_OnPrevious "OnPrevious" in that \ref Container_OnPrevious "OnPrevious" triggers on movement even if there is no scroll involved.</help>
+            <help>True if the container with id (or current container if id is omitted) is scrolling to the previous item. Differs from ref Container_OnPrevious "OnPrevious" in that ref Container_OnPrevious "OnPrevious" triggers on movement even if there is no scroll involved.</help>
         </item>
         <item>
-            <code>Container(id).Row</code>
-            <help>The row number of the focused position in a panel container.</help>
+            <code>Container(id).Position(parameter)</code>
+            <help>True if the container with id (or current container if id is omitted) is focused on the specified position.</help>
+        </item>
+        <item>
+            <code>Container(id).Row(parameter)</code>
+            <help>True if the row number of the focused position matches the specified parameter.</help>
         </item>
         <item>
             <code>Container(id).Scrolling</code>
@@ -1408,8 +1412,8 @@
             <help>True when advanced filtering can be applied to the current container.</help>
         </item>
         <item>
-            <code>Container.Content</code>
-            <help>The content of the current container.</help>
+            <code>Container.Content(parameter)</code>
+            <help>True if the current container you are in contains the following: - &lt;b&gt;files&lt;/b&gt; - &lt;b&gt;songs&lt;/b&gt; - &lt;b&gt;artists&lt;/b&gt; - &lt;b&gt;albums&lt;/b&gt; - &lt;b&gt;movies&lt;/b&gt; - &lt;b&gt;tvshows&lt;/b&gt; - &lt;b&gt;seasons&lt;/b&gt; - &lt;b&gt;episodes&lt;/b&gt; - &lt;b&gt;musicvideos&lt;/b&gt; - &lt;b&gt;genres&lt;/b&gt; - &lt;b&gt;years&lt;/b&gt; - &lt;b&gt;actors&lt;/b&gt; - &lt;b&gt;playlists&lt;/b&gt; - &lt;b&gt;plugins&lt;/b&gt; - &lt;b&gt;studios&lt;/b&gt; - &lt;b&gt;directors&lt;/b&gt; - &lt;b&gt;sets&lt;/b&gt; - &lt;b&gt;tags&lt;/b&gt; - &lt;b&gt;videoversions&lt;/b&gt; - &lt;b&gt;videoassets&lt;/b&gt; - &lt;b&gt;videoextras&lt;/b&gt;</help>
         </item>
         <item>
             <code>Container.Filtered</code>
@@ -1432,16 +1436,12 @@
             <help>True if the container is currently in stacked mode.</help>
         </item>
         <item>
-            <code>container.position</code>
-            <help>No description available.</help>
-        </item>
-        <item>
             <code>Container.SortDirection(direction)</code>
             <help>True if the sort direction of a container equals direction.</help>
         </item>
         <item>
-            <code>Container.SortMethod</code>
-            <help>The current sort method (returns a localized value).</help>
+            <code>Container.SortMethod(sortid)</code>
+            <help>True if the current sort method matches the specified SortID (see ref List_of_sort_methods "SortUtils").</help>
         </item>
         <item>
             <code>Control.HasFocus(id)</code>
@@ -1456,8 +1456,12 @@
             <help>True if the control with id "id" is visible.</help>
         </item>
         <item>
-            <code>controlgroup.hasfocus</code>
-            <help>No description available.</help>
+            <code>ControlGroup(id).HasFocus(controlid)</code>
+            <help>True if the group with id "id" has focus. If "controlid" is given, True if that control is the one currently selected in the group instead.</help>
+        </item>
+        <item>
+            <code>false</code>
+            <help>Always evaluates to false.</help>
         </item>
         <item>
             <code>Integer.IsEqual(info,number)</code>
@@ -1488,12 +1492,80 @@
             <help>True if the value of the infolabel is odd</help>
         </item>
         <item>
-            <code>Integer.ValueOf(number)</code>
-            <help>An integer info label that represents the provided number</help>
+            <code>Library.HasContent(boxsets)</code>
+            <help>True if there are albums in the library which are boxsets.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(compilations)</code>
+            <help>True if the library has compilations.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(movies)</code>
+            <help>True if the library has movies.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(moviesets)</code>
+            <help>True if the library has movie sets.</help>
         </item>
         <item>
             <code>Library.HasContent(music)</code>
             <help>True if the library has music content.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(musicvideos)</code>
+            <help>True if the library has music videos.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Arranger)</code>
+            <help>True if there are songs in the library which have an arranger.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Composer)</code>
+            <help>True if there are songs in the library which have composers.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Conductor)</code>
+            <help>True if there are songs in the library which have a conductor.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.DJMixer)</code>
+            <help>True if there are songs in the library which have a DJMixer.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Engineer)</code>
+            <help>True if there are songs in the library which have an engineer.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Lyricist)</code>
+            <help>True if there are songs in the library which have a lyricist.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Mixer)</code>
+            <help>True if there are songs in the library which have a mixer.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Orchestra)</code>
+            <help>True if there are songs in the library which have an orchestra.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Producer)</code>
+            <help>True if there are songs in the library which have an producer.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(Role.Remixer)</code>
+            <help>True if there are songs in the library which have a remixer.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(singles)</code>
+            <help>True if the library has singles.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(tvshows)</code>
+            <help>True if the library has tvshows.</help>
+        </item>
+        <item>
+            <code>Library.HasContent(video)</code>
+            <help>True if the library has video content.</help>
         </item>
         <item>
             <code>Library.HasNode(path)</code>
@@ -1597,7 +1669,7 @@
         </item>
         <item>
             <code>ListItem.IsPlaying</code>
-            <help>True if the current ListItem. info labels and images are currently Playing media.</help>
+            <help>True if the current ListItem.* info labels and images are currently Playing media.</help>
         </item>
         <item>
             <code>ListItem.IsPremiere</code>
@@ -1624,6 +1696,46 @@
             <help>True when the selected item is a video extra.</help>
         </item>
         <item>
+            <code>ListItem.Property(Addon.HasUpdate)</code>
+            <help>True when there's an update available for the selected addon.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(Addon.IsBinary)</code>
+            <help>True if this add-on is a binary addon.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(Addon.IsEnabled)</code>
+            <help>True when the selected addon is enabled (for use in the addon info dialog only).</help>
+        </item>
+        <item>
+            <code>ListItem.Property(Addon.IsFromOfficialRepo)</code>
+            <help>True if this add-on is from an official repository.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(Addon.IsInstalled)</code>
+            <help>True when the selected addon is installed (for use in the addon info dialog only).</help>
+        </item>
+        <item>
+            <code>ListItem.Property(Addon.IsUpdate)</code>
+            <help>True if this add-on is a valid update of an installed outdated add-on.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(Addon.Orphaned)</code>
+            <help>True if the Addon is orphanad.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(DateLabel)</code>
+            <help>True if the item is a date label, returns false if the item is a time label.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(isbookmark)</code>
+            <help>True if the item is a bookmark.</help>
+        </item>
+        <item>
+            <code>ListItem.Property(ischapter)</code>
+            <help>True if the item is a chapter.</help>
+        </item>
+        <item>
             <code>ListItem.Property(IsSpecial)</code>
             <help>True if the current Season/Episode is a Special.</help>
         </item>
@@ -1644,128 +1756,16 @@
             <help>The total number of discs belonging to an album.</help>
         </item>
         <item>
-            <code>listitemabsolute.hasvideoextras</code>
-            <help>True when the selected item has video extras.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.hasvideoversions</code>
-            <help>True when the selected item has multiple video versions.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.isautoupdateable</code>
-            <help>True if this add-on can be updated automatically.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.isboxset</code>
-            <help>True if the item is part of a boxset album.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.iscollection</code>
-            <help>True when the current ListItem is a movie set.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.isplaying</code>
-            <help>True if the current ListItem. info labels and images are currently Playing media.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.isresumable</code>
-            <help>True when the current ListItem has been partially played.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.isstereoscopic</code>
-            <help>True when the selected video is a 3D (stereoscopic) video.</help>
-        </item>
-        <item>
-            <code>listitemabsolute.isvideoextra</code>
-            <help>True when the selected item is a video extra.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.hasvideoextras</code>
-            <help>True when the selected item has video extras.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.hasvideoversions</code>
-            <help>True when the selected item has multiple video versions.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.isautoupdateable</code>
-            <help>True if this add-on can be updated automatically.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.isboxset</code>
-            <help>True if the item is part of a boxset album.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.iscollection</code>
-            <help>True when the current ListItem is a movie set.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.isplaying</code>
-            <help>True if the current ListItem. info labels and images are currently Playing media.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.isresumable</code>
-            <help>True when the current ListItem has been partially played.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.isstereoscopic</code>
-            <help>True when the selected video is a 3D (stereoscopic) video.</help>
-        </item>
-        <item>
-            <code>listitemnowrap.isvideoextra</code>
-            <help>True when the selected item is a video extra.</help>
-        </item>
-        <item>
-            <code>listitemposition.hasvideoextras</code>
-            <help>True when the selected item has video extras.</help>
-        </item>
-        <item>
-            <code>listitemposition.hasvideoversions</code>
-            <help>True when the selected item has multiple video versions.</help>
-        </item>
-        <item>
-            <code>listitemposition.isautoupdateable</code>
-            <help>True if this add-on can be updated automatically.</help>
-        </item>
-        <item>
-            <code>listitemposition.isboxset</code>
-            <help>True if the item is part of a boxset album.</help>
-        </item>
-        <item>
-            <code>listitemposition.iscollection</code>
-            <help>True when the current ListItem is a movie set.</help>
-        </item>
-        <item>
-            <code>listitemposition.isplaying</code>
-            <help>True if the current ListItem. info labels and images are currently Playing media.</help>
-        </item>
-        <item>
-            <code>listitemposition.isresumable</code>
-            <help>True when the current ListItem has been partially played.</help>
-        </item>
-        <item>
-            <code>listitemposition.isstereoscopic</code>
-            <help>True when the selected video is a 3D (stereoscopic) video.</help>
-        </item>
-        <item>
-            <code>listitemposition.isvideoextra</code>
-            <help>True when the selected item is a video extra.</help>
-        </item>
-        <item>
             <code>MusicPartyMode.Enabled</code>
             <help>True if Party Mode is enabled.</help>
         </item>
         <item>
-            <code>MusicPlayer.Channels(format)</code>
-            <help>The channel information of the current song, formatted in the optional format. (possible values: see \ref ListItem_AudioChannels "ListItem.AudioChannels").</help>
-        </item>
-        <item>
             <code>musicplayer.content</code>
-            <help>No description available.</help>
+            <help>Undocumented in Kodi.</help>
         </item>
         <item>
-            <code>MusicPlayer.Genre</code>
-            <help>The genre(s) of current song.</help>
+            <code>MusicPlayer.Exists(relative,position)</code>
+            <help>True if the currently playing playlist has a song queued at the given position.</help>
         </item>
         <item>
             <code>MusicPlayer.HasNext</code>
@@ -1788,12 +1788,12 @@
             <help>True if a playlist is currently playing.</help>
         </item>
         <item>
-            <code>MusicPlayer.Property(Album_Mood)</code>
-            <help>The moods of the currently playing Album</help>
-        </item>
-        <item>
             <code>Network.IsDHCP</code>
             <help>True if the network type is DHCP.</help>
+        </item>
+        <item>
+            <code>no</code>
+            <help>same as false.</help>
         </item>
         <item>
             <code>Player.Caching</code>
@@ -1853,7 +1853,7 @@
         </item>
         <item>
             <code>Player.HasPerformedSeek(interval)</code>
-            <help>True if the Player has performed a seek operation in the last provided second interval, False otherwise.</help>
+            <help>True if the Player has performed a seek operation in the last provided second `interval`, False otherwise.</help>
         </item>
         <item>
             <code>Player.HasPrograms</code>
@@ -2060,10 +2060,6 @@
             <help>The next timer date.</help>
         </item>
         <item>
-            <code>RDS.GetLine(number)</code>
-            <help>The last sent RDS text messages on given number.</help>
-        </item>
-        <item>
             <code>RDS.HasHotline</code>
             <help>True if a hotline phone number is present.</help>
         </item>
@@ -2097,11 +2093,11 @@
         </item>
         <item>
             <code>RetroPlayer.HasCheats</code>
-            <help>True if at least one exact filename match was discovered among the cheat packs for the currently-playing game, False otherwise. Multiple matching packs count before selection, as does a matching pack containing no usable cheat entries. Use RetroPlayer.SupportsCheats to check the game client's cheat API capability independently of file matches.</help>
+            <help>True if at least one exact filename match was discovered among the cheat packs for the currently-playing game, False otherwise. Multiple matching packs count before selection, as does a matching pack containing no usable cheat entries. Use `RetroPlayer.SupportsCheats` to check the game client's cheat API capability independently of file matches.</help>
         </item>
         <item>
             <code>RetroPlayer.SupportsCheats</code>
-            <help>True if the currently-playing game client implements the cheat API, False otherwise. This is independent of whether a matching cheat file exists and controls the Cheats OSD item's visibility. Use RetroPlayer.HasCheats to check for discovered matching cheat files.</help>
+            <help>True if the currently-playing game client implements the cheat API, False otherwise. This is independent of whether a matching cheat file exists and controls the Cheats OSD item's visibility. Use `RetroPlayer.HasCheats` to check for discovered matching cheat files.</help>
         </item>
         <item>
             <code>RetroPlayer.SupportsEject</code>
@@ -2116,20 +2112,12 @@
             <help>True if the requested theme is enabled, false otherwise.</help>
         </item>
         <item>
-            <code>Skin.Numeric(settingid)</code>
-            <help>return the setting value as an integer/numeric value.</help>
-        </item>
-        <item>
-            <code>Skin.String(setting)</code>
-            <help>The value of the requested string setting (as a string)</help>
-        </item>
-        <item>
-            <code>skin.timerelapsedsecs</code>
-            <help>No description available.</help>
+            <code>Skin.String(setting[,value])</code>
+            <help>True if the setting value equals the provided value, false otherwise.</help>
         </item>
         <item>
             <code>Skin.TimerIsRunning(timer)</code>
-            <help>True if the given timer is active, false otherwise.</help>
+            <help>True if the given `timer` is active, false otherwise.</help>
         </item>
         <item>
             <code>Slideshow.IsActive</code>
@@ -2168,24 +2156,12 @@
             <help>True if the info starts with the given substring.</help>
         </item>
         <item>
-            <code>System.AddonIcon(id)</code>
-            <help>The icon of the addon with the given id.</help>
-        </item>
-        <item>
             <code>System.AddonIsEnabled(id)</code>
             <help>True if the specified addon is enabled on the system.</help>
         </item>
         <item>
-            <code>System.AddonTitle(id)</code>
-            <help>The title of the addon with the given id</help>
-        </item>
-        <item>
-            <code>System.AddonVersion(id)</code>
-            <help>The version of the addon with the given id.</help>
-        </item>
-        <item>
             <code>System.AlarmLessOrEqual(alarmname,seconds)</code>
-            <help>True if the alarm with alarmname has less or equal to seconds left.</help>
+            <help>True if the alarm with `alarmname` has less or equal to `seconds` left.</help>
         </item>
         <item>
             <code>System.CanHibernate</code>
@@ -2204,8 +2180,8 @@
             <help>True if Kodi can suspend the system.</help>
         </item>
         <item>
-            <code>System.Date</code>
-            <help>The current date.</help>
+            <code>System.Date(startDate[,endDate])</code>
+            <help>True if the current system date is &gt;= `startDate` and &lt; `endDate` (if defined).</help>
         </item>
         <item>
             <code>System.DPMSActive</code>
@@ -2229,7 +2205,7 @@
         </item>
         <item>
             <code>System.HasAlarm(alarm)</code>
-            <help>True if the system has the alarm alarm set.</help>
+            <help>True if the system has the `alarm` alarm set.</help>
         </item>
         <item>
             <code>System.HasCMS</code>
@@ -2289,7 +2265,7 @@
         </item>
         <item>
             <code>System.IdleTime(time)</code>
-            <help>True if Kodi has had no input for time amount of seconds.</help>
+            <help>True if Kodi has had no input for `time` amount of seconds.</help>
         </item>
         <item>
             <code>System.InternetState</code>
@@ -2301,7 +2277,7 @@
         </item>
         <item>
             <code>system.isinhibit</code>
-            <help>No description available.</help>
+            <help>Undocumented in Kodi.</help>
         </item>
         <item>
             <code>System.IsMaster</code>
@@ -2316,16 +2292,8 @@
             <help>True if Kodi is running in standalone mode.</help>
         </item>
         <item>
-            <code>System.Locale(type)</code>
-            <help>Locale-specific information depending on the requested type.</help>
-        </item>
-        <item>
             <code>System.LoggedOn</code>
             <help>True if a user is currently logged on under a profile.</help>
-        </item>
-        <item>
-            <code>System.Memory(type)</code>
-            <help>The memory value depending on the requested type.</help>
         </item>
         <item>
             <code>System.Platform.Android</code>
@@ -2368,6 +2336,10 @@
             <help>True if ScreenSaver is active.</help>
         </item>
         <item>
+            <code>System.Setting(hideunwatchedepisodethumbs)</code>
+            <help>True if 'hide unwatched episode setting is enabled', False otherwise.</help>
+        </item>
+        <item>
             <code>System.Setting(hidewatched)</code>
             <help>True if 'hide watched items' is selected.</help>
         </item>
@@ -2380,44 +2352,24 @@
             <help>True if the system can provide CPU usage information.</help>
         </item>
         <item>
-            <code>System.Time</code>
-            <help>The current time.</help>
+            <code>System.Time(startTime[,endTime])</code>
+            <help>True if the current system time is &gt;= `startTime` and &lt; `endTime` (if defined).</help>
         </item>
         <item>
             <code>System.TrayOpen</code>
             <help>True if the disc tray is open.</help>
         </item>
         <item>
-            <code>VideoPlayer.Art(type)</code>
-            <help>The art path for the requested arttype and for the currently playing video.</help>
-        </item>
-        <item>
-            <code>VideoPlayer.AudioChannels(format)</code>
-            <help>The audio channel information of the currently playing video, formatted in the optional format (possible values: see \ref ListItem_AudioChannels "ListItem.AudioChannels").</help>
+            <code>true</code>
+            <help>Always evaluates to true.</help>
         </item>
         <item>
             <code>VideoPlayer.CanResumeLiveTV</code>
             <help>True if a in-progress PVR recording is playing an the respective live TV channel is available.</help>
         </item>
         <item>
-            <code>VideoPlayer.Cast</code>
-            <help>A list of cast members, separated by carriage returns.</help>
-        </item>
-        <item>
-            <code>VideoPlayer.CastAndRole</code>
-            <help>A list of cast members and roles, separated by carriage returns. Every cast/role combination is formatted 'cast' as 'role' where 'as' is localised.</help>
-        </item>
-        <item>
             <code>VideoPlayer.Content(parameter)</code>
-            <help>True if the current Video you are playing is contained in corresponding Video Library sections. The following values are accepted: - files - movies - episodes - musicvideos - livetv</help>
-        </item>
-        <item>
-            <code>VideoPlayer.Director</code>
-            <help>The director of current movie, if it's in the database.</help>
-        </item>
-        <item>
-            <code>VideoPlayer.Genre</code>
-            <help>The genre(s) of current movie, if it's in the database.</help>
+            <help>True if the current Video you are playing is contained in corresponding Video Library sections. The following values are accepted: - &lt;b&gt;files&lt;/b&gt; - &lt;b&gt;movies&lt;/b&gt; - &lt;b&gt;episodes&lt;/b&gt; - &lt;b&gt;musicvideos&lt;/b&gt; - &lt;b&gt;livetv&lt;/b&gt;</help>
         </item>
         <item>
             <code>VideoPlayer.HasEpg</code>
@@ -2452,24 +2404,12 @@
             <help>True when the currently playing video is a 3D (stereoscopic) video.</help>
         </item>
         <item>
-            <code>VideoPlayer.NextGenre</code>
-            <help>The genre of the programme that will be played next (PVR).</help>
-        </item>
-        <item>
             <code>VideoPlayer.SubtitlesEnabled</code>
             <help>True if subtitles are turned on for video.</help>
         </item>
         <item>
-            <code>VideoPlayer.UniqueID(name)</code>
-            <help>The scraped metadata id of current movie, if it's in the database.</help>
-        </item>
-        <item>
             <code>VideoPlayer.UsingOverlays</code>
             <help>True if the video player is using the hardware overlays render method.</help>
-        </item>
-        <item>
-            <code>VideoPlayer.Writer</code>
-            <help>The name of Writer of current playing Video, if it's in the database.</help>
         </item>
         <item>
             <code>Visualisation.Enabled</code>
@@ -2482,10 +2422,6 @@
         <item>
             <code>Visualisation.Locked</code>
             <help>True if the current visualisation preset is locked (e.g. in Milkdrop).</help>
-        </item>
-        <item>
-            <code>Weather.Data(property)</code>
-            <help>Weather data, as specified by the parameter.</help>
         </item>
         <item>
             <code>Weather.IsFetched</code>
@@ -2532,8 +2468,8 @@
             <help>True if the window with id or title _window_ is being moved from.</help>
         </item>
         <item>
-            <code>Window.Property(Addon.ID)</code>
-            <help>The id of the selected addon, in DialogAddonSettings.xml.</help>
+            <code>yes</code>
+            <help>same as true.</help>
         </item>
     </conditions>
 </root>

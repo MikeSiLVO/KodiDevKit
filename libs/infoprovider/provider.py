@@ -26,6 +26,7 @@ class InfoProvider(LoaderMixin, TooltipMixin, NavigationMixin, CheckerMixin):
         self.MODELESS_IDS: set = set()
         self.DIALOG_IDS: set = set()
         self.OBSOLETE_WINDOW_FILES: dict = {}
+        self.INFO_NAMES: dict = {}
         self.builtins: list = []
         self.conditions: list = []
         self.template_attribs: dict = {}

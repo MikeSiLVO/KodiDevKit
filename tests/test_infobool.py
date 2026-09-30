@@ -5,6 +5,7 @@ the negation probe that tells a parse failure apart from a genuine false.
 Expected verdicts were confirmed against a running Kodi via XBMC.GetInfoBooleans.
 """
 
+import json
 import os
 import sys
 import unittest
@@ -165,6 +166,36 @@ class TestNegationProbe(unittest.TestCase):
                          infobool.STATE_TRUE)
         self.assertEqual(infobool.read_probe(self._response(cond, False, False), cond),
                          infobool.STATE_FALSE)
+
+
+class TestInfoNames(unittest.TestCase):
+    """Operand names checked against the generated Piers table."""
+
+    @classmethod
+    def setUpClass(cls):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(infobool.__file__)))
+        with open(os.path.join(root, "..", "data", "piers", "infonames.json"), encoding="utf-8") as f:
+            cls.names = infobool.info_name_sets(json.load(f))
+
+    def unknown(self, condition):
+        return infobool.unknown_infos(condition, self.names)
+
+    def test_known_forms(self):
+        self.assertEqual(self.unknown(
+            "Window.IsVisible(1114) + !Skin.HasSetting(a.b) | Container(50).ListItem(1).Property(x.y)"
+            " + ListItemNoWrap(2).Title + System.Platform.Linux + Player.Offset(1).Title + true"
+            " + Control.HasFocus(3) + String.IsEqual(ListItem.Label,a.b)"), [])
+
+    def test_typo_and_bare_word(self):
+        self.assertEqual(self.unknown("!Window.IsVisble(1114) + Player.HasVideo + foo"),
+                         ["Window.IsVisble(1114)", "foo"])
+
+    def test_macros_are_left_alone(self):
+        self.assertEqual(self.unknown("$EXP[name] + String.IsEmpty($INFO[ListItem.Label]) + $PARAM[x]"), [])
+
+    def test_split_info_keeps_dots_inside_params(self):
+        self.assertEqual(infobool.split_info("Window(Home).Property(a.b)"),
+                         [("window", "Home"), ("property", "a.b")])
 
 
 if __name__ == "__main__":
