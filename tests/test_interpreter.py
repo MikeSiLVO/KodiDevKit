@@ -386,6 +386,23 @@ class TestConditions(unittest.TestCase):
             <value condition="$EXP[e]">b</value>
         </variable></includes>"""), ["Kodi has no info 'Player.HasVidoe', it always reads false"])
 
+class TestLiteralTags(unittest.TestCase):
+    """Kodi reads sizes, fonts and button textures literally, so no dynamic expression expands."""
+
+    def test_dynamic_expression_in_literal_tag(self):
+        interp = XmlInterpreter(template_attribs={"button": {"width": {}, "texturefocus": {}, "label": {}}},
+                                template_values={"button": {"width": "int"}})
+        issues = interp.interpret(_parse("""
+        <window><controls><control type="button">
+            <width>$INFO[System.ScreenWidth]</width>
+            <texturefocus>$VAR[Focus]</texturefocus>
+            <label>$INFO[ListItem.Label]</label>
+        </control></controls></window>"""))
+        self.assertEqual(sorted(i["message"] for i in issues), [
+            "<texturefocus> is read as a literal, Kodi does not expand $VAR[] in it",
+            "<width> is read as a literal, Kodi does not expand $INFO[] in it",
+        ])
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 

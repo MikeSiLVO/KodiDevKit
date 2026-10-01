@@ -806,10 +806,10 @@ class TestVariableValueValidation(ValidationTestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_file(window_path)
 
-        # SHOULD flag NotANumber
-        int_issues = [i for i in issues if "invalid integer value" in i.get("message", "").lower() and "NotANumber" in i.get("message", "")]
-        self.assertEqual(len(int_issues), 1, "Variable with invalid integer value should be flagged")
-        self.assertIn("ControlWidth", int_issues[0]["message"])
+        # Kodi reads <width> literally, so the variable never expands and its values are not checked
+        messages = [i.get("message", "") for i in issues]
+        self.assertIn("<width> is read as a literal, Kodi does not expand $VAR[] in it", messages)
+        self.assertFalse([m for m in messages if "NotANumber" in m])
 
     def test_variable_with_dynamic_expression_values(self):
         """Test variable with dynamic expressions in values are not flagged."""
@@ -953,9 +953,9 @@ class TestVariableValueValidation(ValidationTestCase):
         # Create variable with invalid value for an enum type
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
-    <variable name="AspectRatio">
-        <value condition="Skin.HasSetting(Wide)">keep</value>
-        <value>invalidaspect</value>
+    <variable name="TextColor">
+        <value condition="Skin.HasSetting(Wide)">FFFFFFFF</value>
+        <value>notacolor</value>
     </variable>
 </includes>"""
         includes_path = os.path.join(self.test_dir, "1080i", "Includes.xml")
@@ -966,8 +966,8 @@ class TestVariableValueValidation(ValidationTestCase):
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
-        <control type="image" id="100">
-            <aspectratio>$VAR[AspectRatio]</aspectratio>
+        <control type="label" id="100">
+            <textcolor>$VAR[TextColor]</textcolor>
         </control>
     </controls>
 </window>"""
@@ -978,9 +978,9 @@ class TestVariableValueValidation(ValidationTestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_file(window_path)
 
-        # SHOULD flag invalidaspect
-        aspect_issues = [i for i in issues if "invalid value" in i.get("message", "").lower() and "AspectRatio" in i.get("message", "")]
-        self.assertEqual(len(aspect_issues), 1, "Variable in tag text content should be validated")
+        # SHOULD flag notacolor
+        color_issues = [i for i in issues if "invalid color value" in i.get("message", "") and "TextColor" in i.get("message", "")]
+        self.assertEqual(len(color_issues), 1, "Variable in tag text content should be validated")
 
 
 if __name__ == "__main__":

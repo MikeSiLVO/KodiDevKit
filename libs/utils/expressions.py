@@ -26,6 +26,8 @@ _DEFAULT_DYNAMIC_PREFIXES = tuple(
         "$escmap[",
     )
 )
+# the ones a control reads at runtime; $PARAM is substituted into every tag at include load
+RUNTIME_PREFIXES = tuple(p for p in _DEFAULT_DYNAMIC_PREFIXES if p != "$param[")
 
 
 def is_number(text: str) -> bool:
@@ -160,7 +162,7 @@ def starts_with_param_reference(text: str) -> bool:
     return is_dynamic_expression(text, prefixes=("$param[",))
 
 
-def contains_dynamic_expression(text: str) -> bool:
+def contains_dynamic_expression(text: str, *, prefixes: Optional[tuple[str, ...]] = None) -> bool:
     """True when a runtime expression appears anywhere, not only at the start."""
     if not isinstance(text, str):
         return False
@@ -168,7 +170,7 @@ def contains_dynamic_expression(text: str) -> bool:
         return False
 
     lowered = text.casefold()
-    return any(pref in lowered for pref in _DEFAULT_DYNAMIC_PREFIXES)
+    return any(pref in lowered for pref in (prefixes or _DEFAULT_DYNAMIC_PREFIXES))
 
 
 def split_top_level_commas(text: str) -> list[str]:

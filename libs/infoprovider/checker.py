@@ -31,6 +31,7 @@ from ..validation.interpreter import XmlInterpreter
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
 from ..validation.constants import (
     BRACKET_TAGS,
+    LITERAL_TAGS,
     INCLUDE_DEFINITION_TAGS,
     NOOP_TAGS,
     REPEATABLE_TAGS,
@@ -622,7 +623,7 @@ class CheckerMixin:
             if subnode.text and tmpl_val:
                 if not skip_value_checks:
                     self._validate_enum_value(listitems, subnode, subnode.text, tmpl_val)
-                if is_dynamic_expression(subnode.text):
+                if is_dynamic_expression(subnode.text) and subnode.tag not in LITERAL_TAGS:
                     self._validate_variable_values(listitems, subnode, subnode.text, tmpl_val, folder)
 
             if not skip_value_checks:

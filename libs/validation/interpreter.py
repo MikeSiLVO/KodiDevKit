@@ -38,6 +38,7 @@ from .constants import (
     SEVERITY_WARNING,
     BRACKET_TAGS,
     CONDITION_TAGS,
+    LITERAL_TAGS,
     NOOP_TAGS,
     LABEL_READ_TAGS,
     REPEATABLE_TAGS,
@@ -53,6 +54,7 @@ from .constants import (
 from ..utils.expressions import (
     is_dynamic_expression as _is_dynamic,
     contains_dynamic_expression as _contains_dynamic,
+    RUNTIME_PREFIXES,
     is_number as _is_number,
     extract_number_value,
     unclosed_label_block,
@@ -354,6 +356,11 @@ class XmlInterpreter:
                     f"invalid tag for <{label}>: <{tag}>",
                 )
                 continue
+
+            if tag in LITERAL_TAGS and _contains_dynamic(child.text or "", prefixes=RUNTIME_PREFIXES):
+                found = next(p for p in RUNTIME_PREFIXES if p in child.text.casefold())
+                self._add_issue(child, SEVERITY_ERROR, f"<{tag}> is read as a literal, Kodi does not "
+                                                       f"expand {found.upper()}] in it")
 
             tmpl_val = values.get(tag)
             if child.text and tmpl_val in ("int", "position"):

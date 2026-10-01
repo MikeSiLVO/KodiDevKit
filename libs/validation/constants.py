@@ -13,6 +13,30 @@ CONTROL_TAGS = {
 # text Kodi registers as a boolean condition, besides any `condition` attribute
 CONDITION_TAGS = frozenset({"visible", "enable", "usealttexture", "selected", "expression"})
 
+# control tags Kodi reads with plain XML getters, so no dynamic expression expands in them
+LITERAL_TAGS = frozenset({
+    "align", "aligny", "alttexturefocus", "alttexturenofocus", "angle", "aspectratio",
+    "bordersize", "bordertexture", "bottom", "centerbottom", "centerleft", "centerright",
+    "centertop", "colorheight", "colorposx", "colorposy", "colorwidth", "defaultcontrol", "depth",
+    "endmovement", "fadetime", "focusposition", "font", "haspath", "height", "itemgap", "left",
+    "lefttexture", "loop", "midtexture", "minspertimeblock", "monofont", "movement", "movingspeed",
+    "number", "offsetx", "offsety", "orientation", "overlaytexture", "pagecontrol", "password",
+    "pauseatend", "posx", "posy", "preloaditems", "progresstexture", "pulseonselect",
+    "radioheight", "radioposx", "radioposy", "radiowidth", "randomize", "range",
+    "renderfocusedlast", "resetonlabelchange", "reveal", "reverse", "right", "righttexture",
+    "rulerunit", "scroll", "scrollout", "scrollspeed", "scrolltime", "showonepage", "sliderheight",
+    "sliderwidth", "spinheight", "spinposx", "spinposy", "spinwidth", "startmovement", "subtype",
+    "textoffsetx", "textoffsety", "texturebg", "texturecolordisabledmask", "texturecolormask",
+    "texturedown", "texturedowndisabled", "texturedownfocus", "texturefocus", "texturenofocus",
+    "textureradiofocus", "textureradionofocus", "textureradiooff", "textureradiooffdisabled",
+    "textureradioofffocus", "textureradiooffnofocus", "textureradioon", "textureradioondisabled",
+    "textureradioonfocus", "textureradioonnofocus", "texturesliderbackground", "texturesliderbar",
+    "texturesliderbardisabled", "texturesliderbarfocus", "textureslidernib",
+    "textureslidernibdisabled", "textureslidernibfocus", "textureup", "textureupdisabled",
+    "textureupfocus", "textwidth", "timeblocks", "timeperimage", "top", "urlset",
+    "usecontrolcoords", "width", "wrapmultiline",
+})
+
 # Tags whose text is a bracketed condition that must balance
 BRACKET_TAGS = {"visible", "enable", "usealttexture", "selected", "expression", "onclick", "onback"}
 
@@ -147,6 +171,7 @@ __all__ = [
     'CONTROL_TAGS',
     'BRACKET_TAGS',
     'CONDITION_TAGS',
+    'LITERAL_TAGS',
     'INCLUDE_DEFINITION_TAGS',
     'NOOP_TAGS',
     'POS_TAGS',
