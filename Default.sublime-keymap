@@ -25,7 +25,7 @@
     },
     { "keys": ["ctrl+shift+o"], "command": "show_overlay",
         "args": {"overlay": "command_palette", "text": "KodiDevKit"},
-        "context": [{ "key": "selector", "operator": "equal", "operand": "text.xml.kodi" }]
+        "context": [{ "key": "kodidevkit_project", "operator": "equal", "operand": true }]
     },
     { "keys": ["="], "command": "insert_snippet", "args": {"contents": "=\"$0\""},
         "context": [

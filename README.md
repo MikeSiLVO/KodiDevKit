@@ -15,7 +15,7 @@ A Sublime Text 4 plugin for Kodi skin and addon development. Provides validation
 ## Requirements
 
 1. **Sublime Text 4** or later.
-2. **Project structure**: Open your Kodi addon root as the only project folder.
+2. **Project structure**: Open your Kodi addon root as the only folder (File > Open Folder or a saved project).
 3. **Configuration**: Set up KodiDevKit settings via Preferences > Package Settings > KodiDevKit. At minimum, set `kodi_path` to your Kodi installation folder.
 
 ## Installation

@@ -422,18 +422,46 @@ def plugin_loaded():
     kodi.update_labels()
 
     try:
-        if INFOS:
-            window = sublime.active_window()
-            if window:
-                variables = window.extract_variables()
-                project_folder = variables.get("folder")
-                if project_folder:
-                    load_settings = getattr(INFOS, "load_settings", None)
-                    init_addon = getattr(INFOS, "init_addon", None)
-                    if load_settings and init_addon:
-                        load_settings(settings)
-                        init_addon(project_folder)
-                        _show_fatal_xml_phantom()
+        _sync_project(sublime.active_window())
+    except Exception:
+        pass
+
+
+def _in_addon(filename):
+    """True when the file sits inside the loaded addon's folder; other files are left alone."""
+    path = getattr(getattr(INFOS, "addon", None), "path", None) if INFOS else None
+    if not path or not filename:
+        return False
+    root = os.path.normcase(os.path.abspath(path))
+    try:
+        return os.path.commonpath([root, os.path.normcase(os.path.abspath(filename))]) == root
+    except ValueError:
+        return False
+
+
+def _sync_project(window):
+    """Load the window's project folder as the addon when it is not the one already loaded."""
+    if not INFOS or window is None:
+        return
+    project_folder = window.extract_variables().get("folder")
+    if not project_folder:
+        return
+    addon = getattr(INFOS, "addon", None)
+    if not addon or getattr(addon, "path", None) != project_folder:
+        logger.info("project change detected: %s", project_folder)
+        init_start = time.time()
+        load_settings = getattr(INFOS, "load_settings", None)
+        init_addon = getattr(INFOS, "init_addon", None)
+        if load_settings and init_addon:
+            load_settings(KodiDevKit.settings)
+            init_addon(project_folder)
+            _show_fatal_xml_phantom()
+        init_elapsed = time.time() - init_start
+        if init_elapsed > 1.0:
+            logger.warning("init_addon SLOW: %.3fs project=%s", init_elapsed, project_folder)
+    try:
+        from .libs.kodi.jsonrpc import KodiJsonrpc
+        KodiJsonrpc(KodiDevKit.settings).load_settings(KodiDevKit.settings, force=True)
     except Exception:
         pass
 
@@ -861,7 +889,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             return []
 
         filename = view.file_name()
-        if not filename:
+        if not filename or not _in_addon(filename):
             return []
 
         scope_name = view.scope_name(locations[0])
@@ -911,8 +939,8 @@ class KodiDevKit(sublime_plugin.EventListener):
         addon = getattr(INFOS, "addon", None)
         if not addon:
             return
-        # Skip views without filenames (Find Results, scratch buffers, etc.)
-        if not view.file_name():
+        # also skips views without filenames (Find Results, scratch buffers, etc.)
+        if not _in_addon(view.file_name()):
             return
         sels = view.sel()
         if len(sels) != 1:
@@ -1618,6 +1646,23 @@ class KodiDevKit(sublime_plugin.EventListener):
     def on_load_async(self, view):
         self.check_status()
 
+    def on_load_project_async(self, window):
+        _sync_project(window)
+
+    def on_query_context(self, view, key, operator, operand, match_all):
+        """Answer the `kodidevkit_project` key binding context: a Kodi addon is loaded."""
+        if key != "kodidevkit_project":
+            return None
+        loaded = bool(INFOS and getattr(INFOS, "addon", None))
+        if operator == sublime.OP_EQUAL:
+            return loaded == operand
+        if operator == sublime.OP_NOT_EQUAL:
+            return loaded != operand
+        return None
+
+    def on_new_window_async(self, window):
+        _sync_project(window)
+
     def on_activated_async(self, view):
         self.check_status()
         self._cleanup_orphaned_phantoms()
@@ -1644,7 +1689,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             return
 
         fname = view.file_name()
-        if not fname or not fname.lower().endswith(".xml"):
+        if not fname or not _in_addon(fname) or not fname.lower().endswith(".xml"):
             return
 
         self._modified_files.add(fname)
@@ -1661,7 +1706,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             return None
 
         filename_full = view.file_name()
-        if not filename_full:
+        if not filename_full or not _in_addon(filename_full):
             return None
 
         logger.debug("on_post_save_async START: file=%s", os.path.basename(filename_full))
@@ -1834,6 +1879,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         window = sublime.active_window()
         if window is None:
             return
+        _sync_project(window)
         view = window.active_view()
         if view is None:
             return
@@ -1847,8 +1893,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         ext = os.path.splitext(self.filename)[1].lower()
 
         if INFOS and ext == ".xml":
-            addon = getattr(INFOS, "addon", None)
-            if addon:
+            if _in_addon(self.filename):
                 parse_start = time.time()
                 self.root = get_root_from_file(self.filename)
                 self.tree = ET.ElementTree(self.root)
@@ -1861,33 +1906,6 @@ class KodiDevKit(sublime_plugin.EventListener):
             view.assign_syntax('Packages/KodiDevKit/Gettext.sublime-syntax')
         elif ext == ".log":
             view.assign_syntax('Packages/KodiDevKit/KodiLog.sublime-syntax')
-
-        wnd = view.window()
-        if wnd is None:
-            return
-        variables = wnd.extract_variables()
-        project_folder = variables.get("folder")
-
-        if INFOS and project_folder:
-            addon = getattr(INFOS, "addon", None)
-            if not addon or getattr(addon, 'path', None) != project_folder:
-                logger.info("project change detected: %s", project_folder)
-                init_start = time.time()
-                load_settings = getattr(INFOS, "load_settings", None)
-                init_addon = getattr(INFOS, "init_addon", None)
-                if load_settings and init_addon:
-                    load_settings(KodiDevKit.settings)
-                    init_addon(project_folder)
-                    _show_fatal_xml_phantom()
-                init_elapsed = time.time() - init_start
-                if init_elapsed > 1.0:
-                    logger.warning("check_status init_addon SLOW: %.3fs project=%s", init_elapsed, project_folder)
-
-            try:
-                from .libs.kodi.jsonrpc import KodiJsonrpc
-                KodiJsonrpc(KodiDevKit.settings).load_settings(KodiDevKit.settings, force=True)
-            except Exception:
-                pass
 
         total_elapsed = time.time() - start
         if total_elapsed > 1.0:
