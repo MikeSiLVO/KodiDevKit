@@ -379,6 +379,27 @@ class TestConditions(unittest.TestCase):
             "Kodi has no info 'Window.IsVisble(1114)', it always reads false",
         ])
 
+    def test_parse_faults(self):
+        cases = {
+            "[Window.IsVisible(home) | Player.HasVideo] + !Player.HasVideo": None,
+            "String.IsEqual($VAR[Foo],x)": "$VAR[]",
+            "Window.IsVisible(home) + Foo!Bar": "misplaced '!'",
+            "String.IsEqual(x,$Localize[31000])": "uppercase",
+        }
+        for condition, expected in cases.items():
+            messages = self.messages(f'<window><controls><control type="button"><visible>{condition}'
+                                     f'</visible></control></controls></window>')
+            if expected is None:
+                self.assertEqual([m for m in messages if "cannot parse" in m], [], condition)
+            else:
+                self.assertTrue(any(expected in m for m in messages), (condition, messages))
+
+    def test_condition_attribute(self):
+        messages = self.messages('<window><controls><control type="button"><visible condition='
+                                 '"String.IsEqual($INFO[Foo],x)">Player.HasVideo</visible></control>'
+                                 '</controls></window>')
+        self.assertTrue(any("$INFO[]" in m for m in messages), messages)
+
     def test_variable_value_condition(self):
         self.assertEqual(self.messages("""
         <includes><variable name="v">
