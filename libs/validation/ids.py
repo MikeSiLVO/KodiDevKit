@@ -376,9 +376,3 @@ class ValidationIds:
             progress_callback(f"Complete: {error_count} issues ({undefined_count} undefined)")
 
         return deduplicate_issues(listitems)
-
-
-def check(addon, validation_index):
-    """Module-level check function for ID validation."""
-    checker = ValidationIds(addon, window_ids=[], window_names=[], validation_index=validation_index)
-    return checker.check()

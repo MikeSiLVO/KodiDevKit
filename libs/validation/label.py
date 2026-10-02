@@ -421,9 +421,3 @@ class ValidationLabel:
             progress_callback(f"Complete: {error_count} label issues found")
 
         return listitems
-
-
-def check(addon, validation_index):
-    """Module-level dispatcher: instantiate ValidationLabel and run it."""
-    checker = ValidationLabel(addon, get_po_files_fn=lambda: addon.get_po_files(), validation_index=validation_index)
-    return checker.check()

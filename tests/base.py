@@ -21,7 +21,6 @@ from libs.validation.image import ValidationImage as ImageCheck
 from libs.validation.include import ValidationInclude as IncludeCheck
 from libs.validation.skinmap import ValidationMap as MapCheck
 from libs.validation.interpreter import XmlInterpreter
-from libs.validation.interpreter import Context
 
 
 from libs.skin.skin import Skin
@@ -48,7 +47,6 @@ class KodiDevKitTestCase(unittest.TestCase):
     IncludeCheck = IncludeCheck
     MapCheck = MapCheck
     XmlInterpreter = XmlInterpreter
-    Context = Context
 
     # Skin classes
     Skin = Skin
@@ -82,7 +80,6 @@ __all__ = [
     'IncludeCheck',
     'MapCheck',
     'XmlInterpreter',
-    'Context',
     'Skin',
     'Include',          # noqa: F822
     'Addon',

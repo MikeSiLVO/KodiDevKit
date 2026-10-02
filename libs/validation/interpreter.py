@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import re
-from enum import Enum, auto
 
 from .hierarchy import (
     WINDOW_CHILDREN,
@@ -66,23 +65,6 @@ from ..utils.colors import is_kodi_hex as _is_kodi_hex
 
 logger = logging.getLogger(__name__)
 
-
-class Context(Enum):
-    """Nesting context matching Kodi's loading hierarchy."""
-    WINDOW = auto()
-    CONTROLS = auto()
-    CONTROL = auto()
-    GROUP_CONTROL = auto()
-    CONTAINER = auto()
-    LAYOUT = auto()
-    CONTENT = auto()
-    COORDINATES = auto()
-    FONTS = auto()
-    FONTSET = auto()
-    FONT = auto()
-    INCLUDES = auto()
-    VARIABLE = auto()
-    MAP = auto()
 
 
 _LABEL_ENDING = {"$INFO", "$ESCINFO", "$VAR", "$ESCVAR", "$MAP", "$ESCMAP"}
@@ -148,7 +130,6 @@ class XmlInterpreter:
         self.constants = constants
         self.info_names = info_names
         self.issues: list[dict] = []
-        self._context_stack: list[Context] = []
 
     def interpret(self, root) -> list[dict]:
         """Entry point: detect root tag type and dispatch."""
@@ -156,7 +137,6 @@ class XmlInterpreter:
             return []
 
         self.issues = []
-        self._context_stack = []
 
         tag = root.tag
         if tag == "window":
@@ -173,7 +153,6 @@ class XmlInterpreter:
 
     def _walk_window(self, node):
         """Validate direct children of <window>. (GUIWindow.cpp:186-268)"""
-        self._context_stack.append(Context.WINDOW)
         for child in node:
             tag = child.tag
             if tag == "controls":
@@ -192,7 +171,6 @@ class XmlInterpreter:
         for group in node.iter("control"):
             if (group.get("type") or "").lower() in GROUP_TYPES:
                 self._check_default_control(group)
-        self._context_stack.pop()
 
     def _check_default_control(self, scope):
         """Report a <defaultcontrol> whose every control with that id can never take focus."""
@@ -209,7 +187,6 @@ class XmlInterpreter:
 
     def _walk_controls(self, node):
         """Validate <controls> children. (GUIWindow.cpp:258-268)"""
-        self._context_stack.append(Context.CONTROLS)
         for child in node:
             tag = child.tag
             if tag == "control":
@@ -221,18 +198,15 @@ class XmlInterpreter:
                     child, SEVERITY_WARNING,
                     f"<{tag}> is not valid inside <controls> (only <control>)",
                 )
-        self._context_stack.pop()
 
     def _walk_coordinates(self, node):
         """Validate <coordinates> children. (GUIWindow.cpp:234-250)"""
-        self._context_stack.append(Context.COORDINATES)
         for child in node:
             if child.tag not in COORDINATES_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <coordinates>",
                 )
-        self._context_stack.pop()
 
     def _walk_control(self, node, *, inside_layout: bool):
         """Dispatch a <control> based on its type (group / container / leaf)."""
@@ -255,19 +229,16 @@ class XmlInterpreter:
         Validate group control. (GUIWindow.cpp:302)
         Group controls load child <control> elements recursively.
         """
-        self._context_stack.append(Context.GROUP_CONTROL)
         self._validate_control_children(node, control_type, inside_layout=inside_layout)
         for child in node:
             if child.tag == "control":
                 self._walk_control(child, inside_layout=inside_layout)
-        self._context_stack.pop()
 
     def _walk_container(self, node, control_type: str, *, inside_layout: bool):
         """
         Validate container control. (GUIBaseContainer.cpp:1317-1334)
         Containers expect layout tags + content + standard control children.
         """
-        self._context_stack.append(Context.CONTAINER)
         self._validate_control_children(node, control_type, inside_layout=inside_layout)
 
         valid_layouts = EPG_LAYOUT_TAGS if control_type == "epggrid" else STANDARD_LAYOUT_TAGS
@@ -285,11 +256,9 @@ class XmlInterpreter:
             elif tag == "content":
                 self._walk_content(child)
 
-        self._context_stack.pop()
 
     def _walk_layout(self, node):
         """Validate layout children: only <control> elements. (CGUIListItemLayout)"""
-        self._context_stack.append(Context.LAYOUT)
         for child in node:
             tag = child.tag
             if tag == "control":
@@ -301,18 +270,15 @@ class XmlInterpreter:
                     child, SEVERITY_WARNING,
                     f"<{tag}> is not valid inside <{node.tag}> (only <control>)",
                 )
-        self._context_stack.pop()
 
     def _walk_content(self, node):
         """Validate <content> children: <item> or <include>. (StaticProvider.cpp:20-34)"""
-        self._context_stack.append(Context.CONTENT)
         for child in node:
             if child.tag not in CONTENT_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <content> (only <item>)",
                 )
-        self._context_stack.pop()
 
     def _validate_control_children(self, node, control_type: str, *, inside_layout: bool):
         """
@@ -592,7 +558,6 @@ class XmlInterpreter:
 
     def _walk_includes(self, node):
         """Validate <includes> root children. (GUIIncludes.cpp:88-99)"""
-        self._context_stack.append(Context.INCLUDES)
         for child in node:
             if child.tag not in INCLUDES_CHILDREN:
                 self._add_issue(
@@ -607,7 +572,6 @@ class XmlInterpreter:
                 self._walk_default(child)
             elif child.tag == "include":
                 self._walk_include_definition(child)
-        self._context_stack.pop()
 
     def _walk_include_definition(self, node):
         """Report text beside a <definition>, which Kodi drops (GUIIncludes.cpp:211-213)."""
@@ -638,7 +602,6 @@ class XmlInterpreter:
 
     def _walk_variable(self, node):
         """Validate <variable> children: only <value>. (GUIIncludes.cpp:160-168)"""
-        self._context_stack.append(Context.VARIABLE)
         for child in node:
             if child.tag not in VARIABLE_CHILDREN:
                 self._add_issue(
@@ -650,22 +613,18 @@ class XmlInterpreter:
                 condition = child.get("condition")
                 if condition:
                     self._validate_condition(child, condition, resolved=False)
-        self._context_stack.pop()
 
     def _walk_map(self, node):
         """Validate <map> children: only <entry>. (SkinMapManager.cpp:22-40)"""
-        self._context_stack.append(Context.MAP)
         for child in node:
             if child.tag not in MAP_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <map> (only <entry>)",
                 )
-        self._context_stack.pop()
 
     def _walk_fonts(self, node):
         """Validate <fonts> root children. (GUIFontManager.cpp:67)"""
-        self._context_stack.append(Context.FONTS)
         for child in node:
             if child.tag not in FONTS_CHILDREN:
                 self._add_issue(
@@ -674,11 +633,9 @@ class XmlInterpreter:
                 )
             else:
                 self._walk_fontset(child)
-        self._context_stack.pop()
 
     def _walk_fontset(self, node):
         """Validate <fontset> children. (GUIFontManager.cpp:426-445)"""
-        self._context_stack.append(Context.FONTSET)
         for child in node:
             if child.tag not in FONTSET_CHILDREN:
                 self._add_issue(
@@ -687,18 +644,15 @@ class XmlInterpreter:
                 )
             else:
                 self._walk_font(child)
-        self._context_stack.pop()
 
     def _walk_font(self, node):
         """Validate <font> children. (GUIFontManager.cpp:482-510)"""
-        self._context_stack.append(Context.FONT)
         for child in node:
             if child.tag not in FONT_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <font>",
                 )
-        self._context_stack.pop()
 
     def _add_issue(self, node, severity: str, message: str):
         """
@@ -741,6 +695,5 @@ class XmlInterpreter:
 
 
 __all__ = [
-    "Context",
     "XmlInterpreter",
 ]

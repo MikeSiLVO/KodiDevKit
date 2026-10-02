@@ -3,13 +3,6 @@
 from __future__ import annotations
 from lxml import etree as ET
 
-# Control type tags recognized by Kodi
-CONTROL_TAGS = {
-    "button", "togglebutton", "radiobutton", "edit", "image", "label", "textbox",
-    "progress", "slider", "spincontrol", "list", "panel", "group", "multiimage",
-    "wraplist", "scrollbar", "visualisation", "grouplist", "sliderex", "panelcontainer"
-}
-
 # text Kodi registers as a boolean condition, besides any `condition` attribute
 CONDITION_TAGS = frozenset({"visible", "enable", "usealttexture", "selected", "expression"})
 
@@ -168,7 +161,6 @@ SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"
 
 __all__ = [
-    'CONTROL_TAGS',
     'BRACKET_TAGS',
     'CONDITION_TAGS',
     'LITERAL_TAGS',

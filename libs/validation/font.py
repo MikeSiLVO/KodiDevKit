@@ -422,9 +422,3 @@ class ValidationFont:
                 if not nm or is_dynamic_expression(nm):
                     continue
                 yield nm, path, getattr(node, "sourceline", 0) or 0
-
-
-def check(addon, validation_index):
-    """Module-level dispatcher: instantiate ValidationFont and run it."""
-    checker = ValidationFont(addon, validation_index=validation_index)
-    return checker.check()

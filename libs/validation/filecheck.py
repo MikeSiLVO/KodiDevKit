@@ -168,9 +168,3 @@ def _is_keymap(path):
     except OSError:
         return False
     return re.search(rb"^\s*(?:<\?xml[^>]*>\s*)?(?:<!--.*?-->\s*)*<keymap\b", head, re.S) is not None
-
-
-def check(addon, validation_index):
-    """Module-level check function for file encoding validation."""
-    checker = ValidationFileCheck(addon)
-    return checker.check()
