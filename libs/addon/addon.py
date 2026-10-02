@@ -45,6 +45,8 @@ class Addon:
         self.font_file = None
         self.includes = {}
         self.api_version = None
+        self.validation_index = None
+        self._index_builder = None
 
         self.settings: dict | Any = settings or {}
 
@@ -158,8 +160,17 @@ class Addon:
 
         return po_files
 
+    @property
+    def index_builder(self):
+        """The index builder over every window, built on first use."""
+        if self._index_builder is None:
+            from ..skin.index import SkinIndex
+            self._index_builder = SkinIndex(self)
+        return self._index_builder
+
     def update_xml_files(self):
-        """Rebuild `window_files`: every .xml per folder except Font.xml."""
+        """Rebuild `window_files`: every .xml per folder except Font.xml, dropping the index."""
+        self.validation_index = None
         self.window_files = {}
         for path in self.xml_folders:
             xml_folder = os.path.join(self.path, path)

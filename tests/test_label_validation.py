@@ -70,7 +70,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(home_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should detect untranslated label
@@ -93,7 +93,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(home_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report numeric label as untranslated
@@ -115,7 +115,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(home_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report $LOCALIZE as untranslated
@@ -137,7 +137,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(home_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not crash or report empty labels
@@ -158,7 +158,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(home_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report .xml files as untranslated
@@ -180,7 +180,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(home_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report single-character labels (per the > 1 length check in code)
@@ -216,7 +216,7 @@ class TestLabelValidation(ValidationTestCase):
             f.write(shortcuts_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = LabelCheck(self.provider.addon, self.provider.get_po_files)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should flag the normal window's untranslated label

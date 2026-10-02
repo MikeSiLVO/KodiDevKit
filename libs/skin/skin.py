@@ -32,7 +32,6 @@ class Skin(Addon):
 
     def __init__(self, *args, **kwargs):
         self._resolver: SkinResolution | None = None
-        self._index_builder = None
         self._resource_loader: SkinResources | None = None
         self._include_param_roles = None
         self._last_include_count: dict[str, int] = {}
@@ -90,14 +89,6 @@ class Skin(Addon):
 
             self._resolver = SkinResolution(include_maps, self.path)
         return self._resolver
-
-    @property
-    def index_builder(self):
-        """The index builder over every window, built on first use."""
-        if self._index_builder is None:
-            from .index import SkinIndex
-            self._index_builder = SkinIndex(self)
-        return self._index_builder
 
     @property
     def resource_loader(self) -> "SkinResources":
@@ -433,11 +424,6 @@ class Skin(Addon):
                 nested_conditional = conditional or "condition" in node.attrib
                 self.update_includes(os.path.join(self.path, folder, node.attrib["file"]),
                                      nested_conditional)
-
-    def update_xml_files(self):
-        """Refresh window/include file lists and invalidate the validation index."""
-        super().update_xml_files()
-        self.validation_index = None
 
     def reload(self, path):
         """Reload whichever caches an edit to the file affects: includes, colors or fonts."""

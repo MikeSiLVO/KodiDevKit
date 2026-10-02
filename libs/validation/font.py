@@ -237,52 +237,33 @@ class ValidationFont:
                 for n in extra:
                     issues.append(row(f"fontset '{fs['id']}' has extra font '{n}' not in '{base['id']}'", fs["file"], fs["line"], SEVERITY_WARNING))
 
-        if getattr(self.addon, "fonts", None):
-            if self._validation_index:
-                for folder in self.addon.xml_folders:
-                    fonts_defined = self._validation_index.get('fonts_defined', {}).get(folder, {})
-                    fonts_used = self._validation_index.get('fonts_used', {}).get(folder, {})
-                    used_names = set()
+        if getattr(self.addon, "fonts", None) and self._validation_index:
+            for folder in self.addon.xml_folders:
+                fonts_defined = self._validation_index.get('fonts_defined', {}).get(folder, {})
+                fonts_used = self._validation_index.get('fonts_used', {}).get(folder, {})
+                used_names = set()
 
-                    folded = {n.casefold(): n for n in fonts_defined}
-                    for font_name, usages in fonts_used.items():
-                        exact = font_name in fonts_defined
-                        used_names.add(font_name if exact else folded.get(font_name.casefold(), font_name))
-                        if is_dynamic_expression(font_name):
-                            continue
-                        first_usage = usages[0] if usages else {}
-                        issue = _undefined_font_issue(font_name, fonts_defined, folded,
-                                                      first_usage.get('file', ''), first_usage.get('line', 0),
-                                                      self._unloaded_fonts(folder))
-                        if issue:
-                            issues.append(issue)
+                folded = {n.casefold(): n for n in fonts_defined}
+                for font_name, usages in fonts_used.items():
+                    exact = font_name in fonts_defined
+                    used_names.add(font_name if exact else folded.get(font_name.casefold(), font_name))
+                    if is_dynamic_expression(font_name):
+                        continue
+                    first_usage = usages[0] if usages else {}
+                    issue = _undefined_font_issue(font_name, fonts_defined, folded,
+                                                  first_usage.get('file', ''), first_usage.get('line', 0),
+                                                  self._unloaded_fonts(folder))
+                    if issue:
+                        issues.append(issue)
 
-                    for font_name, font_info in fonts_defined.items():
-                        if font_name not in used_names and font_name not in REQUIRED_FONTS:
-                            issues.append({
-                                "message": f"Unused font definition: '{font_name}'",
-                                "file": font_info.get('file', ''),
-                                "line": font_info.get('line', 0),
-                                "severity": SEVERITY_WARNING,
-                            })
-            else:
-                defined_map = self._defined_font_names_map()
-                for folder, defined in defined_map.items():
-                    used = set()
-
-                    folded = {n.casefold(): n for n in defined}
-                    for name, path, line in self._iter_used_font_names(folder):
-                        used.add(name if name in defined else folded.get(name.casefold(), name))
-                        if is_dynamic_expression(name):
-                            continue
-                        issue = _undefined_font_issue(name, defined, folded, path, line, self._unloaded_fonts(folder))
-                        if issue:
-                            issues.append(issue)
-
-                    for it in (self.addon.fonts.get(folder, []) or []):
-                        nm = (it.get("name") or "").strip()
-                        if nm and nm not in used and nm not in REQUIRED_FONTS:
-                            issues.append({"message": f"Unused font definition: '{nm}'", "file": it.get("file") or "", "line": int(it.get("line") or 0), "severity": SEVERITY_WARNING})
+                for font_name, font_info in fonts_defined.items():
+                    if font_name not in used_names and font_name not in REQUIRED_FONTS:
+                        issues.append({
+                            "message": f"Unused font definition: '{font_name}'",
+                            "file": font_info.get('file', ''),
+                            "line": font_info.get('line', 0),
+                            "severity": SEVERITY_WARNING,
+                        })
 
         # One include pulled into N fontsets re-reports each of its fonts N times
         seen = set()
@@ -378,47 +359,3 @@ class ValidationFont:
 
             out.append({"id": fs_id, "unicode": unicode_flag, "file": path, "line": fs_line, "fonts": fonts})
         return out
-
-    def _defined_font_names_map(self):
-        """{folder -> set of defined font names}."""
-        out = {}
-        if not getattr(self.addon, "fonts", None):
-            return out
-        for folder, items in (self.addon.fonts or {}).items():
-            out[folder] = {
-                (it.get("name") or "").strip()
-                for it in (items or [])
-                if (it.get("name") or "").strip()
-            }
-        return out
-
-    def _iter_used_font_names(self, folder):
-        """Yield (name, file_path, line) for font usages in window XMLs."""
-        xml_dir = os.path.join(self.addon.path, folder)
-        if not os.path.isdir(xml_dir):
-            return
-        for fname in os.listdir(xml_dir):
-            if not fname.lower().endswith(".xml"):
-                continue
-            if fname.lower() in ("font.xml", "fonts.xml"):
-                continue
-            path = os.path.join(xml_dir, fname)
-            root = get_root_from_file(path)
-            if root is None:
-                continue
-
-            # Expand includes and $PARAM if resolver available (with performance check)
-            resolve_fn = self._resolve_include
-            if resolve_fn and file_needs_expansion(path):
-                try:
-                    root = resolve_fn(root, folder=folder)
-                except Exception:
-                    # Fall back to unexpanded if expansion fails
-                    pass
-
-            for node in root.xpath(".//font"):
-                nm = (node.text or "").strip()
-                # After expansion, skip only dynamic expressions (not simple $PARAM)
-                if not nm or is_dynamic_expression(nm):
-                    continue
-                yield nm, path, getattr(node, "sourceline", 0) or 0

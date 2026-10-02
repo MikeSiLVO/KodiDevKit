@@ -304,6 +304,10 @@ class SkinIndex:
                         progress_callback(f"Resolved {resolve_count} windows...")
 
             logger.info("Resolved %d windows for ID extraction", resolve_count)
+        else:
+            # an addon window has no includes of its own to expand
+            for folder in self.skin.xml_folders:
+                index['window_expanded_ids'][folder] = dict(index['window_base_ids'].get(folder, {}))
 
         if progress_callback:
             progress_callback(f"Index built successfully ({file_count} files processed)")

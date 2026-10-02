@@ -1,10 +1,8 @@
 """Label validation for Kodi skins."""
 
-import os
 import re
 import logging
 
-from ..utils.xml import file_needs_expansion, get_root_from_file
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -50,10 +48,9 @@ TECHNICAL_TERMS = {
 class ValidationLabel:
     """Validates label translations and definitions in Kodi skins."""
 
-    def __init__(self, addon, get_po_files_fn, resolve_include_fn=None, validation_index=None):
+    def __init__(self, addon, get_po_files_fn, validation_index=None):
         self.addon = addon
         self._get_po_files = get_po_files_fn
-        self._resolve_include = resolve_include_fn
         self._validation_index = validation_index
 
     def _is_hex_color(self, text):
@@ -119,279 +116,66 @@ class ValidationLabel:
         # Pattern: Prefix.Method(args) and nothing else
         return bool(re.match(r'^[A-Za-z]+\.[A-Za-z]+\([^)]*\)$', text))
 
-    def _is_untranslated_label(self, text):
-        """
-        Check if label text appears to be untranslated (hardcoded text).
-
-        Now filters out false positives:
-        - Hex colors (ARGB format)
-        - Brand names (IMDb, TMDb, etc. - don't need translation)
-        - Addon IDs, bare InfoLabels (handled separately with warnings)
-
-        Returns True if text looks like untranslated hardcoded text.
-        """
-        text = text.strip()
-
-        if len(text) <= 1:
-            return False
-
-        if text.endswith(".xml"):
-            return False
-        if text.startswith("$"):
-            return False
-        if "$INFO[" in text or "$VAR[" in text or "$PARAM[" in text:
-            return False
-        if "$NUMBER[" in text or "$ADDON[" in text or "$MAP[" in text:
-            return False
-
-        if not text[0].isalpha():
-            return False
-
-        if self._is_hex_color(text):
-            return False
-
-        if self._is_brand_name(text):
-            return False
-
-        if self._is_technical_term(text):
-            return False
-
-
-        # If we get here, it's likely untranslated text
-        return True
-
     def check(self, progress_callback=None):
         """Find untranslated/undefined labels.
 
         Returns list of {"message": str, "file": str, "line": int}.
         """
-        total_files = sum(len(files) for files in self.addon.window_files.values()) if hasattr(self.addon, 'window_files') else 0
-
+        if not self._validation_index:
+            return []
         if progress_callback:
             progress_callback("Initializing label validation...")
 
         listitems = []
         refs = []
 
-        if self._validation_index:
-            if progress_callback:
-                progress_callback("Using cached validation index...")
+        if progress_callback:
+            progress_callback("Using cached validation index...")
 
-            cached_labels = self._validation_index.get('labels_untranslated', [])
+        cached_labels = self._validation_index.get('labels_untranslated', [])
 
-            for cached_item in cached_labels:
-                label_text = cached_item.get('name', '') or cached_item.get('identifier', '')
+        for cached_item in cached_labels:
+            label_text = cached_item.get('name', '') or cached_item.get('identifier', '')
 
-                if self._is_hex_color(label_text):
-                    continue
-                elif self._is_brand_name(label_text):
-                    continue
-                elif self._is_technical_term(label_text):
-                    continue
-                elif self._is_bare_infolabel(label_text):
-                    updated_item = cached_item.copy()
-                    updated_item['message'] = (
-                        f"Possible missing $INFO[] wrapper: {label_text}. "
-                        f"Use $INFO[{label_text}] or <info>{label_text}</info> if dynamic. "
-                        f"Ignore if intentional descriptive text."
-                    )
-                    updated_item['severity'] = SEVERITY_WARNING
-                    listitems.append(updated_item)
-                elif self._is_addon_id(label_text):
-                    updated_item = cached_item.copy()
-                    updated_item['message'] = (
-                        f"Possible addon ID: {label_text}. "
-                        f"Check if intentional descriptive text or needs translation."
-                    )
-                    updated_item['severity'] = SEVERITY_WARNING
-                    listitems.append(updated_item)
-                else:
-                    item = cached_item.copy()
-                    item['severity'] = SEVERITY_WARNING
-                    listitems.append(item)
+            if self._is_hex_color(label_text):
+                continue
+            elif self._is_brand_name(label_text):
+                continue
+            elif self._is_technical_term(label_text):
+                continue
+            elif self._is_bare_infolabel(label_text):
+                updated_item = cached_item.copy()
+                updated_item['message'] = (
+                    f"Possible missing $INFO[] wrapper: {label_text}. "
+                    f"Use $INFO[{label_text}] or <info>{label_text}</info> if dynamic. "
+                    f"Ignore if intentional descriptive text."
+                )
+                updated_item['severity'] = SEVERITY_WARNING
+                listitems.append(updated_item)
+            elif self._is_addon_id(label_text):
+                updated_item = cached_item.copy()
+                updated_item['message'] = (
+                    f"Possible addon ID: {label_text}. "
+                    f"Check if intentional descriptive text or needs translation."
+                )
+                updated_item['severity'] = SEVERITY_WARNING
+                listitems.append(updated_item)
+            else:
+                item = cached_item.copy()
+                item['severity'] = SEVERITY_WARNING
+                listitems.append(item)
 
-            for folder in self.addon.xml_folders:
-                labels_used = self._validation_index.get('labels_used', {}).get(folder, {})
-                for label_id, usages in labels_used.items():
-                    if usages:
-                        first_usage = usages[0]
-                        refs.append({
-                            'name': label_id,
-                            'type': first_usage.get('type', 'label'),
-                            'file': first_usage.get('file', ''),
-                            'line': first_usage.get('line', 0)
-                        })
-        else:
-            localize_regex = [r"\$LOCALIZE\[([0-9].*?)\]", r"^(\d+)$"]
-            checks = [
-                [".//viewtype[(@label)]", "label"],
-                [".//fontset[(@idloc)]", "idloc"],
-                [".//label[(@fallback)] | .//label2[(@fallback)]", "fallback"],
-            ]
-            processed_count = 0
-            for folder in self.addon.xml_folders:
-                for xml_file in self.addon.window_files[folder]:
-                    path = os.path.join(self.addon.path, folder, xml_file)
-
-                    if "script-skinshortcuts-includes.xml" in path.replace("\\", "/").lower():
-                        continue
-
-                    processed_count += 1
-                    if progress_callback:
-                        if processed_count <= 10:
-                            progress_callback(f"Scanning {xml_file} ({processed_count}/{total_files})...")
-                        elif total_files > 100 and processed_count % 10 == 0:
-                            progress_callback(f"Scanning {xml_file} ({processed_count}/{total_files})...")
-                        elif processed_count % 3 == 0:
-                            progress_callback(f"Scanning {xml_file} ({processed_count}/{total_files})...")
-
-                    root = get_root_from_file(path)
-                    if root is None:
-                        continue
-
-                    # Expand includes and $PARAM if resolver available
-                    # Skip expansion if file contains no dynamic expressions (performance optimization)
-                    if self._resolve_include and file_needs_expansion(path):
-                        try:
-                            logger.debug("Expanding %s...", os.path.basename(path))
-                            root = self._resolve_include(root, folder=folder)
-                            logger.debug("Expansion complete for %s", os.path.basename(path))
-                        except Exception as e:
-                            # Fall back to unexpanded if expansion fails
-                            logger.warning("Expansion failed for %s: %s", os.path.basename(path), e)
-                    else:
-                        logger.debug("Skipping expansion for %s (no params/includes detected)", os.path.basename(path))
-
-                    for element in root.xpath(
-                        ".//label | .//altlabel | .//label2 | .//hinttext"
-                    ):
-                        if not element.text:
-                            continue
-                        for match in re.finditer(localize_regex[0], element.text):
-                            refs.append(
-                                {
-                                    "name": match.group(1),
-                                    "type": element.tag,
-                                    "file": path,
-                                    "line": element.sourceline,
-                                }
-                            )
-                        if element.text.isdigit():
-                            refs.append(
-                                {
-                                    "name": element.text,
-                                    "type": element.tag,
-                                    "file": path,
-                                    "line": element.sourceline,
-                                }
-                            )
-                        elif self._is_untranslated_label(element.text):
-                            if self._is_bare_infolabel(element.text):
-                                listitems.append(
-                                    {
-                                        "name": element.text,
-                                        "type": element.tag,
-                                        "file": path,
-                                        "identifier": element.text,
-                                        "message": "Possible missing $INFO[] wrapper: %s. "
-                                                   "Use $INFO[%s] or <info>%s</info> if dynamic. "
-                                                   "Ignore if intentional descriptive text."
-                                        % (element.text, element.text, element.text),
-                                        "line": element.sourceline,
-                                        "severity": SEVERITY_WARNING,
-                                    }
-                                )
-                            elif self._is_addon_id(element.text):
-                                listitems.append(
-                                    {
-                                        "name": element.text,
-                                        "type": element.tag,
-                                        "file": path,
-                                        "identifier": element.text,
-                                        "message": "Possible addon ID: %s. "
-                                                   "Check if intentional descriptive text or needs translation."
-                                        % element.text,
-                                        "line": element.sourceline,
-                                        "severity": SEVERITY_WARNING,
-                                    }
-                                )
-                            else:
-                                listitems.append(
-                                    {
-                                        "name": element.text,
-                                        "type": element.tag,
-                                        "file": path,
-                                        "identifier": element.text,
-                                        "message": "Label in <%s> not translated: %s"
-                                        % (element.tag, element.text),
-                                        "line": element.sourceline,
-                                        "severity": SEVERITY_WARNING,
-                                    }
-                                )
-                    for check in checks:
-                        for element in root.xpath(check[0]):
-                            attr = element.attrib[check[1]]
-                            for regex in localize_regex:
-                                for match in re.finditer(regex, attr):
-                                    refs.append(
-                                        {
-                                            "name": match.group(1),
-                                            "type": element.tag,
-                                            "file": path,
-                                            "line": element.sourceline,
-                                        }
-                                    )
-                            if (
-                                not attr.isdigit()
-                                and len(attr.strip()) > 1
-                                and attr.strip()[0].isalpha()
-                            ):
-                                if self._is_hex_color(attr):
-                                    continue
-                                elif self._is_brand_name(attr):
-                                    continue
-                                elif self._is_bare_infolabel(attr):
-                                    listitems.append(
-                                        {
-                                            "name": attr,
-                                            "type": element.tag,
-                                            "file": path,
-                                            "identifier": attr,
-                                            "message": "Possible missing $INFO[] wrapper in attribute %s: %s. "
-                                                       "Use $INFO[%s] or <info>%s</info> if dynamic. "
-                                                       "Ignore if intentional descriptive text."
-                                            % (check[1], attr, attr, attr),
-                                            "line": element.sourceline,
-                                            "severity": SEVERITY_WARNING,
-                                        }
-                                    )
-                                elif self._is_addon_id(attr):
-                                    listitems.append(
-                                        {
-                                            "name": attr,
-                                            "type": element.tag,
-                                            "file": path,
-                                            "identifier": attr,
-                                            "message": "Possible addon ID in attribute %s: %s. "
-                                                       "Check if intentional descriptive text or needs translation."
-                                            % (check[1], attr),
-                                            "line": element.sourceline,
-                                            "severity": SEVERITY_WARNING,
-                                        }
-                                    )
-                                else:
-                                    listitems.append(
-                                        {
-                                            "name": attr,
-                                            "type": element.tag,
-                                            "file": path,
-                                            "identifier": attr,
-                                            "message": "Label in attribute %s not translated: %s"
-                                            % (check[1], attr),
-                                            "line": element.sourceline,
-                                            "severity": SEVERITY_WARNING,
-                                        }
-                                    )
+        for folder in self.addon.xml_folders:
+            labels_used = self._validation_index.get('labels_used', {}).get(folder, {})
+            for label_id, usages in labels_used.items():
+                if usages:
+                    first_usage = usages[0]
+                    refs.append({
+                        'name': label_id,
+                        'type': first_usage.get('type', 'label'),
+                        'file': first_usage.get('file', ''),
+                        'line': first_usage.get('line', 0)
+                    })
 
         if progress_callback:
             progress_callback(f"Checking {len(refs)} label references against translation files...")

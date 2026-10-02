@@ -293,8 +293,7 @@ class CheckerMixin:
             return self._no_issues("id")
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES,
-                                resolve_include_fn=self.resolve_xml, validation_index=index,
+        checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES, validation_index=index,
                                 window_filenames=self.WINDOW_FILENAMES, modeless_ids=self.MODELESS_IDS,
                                 dialog_ids=self.DIALOG_IDS)
         return self._muted("IDs", checker.check(progress_callback=progress_callback))
@@ -305,8 +304,7 @@ class CheckerMixin:
             return self._no_issues("label")
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        checker = ValidationLabel(self.addon, self.get_po_files,
-                                  resolve_include_fn=self.resolve_xml, validation_index=index)
+        checker = ValidationLabel(self.addon, self.get_po_files, validation_index=index)
         return self._muted("Labels", checker.check(progress_callback=progress_callback))
 
     def check_repo(self, progress_callback=None):

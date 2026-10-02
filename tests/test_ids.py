@@ -67,8 +67,8 @@ class TestBasicIDValidation(ValidationTestCase):
         <control type="button" id="100">
             <label>Button</label>
         </control>
-        <control type="image">
-            <visible condition="Control.IsVisible(999)">true</visible>
+        <control type="button" id="101">
+            <onclick condition="Control.IsVisible(4321)">noop</onclick>
         </control>
     </controls>
 </window>"""
@@ -80,13 +80,12 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should find undefined control ID 999
-        undefined_issues = [i for i in issues if "999" in i.get("message", "")]
-        self.assertTrue(len(undefined_issues) > 0, "Should detect undefined control ID 999")
+        # Should find undefined control ID 4321
+        undefined_issues = [i for i in issues if "4321" in i.get("message", "")]
+        self.assertTrue(len(undefined_issues) > 0, "Should detect undefined control ID 4321")
         self.assertIn("not defined", undefined_issues[0]["message"].lower())
 
     def test_defined_control_id_no_issue(self):
@@ -110,8 +109,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Without any references, there should be no issues about undefined IDs
@@ -136,8 +134,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should report undefined window ID 99999
@@ -166,8 +163,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should find undefined control ID 200
@@ -198,8 +194,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report 100 or 200 (defined), but should report 300 (undefined)
@@ -229,8 +224,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report window ID 12345 since it's defined on root
@@ -255,8 +249,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not crash or report empty ID
@@ -300,8 +293,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report 4800 or 4801 as undefined (they're defined via params)
@@ -346,8 +338,7 @@ class TestBasicIDValidation(ValidationTestCase):
         checker = IdCheck(
             self.provider.addon,
             self.provider.WINDOW_IDS,
-            self.provider.WINDOW_NAMES
-        )
+            self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should not report 4412 as undefined (it's defined as fadelabel control)
@@ -406,7 +397,7 @@ class TestListItemIndexHandling(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = IdCheck(self.provider.addon, [], [])
+        checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should NOT flag 0 as undefined - it's a ListItemAbsolute index
@@ -437,7 +428,7 @@ class TestListItemIndexHandling(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = IdCheck(self.provider.addon, [], [])
+        checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should NOT flag 0, 1, or -1 as undefined
@@ -462,7 +453,7 @@ class TestListItemIndexHandling(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = IdCheck(self.provider.addon, [], [])
+        checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should NOT flag 0 as undefined
@@ -487,7 +478,7 @@ class TestListItemIndexHandling(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = IdCheck(self.provider.addon, [], [])
+        checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # Should NOT flag 2 as undefined
@@ -510,7 +501,7 @@ class TestListItemIndexHandling(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        checker = IdCheck(self.provider.addon, [], [])
+        checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
         # SHOULD flag 9999 as undefined (but NOT 0)
@@ -844,7 +835,7 @@ class TestAlarmClockException(ValidationTestCase):
 <window>
     <controls>
         <control type="button" id="100">
-            <onclick>SetFocus(999)</onclick>
+            <onclick>SetFocus(4321)</onclick>
         </control>
         <control type="button" id="101">
             <visible>Control.IsVisible(888)</visible>
@@ -858,14 +849,14 @@ class TestAlarmClockException(ValidationTestCase):
         provider.init_addon(self.test_dir)
 
         from libs.validation.ids import ValidationIds as IdCheck
-        checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES)
+        checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=provider.get_validation_index())
         issues = checker.check()
 
-        # Both 999 and 888 should be flagged (no AlarmClock)
-        id_999_issues = [i for i in issues if "999" in i.get("message", "")]
+        # Both 4321 and 888 should be flagged (no AlarmClock)
+        id_4321_issues = [i for i in issues if "4321" in i.get("message", "")]
         id_888_issues = [i for i in issues if "888" in i.get("message", "")]
 
-        self.assertTrue(len(id_999_issues) > 0, "Should flag undefined control 999")
+        self.assertTrue(len(id_4321_issues) > 0, "Should flag undefined control 4321")
         self.assertTrue(len(id_888_issues) > 0, "Should flag undefined control 888")
 
 
@@ -1161,7 +1152,7 @@ class TestBuiltinControls(unittest.TestCase):
         provider.init_addon(self.test_dir)
 
         from libs.validation.ids import ValidationIds as IdCheck
-        checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES)
+        checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=provider.get_validation_index())
         issues = checker.check()
 
         # Control 99999 should still be flagged (not a builtin)
