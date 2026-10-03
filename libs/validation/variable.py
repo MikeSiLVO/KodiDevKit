@@ -2,20 +2,16 @@
 
 import os
 import re
-import logging
 from ..utils.validation import (
     find_skinshortcuts_template,
     find_variable_definitions_in_skinshortcuts_template,
     find_variables_in_skinshortcuts_template,
-    get_all_parameter_contexts,
+    reference_issues,
     resolve_param_in_name,
     shadowed_issues,
     should_report_progress,
 )
 from ..utils.expressions import bracket_body
-from .constants import SEVERITY_ERROR
-
-logger = logging.getLogger(__name__)
 
 
 def strip_xml_comments(content):
@@ -24,22 +20,11 @@ def strip_xml_comments(content):
 
 
 
-
 class ValidationVariable:
     """Validates variable definitions and usage in Kodi skins."""
 
     def __init__(self, addon):
         self.addon = addon
-        # Cache for parameter resolution: (var_name, frozenset(params)) -> resolved_name
-        self._resolution_cache = {}
-
-    def _resolve_param_in_variable_name(self, var_name, param_context=None):
-        """Resolve $PARAM[...] in variable names using parameter values."""
-        return resolve_param_in_name(var_name, param_context, self._resolution_cache)
-
-    def _get_all_parameter_contexts(self, folder):
-        """Get all parameter contexts where a variable might be used."""
-        return get_all_parameter_contexts(self.addon, folder)
 
     def check(self, progress_callback=None):
         """Find undefined or unused variables."""
@@ -79,7 +64,7 @@ class ValidationVariable:
 
                         # Resolve $PARAM[...] with empty string as default (Kodi's behavior)
                         # Later we'll try with actual parameter contexts
-                        resolved_name = self._resolve_param_in_variable_name(raw_name)
+                        resolved_name = resolve_param_in_name(raw_name)
 
                         var_refs.append(
                             {
@@ -131,76 +116,9 @@ class ValidationVariable:
                     template_path
                 )
 
-            undefined_vars = []
-            defined_var_names = {v['name'] for v in var_definitions} | template_defined_vars
-
-            for var_ref in var_refs:
-                ref_name = var_ref['name']
-                raw_name = var_ref.get('raw_name', ref_name)
-
-                if ref_name in defined_var_names:
-                    continue  # Variable exists
-
-                found_in_context = False
-                if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(folder)
-
-                    found_in_context = False
-                    for param_context in contexts:
-                        resolved_name = self._resolve_param_in_variable_name(raw_name, param_context)
-                        if resolved_name in defined_var_names:
-                            found_in_context = True
-                            break
-
-                    if found_in_context:
-                        continue  # Variable is valid in at least one context
-
-                issue = {
-                    'name': ref_name,
-                    'type': 'variable',
-                    'file': var_ref['file'],
-                    'line': var_ref['line'],
-                    'message': f"Variable not defined: {raw_name}",
-                    'severity': SEVERITY_ERROR,
-                }
-
-                if '$PARAM[' in raw_name and not found_in_context:
-                    issue['message'] += (
-                        " -> Note: Variable contains $PARAM but doesn't resolve to any defined variable "
-                        "in any usage context. Check variable definitions and parameter names."
-                    )
-
-                undefined_vars.append(issue)
-
-            unused_vars = []
-            referenced_var_names = set()
-
-            for var_ref in var_refs:
-                ref_name = var_ref['name']
-                raw_name = var_ref.get('raw_name', ref_name)
-
-                referenced_var_names.add(ref_name)
-
-                if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(folder)
-                    for param_context in contexts:
-                        resolved_name = self._resolve_param_in_variable_name(raw_name, param_context)
-                        if resolved_name:
-                            referenced_var_names.add(resolved_name)
-
-            for var_def in var_definitions:
-                if var_def['name'] not in referenced_var_names:
-                    unused_vars.append({
-                        'name': var_def['name'],
-                        'type': 'variable',
-                        'file': var_def['file'],
-                        'line': var_def['line'],
-                        'message': f"Unused variable: {var_def['name']}",
-                        'severity': SEVERITY_ERROR,
-                    })
-
-            listitems.extend(undefined_vars)
-            listitems.extend(unused_vars)
+            listitems.extend(reference_issues(
+                self.addon, folder, "variable", var_refs, var_definitions,
+                defined=template_defined_vars))
             listitems.extend(shadowed_issues(self.addon, folder, ("variable",)))
 
         error_count = len(listitems)

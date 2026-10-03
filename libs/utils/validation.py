@@ -126,6 +126,51 @@ def shadowed_issues(addon, folder, kinds):
     return issues
 
 
+def reference_issues(addon, folder, kind, refs, definitions, defined=(), skip=None):
+    """Issues for references to undefined names and for definitions nothing references."""
+    cache = {}
+    contexts = None
+
+    def param_names(raw):
+        nonlocal contexts
+        if "$PARAM[" not in raw:
+            return []
+        if contexts is None:
+            contexts = get_all_parameter_contexts(addon, folder)
+        return [resolve_param_in_name(raw, context, cache) for context in contexts]
+
+    label = kind.capitalize()
+    known = {d["name"] for d in definitions} | set(defined)
+    referenced = set()
+    issues = []
+    for ref in refs:
+        name = ref["name"]
+        raw = ref.get("raw_name", name)
+        if skip and skip(name):
+            continue
+        resolved = param_names(raw)
+        referenced.add(name)
+        referenced.update(n for n in resolved if n)
+        if name in known or any(n in known for n in resolved):
+            continue
+        message = f"{label} not defined: {raw}"
+        if resolved:
+            message += (
+                f" -> Note: {label} contains $PARAM but doesn't resolve to any defined {kind} "
+                f"in any usage context. Check {kind} definitions and parameter names.")
+        issues.append(create_issue(message, file=ref["file"], line=ref["line"],
+                                   name=name, type=kind, severity="error"))
+
+    for definition in definitions:
+        name = definition["name"]
+        if name in referenced or (skip and skip(name)):
+            continue
+        issues.append(create_issue(f"Unused {kind}: {name}", file=definition["file"],
+                                   line=definition["line"], name=name, type=kind,
+                                   severity="error"))
+    return issues
+
+
 def should_report_progress(count, total):
     """True when this count should be reported: the first ten, then every tenth or third."""
     if count <= 10:

@@ -2,15 +2,12 @@
 
 import os
 import re
-import logging
-import xml.etree.ElementTree as ET
 
 from ..utils.validation import (
     deduplicate_issues,
     find_includes_in_skinshortcuts_template,
     find_skinshortcuts_template,
-    get_all_parameter_contexts,
-    resolve_param_in_name,
+    reference_issues,
     shadowed_issues,
     should_report_progress,
 )
@@ -18,8 +15,6 @@ from ..utils.files import miscased_name
 from ..utils.xml import get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
-
-logger = logging.getLogger(__name__)
 
 # Runtime include patterns - includes generated at runtime by addons
 RUNTIME_INCLUDE_PATTERNS = [
@@ -53,7 +48,7 @@ def _entries(directory):
 
 
 def resolve_include_file(addon, folder, filename):
-    """Path an `<include file="...">` reference opens, and the real name when only its case differs."""
+    """Resolve the path an `<include file>` opens, and the real name when only its case differs."""
     # Kodi joins the path and opens it through the OS with no case fallback (Skin.cpp:279), so a
     # mis-cased reference loads on Windows and loads nothing on Linux.
     ordered = [folder] + [f for f in addon.xml_folders if f != folder]
@@ -68,7 +63,7 @@ def resolve_include_file(addon, folder, filename):
 
 
 def check_include_file_ref(addon, folder, ref):
-    """Issue for an `<include file="...">` reference Kodi cannot open, without the caller's location."""
+    """Check an `<include file>` Kodi cannot open, as an issue without the caller's location."""
     ref = (ref or "").strip()
     if not ref or "$" in ref or RUNTIME_INCLUDE_FILE.match(ref):
         return None
@@ -95,35 +90,6 @@ class ValidationInclude:
 
     def __init__(self, addon):
         self.addon = addon
-        self.runtime_addons = self._detect_runtime_addons()
-        # Cache for parameter resolution: (include_name, frozenset(params)) -> resolved_name
-        self._resolution_cache = {}
-
-    def _detect_runtime_addons(self):
-        """Set of addon IDs in addon.xml that generate runtime content (skinvariables / skinshortcuts)."""
-        if not self.addon:
-            return set()
-
-        addon_xml_path = os.path.join(self.addon.path, 'addon.xml')
-        if not os.path.isfile(addon_xml_path):
-            return set()
-
-        try:
-            tree = ET.parse(addon_xml_path)
-            root = tree.getroot()
-
-            runtime_addons = set()
-            for import_node in root.findall('.//import'):
-                addon_id = import_node.get('addon', '')
-                if addon_id in ['script.skinvariables', 'script.skinshortcuts']:
-                    runtime_addons.add(addon_id)
-                    logger.info(f"Runtime addon detected: {addon_id}")
-
-            return runtime_addons
-
-        except Exception as e:
-            logger.warning(f"Failed to parse addon.xml: {e}")
-            return set()
 
     def _is_runtime_include(self, include_name):
         """True if `include_name` matches a runtime-generated name pattern."""
@@ -137,12 +103,7 @@ class ValidationInclude:
         return False
 
     def _resolve_include_name_kodi_style(self, name, params=None):
-        """Resolve $PARAM references in an include name using Kodi's rules.
-
-        Kodi replaces undefined params with empty strings (GUIIncludes.cpp:628).
-        Example: "Dialog_Background_Blur$PARAM[dialog_size]" with dialog_size
-        undefined becomes "Dialog_Background_Blur".
-        """
+        """Resolve $PARAM references in an include name, emptying undefined ones as Kodi does."""
         if not name or "$PARAM[" not in name:
             return name
 
@@ -162,14 +123,6 @@ class ValidationInclude:
             return resolved_name
 
         return name
-
-    def _resolve_param_in_include_name(self, inc_name, param_context=None):
-        """Resolve $PARAM[...] in include names using parameter values."""
-        return resolve_param_in_name(inc_name, param_context, self._resolution_cache)
-
-    def _get_all_parameter_contexts(self, folder):
-        """Get all parameter contexts where an include might be used."""
-        return get_all_parameter_contexts(self.addon, folder)
 
     def check(self, progress_callback=None):
         """Check undefined/unused includes, counting <fontset>/<include> as usage."""
@@ -362,92 +315,9 @@ class ValidationInclude:
                     "line": getattr(include_obj.node, 'sourceline', 0) or 0
                 })
 
-            undefined_includes = []
-            defined_include_names = {inc['name'] for inc in include_definitions}
-
-            for inc_ref in var_refs:
-                ref_name = inc_ref['name']
-                raw_name = inc_ref.get('raw_name', ref_name)
-
-                if ref_name.startswith("$"):
-                    continue
-
-                if self._is_runtime_include(ref_name):
-                    if self.runtime_addons:
-                        logger.debug(f"Runtime include (addon detected): {ref_name}")
-                    else:
-                        logger.debug(f"Runtime include pattern (no addon.xml dependency): {ref_name}")
-                    continue
-
-                if ref_name in defined_include_names:
-                    continue  # Include exists
-
-                found_in_context = False  # Initialize for type safety
-                if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(folder)
-
-                    found_in_context = False
-                    for param_context in contexts:
-                        resolved_name = self._resolve_param_in_include_name(raw_name, param_context)
-                        if resolved_name in defined_include_names:
-                            found_in_context = True
-                            break
-
-                    if found_in_context:
-                        continue  # Include is valid in at least one context
-
-                issue = {
-                    'name': ref_name,
-                    'type': 'include',
-                    'file': inc_ref['file'],
-                    'line': inc_ref['line'],
-                    'message': f"Include not defined: {raw_name}",
-                    'severity': SEVERITY_ERROR,
-                }
-
-                if '$PARAM[' in raw_name and not found_in_context:
-                    issue['message'] += (
-                        " -> Note: Include contains $PARAM but doesn't resolve to any defined include "
-                        "in any usage context. Check include definitions and parameter names."
-                    )
-
-                undefined_includes.append(issue)
-
-            unused_includes = []
-            referenced_include_names = set()
-
-            for inc_ref in var_refs:
-                ref_name = inc_ref['name']
-                raw_name = inc_ref.get('raw_name', ref_name)
-
-                if ref_name.startswith("$") or self._is_runtime_include(ref_name):
-                    continue
-
-                referenced_include_names.add(ref_name)
-
-                if '$PARAM[' in raw_name:
-                    contexts = self._get_all_parameter_contexts(folder)
-                    for param_context in contexts:
-                        resolved_name = self._resolve_param_in_include_name(raw_name, param_context)
-                        if resolved_name:
-                            referenced_include_names.add(resolved_name)
-
-            for inc_def in include_definitions:
-                if inc_def['name'] not in referenced_include_names:
-                    if self._is_runtime_include(inc_def['name']):
-                        continue
-
-                    unused_includes.append({
-                        'name': inc_def['name'],
-                        'type': 'include',
-                        'file': inc_def['file'],
-                        'line': inc_def['line'],
-                        'message': f"Unused include: {inc_def['name']}",
-                        'severity': SEVERITY_ERROR,
-                    })
-
-            listitems.extend(undefined_includes)
-            listitems.extend(unused_includes)
+            listitems.extend(reference_issues(
+                self.addon, folder, "include", var_refs, include_definitions,
+                skip=lambda name: name.startswith("$") or self._is_runtime_include(name)))
             listitems.extend(shadowed_issues(
                 self.addon, folder,
                 ("include", "include without definition", "constant", "expression", "default")))
