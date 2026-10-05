@@ -18,6 +18,23 @@ FILE_PREVIEW_SIZE = 50_000
 last_xml_errors = []
 _xml_parse_cache = {}
 
+_ESCAPE_MESSAGES = (
+    (re.compile(r"(?:EntityRef: expecting ';'|xmlParseEntityRef: no name)$"),
+     "Unescaped '&', write '&amp;'; Kodi drops a bare '&'"),
+    (re.compile(r"Entity '([^']*)' not defined$"),
+     "Unknown entity '&{0};', Kodi drops the '&'; write '&amp;' for a literal '&'"),
+    (re.compile(r"StartTag: invalid element name$"),
+     "Unescaped '<', write '&lt;'; Kodi cannot load the file"),
+    (re.compile(r"error parsing attribute name$"),
+     "Broken tag or unescaped '<'; write '&lt;' for a literal '<'"),
+    (re.compile(r"Unescaped '<' not allowed in attributes values$"),
+     "Unescaped '<' in an attribute, write '&lt;'"),
+    (re.compile(r"attributes construct error$"),
+     "Broken attribute, a quote inside the value ends it early; write '&quot;' or '&apos;'"),
+    (re.compile(r"Sequence ']]>' not allowed in content$"),
+     "Unescaped ']]>' in text, write ']]&gt;'"),
+)
+
 
 def _parse_xml_file(xml_file):
     """Parse a file into its root; on a syntax error, log it, record it and return None."""
@@ -27,9 +44,14 @@ def _parse_xml_file(xml_file):
         lxml_line = getattr(e, "position", (0, 0))[0]
         msg = re.sub(r"\sline\s\d+(?:,\scolumn\s\d+)?", "", e.msg, flags=re.IGNORECASE).strip()
         short_msg = msg.rstrip(" ,")
-
-        # Try tag-balance checker for a better error location
-        better = _check_tag_balance(xml_file)
+        better = None
+        for pattern, message in _ESCAPE_MESSAGES:
+            found = pattern.match(short_msg)
+            if found:
+                short_msg = message.format(*found.groups())
+                break
+        else:
+            better = _check_tag_balance(xml_file)
         if better:
             logger.error("Parse error in %s (line %d): %s", os.path.basename(xml_file), better["line"], better["message"])
             last_xml_errors[:] = [{"message": better["message"], "line": better["line"], "file": xml_file}]

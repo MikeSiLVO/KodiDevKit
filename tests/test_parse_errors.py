@@ -50,6 +50,19 @@ class TestParseErrors(unittest.TestCase):
         self.assertIsNone(xml.get_root_from_file(path))
         self.assertEqual(xml.last_xml_errors[0]["line"], 4)
 
+    def test_escape_message_names_the_character(self):
+        path = os.path.join(self.path, "16x9", "Escape.xml")
+        for text, expected in (("<v>a=1&b=2</v>", "Unescaped '&'"), ("<v>a & b</v>", "Unescaped '&'"),
+                               ("<v>a&nbsp;b</v>", "Unknown entity '&nbsp;'"),
+                               ("<v>a < b</v>", "Unescaped '<'"),
+                               ('<c a="x<y"/>', "Unescaped '<' in an attribute"),
+                               ('<c a="x"y"/>', "Broken attribute"),
+                               ("<v>a]]>b</v>", "Unescaped ']]>'")):
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(f"<window>{text}</window>")
+            self.assertIsNone(xml.get_root_from_file(path))
+            self.assertTrue(xml.last_xml_errors[0]["message"].startswith(expected), text)
+
 
 if __name__ == "__main__":
     unittest.main()
