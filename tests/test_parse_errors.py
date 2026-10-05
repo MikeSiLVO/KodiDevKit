@@ -42,26 +42,43 @@ class TestParseErrors(unittest.TestCase):
         self.assertTrue(rows[0]["file"].endswith("MyVideoNav.xml"))
         self.assertEqual((rows[0]["line"], rows[0]["severity"]), (3, "error"))
 
-    def test_nested_grouplist_keeps_the_real_error(self):
-        path = os.path.join(self.path, "16x9", "Nested.xml")
+    def _write(self, name, text):
+        path = os.path.join(self.path, "16x9", name)
         with open(path, "w", encoding="utf-8") as f:
-            f.write('<window>\n<control type="grouplist">\n<control type="grouplist">\n'
-                    '<onclick>a & b</onclick>\n</control>\n</control>\n</window>')
+            f.write(text)
+        return path
+
+    def test_nested_grouplist_keeps_the_real_error(self):
+        path = self._write("Nested.xml", '<window>\n<control type="grouplist">\n<control type="grouplist">\n'
+                                         '<onclick>a < b</onclick>\n</control>\n</control>\n</window>')
         self.assertIsNone(xml.get_root_from_file(path))
-        self.assertEqual(xml.last_xml_errors[0]["line"], 4)
+        self.assertEqual(xml.parse_error_issue(path)["line"], 4)
 
     def test_escape_message_names_the_character(self):
-        path = os.path.join(self.path, "16x9", "Escape.xml")
-        for text, expected in (("<v>a=1&b=2</v>", "Unescaped '&'"), ("<v>a & b</v>", "Unescaped '&'"),
-                               ("<v>a&nbsp;b</v>", "Unknown entity '&nbsp;'"),
-                               ("<v>a < b</v>", "Unescaped '<'"),
-                               ('<c a="x<y"/>', "Unescaped '<' in an attribute"),
-                               ('<c a="x"y"/>', "Broken attribute"),
-                               ("<v>a]]>b</v>", "Unescaped ']]>'")):
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(f"<window>{text}</window>")
-            self.assertIsNone(xml.get_root_from_file(path))
-            self.assertTrue(xml.last_xml_errors[0]["message"].startswith(expected), text)
+        cases = (("<v>a=1&b=2</v>", "Unescaped '&'", True), ("<v>a & b</v>", "Unescaped '&'", True),
+                 ("<v>a&nbsp;b</v>", "Unknown entity '&nbsp;'", True),
+                 ("<v>a < b</v>", "Unescaped '<'", False),
+                 ('<c a="x<y"/>', "Unescaped '<' in an attribute", True),
+                 ('<c a="x"y"/>', "Broken attribute", False),
+                 ("<v>a]]>b</v>", "Unescaped ']]>'", True))
+        for n, (text, expected, loads) in enumerate(cases):
+            path = self._write(f"Escape{n}.xml", f"<window>{text}</window>")
+            self.assertEqual(xml.get_root_from_file(path) is not None, loads, text)
+            self.assertTrue(xml.parse_error_issue(path)["message"].startswith(f"XML parse error: {expected}"), text)
+
+    def test_kodi_tolerated_faults_load_as_tinyxml_reads_them(self):
+        path = self._write("Tolerated.xml", '  <?xml version="1.0"?>\n<window>\n<!---note--->\n'
+                                            '<onclick>Play(a=1&b=2)</onclick>\n<c a="x<y"/>\n</window>')
+        root = xml.get_root_from_file(path)
+        assert root is not None
+        self.assertEqual(root.findtext("onclick"), "Play(a=1b=2)")
+        self.assertEqual(root.find("c").get("a"), "x<y")
+        self.assertEqual(root.find("onclick").sourceline, 4)
+        self.assertEqual(xml.parse_error_issue(path)["line"], 1)
+
+    def test_a_later_fatal_fault_still_fails(self):
+        path = self._write("Mixed.xml", "<window>\n<v>a&b</v>\n<v>a < b</v>\n</window>")
+        self.assertIsNone(xml.get_root_from_file(path))
 
 
 if __name__ == "__main__":

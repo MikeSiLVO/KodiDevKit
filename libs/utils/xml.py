@@ -16,9 +16,12 @@ PARSER = ET.XMLParser(remove_blank_text=True, remove_comments=True)
 FILE_PREVIEW_SIZE = 50_000
 
 last_xml_errors = []
+tolerated_xml_errors = {}
 _xml_parse_cache = {}
 
-_ESCAPE_MESSAGES = (
+_ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
+
+_PARSE_MESSAGES = (
     (re.compile(r"(?:EntityRef: expecting ';'|xmlParseEntityRef: no name)$"),
      "Unescaped '&', write '&amp;'; Kodi drops a bare '&'"),
     (re.compile(r"Entity '([^']*)' not defined$"),
@@ -33,40 +36,131 @@ _ESCAPE_MESSAGES = (
      "Broken attribute, a quote inside the value ends it early; write '&quot;' or '&apos;'"),
     (re.compile(r"Sequence ']]>' not allowed in content$"),
      "Unescaped ']]>' in text, write ']]&gt;'"),
+    (re.compile(r"XML declaration allowed only at the start of the document$"),
+     "Text before <?xml, the declaration has to open the file"),
+    (re.compile(r"Double hyphen within comment"),
+     "'--' inside a comment, XML does not allow it"),
 )
 
 
 def _parse_xml_file(xml_file):
-    """Parse a file into its root; on a syntax error, log it, record it and return None."""
+    """Parse a file into its root, as TinyXML reads it when only Kodi-tolerated faults break it."""
     try:
-        return ET.parse(xml_file, PARSER).getroot()
+        root = ET.parse(xml_file, PARSER).getroot()
+        tolerated_xml_errors.pop(xml_file, None)
+        return root
     except XMLSyntaxError as e:
-        lxml_line = getattr(e, "position", (0, 0))[0]
-        msg = re.sub(r"\sline\s\d+(?:,\scolumn\s\d+)?", "", e.msg, flags=re.IGNORECASE).strip()
-        short_msg = msg.rstrip(" ,")
-        better = None
-        for pattern, message in _ESCAPE_MESSAGES:
-            found = pattern.match(short_msg)
-            if found:
-                short_msg = message.format(*found.groups())
-                break
-        else:
-            better = _check_tag_balance(xml_file)
-        if better:
-            logger.error("Parse error in %s (line %d): %s", os.path.basename(xml_file), better["line"], better["message"])
-            last_xml_errors[:] = [{"message": better["message"], "line": better["line"], "file": xml_file}]
-        else:
-            logger.error("Parse error in %s (line %d): %s", os.path.basename(xml_file), lxml_line, short_msg)
-            last_xml_errors[:] = [{"message": short_msg, "line": lxml_line, "file": xml_file}]
-        return None
+        error = _syntax_error(xml_file, e)
     except Exception:
         logger.exception("Unexpected error parsing %s", xml_file)
         return None
 
+    root = _parse_as_tinyxml(xml_file)
+    if root is not None:
+        tolerated_xml_errors[xml_file] = error
+        return root
+    logger.error("Parse error in %s (line %d): %s", os.path.basename(xml_file), error["line"],
+                 error["message"])
+    last_xml_errors[:] = [error]
+    return None
+
+
+def _syntax_error(xml_file, e):
+    """The parse error as {message, line, file}, in plain words and at the line to fix."""
+    line = getattr(e, "position", (0, 0))[0]
+    message = re.sub(r"\sline\s\d+(?:,\scolumn\s\d+)?", "", e.msg, flags=re.IGNORECASE).strip()
+    message = message.rstrip(" ,")
+    for pattern, plain in _PARSE_MESSAGES:
+        found = pattern.match(message)
+        if found:
+            return {"message": plain.format(*found.groups()), "line": line, "file": xml_file}
+    better = _check_tag_balance(xml_file)
+    if better:
+        return {"message": better["message"], "line": better["line"], "file": xml_file}
+    return {"message": message, "line": line, "file": xml_file}
+
+
+def _parse_as_tinyxml(xml_file):
+    """Root of the file rewritten as TinyXML reads it, None when Kodi cannot load it either."""
+    try:
+        with open(xml_file, "rb") as f:
+            text = f.read().decode("utf-8-sig")
+    except (OSError, UnicodeDecodeError):
+        return None
+    rewritten = _as_tinyxml(text)
+    if rewritten == text:
+        return None
+    try:
+        return ET.fromstring(rewritten.encode("utf-8"), PARSER)
+    except XMLSyntaxError:
+        return None
+
+
+def _as_tinyxml(text):
+    """Rewrite the text as TinyXML reads it: stray '&' dropped, '<' and ']]>' escaped."""
+    out = []
+    lead = re.match(r"\s+(?=<\?xml)", text)
+    i = lead.end() if lead else 0
+    if lead:
+        out.append("\n" * lead.group().count("\n"))
+    n = len(text)
+    while i < n:
+        if text.startswith("<!--", i):
+            end = text.find("-->", i + 4)
+            if end == -1:
+                out.append(text[i:])
+                break
+            out.append("<!--" + "\n" * text.count("\n", i, end) + "-->")
+            i = end + 3
+        elif text.startswith("<![CDATA[", i) or text.startswith("<?", i) or text.startswith("<!", i):
+            closer = "]]>" if text.startswith("<![CDATA[", i) else ">"
+            end = text.find(closer, i + 2)
+            if end == -1:
+                out.append(text[i:])
+                break
+            out.append(text[i:end + len(closer)])
+            i = end + len(closer)
+        elif text[i] == "<":
+            i = _copy_tag(text, i, out)
+        elif text[i] == "&" and not _ENTITY.match(text, i):
+            i += 1
+        elif text.startswith("]]>", i):
+            out.append("]]&gt;")
+            i += 3
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def _copy_tag(text, i, out):
+    """Copy the tag at the index into the output with its values fixed; index after the tag."""
+    quote = None
+    j = i
+    while j < len(text):
+        ch = text[j]
+        if quote:
+            if ch == quote:
+                quote = None
+                out.append(ch)
+            elif ch == "<":
+                out.append("&lt;")
+            elif ch != "&" or _ENTITY.match(text, j):
+                out.append(ch)
+        else:
+            out.append(ch)
+            if ch in "\"'":
+                quote = ch
+            elif ch == ">" and j > i:
+                return j + 1
+        j += 1
+    return j
+
 
 def parse_error_issue(xml_file):
-    """Error row for a file that just failed to parse, at the line the parse error names."""
-    err = next((e for e in last_xml_errors if e["file"] == xml_file), None)
+    """Error row for a file that failed to parse or loaded only as TinyXML reads it."""
+    err = tolerated_xml_errors.get(xml_file) or next(
+        (e for e in last_xml_errors if e["file"] == xml_file), None)
     return {
         "message": f"XML parse error: {err['message'] if err else 'file could not be parsed'}",
         "line": err["line"] if err else 1,

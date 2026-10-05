@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 import copy
 import logging
-from ..utils.xml import check_brackets, get_root_from_file, parse_error_issue, tree_needs_expansion
+from ..utils.xml import (check_brackets, get_root_from_file, parse_error_issue, tolerated_xml_errors,
+                         tree_needs_expansion)
 from ..utils.expressions import (
     contains_dynamic_expression,
     extract_number_value,
@@ -549,7 +550,7 @@ class CheckerMixin:
             return [parse_error_issue(path)]
 
         folder = path.split(os.sep)[-2] if os.sep in path else ""
-        listitems = []
+        listitems = [parse_error_issue(path)] if path in tolerated_xml_errors else []
 
         obsolete = self._obsolete_window_issue(path, folder)
         if obsolete:
