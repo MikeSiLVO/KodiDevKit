@@ -1,16 +1,4 @@
-"""
-Variable validation tests.
-
-Consolidated from:
-- test_variable_validation.py: Basic variable definition/usage validation
-- test_variable_comments.py: Variable usage in commented code detection
-- test_variable_value_validation.py: Validation of values within variable definitions
-
-Test organization:
-- Basic Validation: Definition, usage, undefined variables
-- Comment Handling: Variables in comments not counted as used
-- Value Validation: Color values, integer values, dynamic expressions
-"""
+"""Variable validation tests."""
 
 import os
 import sys
@@ -276,6 +264,26 @@ class TestVariableBasicValidation(ValidationTestCase):
         unused_issues = [i for i in issues if "UnusedVar" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertTrue(len(unused_issues) > 0, "Should report UnusedVar as unused")
 
+    def test_variables_used_in_shortcuts_overrides(self):
+        """A $VAR in overrides.xml or a menu's DATA.xml counts as a usage."""
+        files = {
+            "16x9/Includes.xml": '<includes><variable name="SearchMovies"><value>a</value></variable>'
+                                 '<variable name="MenuArt"><value>b</value></variable>'
+                                 '<variable name="Unused"><value>c</value></variable></includes>',
+            "16x9/Home.xml": "<window><controls/></window>",
+            "shortcuts/overrides.xml": "<overrides><shortcut>$VAR[SearchMovies]</shortcut></overrides>",
+            "shortcuts/mainmenu.DATA.xml": "<shortcuts><shortcut><icon>$VAR[MenuArt]</icon></shortcut></shortcuts>",
+        }
+        os.makedirs(os.path.join(self.test_dir, "shortcuts"), exist_ok=True)
+        for rel, text in files.items():
+            with open(os.path.join(self.test_dir, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        unused = sorted(i["message"] for i in VariableCheck(self.provider.addon).check()
+                        if i["message"].startswith("Unused"))
+        self.assertEqual(unused, ["Unused variable: Unused"])
+
     def test_variables_used_in_skinshortcuts_template(self):
         """Test that variables referenced in shortcuts/template.xml are not flagged as unused."""
         # Create includes file with variables that will be used only in template.xml
@@ -344,7 +352,7 @@ class TestVariableBasicValidation(ValidationTestCase):
         self.assertEqual(len(truly_unused), 1, "Should still flag actually unused variables")
 
     def test_variables_used_in_skinshortcuts_v3_template(self):
-        """Test that variables referenced in v3 shortcuts/templates.xml are not flagged as unused."""
+        """Variables referenced in v3 shortcuts/templates.xml are not flagged as unused."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="HomeWidgetBackColor">
@@ -406,8 +414,7 @@ class TestVariableBasicValidation(ValidationTestCase):
         self.assertEqual(len(truly_unused), 1, "Should still flag actually unused variables")
 
     def test_variables_defined_in_skinshortcuts_template_not_undefined(self):
-        """Variables defined inside a SkinShortcuts template are generated at runtime.
-        References to them in skin XML should not be flagged as undefined."""
+        """Variables defined inside a SkinShortcuts template are generated at runtime."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="SkinDefinedVar">

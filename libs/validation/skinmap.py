@@ -6,9 +6,9 @@ import os
 import re
 import logging
 from ..utils.validation import (
-    find_skinshortcuts_template,
     get_all_parameter_contexts,
     resolve_param_in_name,
+    skinshortcuts_files,
     should_report_progress,
 )
 from .constants import SEVERITY_ERROR
@@ -30,15 +30,7 @@ def blank_xml_comments(content):
 
 
 def extract_map_args(match_text):
-    r"""Arguments of the `$MAP[...]` starting `match_text`, or None if the `]` is missing.
-
-    Mirrors CGUIInfoLabel::Parse: a nesting-aware end bracket, then a plain
-    comma split that is blind to nested brackets (GUIInfoLabel.cpp:355-360).
-
-        extract_map_args("$MAP[Codecs, ListItem.AudioCodec]") -> ["Codecs", " ListItem.AudioCodec"]
-        extract_map_args("$ESCMAP[Codecs]")                   -> ["Codecs"]
-        extract_map_args("$MAP[]")                            -> []
-    """
+    r"""Extract the leading `$MAP[...]` args as CGUIInfoLabel::Parse does; None when unclosed."""
     start = match_text.find('[')
     if start == -1:
         return None
@@ -120,14 +112,12 @@ class ValidationMap:
         return definitions
 
     def _collect_usages(self, folder, progress_callback=None):
-        """Every `$MAP[]` / `$ESCMAP[]` reference in the folder, template included."""
+        """Every `$MAP[]` / `$ESCMAP[]` reference in the folder and the shortcuts files."""
         paths = [
             os.path.join(self.addon.path, folder, xml_file)
             for xml_file in self.addon.window_files.get(folder, [])
         ]
-        template_path = find_skinshortcuts_template(self.addon.path)
-        if template_path:
-            paths.append(template_path)
+        paths.extend(skinshortcuts_files(self.addon.path))
 
         usages = []
         for count, path in enumerate(paths, 1):

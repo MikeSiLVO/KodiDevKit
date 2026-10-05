@@ -81,6 +81,15 @@ class TestMapUsage(MapTestCase):
         self._window(CODEC_LABEL)
         self.assertEqual(self._check(), [])
 
+    def test_shortcuts_menu_data_counts_as_a_usage(self):
+        self._includes(CODEC_MAP)
+        self._window("<controls/>")
+        os.makedirs(os.path.join(self.test_dir, "shortcuts"))
+        self._write("../shortcuts/mainmenu.DATA.xml",
+                    "<shortcuts><shortcut><label>$MAP[CodecMap, ListItem.AudioCodec]</label>"
+                    "</shortcut></shortcuts>")
+        self.assertEqual(self._check(), [])
+
     def test_escmap_counts_as_a_usage(self):
         self._includes(CODEC_MAP)
         self._window("""    <controls>

@@ -5,11 +5,12 @@ import re
 from ..utils.validation import (
     find_skinshortcuts_template,
     find_variable_definitions_in_skinshortcuts_template,
-    find_variables_in_skinshortcuts_template,
+    find_variables_in_skinshortcuts_file,
     reference_issues,
     resolve_param_in_name,
     shadowed_issues,
     should_report_progress,
+    skinshortcuts_files,
 )
 from ..utils.expressions import bracket_body
 
@@ -76,24 +77,15 @@ class ValidationVariable:
                             }
                         )
 
-            # SkinShortcuts template references (v2: template.xml, v3: templates.xml)
             template_path = find_skinshortcuts_template(self.addon.path)
-            if template_path:
-                if progress_callback:
-                    progress_callback("Checking SkinShortcuts template...")
-
-                known_variables = set(self.addon.variable_map.get(folder, {}).keys())
-
-                template_variables = find_variables_in_skinshortcuts_template(
-                    template_path, known_variables
-                )
-
-                for var_name in template_variables:
+            known_variables = set(self.addon.variable_map.get(folder, {}).keys())
+            for shortcuts_path in skinshortcuts_files(self.addon.path):
+                for var_name in find_variables_in_skinshortcuts_file(shortcuts_path, known_variables):
                     var_refs.append(
                         {
                             "line": 0,
                             "type": "variable",
-                            "file": template_path,
+                            "file": shortcuts_path,
                             "name": var_name,
                         }
                     )

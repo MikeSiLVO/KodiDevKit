@@ -263,6 +263,16 @@ def find_skinshortcuts_template(addon_path):
     return None
 
 
+def skinshortcuts_files(addon_path):
+    """Every xml file in the shortcuts folder, all of which feed the generated includes."""
+    folder = os.path.join(addon_path, "shortcuts")
+    try:
+        names = sorted(os.listdir(folder))
+    except OSError:
+        return []
+    return [os.path.join(folder, name) for name in names if name.lower().endswith(".xml")]
+
+
 def find_includes_in_skinshortcuts_template(template_path, known_include_names):
     """Known include names the shortcuts template refers to, in text or in an attribute."""
     from .xml import get_root_from_file
@@ -299,8 +309,8 @@ def find_includes_in_skinshortcuts_template(template_path, known_include_names):
     return referenced
 
 
-def find_variables_in_skinshortcuts_template(template_path, known_variable_names):
-    """Known variable names the shortcuts template refers to, in text or in an attribute."""
+def find_variables_in_skinshortcuts_file(template_path, known_variable_names):
+    """Known variable names a shortcuts file refers to, in text or in an attribute."""
     from .xml import get_root_from_file
 
     if not os.path.isfile(template_path):
