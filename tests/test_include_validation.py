@@ -1,6 +1,4 @@
-"""
-Tests for IncludeCheck class (include definition and usage validation).
-"""
+"""Tests for IncludeCheck class (include definition and usage validation)."""
 
 import os
 import sys
@@ -79,6 +77,25 @@ class TestIncludeValidation(ValidationTestCase):
         # Should detect undefined include
         undefined_issues = [i for i in issues if "UndefinedInclude" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertTrue(len(undefined_issues) > 0, "Should detect undefined include")
+
+    def test_nested_undefined_include_reported_where_written(self):
+        """An undefined include inside an include body is reported once, in the include file."""
+        files = {
+            "Includes.xml": '<includes>\n<include name="Outer">\n<include>Missing</include>\n'
+                            '</include>\n</includes>',
+            "Home.xml": "<window>\n<controls>\n<include>Outer</include>\n</controls>\n</window>",
+            "MyVideoNav.xml": "<window>\n<controls>\n<include>Outer</include>\n</controls>\n</window>",
+        }
+        for name, text in files.items():
+            with open(os.path.join(self.test_dir, "16x9", name), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        issues = IncludeCheck(self.provider.addon).check()
+
+        found = [(os.path.basename(i["file"]), i["line"]) for i in issues
+                 if i["message"] == "Include not defined: Missing"]
+        self.assertEqual(found, [("Includes.xml", 3)])
 
     def test_defined_include_no_issue(self):
         """Test that defined includes don't trigger issues when used."""

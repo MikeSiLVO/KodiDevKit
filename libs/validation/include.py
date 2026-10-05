@@ -239,7 +239,7 @@ class ValidationInclude:
                                 {
                                     "line": inc_tag.sourceline,
                                     "type": "include",
-                                    "file": path,
+                                    "file": include_def.file,
                                     "name": resolved_name,
                                 }
                             )
