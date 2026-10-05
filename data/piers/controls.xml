@@ -80,6 +80,7 @@
         <wrapmultiline>bool</wrapmultiline>
         <scrollspeed>int</scrollspeed>
         <scrollsuffix>label</scrollsuffix>
+        <textwidth>int</textwidth>
     </control>
     <control type="fadelabel" id="int">
         <width max="int">int</width>
@@ -114,12 +115,12 @@
         <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
         <onback condition="condition">builtin</onback>
-        <texturesliderbackground colordiffuse="color" border="coords" diffuse="path">path</texturesliderbackground>
-        <texturesliderbar colordiffuse="color" border="coords" diffuse="path">path</texturesliderbar>
-        <texturesliderbarfocus colordiffuse="color" border="coords" diffuse="path">path</texturesliderbarfocus>
-        <textureslidernib colordiffuse="color" border="coords" diffuse="path">path</textureslidernib>
-        <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path">path</textureslidernibfocus>
-        <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path">path</textureslidernibdisabled>
+        <texturesliderbackground colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbackground>
+        <texturesliderbar colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbar>
+        <texturesliderbarfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbarfocus>
+        <textureslidernib colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernib>
+        <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
+        <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibdisabled>
         <orientation>orientation</orientation>
         <showonepage>bool</showonepage>
     </control>
@@ -146,8 +147,8 @@
         <colorposx>int</colorposx>
         <colorposy>int</colorposy>
         <colorbox>color</colorbox>
-        <texturecolormask border="coords" colordiffuse="color" infill="bool" diffuse="path">path</texturecolormask>
-        <texturecolordisabledmask border="coords" colordiffuse="color" infill="bool" diffuse="path">path</texturecolordisabledmask>
+        <texturecolormask border="coords" colordiffuse="color" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturecolormask>
+        <texturecolordisabledmask border="coords" colordiffuse="color" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturecolordisabledmask>
         <include>common</include>
         <include>button_common</include>
         <include>nav_common</include>
@@ -169,7 +170,7 @@
         <align>align</align>
         <aligny>aligny</aligny>
         <texture border="coords" flipy="bool" flipx="bool" background="bool" diffuse="path" colordiffuse="color" fallback="path" infill="bool">path</texture>
-        <bordertexture border="coords" colordiffuse="color" infill="bool" diffuse="path">path</bordertexture>
+        <bordertexture border="coords" colordiffuse="color" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</bordertexture>
         <bordersize>int</bordersize>
         <info>info</info>
         <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
@@ -197,16 +198,16 @@
         <include>nav_common</include>
         <include>button_common</include>
         <label2>label</label2>
-        <textureradioonfocus colordiffuse="color" border="coords" diffuse="path">path</textureradioonfocus>
-        <textureradioonnofocus colordiffuse="color" border="coords" diffuse="path">path</textureradioonnofocus>
-        <textureradioondisabled colordiffuse="color" border="coords" diffuse="path">path</textureradioondisabled>
-        <textureradioofffocus colordiffuse="color" border="coords" diffuse="path">path</textureradioofffocus>
-        <textureradiooffnofocus colordiffuse="color" border="coords" diffuse="path">path</textureradiooffnofocus>
-        <textureradiooffdisabled colordiffuse="color" border="coords" diffuse="path">path</textureradiooffdisabled>
-        <textureradioon colordiffuse="color" border="coords" diffuse="path">path</textureradioon>
-        <textureradiooff colordiffuse="color" border="coords" diffuse="path">path</textureradiooff>
-        <textureradiofocus colordiffuse="color" border="coords" diffuse="path">path</textureradiofocus>
-        <textureradionofocus colordiffuse="color" border="coords" diffuse="path">path</textureradionofocus>
+        <textureradioonfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradioonfocus>
+        <textureradioonnofocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradioonnofocus>
+        <textureradioondisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradioondisabled>
+        <textureradioofffocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradioofffocus>
+        <textureradiooffnofocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradiooffnofocus>
+        <textureradiooffdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradiooffdisabled>
+        <textureradioon colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradioon>
+        <textureradiooff colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradiooff>
+        <textureradiofocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradiofocus>
+        <textureradionofocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradionofocus>
         <selected>condition</selected>
         <onclick condition="condition">builtin</onclick>
         <onback condition="condition">builtin</onback>
@@ -224,8 +225,8 @@
         <include>common</include>
         <include>nav_common</include>
         <include>button_common</include>
-        <alttexturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</alttexturefocus>
-        <alttexturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</alttexturenofocus>
+        <alttexturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</alttexturefocus>
+        <alttexturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</alttexturenofocus>
         <wrapmultiline>bool</wrapmultiline>
         <usealttexture>condition</usealttexture>
         <altclick condition="condition">builtin</altclick>
@@ -242,12 +243,12 @@
         <include>common</include>
         <include>nav_common</include>
         <colordiffuse>color</colordiffuse>
-        <textureup colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</textureup>
-        <textureupfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</textureupfocus>
-        <texturedown colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturedown>
-        <texturedownfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturedownfocus>
-        <textureupdisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</textureupdisabled>
-        <texturedowndisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturedowndisabled>
+        <textureup colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureup>
+        <textureupfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureupfocus>
+        <texturedown colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedown>
+        <texturedownfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedownfocus>
+        <textureupdisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureupdisabled>
+        <texturedowndisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedowndisabled>
         <subtype>subtype</subtype>
         <font>font</font>
         <range>range</range>
@@ -272,12 +273,12 @@
         <spinwidth>int</spinwidth>
         <spinheight>int</spinheight>
         <reverse>bool</reverse>
-        <textureup colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</textureup>
-        <textureupfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</textureupfocus>
-        <texturedown colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturedown>
-        <texturedownfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturedownfocus>
-        <textureupdisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</textureupdisabled>
-        <texturedowndisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturedowndisabled>
+        <textureup colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureup>
+        <textureupfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureupfocus>
+        <texturedown colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedown>
+        <texturedownfocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedownfocus>
+        <textureupdisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureupdisabled>
+        <texturedowndisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedowndisabled>
         <onback condition="condition">builtin</onback>
         <onfocus condition="condition">builtin</onfocus>
         <onunfocus condition="condition">builtin</onunfocus>
@@ -287,13 +288,13 @@
         <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
-        <texturesliderbackground colordiffuse="color" border="coords" diffuse="path">path</texturesliderbackground>
-        <texturesliderbar colordiffuse="color" border="coords" diffuse="path">path</texturesliderbar>
-        <texturesliderbarfocus colordiffuse="color" border="coords" diffuse="path">path</texturesliderbarfocus>
-        <texturesliderbardisabled colordiffuse="color" border="coords" diffuse="path">path</texturesliderbardisabled>
-        <textureslidernib colordiffuse="color" border="coords" diffuse="path">path</textureslidernib>
-        <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path">path</textureslidernibfocus>
-        <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path">path</textureslidernibdisabled>
+        <texturesliderbackground colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbackground>
+        <texturesliderbar colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbar>
+        <texturesliderbarfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbarfocus>
+        <texturesliderbardisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbardisabled>
+        <textureslidernib colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernib>
+        <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
+        <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibdisabled>
         <info>info</info>
         <action>action</action>
         <pulseonselect>bool</pulseonselect>
@@ -307,9 +308,9 @@
         <include>button_common</include>
         <sliderwidth>int</sliderwidth>
         <sliderheight>int</sliderheight>
-        <texturesliderbar colordiffuse="color" border="coords" diffuse="path">path</texturesliderbar>
-        <textureslidernib colordiffuse="color" border="coords" diffuse="path">path</textureslidernib>
-        <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path">path</textureslidernibfocus>
+        <texturesliderbar colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbar>
+        <textureslidernib colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernib>
+        <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
         <onback condition="condition">builtin</onback>
         <onfocus condition="condition">builtin</onfocus>
         <onunfocus condition="condition">builtin</onunfocus>
@@ -318,8 +319,8 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
-        <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturefocus>
-        <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturenofocus>
+        <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturefocus>
+        <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturenofocus>
         <movingspeed acceleration="int" maxvelocity="int" resettimeout="int" delta="int"></movingspeed>
         <pulseonselect>bool</pulseonselect>
     </control>
@@ -340,12 +341,12 @@
         <height max="int">int</height>
         <include>common</include>
         <reveal>bool</reveal>
-        <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path">path</texturebg>
+        <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturebg>
         <colordiffuse>color</colordiffuse>
-        <lefttexture border="coords" colordiffuse="color" diffuse="path">path</lefttexture>
-        <midtexture border="coords" colordiffuse="color" diffuse="path">path</midtexture>
-        <righttexture border="coords" colordiffuse="color" diffuse="path">path</righttexture>
-        <overlaytexture colordiffuse="color" border="coords" diffuse="path">path</overlaytexture>
+        <lefttexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</lefttexture>
+        <midtexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</midtexture>
+        <righttexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</righttexture>
+        <overlaytexture colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</overlaytexture>
         <info>info</info>
         <info2>info</info2>
     </control>
@@ -354,12 +355,12 @@
         <height max="int">int</height>
         <include>common</include>
         <reveal>bool</reveal>
-        <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path">path</texturebg>
+        <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturebg>
         <colordiffuse>color</colordiffuse>
-        <lefttexture border="coords" colordiffuse="color" diffuse="path">path</lefttexture>
-        <midtexture border="coords" colordiffuse="color" diffuse="path">path</midtexture>
-        <righttexture border="coords" colordiffuse="color" diffuse="path">path</righttexture>
-        <overlaytexture colordiffuse="color" border="coords" diffuse="path">path</overlaytexture>
+        <lefttexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</lefttexture>
+        <midtexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</midtexture>
+        <righttexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</righttexture>
+        <overlaytexture colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</overlaytexture>
         <info>info</info>
     </control>
     <control type="textbox" id="int">
@@ -429,8 +430,8 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
-        <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturefocus>
-        <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path">path</texturenofocus>
+        <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturefocus>
+        <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturenofocus>
         <movingspeed acceleration="int" maxvelocity="int" resettimeout="int" delta="int"></movingspeed>
         <pulseonselect>bool</pulseonselect>
     </control>
@@ -457,7 +458,7 @@
         <orientation>orientation</orientation>
         <onback condition="condition">builtin</onback>
         <viewtype label="label">viewtype</viewtype>
-        <progresstexture colordiffuse="color" border="coords" diffuse="path">path</progresstexture>
+        <progresstexture colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</progresstexture>
         <rulerlayout height="int" width="int" condition="condition"></rulerlayout>
         <rulerdatelayout height="int" width="int" condition="condition"></rulerdatelayout>
         <channellayout height="int" width="int" condition="condition"></channellayout>
@@ -554,8 +555,8 @@
     <include name="button_common">
         <label>label</label>
         <colordiffuse>color</colordiffuse>
-        <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" infill="bool" diffuse="path">path</texturefocus>
-        <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" infill="bool" diffuse="path">path</texturenofocus>
+        <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" infill="bool" diffuse="path" background="bool">path</texturefocus>
+        <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" infill="bool" diffuse="path" background="bool">path</texturenofocus>
         <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
         <angle>int</angle>

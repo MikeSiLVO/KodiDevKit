@@ -1,6 +1,4 @@
-"""
-Tests for control tags and attributes that Kodi consumes, checked against GUIControlFactory.cpp.
-"""
+"""Tests for control tags and attributes Kodi consumes, checked against GUIControlFactory.cpp."""
 
 import os
 import shutil
@@ -128,6 +126,22 @@ class TestControlTemplateSemantics(unittest.TestCase):
 <control type="list">
     <itemlayout width="auto" height="64"></itemlayout>
     <focusedlayout width="auto" height="64"></focusedlayout>
+</control>""")
+
+    def test_texture_attributes_and_label_textwidth(self):
+        """Every texture GetTexture reads takes its attributes; a label reads textwidth."""
+        self._assert_clean("""
+<control type="button">
+    <texturefocus background="true" infill="false">a.png</texturefocus>
+</control>
+<control type="togglebutton">
+    <alttexturenofocus background="true">a.png</alttexturenofocus>
+</control>
+<control type="radiobutton">
+    <textureradioonfocus flipy="true">a.png</textureradioonfocus>
+</control>
+<control type="label">
+    <textwidth>300</textwidth>
 </control>""")
 
     def test_button_label_fallback_warns(self):
