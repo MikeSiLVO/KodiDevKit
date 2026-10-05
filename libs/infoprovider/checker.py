@@ -248,10 +248,10 @@ class CheckerMixin:
         if not hasattr(self.addon, 'index_builder'):
             return None
 
-        if self.addon.validation_index is None:  # type: ignore[attr-defined]
-            self.addon.validation_index = self.addon.index_builder.build_validation_index(progress_callback=progress_callback)  # type: ignore[attr-defined]
+        if self.addon.validation_index is None:
+            self.addon.validation_index = self.addon.index_builder.build_validation_index(progress_callback=progress_callback)
 
-        return self.addon.validation_index  # type: ignore[attr-defined]
+        return self.addon.validation_index
 
     def check_variables(self, progress_callback=None):
         """Find undefined or unused variables."""
@@ -628,7 +628,7 @@ class CheckerMixin:
                 if subnode.tag in NOOP_TAGS:
                     text = (subnode.text or "").strip()
                     if not text and len(subnode) == 0:
-                        self._add_issue(listitems, subnode, f"Use 'noop' for empty calls <{node.tag}>", severity=SEVERITY_ERROR)
+                        self._add_issue(listitems, subnode, f"Use 'noop' for an empty <{subnode.tag}>", severity=SEVERITY_ERROR)
 
                 if subnode.tag in BRACKET_TAGS:
                     text = (subnode.text or "").strip()

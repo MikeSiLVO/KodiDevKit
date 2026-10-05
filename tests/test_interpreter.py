@@ -585,7 +585,7 @@ class TestControlChildValidation(unittest.TestCase):
         """)
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         issues = interp.interpret(root)
-        self.assertEqual([i["message"] for i in issues], ["Use 'noop' for empty calls <control>"])
+        self.assertEqual([i["message"] for i in issues], ["Use 'noop' for an empty <onclick>"])
 
     def test_enum_case_follows_kodi(self):
         attribs = {"image": {"aspectratio": {}, "animation": {"tween": "tween", "easing": "easing"},

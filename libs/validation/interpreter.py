@@ -1,12 +1,4 @@
-"""
-Context-aware XML interpreter for Kodi skin validation.
-
-Walks a resolved lxml tree depth-first with a context stack, validating
-that each element appears in a structurally valid location.
-
-Operates on the RESOLVED tree (after include expansion, constant/expression
-resolution, and default application), so it sees exactly what Kodi sees.
-"""
+"""Checks a resolved tree as Kodi's loaders read it: element placement, values and conditions."""
 
 from __future__ import annotations
 
@@ -104,13 +96,7 @@ _STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAG
 
 
 class XmlInterpreter:
-    """
-    Walks a resolved XML tree and validates structural correctness at each level.
-
-    Each walk method mirrors a Kodi loading function. Issues carry provenance
-    info from stamped attributes so errors point back to the source line
-    the skinner can fix.
-    """
+    """Walker over a resolved tree, each walk mirroring the Kodi loader for that level."""
 
     def __init__(
         self,
@@ -225,20 +211,14 @@ class XmlInterpreter:
         # No type attribute; skip (invalid control type is caught by the unexpanded pass).
 
     def _walk_group_control(self, node, control_type: str, *, inside_layout: bool):
-        """
-        Validate group control. (GUIWindow.cpp:302)
-        Group controls load child <control> elements recursively.
-        """
+        """Walk a group control and the child controls CGUIWindow::LoadControl recurses into."""
         self._validate_control_children(node, control_type, inside_layout=inside_layout)
         for child in node:
             if child.tag == "control":
                 self._walk_control(child, inside_layout=inside_layout)
 
     def _walk_container(self, node, control_type: str, *, inside_layout: bool):
-        """
-        Validate container control. (GUIBaseContainer.cpp:1317-1334)
-        Containers expect layout tags + content + standard control children.
-        """
+        """Walk a container control and its layouts and static content."""
         self._validate_control_children(node, control_type, inside_layout=inside_layout)
 
         valid_layouts = EPG_LAYOUT_TAGS if control_type == "epggrid" else STANDARD_LAYOUT_TAGS
@@ -281,10 +261,7 @@ class XmlInterpreter:
                 )
 
     def _validate_control_children(self, node, control_type: str, *, inside_layout: bool):
-        """
-        Validate each child tag/attribute/value against template schema.
-        Mirrors the per-control checks in InfoProvider.check_file().
-        """
+        """Validate each child's tag, attributes and values against the control's template."""
         subnodes = self.template_attribs.get(control_type)
         if subnodes is None:
             return
@@ -339,7 +316,7 @@ class XmlInterpreter:
                 if not text and len(child) == 0:
                     self._add_issue(
                         child, SEVERITY_ERROR,
-                        f"Use 'noop' for empty calls <{node.tag}>",
+                        f"Use 'noop' for an empty <{tag}>",
                     )
 
             if tag in BRACKET_TAGS:
@@ -588,9 +565,7 @@ class XmlInterpreter:
                 )
 
     def _walk_default(self, node):
-        """Validate a <default type="X"> block as a control of type X, at its
-        own source. Defaults are the skin's own file, not reusable include
-        content, so errors are reported here (not stamped as include warnings)."""
+        """Walk a <default> block as a control of its type, reporting at the block itself."""
         written = (node.attrib.get("type") or "").strip()
         control_type = written.lower()
         # controls match their type in any case, but a default is looked up by the exact string
@@ -655,13 +630,7 @@ class XmlInterpreter:
                 )
 
     def _add_issue(self, node, severity: str, message: str):
-        """
-        Record a validation issue with include provenance chain.
-
-        For issues from include expansion, reports both the call site
-        (where to find the <include> in the window) and the source
-        location (the actual line in the include definition to fix).
-        """
+        """Add an issue, with the call site and source line when it came from an include."""
         call_line = node.get("_kdk_call_line")
         inc_name = node.get("_kdk_inc_name")
         inc_file = node.get("_kdk_inc_file")
