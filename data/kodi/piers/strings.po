@@ -1094,7 +1094,7 @@ msgstr ""
 #: xbmc/addons/GUIViewStateAddonBrowser.cpp
 #: xbmc/playlists/SmartPlaylist.cpp
 #: system/settings/settings.xml
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/utils/Systeminfo.cpp
 #: ###this documented usage does not cover all usecases yet###
 msgctxt "#231"
@@ -1478,7 +1478,7 @@ msgstr ""
 
 #. Select option for the setting "Preferred audio language".
 #. Will prefer the stream marked as "default" if available.
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/cores/VideoPlayer/VideoPlayer.cpp
 msgctxt "#307"
 msgid "Media default"
@@ -1486,13 +1486,13 @@ msgstr ""
 
 #. Select option for the setting "Preferred audio language".
 #. Will prefer the stream marked as "original" if available.
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/cores/VideoPlayer/VideoPlayer.cpp
 msgctxt "#308"
 msgid "Original language"
 msgstr ""
 
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#309"
 msgid "User interface language"
 msgstr ""
@@ -1833,13 +1833,13 @@ msgid "Light"
 msgstr ""
 
 #. Weather token
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#378"
 msgid "AM"
 msgstr ""
 
 #. Weather token
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#379"
 msgid "PM"
 msgstr ""
@@ -5073,7 +5073,7 @@ msgstr ""
 
 #: addons/skin.estuary/xml/DialogPVRRadioRDSInfo.xml
 #: addons/skin.estuary/xml/DialogSeekBar.xml
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/addons/Scraper.cpp
 #: xbmc/addons/addons/GUIDialogAddonInfo.cpp
 #: xbmc/guilib/guiinfo/SystemGUIInfo.cpp
@@ -6256,7 +6256,7 @@ msgid "Switch to visualisation on playback"
 msgstr ""
 
 #. time format with meridiem (xx) e.g. "HH:mm:ss xx"
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#12382"
 msgid "{0:s} xx"
 msgstr ""
@@ -6770,7 +6770,7 @@ msgstr ""
 
 #. generic "unknown" label used in different places
 #: xbmc/GUIInfoManager.cpp
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/addons/gui/GUIDialogAddonSettings.cpp
 #: xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.cpp
 #: xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamNavigator.cpp
@@ -6795,7 +6795,7 @@ msgid "Overwrite"
 msgstr ""
 
 #. Subtitle selection to only use forced subtitles
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#13207"
 msgid "Forced only"
 msgstr ""
@@ -12723,13 +12723,13 @@ msgstr ""
 #empty strings from id 20027 to 20034
 #string id's 20027 thru 20034 are reserved for temperature strings (LocalizeStrings.cpp)
 
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#20035"
 msgid "Regional ({0:s})"
 msgstr ""
 
 #. Used for date/time format settings like "10:00:00 (HH:mm:ss)"
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#20036"
 msgid "{0:s} ({1:s})"
 msgstr ""
@@ -16831,7 +16831,7 @@ msgctxt "#24161"
 msgid "This prevents you from accidental tap/swipe/pan action when you grab the remote in your hand"
 msgstr ""
 
-#: system/settings/darwin_tvos.xml
+#: system/settings/settings.xml
 msgctxt "#24162"
 msgid "Use Kodi virtual keyboard"
 msgstr ""
@@ -17087,11 +17087,7 @@ msgctxt "#25014"
 msgid "Manual"
 msgstr ""
 
-#. Used to ask user if they want to use a playlist already assigned to an episode
-#: xbmc/video/dialogs/GUIDialogSimpleMenu.cpp
-msgctxt "#25015"
-msgid "Selected playlist is already in use. Associate with this episode instead?"
-msgstr ""
+#empty string with id 25015
 
 #. Inform user that no valid movie playlist has been found on disc
 #: xbmc/video/dialogs/GUIDialogSimpleMenu.cpp
@@ -18121,9 +18117,9 @@ msgctxt "#34007"
 msgid "Windows media audio 2 (FFmpeg wmav2)"
 msgstr ""
 
-#: system/settings/darwin_tvos.xml
+#: system/settings/settings.xml
 msgctxt "#34008"
-msgid "When you need to enter some text, Kodi virtual keyboard will show up instead of the built-in tvOS keyboard"
+msgid "When you need to enter some text, Kodi virtual keyboard will show up instead of the built-in platform keyboard"
 msgstr ""
 
 #: system/settings/darwin_tvos.xml
@@ -19375,11 +19371,7 @@ msgctxt "#35270"
 msgid "Your account is not verified. Please check your email to complete your sign up."
 msgstr ""
 
-#. Error message shown when an OpenGL game is played, as OpenGL is not currently supported
-#: xbmc/games/addons/GameClient.cpp
-msgctxt "#35271"
-msgid "This game requires OpenGL support for 3D rendering. OpenGL support is still under development."
-msgstr ""
+#empty string with id 35271
 
 #. Label for the "Disc menu" button to open the Disc Manager when playing a game
 #: addons/skin.estuary/xml/GameOSD.xml
@@ -25061,7 +25053,7 @@ msgstr ""
 #. Help text for setting "Don't show subtitles matching the audio language" of label #39211
 #: system/settings/settings.xml
 msgctxt "#39212"
-msgid "Do not turn on subtitles that are in the same language as the audio being played. Forced subtitles are not affected."
+msgid "Do not turn on subtitles that are in the same language as the audio being played. Forced subtitles in that language are turned on instead, where the video has them."
 msgstr ""
 
 #. Title of the setting that chooses which audio stream a library list describes
@@ -25098,7 +25090,7 @@ msgstr ""
 
 #. List formatting: pattern used to join a list of exactly two items, e.g. "A and B"
 #. STR_LIST_AND_TWO
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39900"
 msgid "{0} and {1}"
 msgstr ""
@@ -25106,21 +25098,21 @@ msgstr ""
 #. List formatting: pattern used to join the first item to the rest of a list of three or more items, e.g. "A" + "B, and C" -> "A, B, and C"
 #. Note the "B, and C" is used here as an example - the actual formatting of the last two item(s) of a list of three of more is determined by STR_LIST_AND_END
 #. STR_LIST_AND_START
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39901"
 msgid "{0}, {1}"
 msgstr ""
 
 #. List formatting: pattern used to join an already-combined partial list to the next item, for the interior items of a list of four or more, e.g. "A, B" + "C" -> "A, B, C"
 #. STR_LIST_AND_MIDDLE
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39902"
 msgid "{0}, {1}"
 msgstr ""
 
 #. List formatting: pattern used to join the already-combined partial list to the final item in a list of three or more items, e.g. "A, B" + "C" -> "A, B, and C"
 #. STR_LIST_AND_END
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39903"
 msgid "{0}, and {1}"
 msgstr ""
@@ -25129,7 +25121,7 @@ msgstr ""
 
 #. List formatting: pattern used to join a list of exactly two items, e.g. "A or B"
 #. STR_LIST_OR_TWO
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39910"
 msgid "{0} or {1}"
 msgstr ""
@@ -25138,7 +25130,7 @@ msgstr ""
 #. Note: the "or"-type list uses only TWO and END patterns; the START and MIDDLE joins for lists of three or more still use the AND-type comma pattern 
 #. (STR_LIST_AND_START / STR_LIST_AND_MIDDLE), with only the very last join switching to "or"
 #. STR_LIST_OR_END
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39911"
 msgid "{0}, or {1}"
 msgstr ""
@@ -25438,7 +25430,38 @@ msgctxt "#40046"
 msgid "Ungroup"
 msgstr ""
 
-#empty strings with id 40047 to 40201
+#. Shown when the playlist chosen for a movie version already belongs to another version of it
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40047"
+msgid "This playlist already belongs to another version of this movie."
+msgstr ""
+
+#. Asked before a playlist already assigned to another episode is taken away from it
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40048"
+msgid "The selected playlist is already assigned to another episode. Reassign it?"
+msgstr ""
+
+#. Asked before a playlist already assigned to another movie version is taken away from it
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40049"
+msgid "The selected playlist is already assigned to another movie version. Reassign it?"
+msgstr ""
+
+#. Asked before an episode joins a playlist that several episodes already share
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40050"
+msgid "The selected playlist is shared by several episodes. Use it for this item as well?"
+msgstr ""
+
+#. Shown when a playlist cannot be given up because a movie version still uses its file
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40051"
+msgid "This playlist is still in use by another movie version and could not be reassigned."
+msgstr ""
+
+#empty strings with id 40052 to 40201
 
 #. Ignore different video versions settting
 #: system/settings/settings.xml
@@ -25767,4 +25790,16 @@ msgstr ""
 #: system/settings/settings.xml
 msgctxt "#40804"
 msgid "{0:.1f} dB"
+msgstr ""
+
+#. Setting "audiooutput.passthroughvolumecontrol"
+#: system/settings/settings.xml
+msgctxt "#40805"
+msgid "Volume control during passthrough"
+msgstr ""
+
+#. Help of setting "audiooutput.passthroughvolumecontrol"
+#: system/settings/settings.xml
+msgctxt "#40806"
+msgid "Adjust and display the volume level while audio is passed through. The level is not applied to the bitstream, but every change is announced, so an add-on or automation can apply it to an external audio processor."
 msgstr ""
