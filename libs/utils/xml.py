@@ -183,12 +183,6 @@ def _check_tag_balance(xml_file):
                             "message": f"Unclosed <control type=\"{top_type}\">",
                             "line": stack[-1][1],
                         }
-                    if (type_attr and top_type == type_attr
-                            and type_attr != "group"):
-                        return {
-                            "message": f"Unclosed <control type=\"{type_attr}\">",
-                            "line": stack[-1][1],
-                        }
             stack.append((tag_name, tag_start_line, type_attr))
 
     if stack:

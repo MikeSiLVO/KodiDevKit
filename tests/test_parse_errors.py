@@ -10,6 +10,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from libs.infoprovider.provider import InfoProvider
+from libs.utils import xml
 
 ADDON_XML = ('<addon id="skin.test" version="1.0.0"><requires>'
              '<import addon="xbmc.gui" version="5.18.0"/></requires>'
@@ -40,6 +41,14 @@ class TestParseErrors(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertTrue(rows[0]["file"].endswith("MyVideoNav.xml"))
         self.assertEqual((rows[0]["line"], rows[0]["severity"]), (3, "error"))
+
+    def test_nested_grouplist_keeps_the_real_error(self):
+        path = os.path.join(self.path, "16x9", "Nested.xml")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write('<window>\n<control type="grouplist">\n<control type="grouplist">\n'
+                    '<onclick>a & b</onclick>\n</control>\n</control>\n</window>')
+        self.assertIsNone(xml.get_root_from_file(path))
+        self.assertEqual(xml.last_xml_errors[0]["line"], 4)
 
 
 if __name__ == "__main__":
