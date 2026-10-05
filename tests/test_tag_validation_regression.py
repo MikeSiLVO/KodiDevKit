@@ -1,6 +1,4 @@
-"""
-Test for tag validation regression where KeyError occurred on tags without template values.
-"""
+"""Tag validation of tags that carry attributes but no template value."""
 
 import unittest
 
@@ -12,7 +10,6 @@ import tempfile
 
 import shutil
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -30,10 +27,8 @@ class TestTagValidationRegression(unittest.TestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -52,12 +47,7 @@ class TestTagValidationRegression(unittest.TestCase):
             shutil.rmtree(self.test_dir)
 
     def test_control_with_animation_tag(self):
-        """Test that controls with <animation> tags don't cause KeyError.
-
-        Animation tags typically have attributes but no text value in controls.xml,
-        which previously caused a KeyError when accessing self.template_values[c_type][tag].
-        """
-        # Create window with animation
+        """Test that controls with <animation> tags don't cause KeyError."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -75,7 +65,6 @@ class TestTagValidationRegression(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Create empty includes file
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
 </includes>"""
@@ -85,20 +74,14 @@ class TestTagValidationRegression(unittest.TestCase):
 
         self.provider.init_addon(self.test_dir)
 
-        # This should not raise KeyError
         try:
             issues = self.provider.check_values()
-            # Should complete without error
             self.assertIsInstance(issues, list)
         except KeyError as e:
             self.fail(f"KeyError raised during validation: {e}")
 
     def test_control_with_camera_tag(self):
-        """Test that controls with <camera> tags don't cause KeyError.
-
-        Camera tags have attributes (x, y) but typically no text value.
-        """
-        # Create window with camera
+        """Test that controls with <camera> tags don't cause KeyError."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -116,7 +99,6 @@ class TestTagValidationRegression(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Create empty includes file
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
 </includes>"""
@@ -126,20 +108,14 @@ class TestTagValidationRegression(unittest.TestCase):
 
         self.provider.init_addon(self.test_dir)
 
-        # This should not raise KeyError
         try:
             issues = self.provider.check_values()
-            # Should complete without error
             self.assertIsInstance(issues, list)
         except KeyError as e:
             self.fail(f"KeyError raised during validation: {e}")
 
     def test_control_with_include_tag(self):
-        """Test that controls with nested <include> tags are handled correctly.
-
-        Include tags within controls have content but no template value.
-        """
-        # Create window with include
+        """Test that controls with nested <include> tags are handled correctly."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -154,7 +130,6 @@ class TestTagValidationRegression(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Create includes file with the referenced include
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="SomeInclude">
@@ -169,10 +144,8 @@ class TestTagValidationRegression(unittest.TestCase):
 
         self.provider.init_addon(self.test_dir)
 
-        # This should not raise KeyError
         try:
             issues = self.provider.check_values()
-            # Should complete without error
             self.assertIsInstance(issues, list)
         except KeyError as e:
             self.fail(f"KeyError raised during validation: {e}")

@@ -6,10 +6,8 @@ import tempfile
 import shutil
 import unittest
 
-# Ensure parent directory is in path (base.py does this too, but be explicit)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Now we can import from base and libs
 from tests.base import ValidationTestCase, IncludeCheck
 from libs.infoprovider.provider import InfoProvider
 
@@ -23,10 +21,8 @@ class TestIncludeValidation(ValidationTestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -46,7 +42,6 @@ class TestIncludeValidation(ValidationTestCase):
 
     def test_undefined_include_detected(self):
         """Test detection of undefined include reference."""
-        # Create includes file with one include
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="DefinedInclude">
@@ -59,7 +54,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that references undefined include
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -74,7 +68,6 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should detect undefined include
         undefined_issues = [i for i in issues if "UndefinedInclude" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertTrue(len(undefined_issues) > 0, "Should detect undefined include")
 
@@ -99,7 +92,6 @@ class TestIncludeValidation(ValidationTestCase):
 
     def test_defined_include_no_issue(self):
         """Test that defined includes don't trigger issues when used."""
-        # Create includes file
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="MyInclude">
@@ -112,7 +104,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that uses the include
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -127,13 +118,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report MyInclude as undefined
         myinclude_issues = [i for i in issues if "MyInclude" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(myinclude_issues), 0, "Should not report defined include as undefined")
 
     def test_unused_include_detected(self):
         """Test detection of defined but unused includes."""
-        # Create includes file with unused include
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="UnusedInclude">
@@ -146,7 +135,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create empty window (no includes used)
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -163,13 +151,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should detect unused include
         unused_issues = [i for i in issues if "UnusedInclude" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertTrue(len(unused_issues) > 0, "Should detect unused include")
 
     def test_include_with_content_attribute(self):
         """Test include references using content attribute instead of text."""
-        # Create includes file
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="ContentInclude">
@@ -182,7 +168,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using content attribute
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -197,13 +182,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report ContentInclude as undefined or unused
         content_issues = [i for i in issues if "ContentInclude" in i.get("message", "")]
         self.assertEqual(len(content_issues), 0, "Should handle include with content attribute")
 
     def test_skinshortcuts_includes_ignored(self):
         """Test that skinshortcuts- prefixed includes are ignored."""
-        # Create window with skinshortcuts include (which won't be defined)
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -218,13 +201,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report skinshortcuts- includes
         skinshortcuts_issues = [i for i in issues if "skinshortcuts" in i.get("message", "").lower()]
         self.assertEqual(len(skinshortcuts_issues), 0, "Should ignore skinshortcuts- prefixed includes")
 
     def test_include_in_fontset(self):
         """Test that includes used in Font.xml fontsets are counted as used."""
-        # Create includes file
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="FontInclude">
@@ -239,7 +220,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create Font.xml with include in fontset
         font_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <fonts>
     <fontset id="Default" unicode="true">
@@ -255,7 +235,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(font_path, "w", encoding="utf-8") as f:
             f.write(font_xml)
 
-        # Create empty Home.xml
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -269,13 +248,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report FontInclude as unused since it's used in fontset
         fontinclude_issues = [i for i in issues if "FontInclude" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(fontinclude_issues), 0, "Should count fontset includes as used")
 
     def test_dynamic_include_ignored(self):
         """Test that dynamic includes (starting with $) are ignored."""
-        # Create window with dynamic include reference
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -290,13 +267,10 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report dynamic includes as undefined
-        # (they start with $, so they're skipped in the undefined check)
         self.assertIsInstance(issues, list)
 
     def test_include_referenced_via_param(self):
         """Test that includes referenced via <param> tags are counted as used."""
-        # Create includes file with a parameterized container include and content include
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="InfoDetailsPanel">
@@ -321,7 +295,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the include with param
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -340,14 +313,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report CustomInfoContentDetails as unused
-        # (it's referenced via <param name="include">)
         unused_issues = [i for i in issues if "CustomInfoContentDetails" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(unused_issues), 0, "Should count param-referenced includes as used")
 
     def test_param_with_id_not_treated_as_include(self):
         """Test that param values used for IDs are not treated as include references."""
-        # Create includes file where param is used for ID, not include
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="SkinVariablesContentList">
@@ -362,7 +332,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the include with ID param
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -380,14 +349,11 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should NOT report "4800" as an undefined include
-        # (it's an ID, not an include reference)
         undefined_4800 = [i for i in issues if "4800" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(undefined_4800), 0, "Should not treat ID params as include references")
 
     def test_includes_used_in_skinshortcuts_template(self):
         """Test that includes referenced in shortcuts/template.xml are not flagged as unused."""
-        # Create includes file with includes that will be used only in template.xml
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="ListPortraitArt">
@@ -410,7 +376,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create empty window (no includes used directly)
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -420,7 +385,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Create shortcuts/template.xml that references the includes
         shortcuts_dir = os.path.join(self.test_dir, "shortcuts")
         os.makedirs(shortcuts_dir, exist_ok=True)
         template_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -438,15 +402,12 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report ListPortraitArt as unused (it's in template.xml)
         portrait_unused = [i for i in issues if "ListPortraitArt" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(portrait_unused), 0, "Should not flag includes used in template.xml as unused")
 
-        # Should not report ListLandscapeArt as unused (it's in template.xml)
         landscape_unused = [i for i in issues if "ListLandscapeArt" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(landscape_unused), 0, "Should not flag includes used in template.xml as unused")
 
-        # Should report UnusedInclude as unused (not in template.xml or anywhere else)
         truly_unused = [i for i in issues if "UnusedInclude" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(truly_unused), 1, "Should still flag actually unused includes")
 
@@ -480,7 +441,6 @@ class TestIncludeValidation(ValidationTestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # v3 templates.xml with <include> tags and content/include attributes
         shortcuts_dir = os.path.join(self.test_dir, "shortcuts")
         os.makedirs(shortcuts_dir, exist_ok=True)
         templates_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -504,20 +464,15 @@ class TestIncludeValidation(ValidationTestCase):
         checker = IncludeCheck(self.provider.addon)
         issues = checker.check()
 
-        # Found via <include>text</include>
         fade_unused = [i for i in issues if "HomeWidgetFade" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(fade_unused), 0, "Should find includes in <include> text content")
 
-        # Found via <include content="Name">
         panel_unused = [i for i in issues if "PanelLabel" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(panel_unused), 0, "Should find includes in content attribute")
 
-        # Found via <skinshortcuts include="Name">
         poster_unused = [i for i in issues if "InfoPosterContent" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(poster_unused), 0, "Should find includes in skinshortcuts include attribute")
 
-        # $PROPERTY[artcontent] is a runtime placeholder — can't resolve
-        # UnusedV3Include is genuinely unused
         truly_unused = [i for i in issues if "UnusedV3Include" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(truly_unused), 1, "Should still flag actually unused includes")
 

@@ -1,6 +1,4 @@
-"""
-Tests for singleton tag validation (tags that should appear once per control).
-"""
+"""Tests for singleton tag validation (tags that should appear once per control)."""
 
 import unittest
 
@@ -12,7 +10,6 @@ import tempfile
 
 import shutil
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -30,10 +27,8 @@ class TestSingletonTags(unittest.TestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "1080i"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -46,7 +41,6 @@ class TestSingletonTags(unittest.TestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):
@@ -70,7 +64,6 @@ class TestSingletonTags(unittest.TestCase):
 
         issues = self.provider.check_file(xml_path)
 
-        # Should NOT flag single colordiffuse
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Single colordiffuse should be valid")
 
@@ -91,7 +84,6 @@ class TestSingletonTags(unittest.TestCase):
 
         issues = self.provider.check_file(xml_path)
 
-        # SHOULD flag multiple colordiffuse in same control
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "") and "colordiffuse" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 1, "Multiple colordiffuse in same control should be flagged")
 
@@ -117,7 +109,6 @@ class TestSingletonTags(unittest.TestCase):
 
         issues = self.provider.check_file(xml_path)
 
-        # Should NOT flag colordiffuse in separate controls
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Separate controls should each be allowed their own colordiffuse")
 
@@ -143,13 +134,11 @@ class TestSingletonTags(unittest.TestCase):
 
         issues = self.provider.check_file(xml_path)
 
-        # Should NOT flag colordiffuse in nested controls
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Nested controls should each be allowed their own colordiffuse")
 
     def test_include_with_colordiffuse_in_control_with_colordiffuse(self):
         """Test control with colordiffuse that includes content also containing colordiffuse."""
-        # Create an include file
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="ProgressDefaults">
@@ -162,7 +151,6 @@ class TestSingletonTags(unittest.TestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that uses the include
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -181,13 +169,11 @@ class TestSingletonTags(unittest.TestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_file(window_path)
 
-        # Should NOT flag - each control uses the include separately
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Separate controls using same include should each be valid")
 
     def test_progress_control_with_var_colordiffuse(self):
         """Test progress control with $VAR colordiffuse with multiple conditional values."""
-        # Create variable with MULTIPLE values (conditional) - this is valid Kodi pattern
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="HighlightColor">
@@ -200,7 +186,6 @@ class TestSingletonTags(unittest.TestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window with progress control - exact structure from user's example
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -222,7 +207,6 @@ class TestSingletonTags(unittest.TestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_file(window_path)
 
-        # Should NOT flag - $VAR expansion with multiple conditional values is valid
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "VAR with multiple conditional values should not trigger multiple tag errors")
 
