@@ -94,6 +94,15 @@ class TestRepo(unittest.TestCase):
             "Kodi repo: string id 31000 is defined twice (first on line 1)",
         ])
 
+    def test_po_bom_and_syntax_error_read_as_the_checker_reports_them(self):
+        self._addon()
+        self._write("language/resource.language.de_de/strings.po", b"\xef\xbb\xbf" + GOOD_PO.encode())
+        self._write("language/resource.language.fr_fr/strings.po", GOOD_PO + 'msgctxt "#31001"\nmsgid\n')
+        self.assertEqual(self._messages(), [
+            "Kodi repo: language/resource.language.de_de/strings.po starts with a BOM (byte order mark)",
+            "Kodi repo: language/resource.language.fr_fr/strings.po: Syntax error",
+        ])
+
     def test_file_types(self):
         self._addon()
         self._write("media/logo.psd", b"8BPS")

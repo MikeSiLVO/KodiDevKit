@@ -167,7 +167,7 @@ class ValidationRepo:
             self._add("addon.xml", 0, "no resource.language.en_gb folder with the default strings")
 
     def _check_po(self, rel, path):
-        """The po header Kodi needs is present and the file parses."""
+        """The po header Kodi needs is present, there is no BOM and the file parses."""
         try:
             with open(path, encoding="utf-8") as f:
                 contents = f.read()
@@ -188,12 +188,23 @@ class ValidationRepo:
                                        f"{seen[found.group(1)]})")
             elif found:
                 seen[found.group(1)] = number
+        if contents.startswith("\ufeff"):
+            self._add(rel, 1, f"{rel} starts with a BOM (byte order mark)")
+            return
+        # kodi-addon-checker rewrites comment lines this way before handing the file to polib
+        cleaned = "".join(
+            "# " + line.replace("#", "").lstrip() if line.startswith("#") and line.replace("#", "").strip()
+            else "\n" if line.startswith("#") else line
+            for line in contents.splitlines(keepends=True))
         try:
-            pofile(path)
+            pofile(cleaned, encoding="utf-8")
         except Exception as error:
-            found = re.search(r"\(line (\d+)\)", str(error))
-            detail = re.sub(r"\s*\(line \d+\)", "", str(error).split(": ", 1)[-1]).strip()
-            self._add(rel, int(found.group(1)) if found else 0, f"{rel}: {detail}")
+            found = (re.search(r"\(line (?P<line>\d+)\)\s*:\s*(?P<detail>[\s\S]+?)\s*$", str(error))
+                     or re.search(r"(?P<detail>Syntax error)[\s\S]+\(line (?P<line>\d+)\)\s*$", str(error)))
+            if found:
+                self._add(rel, int(found.group("line")), f"{rel}: {found.group('detail')}")
+            else:
+                self._add(rel, 0, f"{rel}: {error}")
 
 
 def _plain_schema_error(message):
