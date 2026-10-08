@@ -1,4 +1,4 @@
-"""Include validation for Kodi skins."""
+"""Checks the includes a skin calls and defines, and the include files it names."""
 
 import os
 import re
@@ -16,14 +16,12 @@ from ..utils.xml import get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
 
-# Runtime include patterns - includes generated at runtime by addons
 RUNTIME_INCLUDE_PATTERNS = [
     re.compile(r'^skinvariables-.*'),           # script.skinvariables
     re.compile(r'^skinshortcuts-.*'),            # script.skinshortcuts
-    re.compile(r'^script-.*-includes$'),         # Dynamic script includes
+    re.compile(r'^script-.*-includes$'),
 ]
 
-# Written by the script that owns them, so they are absent until the skin runs.
 RUNTIME_INCLUDE_FILE = re.compile(r'^script-.*-includes\.xml$', re.I)
 
 
@@ -31,7 +29,7 @@ _dir_cache = {}
 
 
 def _entries(directory):
-    """Names in `directory`, reread whenever its mtime moves so a renamed file is never missed."""
+    """List the directory's entries, rereading them whenever its mtime moves."""
     try:
         stamp = os.stat(directory).st_mtime
     except OSError:
@@ -49,8 +47,7 @@ def _entries(directory):
 
 def resolve_include_file(addon, folder, filename):
     """Resolve the path an `<include file>` opens, and the real name when only its case differs."""
-    # Kodi joins the path and opens it through the OS with no case fallback (Skin.cpp:279), so a
-    # mis-cased reference loads on Windows and loads nothing on Linux.
+    # Kodi opens the joined path, no case fallback (CSkinInfo::GetSkinPath); case matters on Linux
     ordered = [folder] + [f for f in addon.xml_folders if f != folder]
     near = None
     for name in ordered:
@@ -86,13 +83,13 @@ def check_include_file_ref(addon, folder, ref):
 
 
 class ValidationInclude:
-    """Validates include definitions and usage in Kodi skins."""
+    """Checker for undefined, unused and shadowed includes, and a misnamed Includes.xml."""
 
     def __init__(self, addon):
         self.addon = addon
 
     def _is_runtime_include(self, include_name):
-        """True if `include_name` matches a runtime-generated name pattern."""
+        """True when the name matches a runtime-generated name pattern."""
         if not include_name:
             return False
 
@@ -102,8 +99,8 @@ class ValidationInclude:
 
         return False
 
-    def _resolve_include_name_kodi_style(self, name, params=None):
-        """Resolve $PARAM references in an include name, emptying undefined ones as Kodi does."""
+    def _resolve_include_name(self, name, params=None):
+        """Resolve $PARAM references in an include name, emptying any left undefined."""
         if not name or "$PARAM[" not in name:
             return name
 
@@ -111,9 +108,8 @@ class ValidationInclude:
             resolved_name, status = resolve_params_in_text(name, params)
             if status in ("ALL_RESOLVED", "NO_PARAMS"):
                 return resolved_name
-            name = resolved_name  # Use partially resolved name for next step
+            name = resolved_name
 
-        # For any remaining $PARAM references, replace with empty string (Kodi behavior)
         param_pattern = re.compile(r"\$PARAM\[\s*(?P<name>[A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
         param_names = param_pattern.findall(name)
 
@@ -125,7 +121,7 @@ class ValidationInclude:
         return name
 
     def check(self, progress_callback=None):
-        """Check undefined/unused includes, counting <fontset>/<include> as usage."""
+        """Check for undefined, unused or shadowed includes and a misnamed Includes.xml."""
         total_includes = sum(len(self.addon.include_map.get(f, {})) for f in self.addon.xml_folders)
         total_files = sum(len(self.addon.window_files.get(f, [])) for f in self.addon.xml_folders)
 
@@ -175,7 +171,7 @@ class ValidationInclude:
                     else:
                         continue
 
-                    resolved_name = self._resolve_include_name_kodi_style(name)
+                    resolved_name = self._resolve_include_name(name)
 
                     if not resolved_name or not resolved_name.strip():
                         continue
@@ -186,7 +182,7 @@ class ValidationInclude:
                             "type": node.tag,
                             "file": path,
                             "name": resolved_name,
-                            "raw_name": name,  # Keep original for context-aware resolution
+                            "raw_name": name,
                         }
                     )
 
@@ -197,27 +193,25 @@ class ValidationInclude:
                     if not include_name or include_name.startswith("$"):
                         continue
 
-                    resolved_include_name = self._resolve_include_name_kodi_style(include_name)
+                    resolved_include_name = self._resolve_include_name(include_name)
 
                     include_def = None
-                    params = None  # Initialize for type safety
+                    params = None
                     if folder in self.addon.include_map and resolved_include_name in self.addon.include_map[folder]:
                         node_or_obj, params, file_path = self.addon.include_map[folder][resolved_include_name]
-                        if hasattr(node_or_obj, 'tag'):  # It's an lxml Element
+                        if hasattr(node_or_obj, 'tag'):
                             from ..skin.include import SkinInclude
                             definition = node_or_obj.find("definition")
                             include_body = definition if definition is not None else node_or_obj
                             include_def = SkinInclude(node=include_body, file=file_path)
                         else:
-                            include_def = node_or_obj  # Already an Include object
+                            include_def = node_or_obj
 
                     if not include_def:
                         continue
 
                     call_params = get_params(include_node, "value")
 
-                    # Merge with default params from include definition (Kodi behavior)
-                    # Passed params take precedence (GUIIncludes.cpp:439-440)
                     default_params = params if params else {}
                     merged_params = {**default_params, **call_params}
 
@@ -227,7 +221,7 @@ class ValidationInclude:
                             inc_name = inc_tag.get("content")
 
                         if not inc_name or inc_name.startswith("$INFO") or inc_name.startswith("$VAR"):
-                            continue  # Skip dynamic expressions
+                            continue
 
                         resolved_name, status = resolve_params_in_text(inc_name, merged_params)
 
@@ -244,10 +238,7 @@ class ValidationInclude:
                                 }
                             )
 
-            # <fontset>/<include> usage
-            # IMPORTANT: Parse Font.xml fresh (bypassing cache) because skin.get_fonts()
-            # modifies the cached root in-place by expanding includes.
-            # We need the ORIGINAL XML with <include> tags intact to detect usage.
+            # parsed fresh: load_fonts() expands the cached root, erasing these <include> tags
             for fname in ("Font.xml", "font.xml"):
                 font_path = os.path.join(self.addon.path, folder, fname)
                 if not os.path.isfile(font_path):
@@ -276,7 +267,6 @@ class ValidationInclude:
                             }
                         )
 
-            # SkinShortcuts template references (v2: template.xml, v3: templates.xml)
             template_path = find_skinshortcuts_template(self.addon.path)
             if template_path:
                 if progress_callback:
@@ -300,13 +290,13 @@ class ValidationInclude:
 
             include_definitions = []
             for name, (node_or_obj, params, file_path) in self.addon.include_map.get(folder, {}).items():
-                if hasattr(node_or_obj, 'tag'):  # It's an lxml Element
+                if hasattr(node_or_obj, 'tag'):
                     from ..skin.include import SkinInclude
                     definition = node_or_obj.find("definition")
                     include_body = definition if definition is not None else node_or_obj
                     include_obj = SkinInclude(node=include_body, file=file_path)
                 else:
-                    include_obj = node_or_obj  # Already an Include object
+                    include_obj = node_or_obj
 
                 include_definitions.append({
                     "name": name,
