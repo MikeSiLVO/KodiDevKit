@@ -90,6 +90,19 @@ class TestIncludeValidation(ValidationTestCase):
                  if i["message"] == "Include not defined: Missing"]
         self.assertEqual(found, [("Includes.xml", 3)])
 
+    def test_unused_include_reported_at_its_name(self):
+        """An unused include is reported on the line naming it."""
+        for name, text in (("Includes.xml", '<includes>\n<include name="Spare">\n<definition>\n'
+                                            '<control type="label"/>\n</definition>\n</include>\n</includes>'),
+                           ("Home.xml", "<window><controls/></window>")):
+            with open(os.path.join(self.test_dir, "16x9", name), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        lines = [i["line"] for i in IncludeCheck(self.provider.addon).check()
+                 if i["message"] == "Unused include: Spare"]
+        self.assertEqual(lines, [2])
+
     def test_defined_include_no_issue(self):
         """Test that defined includes don't trigger issues when used."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>

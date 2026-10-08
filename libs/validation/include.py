@@ -288,22 +288,10 @@ class ValidationInclude:
                         }
                     )
 
-            include_definitions = []
-            for name, (node_or_obj, params, file_path) in self.addon.include_map.get(folder, {}).items():
-                if hasattr(node_or_obj, 'tag'):
-                    from ..skin.include import SkinInclude
-                    definition = node_or_obj.find("definition")
-                    include_body = definition if definition is not None else node_or_obj
-                    include_obj = SkinInclude(node=include_body, file=file_path)
-                else:
-                    include_obj = node_or_obj
-
-                include_definitions.append({
-                    "name": name,
-                    "type": "include",
-                    "file": include_obj.file,
-                    "line": getattr(include_obj.node, 'sourceline', 0) or 0
-                })
+            include_definitions = [
+                {"name": name, "type": "include", "file": file_path, "line": node.sourceline or 0}
+                for name, (node, _params, file_path) in self.addon.include_map.get(folder, {}).items()
+            ]
 
             listitems.extend(reference_issues(
                 self.addon, folder, "include", var_refs, include_definitions,
