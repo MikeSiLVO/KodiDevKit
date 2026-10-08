@@ -192,7 +192,56 @@ def deduplicate_issues(issues):
     return result
 
 
+_FROM_INCLUDE = re.compile(r" \(from include '[^']*'\)$")
 
+
+def merge_include_issues(issues):
+    """Merge an include fault's per-call rows into one at its line; $PARAM lines stay per call."""
+    sources = {}
+
+    def source_line(path, line):
+        if path not in sources:
+            try:
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    sources[path] = f.read().splitlines()
+            except OSError:
+                sources[path] = []
+        text = sources[path]
+        return text[line - 1] if 0 < line <= len(text) else ""
+
+    merged = {}
+    result = []
+    for issue in issues:
+        inc_file, inc_line = issue.get("include_file"), issue.get("include_line")
+        # a $PARAM value is written at the call site, the line to fix
+        if not (inc_file and inc_line) or "$PARAM[" in source_line(inc_file, inc_line):
+            result.append(issue)
+            continue
+        message = _FROM_INCLUDE.sub("", issue["message"])
+        call = (issue.get("call_file") or issue.get("file"), issue.get("line"))
+        group = merged.get((inc_file, inc_line, message))
+        if group is None:
+            group = {k: v for k, v in issue.items() if k not in ("include_file", "include_line")}
+            group.update(file=inc_file, filename=os.path.basename(inc_file), line=inc_line,
+                         message=message, call_file=call[0], call_line=call[1])
+            merged[(inc_file, inc_line, message)] = (group, set())
+            result.append(group)
+        else:
+            group = group[0]
+        merged[(inc_file, inc_line, message)][1].add(call)
+        if issue.get("severity") == "error":
+            group["severity"] = "error"
+
+    direct = {(i["file"], i["line"], i["message"]) for i in result if "call_line" not in i}
+    dropped = set()
+    for key, (group, calls) in merged.items():
+        if key in direct:
+            dropped.add(id(group))
+            continue
+        count = len(calls)
+        group["message"] = (f"{group['message']} (include '{group['include_name']}', "
+                            f"{count} call{'' if count == 1 else 's'})")
+    return [issue for issue in result if id(issue) not in dropped]
 
 
 

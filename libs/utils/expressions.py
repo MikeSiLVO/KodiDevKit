@@ -199,6 +199,11 @@ def split_top_level_commas(text: str) -> list[str]:
 _EXP_PATTERN = re.compile(r"\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
 
 
+def expression_names(text: str) -> list[str]:
+    """Names of the `$EXP` references written in the text, nested ones not followed."""
+    return _EXP_PATTERN.findall(text or "")
+
+
 def flatten_expressions(text: str, expression_map: dict[str, str],
                         _resolved: Optional[list[str]] = None) -> tuple[str, set[str]]:
     """Expand $EXP per CGUIIncludes::FlattenExpression, keeping unknown names for the caller."""

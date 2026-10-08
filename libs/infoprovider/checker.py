@@ -11,10 +11,12 @@ from ..utils.expressions import (
     contains_dynamic_expression,
     extract_number_value,
     extract_variable_name,
+    flatten_expressions,
     is_dynamic_expression,
     is_number,
 )
-from ..utils.validation import create_issue, is_runtime_generated_file, should_report_progress
+from ..utils.validation import (create_issue, deduplicate_issues, is_runtime_generated_file,
+                                merge_include_issues, should_report_progress)
 from ..addon.translations import get_po_file
 from ..utils.colors import is_kodi_hex
 from ..validation.font import ValidationFont
@@ -334,7 +336,7 @@ class CheckerMixin:
         return self._muted("Images", checker.check(progress_callback=progress_callback))
 
     def check_values(self, progress_callback=None):
-        """Run check_file over every XML file, on the unexpanded source the author wrote."""
+        """Check every XML file with check_file, merging per-call include rows."""
         if not self.addon:
             return []
 
@@ -353,7 +355,7 @@ class CheckerMixin:
             if result:
                 listitems.extend(result)
 
-        listitems = self._muted("XML Validation", listitems)
+        listitems = self._muted("XML Validation", deduplicate_issues(merge_include_issues(listitems)))
 
         if progress_callback:
             progress_callback(f"Complete: {len(listitems)} XML validation issues found")
@@ -481,7 +483,7 @@ class CheckerMixin:
         return isinstance(self.addon, Skin) and hasattr(self.addon, "resolver")
 
     def _check_file_resolved(self, root, path: str, folder: str) -> list[dict]:
-        """XmlInterpreter issues over the expanded tree; files without includes are walked as-is."""
+        """XmlInterpreter issues over the tree with its includes and dynamic values expanded."""
         from ..skin.skin import Skin
 
         sk = self.addon
@@ -506,14 +508,27 @@ class CheckerMixin:
             runtime_generator=self._imports_runtime_generator(),
             constants=set(self.addon.get_constants(folder)) if self.addon else set(),
             info_names=self.INFO_NAMES,
+            expressions=self._expression_sources(folder),
         )
         issues = interpreter.interpret(walk_root)
 
         for item in issues:
-            item["filename"] = os.path.basename(path)
-            item["file"] = path
+            item.setdefault("file", path)
+            item["filename"] = os.path.basename(item["file"])
 
         return issues
+
+    def _expression_sources(self, folder):
+        """Each expression's flattened condition, file and line, rebuilt for a new map."""
+        expressions = getattr(self.addon, "expression_map", {}).get(folder, {})
+        cache = vars(self).setdefault("_expression_cache", {})
+        if folder in cache and cache[folder][0] is expressions:
+            return cache[folder][1]
+        sources = getattr(self.addon, "expression_source_map", {}).get(folder, {})
+        table = {name: (flatten_expressions(text, expressions)[0], *sources[name])
+                 for name, text in expressions.items() if name in sources}
+        cache[folder] = (expressions, table)
+        return table
 
     def _obsolete_window_issue(self, path, folder):
         """Issue for a window file this Kodi release never loads, unless the skin includes it."""

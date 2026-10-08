@@ -107,6 +107,7 @@ class XmlInterpreter:
         runtime_generator: bool = False,
         constants: set | frozenset = frozenset(),
         info_names: dict | None = None,
+        expressions: dict | None = None,
     ):
         self.template_attribs = template_attribs or {}
         self.template_values = template_values or {}
@@ -115,6 +116,7 @@ class XmlInterpreter:
         self.runtime_generator = runtime_generator
         self.constants = constants
         self.info_names = info_names
+        self.expressions = expressions or {}
         self.issues: list[dict] = []
 
     def interpret(self, root) -> list[dict]:
@@ -463,25 +465,39 @@ class XmlInterpreter:
                 self._validate_condition(node, condition, resolved=True)
 
     def _validate_condition(self, node, condition: str, *, resolved: bool):
-        """Report a condition Kodi cannot parse, or an operand it has no info for."""
+        """Report unparseable conditions and unknown infos, $EXP faults at their definition."""
         text = condition.strip()
         if not text or "$PARAM" in text.upper() or (not resolved and "$EXP[" in text.upper()):
             return
         # unbalanced brackets are already reported by the bracket check
         if not _check_brackets(text):
             return
+        found = self._condition_problems(text)
+        for name in (node.get("_kdk_exp") or "").split("\t") if found else []:
+            if name not in self.expressions:
+                continue
+            exp_text, exp_file, exp_line = self.expressions[name]
+            exp_found = self._condition_problems(exp_text) if _check_brackets(exp_text) else []
+            for severity, message in exp_found:
+                self._add_issue_at(exp_file, exp_line, "expression", severity, message)
+            if any(m.startswith("Kodi cannot parse") for _, m in exp_found):
+                found = [f for f in found if not f[1].startswith("Kodi cannot parse")]
+            found = [f for f in found if f not in exp_found]
+        for severity, message in found:
+            self._add_issue(node, severity, message)
+
+    def _condition_problems(self, text: str) -> list[tuple[str, str]]:
+        """Severity and message for each reason Kodi cannot read the condition."""
         short = text if len(text) <= 60 else text[:60] + "..."
         problem = check_condition(text)
         if problem and problem[0] == STATE_INVALID:
             if self.runtime_generator and problem[1].startswith("unknown expression"):
-                self._add_issue(node, SEVERITY_WARNING, f"Condition uses an {problem[1]}, "
-                                                        f"unless a runtime generator defines it: {short}")
-            else:
-                self._add_issue(node, SEVERITY_ERROR,
-                                f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}")
-            return
-        for operand in unknown_infos(text, self.info_names) if self.info_names else []:
-            self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false")
+                return [(SEVERITY_WARNING, f"Condition uses an {problem[1]}, "
+                                           f"unless a runtime generator defines it: {short}")]
+            return [(SEVERITY_ERROR,
+                     f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}")]
+        return [(SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false")
+                for operand in (unknown_infos(text, self.info_names) if self.info_names else [])]
 
     def _validate_number(self, node, name: str, is_attr: bool, value: str, value_type: str):
         """Report a number field left holding a name Kodi cannot read as a number."""
@@ -661,6 +677,13 @@ class XmlInterpreter:
             issue["call_file"] = call_file
 
         self.issues.append(issue)
+
+    def _add_issue_at(self, file: str, line: int, tag: str, severity: str, message: str):
+        """Add an issue at a line in another file, once however many usages lead to it."""
+        issue = {"file": file, "line": line, "type": tag, "identifier": tag,
+                 "message": message, "severity": severity}
+        if issue not in self.issues:
+            self.issues.append(issue)
 
 
 __all__ = [

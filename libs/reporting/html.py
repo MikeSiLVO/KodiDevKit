@@ -134,11 +134,7 @@ def _classify_subtype(message: str) -> str:
 
 def generate_html_report(all_issues, skin_name, skin_path, server_port, output_path=None,
                          progress_callback=None, hide_include_warnings=True):
-    """Render `all_issues` to an HTML report and return its path.
-
-    `all_issues` is keyed by check name (Variables/Includes/...).
-    Defaults output to `<skin_path>/validation_report.html`.
-    """
+    """Generate the HTML report of the issues by check name; returns the path it wrote."""
     if output_path is None:
         output_path = os.path.join(skin_path, "validation_report.html")
 
@@ -201,7 +197,7 @@ def generate_html_report(all_issues, skin_name, skin_path, server_port, output_p
 def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                             categories, all_issues, issues_by_file, server_port, progress_callback=None,
                             hide_include_warnings=True):
-    """Generate the complete HTML report template."""
+    """Generate the complete HTML report page, its category and file sections included."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     inc_hidden_js = "true" if hide_include_warnings else "false"
     inc_btn_active = "" if hide_include_warnings else " active"
@@ -227,7 +223,7 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
 
     for category, issues in sorted_categories:
         category_count += 1
-        if progress_callback and category_count % 2 == 0:  # Update every 2 categories
+        if progress_callback and category_count % 2 == 0:
             progress_callback(f"Building category sections... ({category_count}/{total_categories})")
         section = _generate_category_section(category, issues, server_port)
         category_sections.append(section)
@@ -241,7 +237,7 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
 
     for file_path in sorted(issues_by_file.keys()):
         file_count += 1
-        if progress_callback and (file_count % 3 == 0 or file_count == total_files):  # Update every 3 files for better feedback
+        if progress_callback and (file_count % 3 == 0 or file_count == total_files):
             progress_callback(f"Building file sections... ({file_count}/{total_files})")
         section = _generate_file_section(file_path, issues_by_file[file_path], server_port)
         file_sections.append(section)
@@ -256,7 +252,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
         {_get_css_styles()}
     </style>
     <script>
-        // Check if server is running when page loads
         fetch('http://localhost:{server_port}/ping')
             .then(response => {{
                 if (response.ok) {{
@@ -269,15 +264,12 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                     '<span style="color: #ff9800;">⚠ Server not running</span> - Start Sublime Text to enable direct file opening';
             }});
 
-        // Show notification toast when file link is clicked
         function showNotification(fileName, lineNumber) {{
-            // Remove any existing notification
             const existing = document.getElementById('file-notification');
             if (existing) {{
                 existing.remove();
             }}
 
-            // Platform-specific hint message
             const platform = navigator.platform.toLowerCase();
             let hintMessage = 'Switch to Sublime Text to view the file';
 
@@ -289,7 +281,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                 hintMessage = 'Sublime Text window has been activated';
             }}
 
-            // Create notification element
             const notification = document.createElement('div');
             notification.id = 'file-notification';
             notification.innerHTML = `
@@ -311,7 +302,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                 </div>
             `;
 
-            // Apply styles
             notification.style.cssText = `
                 position: fixed;
                 bottom: 40px;
@@ -330,7 +320,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
 
             document.body.appendChild(notification);
 
-            // Auto-remove after 5 seconds
             setTimeout(() => {{
                 if (notification.parentElement) {{
                     notification.style.animation = 'slideOutDown 0.3s ease-in';
@@ -339,12 +328,10 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
             }}, 5000);
         }}
 
-        // Add click handlers to all file links
         document.addEventListener('DOMContentLoaded', function() {{
             const fileLinks = document.querySelectorAll('a.file-link');
             fileLinks.forEach(link => {{
                 link.addEventListener('click', function(e) {{
-                    // Extract filename and line from the href or text
                     const fileName = this.textContent.trim();
                     const href = this.getAttribute('href');
                     const lineMatch = href.match(/line=(\\d+)/);
@@ -355,8 +342,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
             }});
         }});
 
-        // Filtering — errors and warnings shown by default; include-sourced
-        // warnings hidden (mostly educational). The export link mirrors these toggles.
         const hiddenSeverities = new Set();
         let includeWarningsHidden = {inc_hidden_js};
 
@@ -395,7 +380,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
         }}
 
         function applyFilters() {{
-            // Hide/show table rows and list items by combined severity + include filters
             document.querySelectorAll('.severity-error, .severity-warning').forEach(el => {{
                 el.style.display = elementHidden(el) ? 'none' : '';
             }});
@@ -403,20 +387,16 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
             let totalErrors = 0;
             let totalWarnings = 0;
 
-            // Update category section badges
             document.querySelectorAll('.category-section').forEach(section => {{
                 const rows = section.querySelectorAll('tbody tr');
                 const visible = Array.from(rows).filter(tr => tr.style.display !== 'none').length;
                 const badge = section.querySelector('h3 .badge');
                 if (badge) badge.textContent = visible;
-                // Hide entire section if no visible issues
                 section.style.display = visible === 0 ? 'none' : '';
-                // Count errors/warnings
                 totalErrors += Array.from(rows).filter(tr => tr.style.display !== 'none' && tr.classList.contains('severity-error')).length;
                 totalWarnings += Array.from(rows).filter(tr => tr.style.display !== 'none' && tr.classList.contains('severity-warning')).length;
             }});
 
-            // Update summary table counts per category (error/warning split)
             document.querySelectorAll('.summary-table tbody tr').forEach(row => {{
                 const link = row.querySelector('a[href^="#cat-"]');
                 if (!link) return;
@@ -434,7 +414,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                 row.style.display = (errCount + warnCount) === 0 ? 'none' : '';
             }});
 
-            // Update file sections
             document.querySelectorAll('.file-section').forEach(section => {{
                 const items = section.querySelectorAll('li');
                 const visible = Array.from(items).filter(li => li.style.display !== 'none').length;
@@ -443,7 +422,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                 section.style.display = visible === 0 ? 'none' : '';
             }});
 
-            // Update error/warning stat boxes
             const errorStat = document.querySelector('.stat-number-error');
             const warningStat = document.querySelector('.stat-number-warning');
             if (errorStat) errorStat.textContent = totalErrors;
@@ -452,7 +430,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
             updateExportLink();
         }}
 
-        // Apply default filters on load
         document.addEventListener('DOMContentLoaded', applyFilters);
     </script>
     <style>
@@ -698,15 +675,17 @@ def _open_url(server_port, file_path, line):
 
 
 def _include_source_link(issue, server_port):
-    """Link to the include line an issue came from; empty when it has none."""
-    inc_file = issue.get("include_file", "")
-    inc_line = issue.get("include_line", 0)
-    if not (inc_file and inc_line):
+    """Link to the include line a per-call issue came from, or to the first call of a merged one."""
+    if issue.get("include_file") and issue.get("include_line"):
+        target, line, arrow = issue["include_file"], issue["include_line"], "\u2192"
+    elif issue.get("call_file") and issue.get("call_line"):
+        target, line, arrow = issue["call_file"], issue["call_line"], "\u2190 first call"
+    else:
         return ""
-    inc_basename = os.path.basename(inc_file)
-    return (f' <a href="{_open_url(server_port, inc_file, inc_line)}" class="file-link inc-source"'
-            f' target="_blank" title="Open {inc_basename} at line {inc_line}">'
-            f'→ {html.escape(inc_basename)}:{inc_line}</a>')
+    basename = os.path.basename(target)
+    return (f' <a href="{_open_url(server_port, target, line)}" class="file-link inc-source"'
+            f' target="_blank" title="Open {basename} at line {line}">'
+            f'{arrow} {html.escape(basename)}:{line}</a>')
 
 
 def _generate_file_section(file_path, issues, server_port):

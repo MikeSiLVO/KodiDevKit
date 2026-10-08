@@ -6,7 +6,7 @@ import copy
 import re
 import logging
 
-from ..utils.expressions import flatten_expressions, resolve_params_in_text
+from ..utils.expressions import expression_names, flatten_expressions, resolve_params_in_text
 from ..utils.xml import get_params
 from ..skin.include import SkinInclude
 
@@ -115,7 +115,7 @@ class SkinResolution:
         return ",".join(pieces)
 
     def resolve_expressions(self, node, folder: str):
-        """Resolve $EXP as CGUIIncludes::ResolveExpressions: listed tag text, else the condition."""
+        """Resolve $EXP in listed tag text, else the condition, recording the names on the node."""
         if node is None:
             return
 
@@ -123,13 +123,18 @@ class SkinResolution:
         if not expressions_for_folder:
             return
 
+        names = []
         if node.text and node.tag in SkinInclude.exp_nodes:
+            names = expression_names(node.text)
             node.text = self._resolve_expression_value(node.text, expressions_for_folder, [])
         else:
             for attr_name, attr_value in list(node.attrib.items()):
                 if attr_name in SkinInclude.exp_attribs:
+                    names += expression_names(attr_value)
                     node.attrib[attr_name] = self._resolve_expression_value(
                         attr_value, expressions_for_folder, [])
+        if names:
+            node.set("_kdk_exp", self._PATH_SEP.join(names))
 
     def _resolve_expression_value(self, value: str, expression_map: dict, resolved: list) -> str:
         """Resolve $EXP[name] references with circular detection."""
