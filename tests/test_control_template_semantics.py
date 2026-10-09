@@ -152,16 +152,20 @@ class TestControlTemplateSemantics(unittest.TestCase):
 </control>""", "piers")
         self.assertTrue(any("invalid attribute for <label>: fallback" in i["message"] for i in issues), issues)
 
-    def test_invalid_viewtype_lists_allowed_values(self):
-        """An unknown viewtype is reported with the allowed values, not a case hint."""
+    def test_unknown_viewtype_warns_with_the_effect(self):
+        """An unknown viewtype is a warning that explains the effect and lists the types."""
         issues = self._issues("""
 <control type="fixedlist">
-    <viewtype>fixedlist</viewtype>
+    <viewtype label="Fanart">fanart</viewtype>
+</control>
+<control type="list">
+    <viewtype>List</viewtype>
 </control>""", "piers")
-        viewtype = [i["message"] for i in issues if "viewtype" in i["message"]]
-        self.assertTrue(viewtype, issues)
-        self.assertIn("allowed:", viewtype[0])
-        self.assertNotIn("lowercase", viewtype[0])
+        viewtype = [(i["severity"], i["message"]) for i in issues if "<viewtype>" in i["message"]]
+        self.assertEqual([sev for sev, _ in viewtype], ["warning", "warning"])
+        self.assertIn("'fanart' is not a view type Kodi knows", viewtype[0][1])
+        self.assertIn("must be one of: bigicon,", viewtype[0][1])
+        self.assertIn("'List' only works in lowercase ('list')", viewtype[1][1])
 
 
 class TestIncludeDefinitionText(unittest.TestCase):

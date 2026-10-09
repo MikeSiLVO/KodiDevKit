@@ -40,6 +40,7 @@ from ..validation.constants import (
     REPEATABLE_TAGS,
     is_read_copy,
     attribute_bool_problem,
+    viewtype_problem,
     ALLOWED_MULTI,
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
@@ -393,6 +394,11 @@ class CheckerMixin:
             return True
         if is_dynamic_expression(value):
             return True
+        if value_type == "viewtype":
+            problem = viewtype_problem(value)
+            if problem:
+                self._add_issue(listitems, node, problem, value, severity=SEVERITY_WARNING)
+            return problem is None
 
         # lowercased by Kodi first (GUIControlFactory.cpp orientation, XMLUtils::GetBoolean)
         if value_type in CASE_INSENSITIVE_ENUMS:

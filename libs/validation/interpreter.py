@@ -35,6 +35,7 @@ from .constants import (
     REPEATABLE_TAGS,
     is_read_copy,
     attribute_bool_problem,
+    viewtype_problem,
     ALLOWED_MULTI,
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
@@ -404,6 +405,11 @@ class XmlInterpreter:
         if value_type not in ALLOWED_VALUES:
             return
         if _is_dynamic(value):
+            return
+        if value_type == "viewtype":
+            problem = viewtype_problem(value)
+            if problem:
+                self._add_issue(node, SEVERITY_WARNING, problem)
             return
 
         if value_type in CASE_INSENSITIVE_ENUMS:

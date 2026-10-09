@@ -113,6 +113,7 @@ _SUBTYPE_RULES = [
     ("Redundant <", "REDUNDANT"),
     ("invalid attribute for", "INVALID ATTR"),
     ("invalid value for", "INVALID VALUE"),
+    ("this view has no type", "INVALID VALUE"),
     ("Invalid color", "INVALID COLOR"),
     ("invalid integer", "INVALID VALUE"),
     ("Empty condition", "EMPTY CONDITION"),

@@ -1,4 +1,4 @@
-"""Constants and data tables for Kodi skin validation: control tags, allowed values, validation rules."""
+"""Tag sets, allowed enum values and severity names the checks share."""
 
 from __future__ import annotations
 from lxml import etree as ET
@@ -114,7 +114,6 @@ def is_read_copy(element, tag_low):
         return any(not a.startswith("_kdk_") for a in element.attrib)
     return True
 
-# Attribute values with enumerations (normalized to lowercase for efficient case-insensitive lookups)
 ALLOWED_VALUES = {
     "align": {"left", "center", "right", "justify"},
     "grouplistalign": {"left", "center", "right", "justify", "top", "bottom"},
@@ -178,6 +177,20 @@ __all__ = [
     'SEVERITY_ERROR',
     'SEVERITY_WARNING',
 ]
+
+
+def viewtype_problem(value):
+    """Why a <viewtype> leaves the view without a type, or None when Kodi knows the value."""
+    known = ALLOWED_VALUES["viewtype"]
+    if value in known:
+        return None
+    if value.lower() in known:
+        start = f"<viewtype> '{value}' only works in lowercase ('{value.lower()}'), so this view has no type."
+    else:
+        start = f"<viewtype> '{value}' is not a view type Kodi knows, so this view has no type."
+    return (f"{start} Until the user picks a view, Kodi opens a window on the type it asks for, "
+            f"mostly list, or on the first view when none has that type. The label attribute is the "
+            f"name users see; the type must be one of: {', '.join(sorted(known))}")
 
 
 def attribute_bool_problem(attr, value):
