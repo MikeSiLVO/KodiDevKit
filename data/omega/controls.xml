@@ -250,6 +250,7 @@
         <font>font</font>
         <range>range</range>
         <textcolor>color</textcolor>
+        <focusedcolor>color</focusedcolor>
         <disabledcolor>color</disabledcolor>
         <align>align</align>
         <aligny>aligny</aligny>

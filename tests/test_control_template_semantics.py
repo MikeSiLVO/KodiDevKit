@@ -144,6 +144,13 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <textwidth>300</textwidth>
 </control>""")
 
+    def test_spincontrol_focusedcolor(self):
+        """A focused spincontrol draws its text in focusedcolor."""
+        self._assert_clean("""
+<control type="spincontrol">
+    <focusedcolor>FFFFFFFF</focusedcolor>
+</control>""")
+
     def test_button_label_fallback_warns(self):
         """Buttons read their label through GetString, which ignores fallback."""
         issues = self._issues("""
