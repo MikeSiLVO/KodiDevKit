@@ -407,7 +407,7 @@ class SkinIndex:
             return None
 
     def build_include_usages(self, progress_callback=None):
-        """Record every include call site with its params, so $PARAM names are checked in place."""
+        """Build the list of include calls, each with its params and the include it sits in."""
         if self.skin._include_usages_built:
             return
 
@@ -437,10 +437,13 @@ class SkinIndex:
                         if inc_name not in self.skin.include_usages[folder]:
                             self.skin.include_usages[folder][inc_name] = []
 
+                        enclosing = next((a.get('name') for a in elem.iterancestors('include')
+                                          if a.get('name')), None)
                         self.skin.include_usages[folder][inc_name].append({
                             'params': params,
                             'file': file_path,
-                            'line': getattr(elem, 'sourceline', 0)
+                            'line': getattr(elem, 'sourceline', 0),
+                            'enclosing': enclosing,
                         })
 
         self.skin._include_usages_built = True

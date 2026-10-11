@@ -73,17 +73,44 @@ def resolve_param_in_name(name, param_context=None, cache=None):
 
 
 def get_all_parameter_contexts(addon, folder):
-    """Get every param set the folder's includes take, to try a $PARAM name against each."""
+    """Get every param set the folder's includes take, filling forwarded $PARAM from outer calls."""
     if not addon._include_usages_built:
         addon.index_builder.build_include_usages()
 
-    all_contexts = []
-    for _inc_name, usages in addon.include_usages.get(folder, {}).items():
-        for usage in usages:
-            all_contexts.append(usage['params'])
+    usages = addon.include_usages.get(folder, {})
+    includes = getattr(addon, "include_map", {}).get(folder, {})
+    filled = {}
 
+    def contexts_of(name, depth):
+        if name not in filled:
+            filled[name] = []
+            defaults = includes[name][1] if name in includes else {}
+            for usage in usages.get(name, []):
+                for context in expand(usage, depth):
+                    filled[name].append({**defaults, **context})
+        return filled[name]
+
+    def expand(usage, depth):
+        params, outer = usage["params"], usage.get("enclosing")
+        if not outer or depth >= _FORWARD_DEPTH or not any("$PARAM[" in v for v in params.values()):
+            return [params]
+        return [{k: resolve_param_in_name(v, context) for k, v in params.items()}
+                for context in contexts_of(outer, depth + 1)] or [params]
+
+    seen = set()
+    all_contexts = []
+    for calls in usages.values():
+        for usage in calls:
+            for context in expand(usage, 0):
+                key = frozenset(context.items())
+                if key not in seen:
+                    seen.add(key)
+                    all_contexts.append(context)
     all_contexts.append({})
     return all_contexts
+
+
+_FORWARD_DEPTH = 5
 
 
 _GENERATED_INCLUDE_FILE = re.compile(r'^script-.*-includes\.xml$', re.I)

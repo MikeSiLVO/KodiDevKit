@@ -264,6 +264,25 @@ class TestVariableBasicValidation(ValidationTestCase):
         unused_issues = [i for i in issues if "UnusedVar" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertTrue(len(unused_issues) > 0, "Should report UnusedVar as unused")
 
+    def test_variable_named_through_a_forwarded_param_is_used(self):
+        """A $PARAM forwarded into a nested include resolves through the outer call's value."""
+        files = {
+            "16x9/Includes.xml": '<includes><variable name="HubStar1"><value>a</value></variable>'
+                                 '<include name="Flags"><include content="Flag">'
+                                 '<param name="Star" value="$PARAM[Star]1"/></include></include>'
+                                 '<include name="Flag"><control type="image">'
+                                 '<texture>$VAR[$PARAM[Star]]</texture></control></include></includes>',
+            "16x9/Home.xml": '<window><controls><include content="Flags">'
+                             '<param name="Star" value="HubStar"/></include></controls></window>',
+        }
+        for rel, text in files.items():
+            with open(os.path.join(self.test_dir, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        messages = [i["message"] for i in VariableCheck(self.provider.addon).check()]
+        self.assertNotIn("Unused variable: HubStar1", messages)
+
     def test_variables_used_in_shortcuts_overrides(self):
         """A $VAR in overrides.xml or a menu's DATA.xml counts as a usage."""
         files = {
