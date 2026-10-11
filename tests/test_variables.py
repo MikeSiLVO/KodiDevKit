@@ -283,6 +283,22 @@ class TestVariableBasicValidation(ValidationTestCase):
         messages = [i["message"] for i in VariableCheck(self.provider.addon).check()]
         self.assertNotIn("Unused variable: HubStar1", messages)
 
+    def test_rows_inside_a_generated_file_are_dropped(self):
+        """The report and kdk call the check directly and get no rows from a generated file."""
+        files = {
+            "16x9/Includes.xml": "<includes/>",
+            "16x9/Home.xml": "<window><controls/></window>",
+            "16x9/script-skinvariables-includes.xml": '<includes><variable name="Outer">'
+                                                      '<value>$VAR[Built_C1301]</value></variable></includes>',
+        }
+        for rel, text in files.items():
+            with open(os.path.join(self.test_dir, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        files = [os.path.basename(i["file"]) for i in self.provider.check_variables()]
+        self.assertNotIn("script-skinvariables-includes.xml", files)
+
     def test_variables_used_in_shortcuts_overrides(self):
         """A $VAR in overrides.xml or a menu's DATA.xml counts as a usage."""
         files = {

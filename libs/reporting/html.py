@@ -6,7 +6,6 @@ from datetime import datetime
 from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote
-from ..utils.validation import is_runtime_generated_file
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 CATEGORY_DESCRIPTIONS = {
@@ -142,31 +141,13 @@ def generate_html_report(all_issues, skin_name, skin_path, server_port, output_p
     if progress_callback:
         progress_callback("Calculating statistics...")
 
-    normal_issues = {}
-    runtime_issues = {}
-
-    for category, issues in all_issues.items():
-        normal_list = []
-        runtime_list = []
-
-        for issue in issues:
-            if is_runtime_generated_file(issue.get("file", "")):
-                runtime_list.append(issue)
-            else:
-                normal_list.append(issue)
-
-        if normal_list:
-            normal_issues[category] = normal_list
-        if runtime_list:
-            runtime_issues[category] = runtime_list
-
+    normal_issues = {category: issues for category, issues in all_issues.items() if issues}
     total_normal_issues = sum(len(issues) for issues in normal_issues.values())
-    total_runtime_issues = sum(len(issues) for issues in runtime_issues.values())
 
     normal_categories = {name: len(issues) for name, issues in normal_issues.items() if issues}
 
     if progress_callback:
-        progress_callback(f"Grouping {total_normal_issues} actionable issues ({total_runtime_issues} runtime-generated excluded)...")
+        progress_callback(f"Grouping {total_normal_issues} issues...")
 
     issues_by_file = defaultdict(list)
     for category, issues in normal_issues.items():
@@ -178,7 +159,7 @@ def generate_html_report(all_issues, skin_name, skin_path, server_port, output_p
         progress_callback(f"Generating HTML report ({len(normal_categories)} categories, {len(issues_by_file)} files)...")
 
     html_content = _generate_html_template(
-        skin_name, skin_path, total_runtime_issues,
+        skin_name, skin_path,
         normal_categories, normal_issues, issues_by_file, server_port, progress_callback,
         hide_include_warnings
     )
@@ -195,7 +176,7 @@ def generate_html_report(all_issues, skin_name, skin_path, server_port, output_p
     return output_path
 
 
-def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
+def _generate_html_template(skin_name, skin_path,
                             categories, all_issues, issues_by_file, server_port, progress_callback=None,
                             hide_include_warnings=True):
     """Generate the complete HTML report page, its category and file sections included."""
@@ -511,7 +492,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
                 </div>
             </div>
 
-            {_generate_exclusion_note(total_runtime_excluded) if total_runtime_excluded > 0 else ''}
 
             {_generate_severity_legend()}
 
@@ -555,17 +535,6 @@ def _generate_html_template(skin_name, skin_path, total_runtime_excluded,
     </div>
 </body>
 </html>"""
-
-
-def _generate_exclusion_note(excluded_count):
-    """Generate info note about excluded runtime-generated issues."""
-    return f"""
-            <div style="background: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0; color: #1976D2; font-size: 0.95em;">
-                    ℹ️ <strong>Note:</strong> {excluded_count} runtime-generated issue{'s' if excluded_count != 1 else ''}
-                    from <code>script-skinvariables-*.xml</code> files excluded from this report.
-                </p>
-            </div>"""
 
 
 def _generate_severity_legend():

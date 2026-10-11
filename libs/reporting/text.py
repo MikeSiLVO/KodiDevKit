@@ -1,21 +1,12 @@
-"""Plain-text validation report, shared by the export endpoint.
-
-Kept free of the `sublime` import so the formatting/filtering is unit-testable.
-"""
+"""Plain-text validation report for the export endpoint, free of `sublime`."""
 
 from typing import Container
 
-from ..utils.validation import is_runtime_generated_file
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 
 def issue_visible(issue, hidden_severities, hide_include_warnings):
-    """Mirror the HTML report's filters: an issue is visible unless its severity
-    is hidden, or it is an include-sourced warning while those are hidden.
-
-    Include warnings are `include_name` set and severity != error -- matches
-    kdk's filter_include_warnings and the on-page toggle.
-    """
+    """True when the issue passes the HTML report's severity and include-warning filters."""
     severity = issue.get("severity", SEVERITY_WARNING)
     if severity in hidden_severities:
         return False
@@ -25,7 +16,7 @@ def issue_visible(issue, hidden_severities, hide_include_warnings):
 
 
 def generate_text_report(report_data, *, hidden_severities: Container[str] = frozenset(), hide_include_warnings=False):
-    """Render `report_data` to text, honoring the same filters as the HTML view."""
+    """Generate the text report, honoring the same filters as the HTML report."""
     lines = []
     lines.append("=" * 80)
     lines.append("KODI SKIN VALIDATION REPORT")
@@ -42,17 +33,12 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
 
     all_issues_raw = report_data.get('all_issues', {})
 
-    # Drop runtime-generated files, then apply the on-page filters.
     all_issues = {}
-    total_runtime_excluded = 0
     total_filtered_out = 0
 
     for category, issues in all_issues_raw.items():
         kept = []
         for issue in issues:
-            if is_runtime_generated_file(issue.get("file", "")):
-                total_runtime_excluded += 1
-                continue
             if not issue_visible(issue, hidden_severities, hide_include_warnings):
                 total_filtered_out += 1
                 continue
@@ -68,12 +54,6 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
     if filter_notes:
         lines.append("")
         lines.append(f"Filters: {filter_notes} ({total_filtered_out} issue{'s' if total_filtered_out != 1 else ''} hidden)")
-
-    if total_runtime_excluded > 0:
-        lines.append("")
-        lines.append(f"Note: {total_runtime_excluded} runtime-generated issue{'s' if total_runtime_excluded != 1 else ''} from")
-        lines.append("      script-skinvariables-*.xml files excluded from this report.")
-        lines.append("      These files are auto-generated and over-generation is expected.")
 
     lines.append("")
 
@@ -121,7 +101,7 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
 
 
 def _describe_filters(hidden_severities, hide_include_warnings):
-    """Human-readable summary of active filters, or empty string if none."""
+    """Describe the active filters, or return an empty string when none are active."""
     parts = []
     for sev in (SEVERITY_ERROR, SEVERITY_WARNING):
         if sev in hidden_severities:
