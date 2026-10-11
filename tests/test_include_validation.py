@@ -103,6 +103,19 @@ class TestIncludeValidation(ValidationTestCase):
                  if i["message"] == "Unused include: Spare"]
         self.assertEqual(lines, [2])
 
+    def test_content_call_with_blank_text_counts_as_usage(self):
+        """A content call written across lines is a usage, its whitespace text is not a name."""
+        for name, text in (("Includes.xml", '<includes>\n<include name="Weather.Item">\n<label>a</label>\n'
+                                            '</include>\n</includes>'),
+                           ("Home.xml", '<window><controls>\n<include content="Weather.Item">\n'
+                                        '</include>\n</controls></window>')):
+            with open(os.path.join(self.test_dir, "16x9", name), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        messages = [i["message"] for i in IncludeCheck(self.provider.addon).check()]
+        self.assertNotIn("Unused include: Weather.Item", messages)
+
     def test_defined_include_no_issue(self):
         """Test that defined includes don't trigger issues when used."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
