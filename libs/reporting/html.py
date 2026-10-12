@@ -65,6 +65,7 @@ _SUBTYPE_RULES = [
     ("must be named", "CASE MISMATCH"),
     ("is not an empty", "NOT EMPTY"),
     ("Missing image", "MISSING"),
+    ("is only in Textures.xbt", "NOT IN SOURCES"),
     ("Case mismatch for", "CASE MISMATCH"),
     ("Wrong path", "WRONG PATH"),
     ("Case mismatch in font", "CASE MISMATCH"),

@@ -550,7 +550,7 @@ class SkinIndex:
                         _track(val.strip(), node, attr)
 
     def _check_image_files(self, index, progress_callback=None):
-        """Classify every referenced image against the files on disk so the check needs no I/O."""
+        """Check referenced images and texture bundles on disk so image validation needs no I/O."""
         if 'images_referenced' not in index:
             return
 
@@ -577,12 +577,10 @@ class SkinIndex:
         xbt_path = os.path.join(self.skin.path, "media", "Textures.xbt")
         xbt_names = read_xbt_names(xbt_path) if os.path.isfile(xbt_path) else None
         loose_media = any(p.startswith("media/") and not p.lower().endswith(".xbt") for p in exact_relpaths)
-        # a built skin has only the .xbt, so its media/ references resolve against the archive
-        packed = xbt_names if xbt_names is not None and not loose_media else None
 
         def normalize_ref(val: str):
             v = (val or "").strip().replace("\\", "/")
-            # Kodi loads a full path as written (TextureManager.cpp:643), outside the skin
+            # Kodi loads a full path as written, outside the skin
             if v.startswith("/") or re.match(r"^[A-Za-z]:/", v):
                 return None
 
@@ -604,14 +602,18 @@ class SkinIndex:
         def classify_path(val_norm):
             if val_norm is None:
                 return "external", None
-            if packed is not None and val_norm.startswith("media/"):
-                return ("exact", None) if val_norm[len("media/"):].lower() in packed else ("missing", None)
+            in_xbt = (xbt_names is not None and val_norm.startswith("media/")
+                      and val_norm[len("media/"):].lower() in xbt_names)
+            if xbt_names is not None and not loose_media and val_norm.startswith("media/"):
+                return ("exact", None) if in_xbt else ("missing", None)
             if val_norm in exact_relpaths:
                 return "exact", None
 
             cf_rel = val_norm.casefold()
             if cf_rel in cf_rel_to_exact:
                 return "case_mismatch", cf_rel_to_exact[cf_rel]
+            if in_xbt:
+                return "packed_only", None
 
             cf_base = os.path.basename(val_norm).casefold()
             candidates = sorted(cf_base_to_relpaths.get(cf_base, []))

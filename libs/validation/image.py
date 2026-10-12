@@ -77,7 +77,6 @@ class ValidationImage:
 
                 placeholder = image_path.strip().lower() in ("-", "noop")
 
-                # Report for every usage location, not just the first
                 for usage in usages:
                     file_path = usage.get('file', '')
                     line_num = usage.get('line', 0)
@@ -105,6 +104,16 @@ class ValidationImage:
                             "file": file_path,
                             "line": line_num,
                             "severity": SEVERITY_ERROR,
+                        })
+
+                    elif status == 'packed_only':
+                        issues.append({
+                            "message": f"'{image_path}'{attr_suffix} is only in Textures.xbt, not among the "
+                                       f"loose images. Kodi finds it, but the Kodi repo expects loose images "
+                                       f"and packs Textures.xbt itself, so a repo build drops it",
+                            "file": file_path,
+                            "line": line_num,
+                            "severity": SEVERITY_WARNING,
                         })
 
                     elif status == 'case_mismatch':

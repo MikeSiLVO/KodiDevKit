@@ -63,12 +63,14 @@ class TestXbt(unittest.TestCase):
         self.assertEqual(self._messages(), ["Missing image 'icons/b.png'"])
 
     def test_bundle_beside_sources(self):
+        """An image only in a bundle beside loose images warns that a repo build drops it."""
         self._write("media/Textures.xbt", _xbt(["icons/a.png", "icons/b.png"]))
         os.makedirs(os.path.join(self.path, "media", "icons"))
         self._write("media/icons/b.png", b"png")
         self.assertEqual(self._messages(), [
+            "'Icons/A.png' is only in Textures.xbt, not among the loose images. Kodi finds it, but the "
+            "Kodi repo expects loose images and packs Textures.xbt itself, so a repo build drops it",
             "Kodi repo: Textures.xbt ships beside the source images in media/",
-            "Missing image 'Icons/A.png'",
         ])
 
     def test_theme_bundle_beside_sources(self):
