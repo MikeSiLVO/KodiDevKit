@@ -7,6 +7,7 @@ import re
 import logging
 
 from ..utils.expressions import expression_names, flatten_expressions, resolve_params_in_text
+from ..utils.infobool import static_value
 from ..utils.xml import get_params
 from ..skin.include import SkinInclude
 
@@ -154,6 +155,11 @@ class SkinResolution:
 
         include_node = node.find("include")
         while include_node is not None:
+            condition = include_node.get("condition")
+            if condition and static_value(condition) is False:
+                include_node = next(include_node.itersiblings("include"), None)
+                continue
+
             inc_name = include_node.attrib.get("content")
             if not inc_name and include_node.text:
                 inc_name = include_node.text.strip()
@@ -180,7 +186,6 @@ class SkinResolution:
 
             include_def = includes_for_folder.get(inc_name) if inc_name else None
 
-            # unknown name or a cycle stays in place; the scan moves on
             if include_def is None or inc_name in path:
                 if include_def is None and inc_name:
                     logger.debug("Skin has invalid include: %s", inc_name)

@@ -324,7 +324,6 @@ class TestParameterMerging(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create Includes.xml with parameterized include
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="TestButton">
@@ -336,6 +335,15 @@ class TestParameterMerging(unittest.TestCase):
                 <label>$PARAM[label]</label>
             </control>
         </definition>
+    </include>
+    <include name="Textured">
+        <param name="texture" default="false"/>
+        <definition>
+            <include content="TextureTag" condition="Skin.HasSetting(x) + $PARAM[texture]"/>
+        </definition>
+    </include>
+    <include name="TextureTag">
+        <texture>box.png</texture>
     </include>
 </includes>"""
         with open(os.path.join(self.skin_path, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
@@ -390,6 +398,16 @@ class TestParameterMerging(unittest.TestCase):
         # Label not overridden, should use default
         label_elem = control.find("label")
         self.assertEqual(label_elem.text, "DefaultLabel", "Default label should be used")
+
+    def test_include_whose_condition_is_always_false_stays_out(self):
+        """A condition a default param makes always false keeps its include out."""
+        root = ET.fromstring('<control type="button"><include content="Textured"/>'
+                             '<include content="Textured"><param name="texture" value="true"/>'
+                             '</include></control>')
+
+        kodi_resolve(self.skin, root, "16x9")
+
+        self.assertEqual(len(root.findall("texture")), 1)
 
 
 class TestNestedParameterizedFanout(unittest.TestCase):

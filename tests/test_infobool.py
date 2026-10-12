@@ -121,6 +121,28 @@ class TestCheckCondition(unittest.TestCase):
     hasattr(infobool, "read_probe"),
     "live-probe helpers ship only with the editor plugin",
 )
+class TestStaticValue(unittest.TestCase):
+    """Conditions whose value is the same in any state."""
+
+    def test_literals_in_any_case(self):
+        """The literals false, no, true and yes read the same in any case."""
+        self.assertIs(infobool.static_value("False"), False)
+        self.assertIs(infobool.static_value("no"), False)
+        self.assertIs(infobool.static_value("YES"), True)
+
+    def test_operators_follow_three_valued_logic(self):
+        """An unknown operand stays unknown unless the other side settles the result."""
+        self.assertIs(infobool.static_value("Skin.HasSetting(a) + false"), False)
+        self.assertIs(infobool.static_value("Skin.HasSetting(a) | true"), True)
+        self.assertIs(infobool.static_value("[Player.HasVideo + no] | !true"), False)
+        self.assertIsNone(infobool.static_value("Skin.HasSetting(a) | false"))
+
+    def test_unparsed_text_is_unknown(self):
+        """Text that fails to parse, such as an unexpanded $PARAM, reads as unknown."""
+        self.assertIsNone(infobool.static_value("[false"))
+        self.assertIsNone(infobool.static_value("$PARAM[texture] + false"))
+
+
 class TestNegationProbe(unittest.TestCase):
 
     def _response(self, condition, direct, negated):

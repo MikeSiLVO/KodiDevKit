@@ -150,6 +150,49 @@ def check_condition(condition: str) -> tuple[str, str] | None:
     return None
 
 
+def static_value(condition: str) -> bool | None:
+    """True or False when the condition reads the same in any state, else None."""
+    text, unclosed = _drop_presubstituted(condition)
+    if unclosed or check_syntax(condition):
+        return None
+    tokens = [t.strip() for t in re.split(r"([\[\]!+|])", text) if t.strip()]
+    pos = 0
+
+    def any_of():
+        nonlocal pos
+        values = [all_of()]
+        while pos < len(tokens) and tokens[pos] == "|":
+            pos += 1
+            values.append(all_of())
+        return True if True in values else False if all(v is False for v in values) else None
+
+    def all_of():
+        nonlocal pos
+        values = [single()]
+        while pos < len(tokens) and tokens[pos] == "+":
+            pos += 1
+            values.append(single())
+        return False if False in values else True if all(values) else None
+
+    def single():
+        nonlocal pos
+        token = tokens[pos]
+        pos += 1
+        if token == "!":
+            value = single()
+            return None if value is None else not value
+        if token == "[":
+            value = any_of()
+            pos += 1
+            return value
+        return _LITERALS.get(token.lower())
+
+    return any_of()
+
+
+_LITERALS = {"false": False, "no": False, "true": True, "yes": True}
+
+
 def info_name_sets(raw: dict) -> dict:
     """An infonames.json table with its name lists as sets, the shape `is_known_info` reads."""
     return {**raw, "categories": {c: set(v) for c, v in raw["categories"].items()},
