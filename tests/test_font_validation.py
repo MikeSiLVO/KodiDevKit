@@ -420,6 +420,27 @@ class TestFontValidation(unittest.TestCase):
         has_duplicate_error = any("duplicate" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_duplicate_error, "Should detect duplicate font name")
 
+    def test_duplicate_font_name_through_conditional_includes(self):
+        """Copies from conditional includes clash only after a copy that is always there."""
+        self.create_font_file("font.ttf")
+        font = "<font><name>{}</name><filename>font.ttf</filename><size>13</size></font>"
+        self.create_includes_xml(
+            '<includes><include name="SetA">' + font.format("plot") + font.format("late") +
+            font.format("font13") +
+            '</include><include name="SetB">' + font.format("plot") + font.format("late") +
+            "</include></includes>")
+        self.create_fonts_xml(
+            '<fonts><fontset id="Default">' + font.format("font13") +
+            '<include condition="Skin.HasSetting(a)">SetA</include>'
+            '<include condition="!Skin.HasSetting(a)">SetB</include>' + font.format("late") +
+            "</fontset></fonts>")
+        self.create_window_xml("<window><controls/></window>")
+
+        issues = self.init_provider().check_fonts()
+
+        duplicates = {i["message"] for i in issues if i["message"].startswith("Duplicate")}
+        self.assertEqual(duplicates, {"Duplicate font name 'font13' within fontset 'Default'"})
+
     def test_missing_font_name(self):
         """Test detection of missing <name> element."""
         self.create_font_file("font.ttf")

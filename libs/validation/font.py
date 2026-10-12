@@ -1,4 +1,4 @@
-"""Font validation for Kodi skins."""
+"""Checks a skin's font definitions, their files, and where fonts are used."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
 
-# Fonts required by Kodi that don't need to be explicitly used in XML
+# Kodi's fallback fonts, which count as used
 REQUIRED_FONTS = {"font13"}
 
 
@@ -38,7 +38,7 @@ def _undefined_font_issue(name, defined, folded, file, line, unloaded=()):
 
 
 class ValidationFont:
-    """Validates font definitions and usage in Kodi skins."""
+    """Checker for font definitions, their files, their fontsets and where fonts are used."""
 
     def __init__(self, addon, resolve_include_fn=None, validation_index=None):
         self.addon = addon
@@ -47,7 +47,7 @@ class ValidationFont:
         self._dir_cache = {}
 
     def _dir_listing(self, path):
-        """Case-folded name -> on-disk name for `path`; empty if unreadable."""
+        """Case-folded name to on-disk name for one directory, cached; empty when unreadable."""
         listing = self._dir_cache.get(path)
         if listing is None:
             try:
@@ -58,7 +58,7 @@ class ValidationFont:
         return listing
 
     def _resolve_font_path(self, base_dir, rel):
-        """On-disk spelling of `rel` under `base_dir`, matched per component ignoring case; None if absent."""
+        """Resolve the path to its on-disk spelling, ignoring case; None when absent."""
         current = base_dir
         parts = []
         for part in rel.split("/"):
@@ -70,10 +70,7 @@ class ValidationFont:
         return "/".join(parts) if os.path.isfile(current) else None
 
     def check(self, progress_callback=None):
-        """
-        Validate fonts declared by the skin.
-        Returns list of {"message": str, "file": str, "line": int}.
-        """
+        """Check the fonts, one issue row per problem with a definition, file, fontset or use."""
         def row(message, file_path="", line=0, severity=SEVERITY_ERROR):
             return {"message": message, "file": file_path, "line": line, "severity": severity}
 
@@ -132,8 +129,7 @@ class ValidationFont:
                     if filename and not is_dynamic_expression(filename):
                         rel = filename.replace("\\", "/").strip()
 
-                        # Skip validation for resource:// paths (font addon packages)
-                        # These reference fonts from separate resource.font.* addons
+                        # a resource:// font lives in another addon
                         if rel.startswith("resource://"):
                             continue
 
@@ -179,12 +175,6 @@ class ValidationFont:
             if not fontsets:
                 continue
 
-            # Empty fontsets are allowed - they can be conditionally populated
-            # or used as fallbacks, so we skip this check
-            # for fs in fontsets:
-            #     if not fs["fonts"]:
-            #         issues.append(row(f"Empty <fontset> '{fs['id']}'", fs["file"], fs["line"]))
-
             for fs in fontsets:
                 if fs["unicode"]:
                     issues.append(row(f"Obsolete unicode attribute on fontset '{fs['id']}', Kodi ignores it",
@@ -219,12 +209,14 @@ class ValidationFont:
                             issues.append(row(f"Invalid font size '{sz}' for '{nm or '?'}'", f["file"], f["line"]))
 
                     if nm:
-                        name_to_locs.setdefault(nm, []).append((f["file"], f["line"]))
+                        name_to_locs.setdefault(nm, []).append(f)
 
-                for nm, locs in name_to_locs.items():
-                    if len(locs) > 1:
-                        for fp, ln in locs:
-                            issues.append(row(f"Duplicate font name '{nm}' within fontset '{fs['id']}'", fp, ln, SEVERITY_WARNING))
+                for nm, copies in name_to_locs.items():
+                    # a conditional copy never becomes the one Kodi keeps
+                    first = next((i for i, f in enumerate(copies) if not f["conditional"]), len(copies))
+                    if len(copies) - first > 1:
+                        for f in copies[first:]:
+                            issues.append(row(f"Duplicate font name '{nm}' within fontset '{fs['id']}'", f["file"], f["line"], SEVERITY_WARNING))
 
             base = fontsets[0]
             base_names = {f["name"] for f in base["fonts"] if f["name"]}
@@ -265,7 +257,7 @@ class ValidationFont:
                             "severity": SEVERITY_WARNING,
                         })
 
-        # One include pulled into N fontsets re-reports each of its fonts N times
+        # an include pulled into several fontsets reports each of its fonts once per set
         seen = set()
         deduped = []
         for it in issues:
@@ -301,7 +293,7 @@ class ValidationFont:
         return skips - loads
 
     def _parse_fontsets(self, folder):
-        """Return list of fontset dicts with resolved includes."""
+        """Parse the folder's fontsets with their fonts, include-supplied ones too."""
         out = []
         candidates = [
             os.path.join(self.addon.path, folder, "Font.xml"),
@@ -315,15 +307,13 @@ class ValidationFont:
         if root is None:
             return out
 
-        # Expand includes and $PARAM in Font.xml if resolver available (with performance check)
         if self._resolve_include and file_needs_expansion(path):
             try:
                 root = self._resolve_include(root, folder=folder)
             except Exception:
-                # Fall back to unexpanded if expansion fails
                 pass
 
-        def add_font_from_node(fnode, src_file, include_def=None):
+        def add_font_from_node(fnode, src_file, include_def=None, conditional=False):
             nm = (fnode.findtext("name") or "").strip()
             fn = (fnode.findtext("filename") or "").strip()
             sz = (fnode.findtext("size") or "").strip()
@@ -332,7 +322,9 @@ class ValidationFont:
             if include_def and nm:
                 ln = find_font_line_in_include(include_def, nm)
                 src_file = include_def.get("file") or src_file
-            return {"name": nm, "filename": fn, "size": sz, "file": src_file, "line": ln}
+            conditional = conditional or fnode.get("_kdk_inc_cond") == "1"
+            return {"name": nm, "filename": fn, "size": sz, "file": src_file, "line": ln,
+                    "conditional": conditional}
 
         for fs in root.findall(".//fontset"):
             fs_id = fs.attrib.get("id") or fs.attrib.get("name") or "fontset"
@@ -353,7 +345,8 @@ class ValidationFont:
                         try:
                             cont_root = ET.fromstring(f"<root>{content}</root>")
                             for f in cont_root.findall(".//font"):
-                                fonts.append(add_font_from_node(f, path, include_def=inc))
+                                fonts.append(add_font_from_node(
+                                    f, path, include_def=inc, conditional="condition" in inc_node.attrib))
                         except Exception:
                             pass
 
