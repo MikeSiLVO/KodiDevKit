@@ -103,6 +103,18 @@ class TestRepo(unittest.TestCase):
             "Kodi repo: language/resource.language.fr_fr/strings.po: Syntax error",
         ])
 
+    def test_nested_addon_reported_once_and_its_files_skipped(self):
+        """A folder with its own addon.xml is one warning; nothing inside it is checked."""
+        self._addon()
+        self._write("addons/script.x/addon.xml", "<addon/>")
+        self._write("addons/script.x/default.py", "pass")
+        self._write("addons/script.x/tests/helper/addon.xml", "<addon/>")
+        self._write("addons/script.x/art.psd", b"8BPS")
+        self.assertEqual(self._messages(), [
+            "Kodi repo: addons/script.x is a separate add-on inside this one. The Kodi repo takes one "
+            "add-on per submission; outside the repo this works",
+        ])
+
     def test_file_types(self):
         self._addon()
         self._write("media/logo.psd", b"8BPS")

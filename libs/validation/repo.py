@@ -12,7 +12,7 @@ from lxml.etree import XMLSchema
 from ..polib.polib import pofile
 from ..utils.images import get_image_info
 from .constants import SEVERITY_WARNING
-from .filecheck import shipped_files
+from .filecheck import nested_addons, shipped_files
 
 SCHEMA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "addon_schema")
 
@@ -74,6 +74,9 @@ class ValidationRepo:
             self._check_addon_xml(root)
             self._check_artwork(root)
         self._check_languages()
+        for folder in nested_addons(self.addon.path):
+            self._add(folder, 0, f"{folder} is a separate add-on inside this one. The Kodi repo takes one "
+                                 f"add-on per submission; outside the repo this works")
         for rel, _executable in shipped_files(self.addon.path):
             name = rel.rsplit("/", 1)[-1]
             # dotfiles never reach a submission; a shipped .xbt is reported by the image check

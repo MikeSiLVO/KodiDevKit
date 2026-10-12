@@ -140,6 +140,25 @@ class ValidationFileCheck:
 
 
 def shipped_files(root):
+    """Relative paths with their executable bit, leaving out the add-ons nested inside this one."""
+    files = _tracked_files(root)
+    nested = _nested(files)
+    return [entry for entry in files if not any(entry[0].startswith(folder + "/") for folder in nested)]
+
+
+def nested_addons(root):
+    """Outermost folders inside the add-on that hold their own addon.xml, each a separate add-on."""
+    return _nested(_tracked_files(root))
+
+
+def _nested(files):
+    """Outermost folders in the listing that hold an addon.xml of their own."""
+    folders = sorted({os.path.dirname(rel) for rel, _executable in files
+                      if os.path.basename(rel) == "addon.xml" and os.path.dirname(rel)})
+    return [f for f in folders if not any(f.startswith(other + "/") for other in folders)]
+
+
+def _tracked_files(root):
     """Relative paths with their executable bit: git's index in a checkout, else the folder."""
     if os.path.exists(os.path.join(root, ".git")):
         try:
