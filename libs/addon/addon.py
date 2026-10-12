@@ -125,10 +125,12 @@ class Addon:
 
     @staticmethod
     def by_project(path, settings):
-        """Build a `Skin` or plain `Addon` for the project, decided by the xbmc.python import."""
-        xml_file = os.path.join(path, "addon.xml")
-        root = get_root_from_file(xml_file)
-        if root is None or root.find(".//import[@addon='xbmc.python']") is None:
+        """Build a `Skin` or plain `Addon` for the project, by its first non-metadata extension."""
+        root = get_root_from_file(os.path.join(path, "addon.xml"))
+        points = [] if root is None else [
+            ext.get("point") for ext in root.findall("extension")
+            if ext.get("point") not in ("xbmc.addon.metadata", "kodi.addon.metadata")]
+        if not points or points[0] == "xbmc.gui.skin":
             from ..skin.skin import Skin
             return Skin(path=path, settings=settings)
         return Addon(path=path, settings=settings)
