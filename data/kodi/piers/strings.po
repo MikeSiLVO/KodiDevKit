@@ -1094,7 +1094,7 @@ msgstr ""
 #: xbmc/addons/GUIViewStateAddonBrowser.cpp
 #: xbmc/playlists/SmartPlaylist.cpp
 #: system/settings/settings.xml
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/utils/Systeminfo.cpp
 #: ###this documented usage does not cover all usecases yet###
 msgctxt "#231"
@@ -1478,7 +1478,7 @@ msgstr ""
 
 #. Select option for the setting "Preferred audio language".
 #. Will prefer the stream marked as "default" if available.
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/cores/VideoPlayer/VideoPlayer.cpp
 msgctxt "#307"
 msgid "Media default"
@@ -1486,13 +1486,13 @@ msgstr ""
 
 #. Select option for the setting "Preferred audio language".
 #. Will prefer the stream marked as "original" if available.
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/cores/VideoPlayer/VideoPlayer.cpp
 msgctxt "#308"
 msgid "Original language"
 msgstr ""
 
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#309"
 msgid "User interface language"
 msgstr ""
@@ -1833,13 +1833,13 @@ msgid "Light"
 msgstr ""
 
 #. Weather token
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#378"
 msgid "AM"
 msgstr ""
 
 #. Weather token
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#379"
 msgid "PM"
 msgstr ""
@@ -5073,7 +5073,7 @@ msgstr ""
 
 #: addons/skin.estuary/xml/DialogPVRRadioRDSInfo.xml
 #: addons/skin.estuary/xml/DialogSeekBar.xml
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/addons/Scraper.cpp
 #: xbmc/addons/addons/GUIDialogAddonInfo.cpp
 #: xbmc/guilib/guiinfo/SystemGUIInfo.cpp
@@ -6256,7 +6256,7 @@ msgid "Switch to visualisation on playback"
 msgstr ""
 
 #. time format with meridiem (xx) e.g. "HH:mm:ss xx"
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#12382"
 msgid "{0:s} xx"
 msgstr ""
@@ -6770,7 +6770,7 @@ msgstr ""
 
 #. generic "unknown" label used in different places
 #: xbmc/GUIInfoManager.cpp
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 #: xbmc/addons/gui/GUIDialogAddonSettings.cpp
 #: xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.cpp
 #: xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamNavigator.cpp
@@ -6795,7 +6795,7 @@ msgid "Overwrite"
 msgstr ""
 
 #. Subtitle selection to only use forced subtitles
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#13207"
 msgid "Forced only"
 msgstr ""
@@ -7244,7 +7244,19 @@ msgctxt "#13362"
 msgid "Continue watching"
 msgstr ""
 
-#empty strings from id 13363 to 13374
+#. Label for context menu item on a video source to refresh the library information of all items in it
+#: xbmc/video/windows/GUIWindowVideoNav.cpp
+msgctxt "#13363"
+msgid "Refresh all content"
+msgstr ""
+
+#. Label for context menu item on a video source to stop refreshing the library information of all items in it
+#: xbmc/video/windows/GUIWindowVideoNav.cpp
+msgctxt "#13364"
+msgid "Stop refreshing"
+msgstr ""
+
+#empty strings from id 13365 to 13374
 
 msgctxt "#13375"
 msgid "Enable device"
@@ -8736,6 +8748,7 @@ msgstr ""
 #empty strings from id 14228 to 14229
 
 #: system/settings/settings.xml
+#: xbmc/addons/gui/GUIDialogAddonSettings.cpp
 msgctxt "#14230"
 msgid "Actions"
 msgstr ""
@@ -10955,7 +10968,8 @@ msgctxt "#19193"
 msgid "The channel scan can't be started."
 msgstr ""
 
-#. unused?
+#. Question after an explanation of what will happen, such as #35702
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
 msgctxt "#19194"
 msgid "Continue?"
 msgstr ""
@@ -10966,11 +10980,7 @@ msgctxt "#19195"
 msgid "Delay mark last watched"
 msgstr ""
 
-#. value for "pvr client specific actions" dialog headers
-#: xbmc/pvr/guilib/PVRGUIActionsClients.cpp
-msgctxt "#19196"
-msgid "PVR client specific actions"
-msgstr ""
+#empty string with id 19196
 
 #. text for "recording started on <pvr client name>" pvr client addon callback notification
 #: xbmc/pvr/addons/PVRClient.cpp
@@ -11459,11 +11469,7 @@ msgctxt "#19279"
 msgid "PVR clients"
 msgstr ""
 
-#. pvr client specific settings 'client specific settings' action control label.
-#: system/settings/settings.xml
-msgctxt "#19280"
-msgid "Client specific settings"
-msgstr ""
+#empty string with id 19280
 
 #. pvr settings 'confirm channel switch' setting label.
 #: system/settings/settings.xml
@@ -11880,11 +11886,7 @@ msgctxt "#19346"
 msgid "Display and manage available PVR client add-ons."
 msgstr ""
 
-#. info message box text stating that none of the available pvr clients does provide client-specific settings
-#: xbmc/pvr/guilib/PVRGUIActionsClients.cpp
-msgctxt "#19347"
-msgid "None of the active PVR clients provide client-specific settings."
-msgstr ""
+#empty string with id 19347
 
 #. generic label for a pvr provider used in different places
 #: xbmc/pvr/windows/GUIViewStatePVR.cpp
@@ -11947,7 +11949,13 @@ msgctxt "#19357"
 msgid "Delete recording"
 msgstr ""
 
-#empty strings from id 19358 to 19498
+#. Label for the optional provider-scoped channel OSD setting
+#: system/settings/settings.xml
+msgctxt "#19358"
+msgid "Show channels by provider in channel OSD"
+msgstr ""
+
+#empty strings from id 19359 to 19498
 
 #. label for epg genre value
 #: xbmc/pvr/epg/Epg.cpp
@@ -12723,13 +12731,13 @@ msgstr ""
 #empty strings from id 20027 to 20034
 #string id's 20027 thru 20034 are reserved for temperature strings (LocalizeStrings.cpp)
 
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#20035"
 msgid "Regional ({0:s})"
 msgstr ""
 
 #. Used for date/time format settings like "10:00:00 (HH:mm:ss)"
-#: xbmc/LangInfo.cpp
+#: xbmc/language/LangInfo.cpp
 msgctxt "#20036"
 msgid "{0:s} ({1:s})"
 msgstr ""
@@ -16283,7 +16291,6 @@ msgid "Last updated {0:s}"
 msgstr ""
 
 #. Used as a title in the progress dialog when installing an add-on
-#: xbmc/addons/AddonInstaller.cpp
 #: xbmc/games/controllers/windows/ControllerInstaller.cpp
 msgctxt "#24057"
 msgid "Installing {0:s}..."
@@ -16831,7 +16838,7 @@ msgctxt "#24161"
 msgid "This prevents you from accidental tap/swipe/pan action when you grab the remote in your hand"
 msgstr ""
 
-#: system/settings/darwin_tvos.xml
+#: system/settings/settings.xml
 msgctxt "#24162"
 msgid "Use Kodi virtual keyboard"
 msgstr ""
@@ -16955,7 +16962,19 @@ msgctxt "#24187"
 msgid "Failed to initialise databases - exiting in {} seconds."
 msgstr ""
 
-#empty strings from id 24188 to 24990
+#. Progress text while extracting an add-on package
+#: xbmc/addons/AddonInstaller.cpp
+msgctxt "#24188"
+msgid "Unpacking add-on..."
+msgstr ""
+
+#. Header of the background progress bar when installing an add-on, followed by the percentage
+#: xbmc/addons/AddonInstaller.cpp
+msgctxt "#24189"
+msgid "Installing {0:s}"
+msgstr ""
+
+#empty strings from id 24190 to 24990
 
 #. Used as error message in add-on browser when add-on repository data could not be downloaded
 #: xbmc/filesystem/AddonsDirectory.cpp
@@ -17087,11 +17106,7 @@ msgctxt "#25014"
 msgid "Manual"
 msgstr ""
 
-#. Used to ask user if they want to use a playlist already assigned to an episode
-#: xbmc/video/dialogs/GUIDialogSimpleMenu.cpp
-msgctxt "#25015"
-msgid "Selected playlist is already in use. Associate with this episode instead?"
-msgstr ""
+#empty string with id 25015
 
 #. Inform user that no valid movie playlist has been found on disc
 #: xbmc/video/dialogs/GUIDialogSimpleMenu.cpp
@@ -18121,9 +18136,9 @@ msgctxt "#34007"
 msgid "Windows media audio 2 (FFmpeg wmav2)"
 msgstr ""
 
-#: system/settings/darwin_tvos.xml
+#: system/settings/settings.xml
 msgctxt "#34008"
-msgid "When you need to enter some text, Kodi virtual keyboard will show up instead of the built-in tvOS keyboard"
+msgid "When you need to enter some text, Kodi virtual keyboard will show up instead of the built-in platform keyboard"
 msgstr ""
 
 #: system/settings/darwin_tvos.xml
@@ -19375,11 +19390,7 @@ msgctxt "#35270"
 msgid "Your account is not verified. Please check your email to complete your sign up."
 msgstr ""
 
-#. Error message shown when an OpenGL game is played, as OpenGL is not currently supported
-#: xbmc/games/addons/GameClient.cpp
-msgctxt "#35271"
-msgid "This game requires OpenGL support for 3D rendering. OpenGL support is still under development."
-msgstr ""
+#empty string with id 35271
 
 #. Label for the "Disc menu" button to open the Disc Manager when playing a game
 #: addons/skin.estuary/xml/GameOSD.xml
@@ -19569,7 +19580,11 @@ msgctxt "#35301"
 msgid "Kodi couldn't initialize {0:s} rendering for this game on this display."
 msgstr ""
 
-#empty string with id 35302
+#. Help text for the hardcore mode setting
+#: system/settings/settings.xml
+msgctxt "#35302"
+msgid "Earn achievements worth double points. Rewind, loading save states, slow motion and cheats are unavailable while this is on, and turning it on restarts the game."
+msgstr ""
 
 #. Label of the setting that enables RetroAchievements encore mode
 #: system/settings/settings.xml
@@ -19583,13 +19598,38 @@ msgctxt "#35304"
 msgid "Allow achievements you have already earned to be triggered again.[CR][CR]Applies the next time you load the game."
 msgstr ""
 
+#. Notification shown when hardcore mode refuses something, {0:s} is the feature
+#: xbmc/games/GameUtils.cpp
+msgctxt "#35305"
+msgid "{0:s} is not available"
+msgstr ""
+
+#. Notification shown when resuming a save state turns hardcore mode off
+#: xbmc/cores/RetroPlayer/RetroPlayer.cpp
+msgctxt "#35306"
+msgid "Hardcore mode turned off. Achievements will be earned in casual mode."
+msgstr ""
+
 #. Notification shown when all achievements of a subset are earned, {0:s} is the subset
 #: xbmc/games/addons/cheevos/GameClientCheevos.cpp
 msgctxt "#35307"
 msgid "Subset completed"
 msgstr ""
 
-#empty strings from id 35313 to 35319
+#. Name of the feature hardcore mode refused, used with #35305
+#: xbmc/cores/RetroPlayer/playback/ReversiblePlayback.cpp
+msgctxt "#35308"
+msgid "Loading save states"
+msgstr ""
+
+#. Name of the feature hardcore mode refused, used with #35305
+#: xbmc/cores/RetroPlayer/RetroPlayer.cpp
+#: xbmc/cores/RetroPlayer/playback/ReversiblePlayback.cpp
+msgctxt "#35309"
+msgid "Rewind"
+msgstr ""
+
+#empty strings from id 35310 to 35319
 
 #. Label of the Cheats button in the game OSD, heading of the cheats dialog, and
 #. of the cheats group in settings
@@ -19929,7 +19969,34 @@ msgctxt "#35511"
 msgid "Current"
 msgstr ""
 
-#empty strings from id 35512 to 35999
+#empty strings from id 35512 to 35699
+
+#. Label of the setting that enables RetroAchievements hardcore mode
+#: system/settings/settings.xml
+msgctxt "#35700"
+msgid "Hardcore mode"
+msgstr ""
+
+#. Name of the feature hardcore mode refused, used with #35305
+#: xbmc/cores/RetroPlayer/RetroPlayer.cpp
+msgctxt "#35701"
+msgid "Slow motion"
+msgstr ""
+
+#. Confirmation shown before turning hardcore mode on during a game, followed by #19194
+#: xbmc/games/dialogs/osd/DialogGameAchievements.cpp
+msgctxt "#35702"
+msgid "Starting a hardcore session restarts the game. Any unsaved progress will be lost."
+msgstr ""
+
+#. Shown as a game with achievements starts in hardcore mode, {0:d} earned of {1:d}
+#: xbmc/games/addons/cheevos/GameClientCheevos.cpp
+#, c++-format
+msgctxt "#35703"
+msgid "Hardcore mode: {0:d} of {1:d} achievements unlocked"
+msgstr ""
+
+#empty strings from id 35704 to 35999
 
 #: xbmc/peripherals/devices/PeripheralCecAdapter.cpp
 msgctxt "#36000"
@@ -20374,7 +20441,16 @@ msgctxt "#36116"
 msgid "Choose which character set is used for displaying text in the user interface. This doesn't change the character set used for subtitles, for that go to Player > Language."
 msgstr ""
 
-#empty strings from id 36117 to 36118
+#: system/settings/win32.xml
+msgctxt "#36117"
+msgid "Render on high-performance GPU"
+msgstr ""
+
+#. Description of setting with label #36117 "Render on high-performance GPU"
+#: system/settings/win32.xml
+msgctxt "#36118"
+msgid "On laptops with two GPUs, render on the high-performance GPU even when the display is connected to the other GPU. Frees the CPU's power and memory bandwidth for decoding, but uses more power. Exclusive fullscreen is not available in this mode."
+msgstr ""
 
 #. Description of setting with label #285 "Preferred audio language"
 #: system/settings/settings.xml
@@ -21108,10 +21184,7 @@ msgctxt "#36251"
 msgid "This category contains the settings for your PVR backend specifically, if supported by the PVR add-on and backend."
 msgstr ""
 
-#: system/settings/settings.xml
-msgctxt "#36252"
-msgid "This option will bring you to any specific settings for your PVR backend, if supported by the PVR add-on and backend."
-msgstr ""
+#empty string with id 36252
 
 #. Description of settings section with label #2 "Music"
 #: system/settings/settings.xml
@@ -22271,7 +22344,13 @@ msgctxt "#36461"
 msgid "Notification event describe regular processes and actions performed by the system or the user."
 msgstr ""
 
-#empty strings from id 36462 to 36499
+#. Description of setting with label #19358 "Show channels by provider in channel OSD"
+#: system/settings/settings.xml
+msgctxt "#36462"
+msgid "Show only channels from the selected provider and group in the channel OSD. Switching groups also cycles through providers. Switching to the next or previous channel stays within the provider of the playing channel. Disable to use the standard channel group list."
+msgstr ""
+
+#empty strings from id 36463 to 36499
 #end reservation
 
 #. label of a setting for the stereoscopic 3D mode of the GUI that is/should be applied
@@ -25061,7 +25140,7 @@ msgstr ""
 #. Help text for setting "Don't show subtitles matching the audio language" of label #39211
 #: system/settings/settings.xml
 msgctxt "#39212"
-msgid "Do not turn on subtitles that are in the same language as the audio being played. Forced subtitles are not affected."
+msgid "Do not turn on subtitles that are in the same language as the audio being played. Forced subtitles in that language are turned on instead, where the video has them."
 msgstr ""
 
 #. Title of the setting that chooses which audio stream a library list describes
@@ -25098,7 +25177,7 @@ msgstr ""
 
 #. List formatting: pattern used to join a list of exactly two items, e.g. "A and B"
 #. STR_LIST_AND_TWO
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39900"
 msgid "{0} and {1}"
 msgstr ""
@@ -25106,21 +25185,21 @@ msgstr ""
 #. List formatting: pattern used to join the first item to the rest of a list of three or more items, e.g. "A" + "B, and C" -> "A, B, and C"
 #. Note the "B, and C" is used here as an example - the actual formatting of the last two item(s) of a list of three of more is determined by STR_LIST_AND_END
 #. STR_LIST_AND_START
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39901"
 msgid "{0}, {1}"
 msgstr ""
 
 #. List formatting: pattern used to join an already-combined partial list to the next item, for the interior items of a list of four or more, e.g. "A, B" + "C" -> "A, B, C"
 #. STR_LIST_AND_MIDDLE
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39902"
 msgid "{0}, {1}"
 msgstr ""
 
 #. List formatting: pattern used to join the already-combined partial list to the final item in a list of three or more items, e.g. "A, B" + "C" -> "A, B, and C"
 #. STR_LIST_AND_END
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39903"
 msgid "{0}, and {1}"
 msgstr ""
@@ -25129,7 +25208,7 @@ msgstr ""
 
 #. List formatting: pattern used to join a list of exactly two items, e.g. "A or B"
 #. STR_LIST_OR_TWO
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39910"
 msgid "{0} or {1}"
 msgstr ""
@@ -25138,7 +25217,7 @@ msgstr ""
 #. Note: the "or"-type list uses only TWO and END patterns; the START and MIDDLE joins for lists of three or more still use the AND-type comma pattern 
 #. (STR_LIST_AND_START / STR_LIST_AND_MIDDLE), with only the very last join switching to "or"
 #. STR_LIST_OR_END
-#: xbmc/utils/i18n/ListFormatter.h
+#: xbmc/language/i18n/ListFormatter.h
 msgctxt "#39911"
 msgid "{0}, or {1}"
 msgstr ""
@@ -25438,7 +25517,38 @@ msgctxt "#40046"
 msgid "Ungroup"
 msgstr ""
 
-#empty strings with id 40047 to 40201
+#. Shown when the playlist chosen for a movie version already belongs to another version of it
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+#: xbmc/video/dialogs/GUIDialogVideoManagerVersions.cpp
+msgctxt "#40047"
+msgid "This playlist already belongs to another version of this movie."
+msgstr ""
+
+#. Asked before a playlist already assigned to another episode is taken away from it
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40048"
+msgid "The selected playlist is already assigned to another episode. Reassign it?"
+msgstr ""
+
+#. Asked before a playlist already assigned to another movie version is taken away from it
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40049"
+msgid "The selected playlist is already assigned to another movie version. Reassign it?"
+msgstr ""
+
+#. Asked before an episode joins a playlist that several episodes already share
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40050"
+msgid "The selected playlist is shared by several episodes. Use it for this item as well?"
+msgstr ""
+
+#. Shown when a playlist cannot be given up because a movie version still uses its file
+#: xbmc/dialogs/GUIDialogSimpleMenu.cpp
+msgctxt "#40051"
+msgid "This playlist is still in use by another movie version and could not be reassigned."
+msgstr ""
+
+#empty strings with id 40052 to 40201
 
 #. Ignore different video versions settting
 #: system/settings/settings.xml
@@ -25767,4 +25877,16 @@ msgstr ""
 #: system/settings/settings.xml
 msgctxt "#40804"
 msgid "{0:.1f} dB"
+msgstr ""
+
+#. Setting "audiooutput.passthroughvolumecontrol"
+#: system/settings/settings.xml
+msgctxt "#40805"
+msgid "Volume control during passthrough"
+msgstr ""
+
+#. Help of setting "audiooutput.passthroughvolumecontrol"
+#: system/settings/settings.xml
+msgctxt "#40806"
+msgid "Adjust and display the volume level while audio is passed through. The level is not applied to the bitstream, but every change is announced, so an add-on or automation can apply it to an external audio processor."
 msgstr ""
