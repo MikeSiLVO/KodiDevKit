@@ -307,6 +307,23 @@ class TestVariableBasicValidation(ValidationTestCase):
                         if i["message"].startswith("Unused"))
         self.assertEqual(unused, ["Unused variable: Title9"])
 
+    def test_variable_from_the_generated_shortcuts_includes_is_defined(self):
+        """Includes.xml pulling in script-skinshortcuts-includes.xml loads its variables."""
+        files = {
+            "16x9/Includes.xml": '<includes><include file="script-skinshortcuts-includes.xml"/>'
+                                 '</includes>',
+            "16x9/script-skinshortcuts-includes.xml": '<includes><variable name="Built">'
+                                                      '<value>a</value></variable></includes>',
+            "16x9/Home.xml": "<window><controls><control type=\"label\">"
+                             "<label>$VAR[Built]</label></control></controls></window>",
+        }
+        for rel, text in files.items():
+            with open(os.path.join(self.test_dir, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        self.assertEqual(VariableCheck(self.provider.addon).check(), [])
+
     def test_rows_inside_a_generated_file_are_dropped(self):
         """The report and kdk call the check directly and get no rows from a generated file."""
         files = {

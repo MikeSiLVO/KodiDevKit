@@ -406,7 +406,7 @@ class Skin(Addon):
                 self.map_map[folder][name] = (node, xml_file)
 
     def _load_includes(self, root, folder, xml_file, conditional=False):
-        """Index named includes and load <include file> ones in place, as LoadIncludes."""
+        """Index named includes and load <include file> ones in place (LoadIncludes)."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
             if name and node.find("*") is not None:
@@ -420,7 +420,7 @@ class Skin(Addon):
                     continue
                 self._keep_first("include", self.include_map, folder, name, node, xml_file,
                                  (node, params, xml_file))
-            elif "file" in node.attrib and node.attrib["file"] != "script-skinshortcuts-includes.xml":
+            elif "file" in node.attrib:
                 nested_conditional = conditional or "condition" in node.attrib
                 self.update_includes(os.path.join(self.path, folder, node.attrib["file"]),
                                      nested_conditional)
