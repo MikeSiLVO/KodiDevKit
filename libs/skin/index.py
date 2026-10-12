@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from ..utils.files import read_xbt_names
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
 from ..utils.expressions import is_dynamic_expression
-from ..utils.validation import normalize_control_id
+from ..utils.validation import normalize_control_id, skinshortcuts_files
 
 logger = logging.getLogger(__name__)
 
@@ -415,10 +415,11 @@ class SkinIndex:
             if folder not in self.skin.include_usages:
                 self.skin.include_usages[folder] = {}
 
-            files_to_scan = self.skin.window_files.get(folder, [])
+            files_to_scan = [os.path.join(self.skin.path, folder, xml_file)
+                             for xml_file in self.skin.window_files.get(folder, [])]
+            files_to_scan.extend(skinshortcuts_files(self.skin.path))
 
-            for xml_file in files_to_scan:
-                file_path = os.path.join(self.skin.path, folder, xml_file)
+            for file_path in files_to_scan:
                 root = get_root_from_file(file_path)
                 if root is None:
                     continue

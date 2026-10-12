@@ -283,6 +283,30 @@ class TestVariableBasicValidation(ValidationTestCase):
         messages = [i["message"] for i in VariableCheck(self.provider.addon).check()]
         self.assertNotIn("Unused variable: HubStar1", messages)
 
+    def test_variable_named_through_a_param_the_shortcuts_template_passes_is_used(self):
+        """A param value written in the shortcuts template counts like one in a window file."""
+        files = {
+            "16x9/Includes.xml": '<includes><variable name="Title5"><value>a</value></variable>'
+                                 '<variable name="Title9"><value>b</value></variable>'
+                                 '<include name="WidgetTitle"><control type="label">'
+                                 '<label>$VAR[Title$PARAM[idshort]]</label></control></include>'
+                                 '</includes>',
+            "16x9/Home.xml": "<window><controls/></window>",
+            "shortcuts/template.xml": '<template><other include="widgets"><controls>'
+                                      '<include content="WidgetTitle">'
+                                      '<param name="idshort" value="5"/></include>'
+                                      '</controls></other></template>',
+        }
+        os.makedirs(os.path.join(self.test_dir, "shortcuts"), exist_ok=True)
+        for rel, text in files.items():
+            with open(os.path.join(self.test_dir, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        unused = sorted(i["message"] for i in VariableCheck(self.provider.addon).check()
+                        if i["message"].startswith("Unused"))
+        self.assertEqual(unused, ["Unused variable: Title9"])
+
     def test_rows_inside_a_generated_file_are_dropped(self):
         """The report and kdk call the check directly and get no rows from a generated file."""
         files = {
