@@ -206,6 +206,7 @@
         <textureradiofocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradiofocus>
         <textureradionofocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureradionofocus>
         <selected>condition</selected>
+        <usealttexture>condition</usealttexture>
         <onclick condition="condition">builtin</onclick>
         <onback condition="condition">builtin</onback>
         <onfocus condition="condition">builtin</onfocus>
@@ -226,6 +227,7 @@
         <alttexturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</alttexturenofocus>
         <wrapmultiline>bool</wrapmultiline>
         <usealttexture>condition</usealttexture>
+        <selected>condition</selected>
         <altclick condition="condition">builtin</altclick>
         <altlabel>label</altlabel>
         <onclick condition="condition">builtin</onclick>

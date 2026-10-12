@@ -151,6 +151,16 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <focusedcolor>FFFFFFFF</focusedcolor>
 </control>""")
 
+    def test_toggle_condition_under_either_name(self):
+        """Togglebuttons and radiobuttons take their toggle condition from either tag."""
+        self._assert_clean("""
+<control type="togglebutton">
+    <selected>Player.Paused</selected>
+</control>
+<control type="radiobutton">
+    <usealttexture>Player.Paused</usealttexture>
+</control>""")
+
     def test_button_label_fallback_warns(self):
         """Buttons read their label through GetString, which ignores fallback."""
         issues = self._issues("""
