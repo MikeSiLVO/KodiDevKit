@@ -228,6 +228,11 @@ def evaluate_condition(view, condition):
 _WRAP_BREAK_CHARS = ",|+"
 
 
+def _help_details(text):
+    """Kodi's help text for a completion's details line, markup stripped and HTML-escaped."""
+    return html.escape(" ".join(re.sub(r"<[^>]+>", "", text or "").split()))
+
+
 def _soft_wrap_source(text, max_col):
     """Hard-wrap long lines at `,`, `|`, `+` so minihtml has break points."""
     if max_col <= 0:
@@ -801,7 +806,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         return None, None
 
     def _completions_for_type(self, value_type, addon, folder):
-        """Build [trigger, completion] pairs for the given value type."""
+        """Build completions for a value type from Kodi's lists and the skin's own files."""
         from .libs.validation.constants import ALLOWED_VALUES
 
         items = []
@@ -860,7 +865,9 @@ class KodiDevKit(sublime_plugin.EventListener):
         if value_type == "condition":
             conditions = getattr(INFOS, "conditions", [])
             for nm, desc in conditions:
-                items.append([f"{nm}\t{desc or 'condition'}", nm])
+                items.append(sublime.CompletionItem(
+                    nm, annotation="condition", completion=nm,
+                    completion_format=sublime.COMPLETION_FORMAT_TEXT, details=_help_details(desc)))
             return items
 
         if value_type == "builtin":
@@ -869,7 +876,8 @@ class KodiDevKit(sublime_plugin.EventListener):
                 completion = nm
                 for i, match in enumerate(re.findall(r"\([a-z,\]\[]+\)", completion)):
                     completion = completion.replace(match, f"(${i + 1})")
-                items.append([f"{nm}\t{desc or 'builtin'}", completion])
+                items.append(sublime.CompletionItem.snippet_completion(
+                    nm, completion, annotation="builtin", details=_help_details(desc)))
             return items
 
         return items
