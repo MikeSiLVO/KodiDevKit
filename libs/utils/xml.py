@@ -20,6 +20,7 @@ tolerated_xml_errors = {}
 _xml_parse_cache = {}
 
 _ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
+_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 _PARSE_MESSAGES = (
     (re.compile(r"(?:EntityRef: expecting ';'|xmlParseEntityRef: no name)$"),
@@ -341,6 +342,11 @@ def get_root_from_file(xml_file):
         logger.warning("get_root_from_file FAILED: file=%s duration=%.3fs", os.path.basename(xml_file), parse_duration)
 
     return root
+
+
+def blank_xml_comments(content):
+    """Blank out `<!-- ... -->`, keeping every newline."""
+    return _COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), content)
 
 
 def check_brackets(label):

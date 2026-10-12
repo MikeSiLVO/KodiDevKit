@@ -11,6 +11,7 @@ from ..utils.validation import (
     skinshortcuts_files,
     should_report_progress,
 )
+from ..utils.xml import blank_xml_comments
 from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
@@ -20,13 +21,6 @@ MAPS_SINCE_RELEASE = "piers"
 
 # Kodi matches the format prefixes case-sensitively (GUIInfoLabel.cpp:340-346).
 MAP_REF_REGEX = re.compile(r"\$(?:ESC)?MAP\[")
-
-_COMMENT_REGEX = re.compile(r"<!--.*?-->", re.DOTALL)
-
-
-def blank_xml_comments(content):
-    """Blank out `<!-- ... -->` while keeping every newline, so line numbers hold."""
-    return _COMMENT_REGEX.sub(lambda m: "\n" * m.group(0).count("\n"), content)
 
 
 def extract_map_args(match_text):

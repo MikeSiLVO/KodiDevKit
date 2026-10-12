@@ -1,4 +1,4 @@
-"""Variable validation for Kodi skins."""
+"""Checks the variables a skin uses and defines."""
 
 import os
 import re
@@ -13,22 +13,17 @@ from ..utils.validation import (
     skinshortcuts_files,
 )
 from ..utils.expressions import bracket_body
-
-
-def strip_xml_comments(content):
-    """Remove all `<!-- ... -->` comments from `content`."""
-    return re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
-
+from ..utils.xml import blank_xml_comments
 
 
 class ValidationVariable:
-    """Validates variable definitions and usage in Kodi skins."""
+    """Checker for undefined, unused and shadowed variables."""
 
     def __init__(self, addon):
         self.addon = addon
 
     def check(self, progress_callback=None):
-        """Find undefined or unused variables."""
+        """Check for undefined, unused or shadowed variables."""
         total_vars = sum(len(vars) for vars in self.addon.variable_map.values()) if hasattr(self.addon, 'variable_map') else 0
         total_files = sum(len(self.addon.window_files.get(f, [])) for f in self.addon.xml_folders)
 
@@ -49,22 +44,16 @@ class ValidationVariable:
                 with open(path, encoding="utf8", errors="ignore") as f:
                     content = f.read()
 
-                # Strip XML comments to avoid counting variables in commented code
-                content_without_comments = strip_xml_comments(content)
-
-                for i, line in enumerate(content_without_comments.splitlines(), 1):
+                for i, line in enumerate(blank_xml_comments(content).splitlines(), 1):
                     for match in re.finditer(var_start_regex, line):
                         match_text = line[match.start():]
                         raw_name = bracket_body(match_text)
 
                         if not raw_name:
-                            continue  # Malformed variable reference
+                            continue
 
-                        # Handle fallback syntax: $VAR[Name,fallback]
                         raw_name = raw_name.split(",")[0]
 
-                        # Resolve $PARAM[...] with empty string as default (Kodi's behavior)
-                        # Later we'll try with actual parameter contexts
                         resolved_name = resolve_param_in_name(raw_name)
 
                         var_refs.append(
@@ -73,7 +62,7 @@ class ValidationVariable:
                                 "type": "variable",
                                 "file": path,
                                 "name": resolved_name,
-                                "raw_name": raw_name,  # Keep original for debugging
+                                "raw_name": raw_name,
                             }
                         )
 
@@ -94,14 +83,13 @@ class ValidationVariable:
                 {
                     "name": name,
                     "type": "variable",
-                    "file": file_path,  # Extract from tuple
+                    "file": file_path,
                     "line": node.sourceline if hasattr(node, 'sourceline') else 0
                 }
                 for name, (node, file_path) in self.addon.variable_map.get(folder, {}).items()
             ]
 
-            # Variables defined inside SkinShortcuts templates are generated at
-            # runtime -- treat them as defined so $VAR[] refs aren't flagged.
+            # template-defined variables exist only at runtime
             template_defined_vars = set()
             if template_path:
                 template_defined_vars = find_variable_definitions_in_skinshortcuts_template(

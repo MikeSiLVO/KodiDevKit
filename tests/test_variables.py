@@ -699,6 +699,18 @@ class TestVariableCommentHandling(ValidationTestCase):
         unused_issues = [i for i in issues if "ActiveVar" in i.get("message", "") and "Unused" in i.get("message", "")]
         self.assertEqual(len(unused_issues), 0, "Variable used after comment end should be recognized as used")
 
+    def test_line_after_a_multiline_comment(self):
+        """A reference below a multi-line comment is reported at its own line."""
+        with open(os.path.join(self.test_dir, "1080i", "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write("<includes/>")
+        with open(os.path.join(self.test_dir, "1080i", "Test.xml"), "w", encoding="utf-8") as f:
+            f.write("<window>\n<!--\none\ntwo\n-->\n<label>$VAR[Missing]</label>\n</window>")
+
+        self.provider.init_addon(self.test_dir)
+        lines = [i["line"] for i in VariableCheck(self.provider.addon).check()
+                 if i["message"] == "Variable not defined: Missing"]
+        self.assertEqual(lines, [6])
+
 
 class TestVariableValueValidation(ValidationTestCase):
     """Test validation of values within variable definitions."""
