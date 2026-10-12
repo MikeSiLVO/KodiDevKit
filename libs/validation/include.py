@@ -168,7 +168,8 @@ class ValidationInclude:
 
                     resolved_name = self._resolve_include_name(name)
 
-                    if not resolved_name or not resolved_name.strip():
+                    # a name made only of $PARAM still counts its values as used
+                    if not resolved_name.strip() and "$PARAM[" not in name:
                         continue
 
                     var_refs.append(
@@ -290,7 +291,7 @@ class ValidationInclude:
 
             listitems.extend(reference_issues(
                 self.addon, folder, "include", var_refs, include_definitions,
-                skip=lambda name: name.startswith("$") or self._is_runtime_include(name)))
+                skip=lambda name: not name.strip() or name.startswith("$") or self._is_runtime_include(name)))
             listitems.extend(shadowed_issues(
                 self.addon, folder,
                 ("include", "include without definition", "constant", "expression", "default")))

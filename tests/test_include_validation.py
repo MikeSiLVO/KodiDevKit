@@ -116,6 +116,24 @@ class TestIncludeValidation(ValidationTestCase):
         messages = [i["message"] for i in IncludeCheck(self.provider.addon).check()]
         self.assertNotIn("Unused include: Weather.Item", messages)
 
+    def test_include_named_only_by_a_forwarded_param_is_used(self):
+        """An include reached through a forwarded $PARAM in a content call counts as used."""
+        for name, text in (("Includes.xml", '<includes>'
+                                            '<include name="Face"><label>a</label></include>'
+                                            '<include name="Row"><param name="overlay">None</param><definition>'
+                                            '<include content="Tile"><param name="overlay">$PARAM[overlay]</param>'
+                                            '</include></definition></include>'
+                                            '<include name="Tile"><definition><include content="$PARAM[overlay]"/>'
+                                            '</definition></include></includes>'),
+                           ("Home.xml", '<window><controls><include content="Row">'
+                                        '<param name="overlay">Face</param></include></controls></window>')):
+            with open(os.path.join(self.test_dir, "16x9", name), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        messages = [i["message"] for i in IncludeCheck(self.provider.addon).check()]
+        self.assertNotIn("Unused include: Face", messages)
+
     def test_defined_include_no_issue(self):
         """Test that defined includes don't trigger issues when used."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>

@@ -173,11 +173,11 @@ def reference_issues(addon, folder, kind, refs, definitions, defined=(), skip=No
     for ref in refs:
         name = ref["name"]
         raw = ref.get("raw_name", name)
+        resolved = param_names(raw)
+        referenced.update(n for n in resolved if n)
         if skip and skip(name):
             continue
-        resolved = param_names(raw)
         referenced.add(name)
-        referenced.update(n for n in resolved if n)
         if name in known or any(n in known for n in resolved):
             continue
         message = f"{label} not defined: {raw}"
