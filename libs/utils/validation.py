@@ -220,10 +220,11 @@ def deduplicate_issues(issues):
 
 
 _FROM_INCLUDE = re.compile(r" \(from include '[^']*'\)$")
+_EMPTY_ACTION = re.compile(r"Use 'noop' for an empty <(\w+)>$")
 
 
 def merge_include_issues(issues):
-    """Merge an include fault's per-call rows into one at its line; $PARAM lines stay per call."""
+    """Merge an include fault's per-call rows into one at its line, except a $PARAM a call fills."""
     sources = {}
 
     def source_line(path, line):
@@ -240,11 +241,16 @@ def merge_include_issues(issues):
     result = []
     for issue in issues:
         inc_file, inc_line = issue.get("include_file"), issue.get("include_line")
-        # a $PARAM value is written at the call site, the line to fix
-        if not (inc_file and inc_line) or "$PARAM[" in source_line(inc_file, inc_line):
+        message = _FROM_INCLUDE.sub("", issue["message"])
+        param = _PARAM_PATTERN.search(source_line(inc_file, inc_line)) if inc_file and inc_line else None
+        empty_action = _EMPTY_ACTION.match(message)
+        # a $PARAM value is written at the call site, the line to fix, unless no call passes one
+        if not (inc_file and inc_line) or (param and not empty_action):
             result.append(issue)
             continue
-        message = _FROM_INCLUDE.sub("", issue["message"])
+        if param and empty_action:
+            message = (f"<{empty_action.group(1)}> is empty where a call passes no {param.group(1)}; "
+                       f"give the {param.group(1)} param a default of noop")
         call = (issue.get("call_file") or issue.get("file"), issue.get("line"))
         group = merged.get((inc_file, inc_line, message))
         if group is None:

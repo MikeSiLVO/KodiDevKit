@@ -29,6 +29,14 @@ INCLUDES = """<includes>
 <include name="SpinTextures">
 <textureup>up.png</textureup>
 </include>
+<include name="Press">
+<param name="onclick"/>
+<definition>
+<control type="button">
+<onclick>$PARAM[onclick]</onclick>
+</control>
+</definition>
+</include>
 </includes>"""
 
 WINDOW = """<window>
@@ -36,6 +44,7 @@ WINDOW = """<window>
 <include content="Caption"><param name="speed" value="fast"/></include>
 <control type="image"><visible>$EXP[Broken]</visible></control>
 <control type="radiobutton"><include>SpinTextures</include></control>
+<include content="Press"/>
 </controls>
 </window>"""
 
@@ -73,6 +82,13 @@ class TestIncludeFaults(unittest.TestCase):
         rows = [r for r in self.rows if "<textureup>" in r[2]]
         self.assertEqual(rows, [("Includes.xml", 13, "invalid tag for <control type=radiobutton>: <textureup> "
                                                      "(include 'SpinTextures', 2 calls)")])
+
+    def test_empty_action_from_a_missing_param_is_reported_at_the_definition(self):
+        """An action left empty because no call passes its param is one row at the definition."""
+        rows = [r for r in self.rows if "noop" in r[2]]
+        self.assertEqual(rows, [("Includes.xml", 19, "<onclick> is empty where a call passes no onclick; "
+                                                     "give the onclick param a default of noop "
+                                                     "(include 'Press', 2 calls)")])
 
     def test_param_fault_stays_at_each_call(self):
         """A fault in a $PARAM value keeps one row per call site."""
