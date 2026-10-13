@@ -46,6 +46,7 @@ class Addon:
         self.includes = {}
         self.api_version = None
         self.validation_index = None
+        self.notices: list[str] = []
         self._index_builder = None
 
         self.settings: dict | Any = settings or {}
@@ -74,14 +75,21 @@ class Addon:
         return None
 
     def _resolve_release(self) -> str:
-        """Kodi release this project targets: the setting, else addon.xml, else the newest."""
+        """Kodi release to target: the setting, else addon.xml, else newest; a bad setting noted."""
         override = str(self.settings.get("kodi_release") or "").strip().lower()
+        if override and any(item["name"] == override for item in self.RELEASES):
+            return override
+        release = self._release_from_addon_xml() or self.RELEASES[-1]["name"]
         if override:
-            if any(item["name"] == override for item in self.RELEASES):
-                return override
-            logger.warning("Unknown kodi_release %r; supported: %s", override,
-                           ", ".join(item["name"] for item in self.RELEASES))
-        return self._release_from_addon_xml() or self.RELEASES[-1]["name"]
+            self.add_notice(f"Unknown kodi_release '{override}', checked against {release} instead; "
+                            f"known: {', '.join(item['name'] for item in self.RELEASES)}")
+        return release
+
+    def add_notice(self, message):
+        """Add and log a notice of something weakening this run's results, skipping repeats."""
+        if message not in self.notices:
+            self.notices.append(message)
+            logger.warning(message)
 
     @property
     def default_xml_folder(self):

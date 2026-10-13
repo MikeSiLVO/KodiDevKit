@@ -1,8 +1,4 @@
-"""Bundled Kodi reference resolution: the snapshot path taken when `kodi_path`
-is unset.
-
-Skips when snapshots are absent, since they are fetched at build time.
-"""
+"""Bundled Kodi reference resolution: when the snapshot stands in for `kodi_path`."""
 
 import os
 import sys
@@ -105,6 +101,13 @@ class TestBundledReferences(unittest.TestCase):
                 f.write('<colors><color name="marker">FFFFFFFF</color></colors>')
             self.assertEqual(kodi_colors_xml(self.skin, fake_kodi), marker)
 
+    def test_kodi_path_without_the_file_is_a_notice(self):
+        """Falling back to the bundle from a set kodi_path is recorded on the addon."""
+        with tempfile.TemporaryDirectory() as fake_kodi:
+            self.assertIsNotNone(kodi_colors_xml(self.skin, fake_kodi))
+            self.assertEqual(self.skin.notices,
+                             [f"No system/colors.xml in {fake_kodi}, core colors come from the bundled copy"])
+
 
 @unittest.skipUnless(SNAPSHOTS_PRESENT, "bundled Kodi snapshots not fetched")
 class TestReleaseOverride(unittest.TestCase):
@@ -125,6 +128,16 @@ class TestReleaseOverride(unittest.TestCase):
                 f.write(ADDON_XML.format(gui="5.17.0"))
             skin = Skin(path=tmp, settings={"kodi_release": "nonsuch"})
             self.assertEqual(skin.api_version, "omega")
+
+    def test_unknown_override_is_a_notice(self):
+        """The release checked instead is recorded on the addon."""
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "16x9"))
+            with open(os.path.join(tmp, "addon.xml"), "w", encoding="utf-8") as f:
+                f.write(ADDON_XML.format(gui="5.17.0"))
+            skin = Skin(path=tmp, settings={"kodi_release": "nonsuch"})
+            self.assertEqual(skin.notices, ["Unknown kodi_release 'nonsuch', checked against omega instead; "
+                                            "known: omega, piers"])
 
     def test_addon_without_gui_import_gets_newest_release(self):
         """Scripts take the newest release; xbmc.python cannot tell releases apart."""

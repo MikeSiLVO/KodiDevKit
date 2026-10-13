@@ -29,21 +29,20 @@ def _latest_bundled_dir() -> Optional[Path]:
 
 
 def _core_file(addon, kodi_path, installed, name, what):
-    """Path to a Kodi-core file under kodi_path, else in the release's snapshot; None if neither."""
+    """Path to a Kodi-core file in the Kodi folder, else a snapshot; fallback or none noted."""
+    notice = getattr(addon, "add_notice", logger.warning)
     if kodi_path:
         candidate = os.path.join(kodi_path, *installed)
         if os.path.isfile(candidate):
             return candidate
+        notice(f"No {'/'.join(installed)} in {kodi_path}, {what} come from the bundled copy")
 
     release_name = getattr(addon, "api_version", None) if addon else None
     target = (_bundled_dir(release_name) if release_name else None) or _latest_bundled_dir()
-    if target is None:
-        logger.warning("No Kodi reference data: %s will be reported as undefined. Set kodi_path.",
-                       what)
+    if target is None or not (target / name).is_file():
+        notice(f"No Kodi reference data: {what} will be reported as undefined. Set kodi_path.")
         return None
-
-    path = target / name
-    return str(path) if path.is_file() else None
+    return str(target / name)
 
 
 def kodi_colors_xml(addon, kodi_path: str | None) -> Optional[str]:
