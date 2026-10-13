@@ -1022,28 +1022,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 flags = getattr(sublime, "INHIBIT_WORD_COMPLETIONS", 8)
                 return (items, flags)
 
-        items = []
-
-        inc_map = getattr(addon, "include_map", {}).get(folder, {})
-        if inc_map:
-            for nm in sorted(inc_map.keys()):
-                items.append([f"{nm}\tinclude", nm])
-        else:
-            for node in addon.includes.get(folder, []):
-                nm = node.get("name")
-                if nm:
-                    items.append([f"{nm}\tinclude", nm])
-
-        window_names = getattr(INFOS, "WINDOW_NAMES", [])
-        for item in window_names:
-            if item:
-                items.append([f"{item}\twindow", item])
-
-        elapsed = time.time() - start
-        if elapsed > 0.2:
-            logger.warning("on_query_completions SLOW: %.3fs count=%d ctx=fallback", elapsed, len(items))
-
-        return items
+        return []
 
     def on_selection_modified_async(self, view):
         if not INFOS:
