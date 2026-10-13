@@ -871,7 +871,6 @@ class KodiDevKit(sublime_plugin.EventListener):
             attr_name = attr_match.group(1)
             if ctrl_type and INFOS and node is not None:
                 attribs = INFOS.template_attribs.get(ctrl_type, {})
-                # Live-buffer tag name when the parsed tree is stale
                 buf_tag = self._tag_from_buffer(line_text, view, point)
                 tag_key = buf_tag or node.tag
                 tag_attribs = attribs.get(tag_key, {})
@@ -915,7 +914,10 @@ class KodiDevKit(sublime_plugin.EventListener):
             "onunfocus": "builtin", "onback": "builtin",
             "onup": "builtin", "ondown": "builtin",
             "onleft": "builtin", "onright": "builtin",
-            "oninfo": "builtin",
+            "onnext": "builtin", "onprev": "builtin",
+            "oninfo": "builtin", "altclick": "builtin",
+            "ontextchange": "builtin",
+            "onload": "builtin", "onunload": "builtin",
         }
         hint = TAG_TYPE_HINTS.get(tag)
         if hint:
