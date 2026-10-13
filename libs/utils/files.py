@@ -12,12 +12,12 @@ from typing import Optional
 from urllib.request import urlopen
 from lxml import etree as ET
 
+from .xml import PARSER
+
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
-
-PARSER = ET.XMLParser(remove_blank_text=True, remove_comments=True)
 
 
 def eol_info_from_path_patterns(

@@ -1,7 +1,6 @@
 """Tag sets, allowed enum values and severity names the checks share."""
 
 from __future__ import annotations
-from lxml import etree as ET
 
 # text Kodi registers as a boolean condition, besides any `condition` attribute
 CONDITION_TAGS = frozenset({"visible", "enable", "usealttexture", "selected", "expression"})
@@ -152,9 +151,6 @@ ALLOWED_VALUES = {
 # Enum types that Kodi parses case-insensitively (see XMLUtils.cpp:213, VisibleEffect.cpp:102)
 CASE_INSENSITIVE_ENUMS = {"bool", "orientation", "tween", "easing", "aspect"}
 
-# XML parser configuration
-PARSER = ET.XMLParser(remove_blank_text=True, remove_comments=True)
-
 # Severity levels for validation issues
 SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"
@@ -173,7 +169,6 @@ __all__ = [
     'ALLOWED_MULTI',
     'ALLOWED_VALUES',
     'CASE_INSENSITIVE_ENUMS',
-    'PARSER',
     'SEVERITY_ERROR',
     'SEVERITY_WARNING',
 ]

@@ -12,7 +12,8 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
-PARSER = ET.XMLParser(remove_blank_text=True, remove_comments=True)
+PARSER = ET.XMLParser(remove_blank_text=True, remove_comments=True, resolve_entities=False,
+                      no_network=True, load_dtd=False)
 FILE_PREVIEW_SIZE = 50_000
 
 last_xml_errors = []

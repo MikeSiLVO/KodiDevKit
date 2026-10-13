@@ -10,10 +10,9 @@ from typing import Any
 from lxml import etree as ET
 
 from ..utils.infobool import info_name_sets
-from ..utils.xml import get_root_from_file
+from ..utils.xml import PARSER, get_root_from_file
 from ..addon.addon import Addon
 from ..kodi.jsonrpc import kodi
-from ..validation.constants import PARSER
 
 logger = logging.getLogger(__name__)
 

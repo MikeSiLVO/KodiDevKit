@@ -11,6 +11,7 @@ from lxml.etree import XMLSchema
 
 from ..polib.polib import pofile
 from ..utils.images import get_image_info
+from ..utils.xml import PARSER
 from .constants import SEVERITY_WARNING
 from .filecheck import nested_addons, shipped_files
 
@@ -67,7 +68,7 @@ class ValidationRepo:
         if progress_callback:
             progress_callback("Checking addon.xml, artwork and language files...")
         try:
-            root = ET.parse(os.path.join(self.addon.path, "addon.xml")).getroot()
+            root = ET.parse(os.path.join(self.addon.path, "addon.xml"), PARSER).getroot()
         except (OSError, ET.XMLSyntaxError):
             root = None
         if root is not None:

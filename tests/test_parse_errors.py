@@ -4,6 +4,9 @@ import os
 import sys
 import tempfile
 import unittest
+from pathlib import Path
+
+from lxml import etree as ET
 
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
@@ -79,6 +82,17 @@ class TestParseErrors(unittest.TestCase):
     def test_a_later_fatal_fault_still_fails(self):
         path = self._write("Mixed.xml", "<window>\n<v>a&b</v>\n<v>a < b</v>\n</window>")
         self.assertIsNone(xml.get_root_from_file(path))
+
+    def test_declared_entities_are_never_expanded(self):
+        """Neither a local file nor an internal value reaches the tree through a DTD entity."""
+        secret = Path(self.path, "secret.txt")
+        secret.write_text("SECRET", encoding="utf-8")
+        for n, (entity, value) in enumerate(((f'SYSTEM "{secret.as_uri()}"', "SECRET"),
+                                             ('"INTERNAL"', "INTERNAL"))):
+            path = self._write(f"Entity{n}.xml", f"<!DOCTYPE window [<!ENTITY x {entity}>]>\n"
+                                                 "<window><a>&x;</a></window>")
+            root = xml.get_root_from_file(path)
+            self.assertNotIn(value, "" if root is None else ET.tostring(root, encoding="unicode"))
 
 
 if __name__ == "__main__":

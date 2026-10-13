@@ -3,6 +3,8 @@
 import os
 import re
 
+from lxml import etree as ET
+
 from ..utils.validation import (
     deduplicate_issues,
     find_includes_in_skinshortcuts_template,
@@ -12,7 +14,7 @@ from ..utils.validation import (
     should_report_progress,
 )
 from ..utils.files import miscased_name
-from ..utils.xml import get_params, get_root_from_file
+from ..utils.xml import PARSER, get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
 
@@ -244,8 +246,7 @@ class ValidationInclude:
                     progress_callback(f"Checking fontsets in {fname}...")
 
                 try:
-                    from lxml import etree as ET
-                    root = ET.parse(font_path).getroot()
+                    root = ET.parse(font_path, PARSER).getroot()
                 except Exception:
                     continue
 
