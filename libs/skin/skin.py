@@ -7,7 +7,7 @@ import re
 import time
 from pathlib import Path
 
-from ..utils.files import check_paths
+from ..utils.files import check_paths, is_inside
 from ..utils.xml import get_params, get_root_from_file
 from ..utils.validation import normalize_control_id
 from ..addon.addon import Addon
@@ -329,9 +329,9 @@ class Skin(Addon):
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
     def update_includes(self, xml_file, conditional=False):
-        """Load one include file and the files it pulls in, as CGUIIncludes::Load_Internal does."""
+        """Update maps from a skin include file and nested ones (CGUIIncludes::Load_Internal)."""
 
-        if not os.path.exists(xml_file):
+        if not os.path.exists(xml_file) or not is_inside(xml_file, self.path):
             logger.info("Could not find include file %s", xml_file)
             return None
 

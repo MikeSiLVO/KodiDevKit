@@ -1,4 +1,4 @@
-"""Resolving `<include file="..."/>` references: the jump target and the issue raised when it breaks."""
+"""Resolving `<include file>` references: the jump target and the issue raised when one breaks."""
 
 import os
 import sys
@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from libs.infoprovider.provider import InfoProvider
 from libs.skin.skin import Skin
-from libs.validation.include import check_include_file_ref, resolve_include_file
+from libs.validation.include import ValidationInclude, check_include_file_ref, resolve_include_file
 
 ADDON_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
@@ -101,9 +101,17 @@ class TestIssue(_Base):
     def test_empty_reference_is_skipped(self):
         self.assertIsNone(check_include_file_ref(self.addon, "16x9", ""))
 
+    def test_reference_outside_the_skin_is_reported(self):
+        """A relative or absolute path leaving the skin folder is named as outside it."""
+        outside = os.path.join(os.path.dirname(self.root), "Outside.xml")
+        for ref in ("../../Outside.xml", outside):
+            issue = check_include_file_ref(self.addon, "16x9", ref)
+            assert issue is not None
+            self.assertIn("is outside the skin folder", issue["message"])
+
 
 class TestCheckFileReportsIt(unittest.TestCase):
-    """The per-file check reports a broken reference, so one call site covers save and the full report."""
+    """Include file references in a loaded skin: each broken one reported, none outside loaded."""
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
@@ -149,12 +157,25 @@ class TestCheckFileReportsIt(unittest.TestCase):
         self.assertEqual(self._issues(path), [])
 
     def test_reference_from_a_window_file_is_checked(self):
-        # ResolveIncludes (GUIIncludes.cpp:377-379) loads file= from any resolved node,
-        # so a window can pull in a definitions file too.
+        """A missing include file named in a window file is reported too."""
+        # Kodi loads file= from any resolved node, window files too
         path = self._write("Home.xml", '<window>\n<include file="Nope.xml" />\n</window>')
         issues = self._issues(path)
         self.assertEqual(len(issues), 1)
         self.assertIn("Missing include file 'Nope.xml'", issues[0]["message"])
+
+    def test_include_file_outside_the_skin_is_never_loaded(self):
+        """Definitions in a file outside the skin folder stay out of the include map."""
+        outside = os.path.join(os.path.dirname(self.test_dir), os.path.basename(self.test_dir) + "-out.xml")
+        with open(outside, "w", encoding="utf-8") as f:
+            f.write('<includes><include name="Leak"><definition/></include></includes>')
+        self.addCleanup(os.remove, outside)
+        rel = "../../" + os.path.basename(outside)
+        self._write("Includes.xml", f'<includes><include file="{rel}"/><include file="{outside}"/></includes>')
+        self._write("Home.xml", f'<window><include file="{rel}">Leak</include></window>')
+        skin = Skin(path=self.test_dir, settings={})
+        ValidationInclude(skin).check()
+        self.assertNotIn("Leak", skin.include_map.get("16x9", {}))
 
     def test_reported_once(self):
         # check_values runs check_file over every file, so a second call site would double it.

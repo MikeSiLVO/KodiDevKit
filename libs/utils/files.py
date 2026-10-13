@@ -162,6 +162,15 @@ def check_paths(paths: list[str]) -> Optional[str]:
     return None
 
 
+def is_inside(path: str, root: str) -> bool:
+    """True when the path, links followed, lies within the root folder."""
+    root = os.path.realpath(root)
+    try:
+        return os.path.commonpath([os.path.realpath(path), root]) == root
+    except ValueError:
+        return False
+
+
 def miscased_name(folder: str, name: str) -> Optional[str]:
     """On-disk name of the file in the folder when it differs from the name only by case."""
     try:

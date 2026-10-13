@@ -13,7 +13,7 @@ from ..utils.validation import (
     shadowed_issues,
     should_report_progress,
 )
-from ..utils.files import miscased_name
+from ..utils.files import is_inside, miscased_name
 from ..utils.xml import PARSER, get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
@@ -71,7 +71,9 @@ def check_include_file_ref(addon, folder, ref):
     if path:
         return None
 
-    if actual:
+    if not is_inside(os.path.join(addon.path, folder, ref), addon.path):
+        message = f"Include file '{ref}' is outside the skin folder, so it never ships with the skin"
+    elif actual:
         message = f"Case mismatch for '{ref}' (actual '{actual}')"
     else:
         message = f"Missing include file '{ref}'"
