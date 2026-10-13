@@ -9,6 +9,7 @@ import time
 import re
 import os
 import html
+from collections import Counter
 from bisect import bisect_right
 from urllib.parse import quote, unquote
 
@@ -30,7 +31,8 @@ from .libs.utils.infobool import (  # noqa: E402
     probe_booleans,
     read_probe,
 )
-from .libs.utils.expressions import extract_expression_at_offset, flatten_expressions  # noqa: E402
+from .libs.utils.expressions import (  # noqa: E402
+    extract_expression_at_offset, flatten_expressions, split_top_level_commas)
 from .libs.utils.xml import get_root_from_file  # noqa: E402
 from .libs.sublime.view import jump_to_label_declaration  # noqa: E402
 from .libs.infoprovider.provider import InfoProvider  # noqa: E402
@@ -231,6 +233,55 @@ _WRAP_BREAK_CHARS = ",|+"
 def _help_details(text):
     """Kodi's help text for a completion's details line, markup stripped and HTML-escaped."""
     return html.escape(" ".join(re.sub(r"<[^>]+>", "", text or "").split()))
+
+
+_PARAM_GROUP = re.compile(r"\(([^()]*)\)")
+
+
+def _snippet_escape(text):
+    """Escape the characters a Sublime snippet reads as markup."""
+    return text.replace("\\", "\\\\").replace("$", "\\$").replace("}", "\\}")
+
+
+def _completion_snippets(codes):
+    """Snippet per code with a field for each parameter, skipping groups another code varies."""
+    stems = Counter(code[:a] + "()" + code[b:] for code in codes
+                    for a, b in (m.span() for m in _PARAM_GROUP.finditer(code)))
+    snippets = []
+    for code in codes:
+        parts, last, field = [], 0, 0
+        for match in _PARAM_GROUP.finditer(code):
+            a, b = match.span()
+            names = split_top_level_commas(match.group(1))
+            if not names or stems[code[:a] + "()" + code[b:]] > 1:
+                continue
+            fields = []
+            for name in names:
+                field += 1
+                fields.append(f"${{{field}:{_snippet_escape(name)}}}")
+            parts += [_snippet_escape(code[last:a + 1]), ",".join(fields)]
+            last = b - 1
+        snippets.append("".join(parts) + _snippet_escape(code[last:]))
+    return snippets
+
+
+def _completion_items(entries, annotation):
+    """Completion items for Kodi's conditions or builtins, with Kodi's help as details."""
+    snippets = _completion_snippets([code for code, _help in entries])
+    return [sublime.CompletionItem.snippet_completion(
+        code, snippet, annotation=annotation, details=_help_details(help_text))
+        for (code, help_text), snippet in zip(entries, snippets)]
+
+
+_derived = {}
+
+
+def _kodi_derived(entries, key, build):
+    """Value built from one of Kodi's loaded lists, rebuilt once a reload replaces that list."""
+    cached = _derived.get(key)
+    if cached is None or cached[0] is not entries:
+        cached = _derived[key] = (entries, build(entries))
+    return cached[1]
 
 
 def _soft_wrap_source(text, max_col):
@@ -862,23 +913,9 @@ class KodiDevKit(sublime_plugin.EventListener):
         if value_type in ("path", "texture"):
             return self._get_media_completions(addon.media_path)
 
-        if value_type == "condition":
-            conditions = getattr(INFOS, "conditions", [])
-            for nm, desc in conditions:
-                items.append(sublime.CompletionItem(
-                    nm, annotation="condition", completion=nm,
-                    completion_format=sublime.COMPLETION_FORMAT_TEXT, details=_help_details(desc)))
-            return items
-
-        if value_type == "builtin":
-            builtins = getattr(INFOS, "builtins", [])
-            for nm, desc in builtins:
-                completion = nm
-                for i, match in enumerate(re.findall(r"\([a-z,\]\[]+\)", completion)):
-                    completion = completion.replace(match, f"(${i + 1})")
-                items.append(sublime.CompletionItem.snippet_completion(
-                    nm, completion, annotation="builtin", details=_help_details(desc)))
-            return items
+        if value_type in ("condition", "builtin"):
+            entries = getattr(INFOS, value_type + "s", [])
+            return _kodi_derived(entries, value_type, lambda e: _completion_items(e, value_type))
 
         return items
 
