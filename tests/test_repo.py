@@ -44,9 +44,11 @@ class TestRepo(unittest.TestCase):
         with open(path, "wb" if isinstance(data, bytes) else "w", encoding=None if isinstance(data, bytes) else "utf-8") as f:
             f.write(data)
 
-    def _addon(self, version="1.0.0", news="Fixes", assets="<icon>resources/icon.png</icon>", addon_id="skin.test"):
+    def _addon(self, version="1.0.0", news="Fixes", assets="<icon>resources/icon.png</icon>", addon_id="skin.test",
+               gui="5.18.0"):
+        """Write a skin addon.xml that passes every rule unless a field is overridden."""
         self._write("addon.xml", f'<?xml version="1.0" encoding="UTF-8"?>\n<addon id="{addon_id}" version="{version}" '
-                                 'name="Test" provider-name="me"><requires><import addon="xbmc.gui" version="5.18.0"/>'
+                                 f'name="Test" provider-name="me"><requires><import addon="xbmc.gui" version="{gui}"/>'
                                  '</requires><extension point="xbmc.gui.skin" debugging="false">'
                                  '<res width="1920" height="1080" aspect="16:9" default="true" folder="16x9"/>'
                                  '</extension><extension point="xbmc.addon.metadata">'
@@ -54,15 +56,28 @@ class TestRepo(unittest.TestCase):
                                  '<platform>all</platform><license>GPL-2.0-or-later</license>'
                                  f'<news>{news}</news><assets>{assets}</assets></extension></addon>')
 
-    def _messages(self):
+    def _messages(self, settings=None):
+        """Sorted repo check messages for the test skin."""
         provider = InfoProvider()
-        provider.settings = {}
+        provider.settings = settings or {}
         provider.init_addon(self.path)
         return sorted(r["message"] for r in provider.get_check_listitems("repo") if r.get("file"))
 
     def test_clean_skin(self):
         self._addon()
         self.assertEqual(self._messages(), [])
+
+    def test_forced_release_that_cannot_load_the_skin(self):
+        """The repo check reports an xbmc.gui import the release named in the settings refuses."""
+        self._addon(gui="5.18.0")
+        self.assertEqual(self._messages({"kodi_release": "omega"}),
+                         ["Kodi repo: xbmc.gui 5.18.0 is newer than Omega's 5.17.0, so Omega will not load it"])
+        self._addon(gui="5.16.0")
+        self.assertEqual(self._messages({"kodi_release": "piers"}),
+                         ["Kodi repo: xbmc.gui 5.16.0 is older than the 5.17.0 Piers still accepts, "
+                          "so Piers will not load it"])
+        self._addon(gui="5.17.0")
+        self.assertEqual(self._messages({"kodi_release": "piers"}), [])
 
     def test_addon_xml_rules(self):
         self._addon(version="1.0", news="x" * 1501, addon_id="skin.other")

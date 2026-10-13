@@ -90,7 +90,7 @@ class ValidationRepo:
         return self.issues
 
     def _check_addon_xml(self, root):
-        """Version, id against the folder name, and each extension against its schema."""
+        """Check the version, id, extensions and xbmc.gui import in addon.xml."""
         version = root.get("version")
         if not version or not VERSION.match(version):
             self._add("addon.xml", root.sourceline, f"version {version!r} is not major.minor.revision (e.g. 1.0.0)")
@@ -108,6 +108,28 @@ class ValidationRepo:
         self._validate(bare, "addon.xsd")
         if not root.findall("extension[@point='xbmc.addon.metadata']"):
             self._add("addon.xml", root.sourceline, "addon.xml has no xbmc.addon.metadata extension")
+        self._check_release(root)
+
+    def _check_release(self, root):
+        """Check the xbmc.gui import against the release the settings force."""
+        forced = str(self.addon.settings.get("kodi_release") or "").strip().lower()
+        release = next((r for r in self.addon.RELEASES if r["name"] == forced), None)
+        node = root.find("requires/import[@addon='xbmc.gui']")
+        if release is None or node is None:
+            return
+        version = node.get("version") or ""
+        wanted = self.addon._safe_version_tuple(version)
+        lowest = self.addon._safe_version_tuple(node.get("minversion") or version)
+        name = forced.capitalize()
+        if wanted is None or lowest is None:
+            return
+        if lowest > self.addon._safe_version_tuple(release["gui_version"]):
+            self._add("addon.xml", node.sourceline, f"xbmc.gui {version} is newer than {name}'s "
+                                                    f"{release['gui_version']}, so {name} will not load it")
+        elif wanted < self.addon._safe_version_tuple(release["gui_abi"]):
+            self._add("addon.xml", node.sourceline, f"xbmc.gui {version} is older than the "
+                                                    f"{release['gui_abi']} {name} still accepts, "
+                                                    f"so {name} will not load it")
 
     def _validate(self, element, schema_name):
         """Report each schema error at the addon.xml line it names."""
