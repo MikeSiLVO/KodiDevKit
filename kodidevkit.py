@@ -191,6 +191,18 @@ def _skin_expressions(view):
 
 
 def evaluate_condition(view, condition):
+    """Popup HTML with a condition's verdict and, for one item, Kodi's help; None if neither."""
+    verdict = _condition_verdict(view, condition)
+    help_text = _condition_help_text(_decode_entities(condition or ""))
+    if not help_text:
+        return verdict
+    sentence, values = _help_parts(help_text)
+    note = html.escape(sentence) + (f"<br>{html.escape(', '.join(values))}" if values else "")
+    rule = '<div class="kdk-rule"></div>' if verdict else ""
+    return f'{verdict or ""}{rule}<div class="kdk-sub">{note}</div>'
+
+
+def _condition_verdict(view, condition):
     """Popup HTML giving a Kodi boolean condition's verdict, or None if there is none."""
     condition = _decode_entities(condition or "").strip()
     if not condition or not re.search(r"[A-Za-z]", condition):
@@ -230,12 +242,67 @@ def evaluate_condition(view, condition):
 _WRAP_BREAK_CHARS = ",|+"
 
 
+_HELP_TAG = re.compile(r"</?(?:b|c|i|em|strong|code)>")
+_HELP_VALUE = re.compile(r"\s*-\s*<b>([^<]+)</b>")
+
+
+def _help_parts(text):
+    """Split Kodi's help into its plain sentence and the values it lists, if any."""
+    text = text or ""
+    values = _HELP_VALUE.findall(text)
+    return " ".join(_HELP_TAG.sub("", _HELP_VALUE.sub("", text)).split()), values
+
+
 def _help_details(text):
-    """Kodi's help text for a completion's details line, markup stripped and HTML-escaped."""
-    return html.escape(" ".join(re.sub(r"<[^>]+>", "", text or "").split()))
+    """Kodi's help text for a completion's details line, listed values last, HTML-escaped."""
+    sentence, values = _help_parts(text)
+    return html.escape(" ".join([sentence] + ([", ".join(values)] if values else [])))
 
 
 _PARAM_GROUP = re.compile(r"\(([^()]*)\)")
+
+
+def _info_stem(text):
+    """The stem `Foo(50)` and `Foo(id)` share: the info lowercased, every argument emptied."""
+    text = text.lower()
+    while True:
+        emptied = _PARAM_GROUP.sub("\0", text)
+        if emptied == text:
+            return text.replace("\0", "()")
+        text = emptied
+
+
+def _help_index(entries):
+    """Help per lowercased code, and per stem where only one code has it."""
+    stems = Counter(_info_stem(code) for code, _help in entries)
+    exact = {code.lower(): help_text for code, help_text in entries}
+    by_stem = {_info_stem(code): help_text for code, help_text in entries
+               if stems[_info_stem(code)] == 1}
+    return exact, by_stem
+
+
+def _condition_help_text(condition):
+    """Kodi's help for a condition that is one item, matched exactly, else by its stem."""
+    item = condition.strip().lstrip("!").strip()
+    depth = 0
+    for char in item:
+        depth += (char in "([") - (char in ")]")
+        if char in "+|" and depth == 0:
+            return None
+    if not item or item.startswith("["):
+        return None
+    exact, by_stem = _kodi_derived(getattr(INFOS, "conditions", []), "help", _help_index)
+    return exact.get(item.lower()) or by_stem.get(_info_stem(item))
+
+
+def _value_completions(text_before):
+    """Values Kodi's help lists for the condition whose parentheses the caret sits in."""
+    call = re.search(r"([\w.]+)\(\w*$", text_before)
+    if not call:
+        return []
+    _exact, by_stem = _kodi_derived(getattr(INFOS, "conditions", []), "help", _help_index)
+    _sentence, values = _help_parts(by_stem.get(call.group(1).lower() + "()"))
+    return [sublime.CompletionItem(value, annotation="value") for value in values]
 
 
 def _snippet_escape(text):
@@ -920,6 +987,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         return items
 
     def on_query_completions(self, view, prefix, locations):
+        """Completions for the caret's place in one of the loaded addon's XML files."""
         start = time.time()
         if not INFOS:
             return []
@@ -940,6 +1008,12 @@ class KodiDevKit(sublime_plugin.EventListener):
         ctx_type, detail = self._get_completion_context(view, locations[0])
 
         if ctx_type and detail:
+            if detail == "condition":
+                line_start = view.line(locations[0]).begin()
+                values = _value_completions(view.substr(sublime.Region(line_start, locations[0])))
+                if values:
+                    return (values, sublime.INHIBIT_WORD_COMPLETIONS
+                            | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
             items = self._completions_for_type(detail, addon, folder)
             if items:
                 elapsed = time.time() - start
@@ -948,7 +1022,6 @@ class KodiDevKit(sublime_plugin.EventListener):
                 flags = getattr(sublime, "INHIBIT_WORD_COMPLETIONS", 8)
                 return (items, flags)
 
-        # Generic fallback when no specific value-type was matched: includes + window names.
         items = []
 
         inc_map = getattr(addon, "include_map", {}).get(folder, {})

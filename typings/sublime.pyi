@@ -166,6 +166,8 @@ def windows() -> List[Window]: ...
 def log_commands(flag: bool) -> None: ...
 
 ENCODED_POSITION: int
+INHIBIT_WORD_COMPLETIONS: int
+INHIBIT_EXPLICIT_COMPLETIONS: int
 TRANSIENT: int
 FORCE_GROUP: int
 COOPERATE_WITH_AUTO_COMPLETE: int
