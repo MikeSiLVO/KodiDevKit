@@ -450,20 +450,23 @@ class Skin(Addon):
         """Get the constant names defined for the folder."""
         return list(self.constant_map.get(folder, {}).keys())
 
-    def return_node(self, keyword=None, folder=None):
-        """Look up a name as font, include, variable, map, default, constant or expression."""
+    def return_node(self, keyword=None, folder=None, kinds=None):
+        """Look up a name in every definition kind, fonts first, or in those a caller picks."""
         if not keyword or not folder:
             return None
 
         lookup_name = keyword.split(',')[0] if ',' in keyword else keyword
 
-        if folder in self.fonts:
+        def wanted(kind):
+            return kinds is None or kind in kinds
+
+        if wanted("font") and folder in self.fonts:
             for node in self.fonts[folder]:
                 if node["name"] == lookup_name:
                     return node
 
         includes_for_folder = self.include_map.get(folder, {})
-        if lookup_name in includes_for_folder:
+        if wanted("include") and lookup_name in includes_for_folder:
             node, _params, file_path = includes_for_folder[lookup_name]
             return {
                 "name": lookup_name,
@@ -473,58 +476,30 @@ class Skin(Addon):
                 "type": node.tag
             }
 
-        variables_for_folder = self.variable_map.get(folder, {})
-        if lookup_name in variables_for_folder:
-            node, file_path = variables_for_folder[lookup_name]
-            return {
-                "name": lookup_name,
-                "content": node,
-                "file": file_path,
-                "line": node.sourceline if hasattr(node, 'sourceline') else 0,
-                "type": node.tag
-            }
+        for kind, table in (("variable", self.variable_map), ("map", self.map_map),
+                            ("default", self.default_map)):
+            entries = table.get(folder, {})
+            if wanted(kind) and lookup_name in entries:
+                node, file_path = entries[lookup_name]
+                return {
+                    "name": lookup_name,
+                    "content": node,
+                    "file": file_path,
+                    "line": node.sourceline if hasattr(node, 'sourceline') else 0,
+                    "type": node.tag
+                }
 
-        maps_for_folder = self.map_map.get(folder, {})
-        if lookup_name in maps_for_folder:
-            node, file_path = maps_for_folder[lookup_name]
-            return {
-                "name": lookup_name,
-                "content": node,
-                "file": file_path,
-                "line": node.sourceline if hasattr(node, 'sourceline') else 0,
-                "type": node.tag
-            }
-
-        defaults_for_folder = self.default_map.get(folder, {})
-        if lookup_name in defaults_for_folder:
-            node, file_path = defaults_for_folder[lookup_name]
-            return {
-                "name": lookup_name,
-                "content": node,
-                "file": file_path,
-                "line": node.sourceline if hasattr(node, 'sourceline') else 0,
-                "type": node.tag
-            }
-
-        if folder in self.constant_map and lookup_name in self.constant_map[folder]:
-            source = self.constant_source_map.get(folder, {}).get(lookup_name, (None, 0))
-            return {
-                "name": lookup_name,
-                "type": "constant",
-                "content": self.constant_map[folder][lookup_name],
-                "file": source[0],
-                "line": source[1],
-            }
-
-        if folder in self.expression_map and lookup_name in self.expression_map[folder]:
-            source = self.expression_source_map.get(folder, {}).get(lookup_name, (None, 0))
-            return {
-                "name": lookup_name,
-                "type": "expression",
-                "content": self.expression_map[folder][lookup_name],
-                "file": source[0],
-                "line": source[1],
-            }
+        for kind, table, sources in (("constant", self.constant_map, self.constant_source_map),
+                                     ("expression", self.expression_map, self.expression_source_map)):
+            if wanted(kind) and lookup_name in table.get(folder, {}):
+                source = sources.get(folder, {}).get(lookup_name, (None, 0))
+                return {
+                    "name": lookup_name,
+                    "type": kind,
+                    "content": table[folder][lookup_name],
+                    "file": source[0],
+                    "line": source[1],
+                }
 
         return None
 

@@ -388,6 +388,18 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         marks = {child.tag: child.get("_kdk_inc_cond") for child in root}
         self.assertEqual(marks, {"fadetime": "1", "height": "1", "width": None})
 
+    def test_lookup_can_ask_for_one_kind(self):
+        """A name an include and a variable share finds the include, or the variable if asked."""
+        skin = self._create_skin_with_includes("""
+            <includes>
+                <include name="Logo"><control type="image"/></include>
+                <variable name="Logo"><value>logo.png</value></variable>
+            </includes>""")
+        skin.fonts = {}
+        found = [skin.return_node("Logo", self.folder_name),
+                 skin.return_node("Logo", self.folder_name, kinds=("variable",))]
+        self.assertEqual([node and node["type"] for node in found], ["include", "variable"])
+
     def test_identical_conditional_control_splices_once(self):
         """A repeated conditional call adds nothing; other params or unconditional calls do."""
         skin = self._create_skin_with_includes("""

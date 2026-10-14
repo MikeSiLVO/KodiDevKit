@@ -1168,7 +1168,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     return window_filenames[window_index]
 
         if info_type in {"VAR", "ESCVAR"}:
-            content = self.get_formatted_include(selected_content, view)
+            content = self.get_formatted_include(selected_content, view, kinds=("variable",))
             if content:
                 return content
 
@@ -1179,7 +1179,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             # Kodi splits the block on every comma
             arg_index = line_text.count(",", body_start, cursor_offset)
             if arg_index == 0:
-                content = self.get_formatted_include(map_name, view)
+                content = self.get_formatted_include(map_name, view, kinds=("map",))
                 if content:
                     return content
             elif arg_index == 1 and len(args) > 1:
@@ -1277,13 +1277,14 @@ class KodiDevKit(sublime_plugin.EventListener):
                 if attr_name and sel == attr_name:
                     ref_name = attr_name
             if ref_name:
-                include_content = self.get_formatted_include(ref_name, view)
+                include_content = self.get_formatted_include(ref_name, view, kinds=(element.tag,))
                 if include_content:
                     return include_content
 
         # read the live buffer, which works before the file is saved
         if element is None or element.tag not in ("include", "font"):
             ref_name = None
+            ref_kind = "include"
             attr_match = re.search(
                 r'<include[^>]*\bcontent\s*=\s*"([^"]+)"',
                 line_text,
@@ -1295,9 +1296,10 @@ class KodiDevKit(sublime_plugin.EventListener):
                 if not ref_match:
                     ref_match = re.match(r'\s*<(include|font)[^>]*>(\S+)', line_text)
                 if ref_match:
+                    ref_kind = ref_match.group(1)
                     ref_name = ref_match.group(2).strip()
             if ref_name and selected_content.strip() in ref_name:
-                include_content = self.get_formatted_include(ref_name, view)
+                include_content = self.get_formatted_include(ref_name, view, kinds=(ref_kind,))
                 if include_content:
                     return include_content
 
@@ -1435,7 +1437,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     getattr(addon, "variable_map", {}),
                 )
                 if any(sel in m.get(folder, {}) for m in maps):
-                    content = self.get_formatted_include(sel, view)
+                    content = self.get_formatted_include(sel, view, kinds=("constant", "expression", "variable"))
                     if content:
                         return content
 
@@ -1491,8 +1493,8 @@ class KodiDevKit(sublime_plugin.EventListener):
         return (addon, folder) if folder else None
 
     @staticmethod
-    def get_formatted_include(content, view):
-        """Get a popup body showing the include, font, variable or constant of that name."""
+    def get_formatted_include(content, view, kinds=None):
+        """Get a popup body showing the definition of that name, of any kind or only those given."""
         target = KodiDevKit._popup_target(view)
         if target is None:
             return None
@@ -1502,7 +1504,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         if not return_node:
             return None
 
-        node = return_node(content, folder=folder)
+        node = return_node(content, folder=folder, kinds=kinds)
         if not node:
             return None
 

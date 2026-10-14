@@ -242,18 +242,18 @@ class Addon:
         else:
             return os.path.join(self.media_path, path)
 
-    def return_node(self, keyword=None, folder=None):
-        """Look up a font or include by name in the folder, ignoring any param tail."""
+    def return_node(self, keyword=None, folder=None, kinds=None):
+        """Look up a font or include by name, ignoring any param tail; or just one of the two."""
         if not keyword or not folder:
             return None
 
         lookup_name = keyword.split(',')[0]
 
-        if folder in self.fonts:
+        if folder in self.fonts and (kinds is None or "font" in kinds):
             for node in self.fonts[folder]:
                 if node["name"] == lookup_name:
                     return node
-        if folder in self.includes:
+        if folder in self.includes and (kinds is None or "include" in kinds):
             for node in self.includes[folder]:
                 if node["name"] == lookup_name:
                     return node
