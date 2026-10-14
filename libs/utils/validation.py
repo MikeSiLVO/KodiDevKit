@@ -72,36 +72,43 @@ def resolve_param_in_name(name, param_context=None, cache=None):
     return resolved
 
 
-def get_all_parameter_contexts(addon, folder):
-    """Get every param set the folder's includes take, filling forwarded $PARAM from outer calls."""
-    if not addon._include_usages_built:
-        addon.index_builder.build_include_usages()
+class CallContexts:
+    """Param sets the folder's include calls pass, forwarded $PARAM filled from outer calls."""
 
-    usages = addon.include_usages.get(folder, {})
-    includes = getattr(addon, "include_map", {}).get(folder, {})
-    filled = {}
+    def __init__(self, addon, folder):
+        if not addon._include_usages_built:
+            addon.index_builder.build_include_usages()
+        self.usages = addon.include_usages.get(folder, {})
+        self._includes = getattr(addon, "include_map", {}).get(folder, {})
+        self._filled = {}
 
-    def contexts_of(name, depth):
-        if name not in filled:
-            filled[name] = []
-            defaults = includes[name][1] if name in includes else {}
-            for usage in usages.get(name, []):
-                for context in expand(usage, depth):
-                    filled[name].append({**defaults, **context})
-        return filled[name]
+    def for_include(self, name, depth=0):
+        """Param sets the include is called with, its defaults applied; empty when never called."""
+        if name not in self._filled:
+            self._filled[name] = []
+            defaults = self._includes[name][1] if name in self._includes else {}
+            for usage in self.usages.get(name, []):
+                for context in self.expand(usage, depth):
+                    self._filled[name].append({**defaults, **context})
+        return self._filled[name]
 
-    def expand(usage, depth):
+    def expand(self, usage, depth=0):
+        """Expand a call's params, once per outer param set when it forwards $PARAM."""
         params, outer = usage["params"], usage.get("enclosing")
         if not outer or depth >= _FORWARD_DEPTH or not any("$PARAM[" in v for v in params.values()):
             return [params]
         return [{k: resolve_param_in_name(v, context) for k, v in params.items()}
-                for context in contexts_of(outer, depth + 1)] or [params]
+                for context in self.for_include(outer, depth + 1)] or [params]
 
+
+def get_all_parameter_contexts(addon, folder):
+    """Get every param set the folder's includes take, filling forwarded $PARAM from outer calls."""
+    calls = CallContexts(addon, folder)
     seen = set()
     all_contexts = []
-    for calls in usages.values():
-        for usage in calls:
-            for context in expand(usage, 0):
+    for usages in calls.usages.values():
+        for usage in usages:
+            for context in calls.expand(usage):
                 key = frozenset(context.items())
                 if key not in seen:
                     seen.add(key)

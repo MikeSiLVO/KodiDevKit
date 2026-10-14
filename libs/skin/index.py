@@ -451,7 +451,7 @@ class SkinIndex:
         self.skin._include_usages_built = True
 
     def _extract_fonts_from_xml(self, root, path, folder, index):
-        """Extract every static <font> name in the file into the index."""
+        """Extract each static <font> name and the include it sits in into the index."""
         for node in root.xpath(".//font"):
             font_name = (node.text or "").strip()
             if font_name and not is_dynamic_expression(font_name):
@@ -459,7 +459,9 @@ class SkinIndex:
                     index['fonts_used'][folder][font_name] = []
                 index['fonts_used'][folder][font_name].append({
                     'file': path,
-                    'line': getattr(node, 'sourceline', 0) or 0
+                    'line': getattr(node, 'sourceline', 0) or 0,
+                    'include': next((a.get('name') for a in node.iterancestors('include')
+                                     if a.get('name')), None),
                 })
 
     def _extract_labels_from_xml(self, root, path, folder, index):

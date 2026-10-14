@@ -132,6 +132,27 @@ class TestFontValidation(unittest.TestCase):
         errors = [i for i in issues if "no" not in i["message"].lower() and "unused" not in i["message"].lower()]
         self.assertEqual(len(errors), 0, f"Should have no errors, got: {errors}")
 
+    def test_param_font_in_an_include_resolves_per_call(self):
+        """A $PARAM font name is checked as each call fills it; the fonts it names count as used."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml("""<fonts><fontset id="Default">
+    <font><name>font13</name><filename>font.ttf</filename><size>13</size></font>
+    <font><name>Key_1</name><filename>font.ttf</filename><size>13</size></font>
+</fontset></fonts>""")
+        self.create_includes_xml("""<includes>
+    <include name="Key">
+        <param name="position" />
+        <definition><control type="label"><font>Key_$PARAM[position]</font></control></definition>
+    </include>
+</includes>""")
+        self.create_window_xml("""<window><controls>
+    <include content="Key"><param name="position" value="1" /></include>
+    <include content="Key"><param name="position" value="2" /></include>
+</controls></window>""")
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertIn("Font 'Key_2' is used but not defined in Font.xml", messages)
+        self.assertFalse([m for m in messages if "Key_1" in m or "$PARAM" in m], messages)
+
     def test_missing_font13(self):
         """Test detection of missing required font13."""
         self.create_font_file("font.ttf")

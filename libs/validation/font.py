@@ -8,7 +8,12 @@ from lxml import etree as ET
 
 from ..utils.files import miscased_name
 from ..utils.xml import file_needs_expansion, get_root_from_file
-from ..utils.validation import find_font_line_in_include, resolve_include_content
+from ..utils.validation import (
+    CallContexts,
+    find_font_line_in_include,
+    resolve_include_content,
+    resolve_param_in_name,
+)
 from ..utils.expressions import is_dynamic_expression
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -236,17 +241,28 @@ class ValidationFont:
                 used_names = set()
 
                 folded = {n.casefold(): n for n in fonts_defined}
+                calls = None
                 for font_name, usages in fonts_used.items():
-                    exact = font_name in fonts_defined
-                    used_names.add(font_name if exact else folded.get(font_name.casefold(), font_name))
-                    if is_dynamic_expression(font_name):
-                        continue
                     first_usage = usages[0] if usages else {}
-                    issue = _undefined_font_issue(font_name, fonts_defined, folded,
-                                                  first_usage.get('file', ''), first_usage.get('line', 0),
-                                                  self._unloaded_fonts(folder))
-                    if issue:
-                        issues.append(issue)
+                    checks = [(font_name, first_usage)]
+                    if "$PARAM[" in font_name and any(u.get('include') for u in usages):
+                        calls = calls or CallContexts(self.addon, folder)
+                        outside = [u for u in usages if not u.get('include')]
+                        # each call's params name the font Kodi looks up for it
+                        checks = [(font_name, outside[0])] if outside else []
+                        checks += [(name, usage) for usage in usages if usage.get('include')
+                                   for name in sorted({resolve_param_in_name(font_name, context)
+                                                       for context in calls.for_include(usage['include'])})]
+                    for name, usage in checks:
+                        exact = name in fonts_defined
+                        used_names.add(name if exact else folded.get(name.casefold(), name))
+                        if is_dynamic_expression(name):
+                            continue
+                        issue = _undefined_font_issue(name, fonts_defined, folded,
+                                                      usage.get('file', ''), usage.get('line', 0),
+                                                      self._unloaded_fonts(folder))
+                        if issue:
+                            issues.append(issue)
 
                 for font_name, font_info in fonts_defined.items():
                     if font_name not in used_names and font_name not in REQUIRED_FONTS:
