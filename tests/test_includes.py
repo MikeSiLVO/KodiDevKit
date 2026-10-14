@@ -388,6 +388,25 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         marks = {child.tag: child.get("_kdk_inc_cond") for child in root}
         self.assertEqual(marks, {"fadetime": "1", "height": "1", "width": None})
 
+    def test_identical_conditional_control_splices_once(self):
+        """A repeated conditional call adds nothing; other params or unconditional calls do."""
+        skin = self._create_skin_with_includes("""
+            <includes>
+                <include name="Item">
+                    <param name="p" />
+                    <definition>
+                        <control type="label"><label>$PARAM[p]</label></control>
+                    </definition>
+                </include>
+            </includes>""")
+        call = '<include content="Item" condition="Skin.HasSetting({})"><param name="p" value="{}"/></include>'
+        root = ET.fromstring("<window><controls>" + call.format("a", "x") + call.format("b", "x")
+                             + call.format("c", "y") + '<include content="Item"><param name="p" value="x"/>'
+                             '</include><include content="Item"><param name="p" value="x"/></include>'
+                             "</controls></window>")
+        kodi_resolve(skin, root, self.folder_name)
+        self.assertEqual([label.text for label in root.iter("label")], ["x", "y", "x", "x"])
+
     def test_basic_param_override(self):
         """Test basic parameter override with defaults."""
         includes_xml = """

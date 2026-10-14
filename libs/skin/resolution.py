@@ -6,15 +6,35 @@ import copy
 import re
 import logging
 
+from lxml import etree as ET
+
 from ..utils.expressions import expression_names, flatten_expressions, resolve_params_in_text
 from ..utils.infobool import static_value
 from ..utils.xml import get_params
 from ..skin.include import SkinInclude
+from ..validation.hierarchy import ALL_LAYOUT_TAGS
 
 if TYPE_CHECKING:
     from .maps import SkinMaps
 
 logger = logging.getLogger(__name__)
+
+_STAMP = re.compile(r'\s_kdk_\w+="[^"]*"')
+
+
+def _whole_controls(body):
+    """True when every element the include body splices is a <control>."""
+    tags = [child.tag for child in body if isinstance(child.tag, str)]
+    return bool(tags) and all(tag == "control" for tag in tags)
+
+
+def _splice_key(parent, include_node, name, params):
+    """What makes two splices identical: include, params, call body and where they land."""
+    body = "".join(ET.tostring(c, encoding="unicode", with_tail=False)
+                   for c in include_node if c.tag != "param")
+    in_layout = any(e.tag in ALL_LAYOUT_TAGS for e in (parent, *parent.iterancestors()))
+    return (name, tuple(sorted(params.items())), _STAMP.sub("", body),
+            parent.tag, parent.get("type"), in_layout)
 
 
 class SkinResolution:
@@ -30,21 +50,22 @@ class SkinResolution:
         self.variable_map = include_maps.variables
         self.expression_map = include_maps.expressions
 
-    def resolve(self, node, folder: str, *, source_file: str = ""):
+    def resolve(self, node, folder: str, *, source_file: str = "", _spliced=None):
         """Resolve a subtree as CGUIIncludes::Resolve does: defaults, constants, $EXP, includes."""
         if node is None:
             return
 
         if source_file:
             self._source_file = source_file
+        spliced = set() if _spliced is None else _spliced
 
         self.set_defaults(node, folder)
         self.resolve_constants(node, folder)
         self.resolve_expressions(node, folder)
-        self.resolve_includes(node, folder)
+        self.resolve_includes(node, folder, spliced)
 
         for child in list(node):
-            self.resolve(child, folder)
+            self.resolve(child, folder, _spliced=spliced)
 
     def set_defaults(self, node, folder: str):
         """Append the control type's default block, as CGUIIncludes::SetDefaults does."""
@@ -144,8 +165,8 @@ class SkinResolution:
     # tab is attribute-safe and never appears in an include name
     _PATH_SEP = "\t"
 
-    def resolve_includes(self, node, folder: str):
-        """Splice includes as CGUIIncludes::ResolveIncludes does, rescanning from the top."""
+    def resolve_includes(self, node, folder: str, spliced=None):
+        """Splice includes, skipping repeated conditional ones (CGUIIncludes::ResolveIncludes)."""
         if node is None:
             return
 
@@ -206,6 +227,18 @@ class SkinResolution:
 
             include_element = include_obj.node
 
+            # Kodi splices a conditional include only when its condition holds at load
+            conditional = "condition" in include_node.attrib or include_node.get("_kdk_inc_cond") == "1"
+
+            # every branch splices and nesting multiplies them; a repeat adds nothing to check
+            if spliced is not None and conditional and _whole_controls(include_element):
+                key = _splice_key(node, include_node, inc_name, merged_params)
+                if key in spliced:
+                    node.remove(include_node)
+                    include_node = node.find("include")
+                    continue
+                spliced.add(key)
+
             inc_file_for_stamp = include_obj.file or ""
             # nested include: keep the outermost call site in the window file
             existing_stamp = include_node.get("_kdk_call_line")
@@ -215,9 +248,6 @@ class SkinResolution:
             else:
                 call_line = str(include_node.sourceline) if include_node.sourceline else ""
                 call_file = getattr(self, "_source_file", "")
-
-            # Kodi splices a conditional include only when its condition holds at load
-            conditional = "condition" in include_node.attrib or include_node.get("_kdk_inc_cond") == "1"
 
             # ancestry stamp is what the cycle check reads
             child_path_attr = self._PATH_SEP.join(path + [inc_name])
