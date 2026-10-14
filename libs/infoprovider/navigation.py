@@ -22,14 +22,20 @@ class NavigationMixin(CheckerMixin):
 
     addon: Any
 
-    def go_to_tag(self, keyword, folder):
-        """Get "path:line" of the definition, font, color, label or file named; False when none."""
+    def go_to_tag(self, keyword, folder, kinds=None):
+        """Get "path:line" of the named definition, label or file, of the given types or any."""
         if not self.addon or not keyword:
             return False
         kw = str(keyword).strip()
         # caret lands in a whole `$MAP[Name, ListItem.X]` body; the name is the first arg
         if "," in kw:
             kw = kw.split(",", 1)[0].strip()
+
+        if kinds is not None and "font" not in kinds:
+            for node in self._get_includes_for_folder(folder):
+                if node.get("name") == kw and node.get("type") in kinds:
+                    return "%s:%s" % (node.get("file"), node.get("line"))
+            return False
 
         if kw.lower().endswith(".xml"):
             path, _ = resolve_include_file(self.addon, folder, kw)
@@ -73,6 +79,9 @@ class NavigationMixin(CheckerMixin):
 
             path = font_node.get("file") or os.path.join(self.addon.path, folder, "Font.xml")
             return "%s:%s" % (path, int(font_node.get("line") or 0))
+
+        if kinds is not None:
+            return False
 
         for node in self._get_includes_for_folder(folder):
             if node.get("name") == kw:

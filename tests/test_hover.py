@@ -315,5 +315,30 @@ class TestControlTypeHover(unittest.TestCase):
         self.assertIsNone(self._hover("button"))
 
 
+class TestGoToTagKinds(unittest.TestCase):
+    """Jump-to-definition narrowed to one kind, skipping a same-named definition of another."""
+
+    def setUp(self):
+        """Create a navigator whose rows hold an include and a variable named Logo."""
+        from libs.infoprovider.navigation import NavigationMixin
+
+        class Rows(NavigationMixin):
+            def _get_includes_for_folder(self, folder):
+                return [{"name": "Logo", "type": "include", "file": "Inc.xml", "line": 3},
+                        {"name": "Logo", "type": "variable", "file": "Var.xml", "line": 9}]
+
+        self.nav = Rows.__new__(Rows)
+        self.nav.addon = types.SimpleNamespace(fonts={}, colors=[], path="/skin")
+
+    def test_any_kind_finds_the_first(self):
+        self.assertEqual(self.nav.go_to_tag("Logo", "16x9"), "Inc.xml:3")
+
+    def test_variable_kind_finds_the_variable(self):
+        self.assertEqual(self.nav.go_to_tag("Logo", "16x9", kinds=("variable",)), "Var.xml:9")
+
+    def test_missing_kind_finds_nothing(self):
+        self.assertFalse(self.nav.go_to_tag("Logo", "16x9", kinds=("map",)))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -595,6 +595,22 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
         sublime.active_window().focus_view(self.view)
 
 
+_REFERENCE_KINDS = (
+    (re.compile(r"\$(?:ESC)?VAR\[[^\[\]]*$"), ("variable",)),
+    (re.compile(r"\$(?:ESC)?MAP\[[^\[\]]*$"), ("map",)),
+    (re.compile(r"\$EXP\[[^\[\]]*$"), ("expression",)),
+    (re.compile(r'<include\b(?:[^>]*\bcontent="[^"]*|[^>]*>[^<]*)$'), ("include",)),
+    (re.compile(r"<font>[^<]*$"), ("font",)),
+)
+
+
+def _reference_kinds(view):
+    """Definition kinds the reference under the caret can name, or None when it could be any."""
+    point = view.sel()[0].b
+    before = view.substr(sublime.Region(view.line(point).begin(), point))
+    return next((kinds for pattern, kinds in _REFERENCE_KINDS if pattern.search(before)), None)
+
+
 class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
     """Command jumping to the definition of the include, font, color or label under the cursor."""
 
@@ -613,8 +629,10 @@ class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
         file_name = view.file_name()
         if not file_name:
             return None
-        position = go_to_tag(keyword=get_node_content(view, flags),
-                            folder=file_name.split(os.sep)[-2])
+        addon = getattr(infos, "addon", None)
+        folder = addon.xml_folder_of(file_name) if addon else file_name.split(os.sep)[-2]
+        position = go_to_tag(keyword=get_node_content(view, flags), folder=folder,
+                             kinds=_reference_kinds(view))
         if position:
             self.window.open_file(position, sublime.ENCODED_POSITION)
 
