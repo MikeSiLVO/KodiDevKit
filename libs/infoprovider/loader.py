@@ -1,4 +1,4 @@
-"""Data loading and initialization mixin for InfoProvider."""
+"""InfoProvider mixin that loads the bundled Kodi data and opens the addon."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoaderMixin:
-    """Loads the bundled Kodi data for a release and opens the addon under it."""
+    """Mixin that loads a Kodi release's bundled data and opens the addon."""
 
     addon: Any
     template_root: Any

@@ -17,19 +17,19 @@ _LEFTOVER = re.compile(r"(?i)(\.(bak|orig|tmp|old|swp|psd|xcf)$|~$|^(thumbs\.db|
 
 
 class ValidationFileCheck:
-    """Validates file encoding (BOM) and line endings."""
+    """Checker for BOMs, line endings, 16-bit PNGs and files Kodi repo review rejects."""
 
     def __init__(self, addon):
         self.addon = addon
 
     def check(self, progress_callback=None):
+        """Check the skin's files, one issue row per problem found."""
         issues = []
 
         if not self.addon:
             return issues
 
-        # Text types only: binaries such as PNGs routinely contain 0D 0A and
-        # would otherwise be reported as having Windows line endings.
+        # text only: a PNG holding 0D 0A would read as Windows line endings
         result = eol_info_from_path_patterns(
             [self.addon.path],
             recursive=True,

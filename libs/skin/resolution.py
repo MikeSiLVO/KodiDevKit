@@ -1,4 +1,4 @@
-"""Include / constant / expression / default resolver, mirroring CGUIIncludes."""
+"""Include, constant, expression and default resolution for skin XML."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -38,7 +38,7 @@ def _splice_key(parent, include_node, name, params):
 
 
 class SkinResolution:
-    """Resolves includes, constants, expressions and defaults the way CGUIIncludes does."""
+    """Resolver for a skin's includes, constants, expressions and defaults."""
 
     def __init__(self, include_maps: SkinMaps, skin_path: str):
         self.include_maps = include_maps
@@ -51,7 +51,7 @@ class SkinResolution:
         self.expression_map = include_maps.expressions
 
     def resolve(self, node, folder: str, *, source_file: str = "", _spliced=None):
-        """Resolve a subtree as CGUIIncludes::Resolve does: defaults, constants, $EXP, includes."""
+        """Resolve defaults, constants, $EXP and includes, then children."""
         if node is None:
             return
 
@@ -68,7 +68,7 @@ class SkinResolution:
             self.resolve(child, folder, _spliced=spliced)
 
     def set_defaults(self, node, folder: str):
-        """Append the control type's default block, as CGUIIncludes::SetDefaults does."""
+        """Set defaults: append the control type's default children, minus overridden positions."""
         if node.tag != "control":
             return
 
@@ -113,7 +113,7 @@ class SkinResolution:
                 node.append(cloned)
 
     def resolve_constants(self, node, folder: str):
-        """Expand constants as CGUIIncludes::ResolveConstants: listed tag text, else attributes."""
+        """Resolve constants in listed tag text, else in listed attributes."""
         if node is None:
             return
 
@@ -129,7 +129,7 @@ class SkinResolution:
                     node.attrib[attr_name] = self._resolve_constant_value(attr_value, constants_for_folder)
 
     def _resolve_constant_value(self, value: str, constant_map: dict) -> str:
-        """Swap each comma-split piece that names a constant, like CGUIIncludes::ResolveConstant."""
+        """Resolve each comma-split piece naming a constant."""
         if not value:
             return value
         pieces = value.split(",")
@@ -166,7 +166,7 @@ class SkinResolution:
     _PATH_SEP = "\t"
 
     def resolve_includes(self, node, folder: str, spliced=None):
-        """Splice includes, skipping repeated conditional ones (CGUIIncludes::ResolveIncludes)."""
+        """Resolve includes, skipping cyclic, always-false and repeated conditional ones."""
         if node is None:
             return
 
@@ -201,7 +201,7 @@ class SkinResolution:
                     else:
                         inc_name = resolved_name
 
-            # cycle check by stamped path; lxml reuses proxy addresses so id() tracking misfires
+            # cycle check by stamped path; lxml proxy ids are reused
             path_attr = include_node.get("_kdk_inc_path")
             path = path_attr.split(self._PATH_SEP) if path_attr else []
 
@@ -280,7 +280,7 @@ class SkinResolution:
             include_node = node.find("include")
 
     def _insert_nested(self, parent_node, include_node, inserted_node):
-        """Put the call's children at the <nested/> marker, as CGUIIncludes::InsertNested does."""
+        """Insert the call's children at the <nested/> marker."""
         if inserted_node.tag == "nested":
             nested = inserted_node
             target = parent_node
@@ -301,7 +301,7 @@ class SkinResolution:
                 parent_node.remove(inserted_node)
 
     def _resolve_params_for_node(self, node, params: dict, include_node=None):
-        """Expand $PARAM through a subtree as CGUIIncludes::ResolveParametersForNode does."""
+        """Resolve $PARAM through a subtree, dropping a forwarded <param> left undefined."""
         if node is None:
             return
 

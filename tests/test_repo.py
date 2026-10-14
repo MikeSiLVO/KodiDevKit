@@ -1,4 +1,4 @@
-"""Kodi repo rules mirror kodi-addon-checker and are labeled warnings."""
+"""Kodi repo rules from kodi-addon-checker, reported as labeled warnings."""
 
 import os
 import struct

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _is_addon_string_id(label_id):
-    """True when the id sits in a range Kodi reserves for add-on strings (AddonBase.h:1213)."""
+    """True when the id sits in a range Kodi reserves for add-on strings."""
     return 30000 <= label_id <= 30999 or 32000 <= label_id <= 32999
 
 
@@ -131,7 +131,7 @@ class TooltipMixin(CheckerMixin):
         return tooltips if tooltips else f"<i>Label {label_id} not found in {addon_id}</i>"
 
     def get_po_files(self):
-        """Prepend PO files from a live Kodi instance to the engine's own set."""
+        """Get the engine's PO files, with a live Kodi instance's ahead of them."""
         po_files = []
         seen = set()
         live = [po for client in (kodi, self.kodi) for po in getattr(client, "po_files", None) or []]
@@ -146,7 +146,7 @@ class TooltipMixin(CheckerMixin):
         return list(self.addon.colors) if self.addon else []
 
     def get_color_info_html(self, color_string):
-        """Build a small HTML swatch + info for a color value or name."""
+        """Get an HTML swatch with alpha for a color name or hex value; None when it is neither."""
         color_info = ""
         colors = self.addon.colors if self.addon else []
         for item in colors:
@@ -183,7 +183,7 @@ class TooltipMixin(CheckerMixin):
             )
 
     def build_translate_label(self, label_id, view):
-        """Localize expression for the label id, shaped for the scope under the caret."""
+        """Build the localize expression for the label id, shaped for the scope under the caret."""
         if not self.addon:
             return str(label_id)
 

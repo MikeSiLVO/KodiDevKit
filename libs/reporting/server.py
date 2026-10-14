@@ -1,7 +1,4 @@
-"""
-Local HTTP server for handling file:line navigation from HTML reports.
-No system-level installation or protocol registration required.
-"""
+"""Local HTTP server that opens a report's file:line links in Sublime Text."""
 
 import sublime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -14,8 +11,8 @@ from .text import generate_text_report
 logger = logging.getLogger(__name__)
 
 _server = None
-_server_port = 48273  # Random high port
-_report_data = {}  # Store report data for export
+_server_port = 48273
+_report_data = {}
 
 
 def _raise_window(window):
@@ -97,7 +94,7 @@ class FileOpenHandler(BaseHTTPRequestHandler):
     """HTTP request handler for opening files in Sublime Text."""
 
     def log_message(self, format, *args):
-        """Override to use our logger instead of stderr."""
+        """Log through the module logger instead of stderr."""
         logger.info(format % args)
 
     def do_GET(self):
@@ -156,7 +153,7 @@ class FileOpenHandler(BaseHTTPRequestHandler):
 
 
 def set_report_data(all_issues, skin_name, skin_path, timestamp):
-    """Store report data for export."""
+    """Set the report data the export endpoint serves."""
     global _report_data
     _report_data = {
         'all_issues': all_issues,
@@ -197,7 +194,7 @@ def stop_server():
 
 
 def get_server_port():
-    """Get the port number of the running server, or start it."""
+    """Get the server's port, starting the server if it is down."""
     if _server is None:
         start_server()
     return _server_port

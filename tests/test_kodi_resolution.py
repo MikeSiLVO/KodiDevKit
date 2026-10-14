@@ -1,19 +1,4 @@
-"""
-Tests for Kodi-exact resolution behavior matching GUIIncludes.cpp.
-
-These tests verify that kodi_resolve() matches Kodi's CGUIIncludes::Resolve exactly:
-- Resolution order: SetDefaults → ResolveConstants → ResolveExpressions → ResolveIncludes → Recurse
-- Constant whitelist enforcement (only expand in whitelisted attributes/nodes)
-- Expression wrapping in [...]
-- Control defaults with position skipping
-- Parameter merging (call-site overrides defaults)
-
-References:
-- GUIIncludes.cpp lines 341-359: Resolve() method
-- GUIIncludes.cpp lines 362-389: SetDefaults() method
-- GUIIncludes.cpp lines 391-410: ResolveConstants() method
-- GUIIncludes.cpp lines 412-430: ResolveExpressions() method
-"""
+"""Tests for resolution order, constants, $EXP, defaults and params."""
 
 import os
 import sys
@@ -31,14 +16,13 @@ from tests.test_utils import kodi_resolve
 
 
 class TestKodiResolutionOrder(unittest.TestCase):
-    """Test that resolution happens in correct order per GUIIncludes.cpp:341-359."""
+    """Resolution order: defaults, constants, $EXP, then includes."""
 
     def setUp(self):
         """Create temporary skin structure."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.skin_path = self.temp_dir.name
 
-        # Create minimal addon.xml
         os.makedirs(os.path.join(self.skin_path, "16x9"))
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test" provider-name="Test">
@@ -50,7 +34,6 @@ class TestKodiResolutionOrder(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize skin
         self.skin = Skin(path=self.skin_path)
 
     def tearDown(self):
@@ -58,8 +41,7 @@ class TestKodiResolutionOrder(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_resolution_order_constants_before_includes(self):
-        """Test that constants are resolved before includes (GUIIncludes.cpp:341-359)."""
-        # Create Includes.xml with constant and include
+        """Constants resolve before includes."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <constant name="ButtonWidth">200</constant>
@@ -73,29 +55,22 @@ class TestKodiResolutionOrder(unittest.TestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Load includes
         self.skin.update_include_list()
 
-        # Create test XML that uses the include
         test_xml = """<window>
     <include>TestButton</include>
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Apply Kodi resolution
         kodi_resolve(self.skin, root, "16x9")
 
-        # After resolution:
-        # 1. Constants should be expanded first
-        # 2. Then include should be spliced in
-        # Result: <width>200</width>
         width_elem = root.find(".//width")
         self.assertIsNotNone(width_elem, "Width element should exist after resolution")
         self.assertEqual(width_elem.text, "200", "Constant should be resolved to '200'")
 
 
 class TestConstantWhitelist(unittest.TestCase):
-    """Test constant expansion whitelist per GUIIncludes.cpp:18-50, 391-410."""
+    """Constant expansion, limited to the listed tags and attributes."""
 
     def setUp(self):
         """Create temporary skin with constants."""
@@ -113,7 +88,6 @@ class TestConstantWhitelist(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create Includes.xml with constants
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <constant name="TestValue">100</constant>
@@ -129,7 +103,7 @@ class TestConstantWhitelist(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_constant_expands_in_whitelisted_attribute(self):
-        """Bare constant name resolves in a CONSTANT_ATTRIBUTES attrib (GUIIncludes.cpp:641-651)."""
+        """A bare constant name resolves in a listed attribute."""
         test_xml = """<control type="button" width="TestValue" />"""
         root = ET.fromstring(test_xml)
 
@@ -138,7 +112,7 @@ class TestConstantWhitelist(unittest.TestCase):
         self.assertEqual(root.attrib.get("width"), "100")
 
     def test_constant_expands_in_whitelisted_node(self):
-        """Bare constant name resolves in a CONSTANT_NODES text."""
+        """A bare constant name resolves in a listed tag's text."""
         test_xml = """<control type="button">
     <width>TestValue</width>
 </control>"""
@@ -172,7 +146,7 @@ class TestConstantWhitelist(unittest.TestCase):
 
 
 class TestExpressionWrapping(unittest.TestCase):
-    """Test expression wrapping in brackets per GUIIncludes.cpp:412-430."""
+    """Expression resolution, each body wrapped in brackets."""
 
     def setUp(self):
         """Create temporary skin with expressions."""
@@ -190,7 +164,6 @@ class TestExpressionWrapping(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create Includes.xml with expression
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <expression name="IsPlaying">Player.HasMedia</expression>
@@ -206,7 +179,7 @@ class TestExpressionWrapping(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_expression_wrapped_in_brackets(self):
-        """$EXP[name] should be replaced with [expression_value] (GUIIncludes.cpp:412-430)."""
+        """$EXP[name] is replaced with the expression wrapped in brackets."""
         test_xml = """<control type="button">
     <visible>$EXP[IsPlaying]</visible>
 </control>"""
@@ -215,13 +188,12 @@ class TestExpressionWrapping(unittest.TestCase):
         kodi_resolve(self.skin, root, "16x9")
 
         visible_elem = root.find("visible")
-        # Expression should be wrapped in brackets
         self.assertEqual(visible_elem.text, "[Player.HasMedia]",
                         "Expression should be wrapped in brackets")
 
 
 class TestControlDefaults(unittest.TestCase):
-    """Test control defaults application per GUIIncludes.cpp:362-389."""
+    """Control defaults by control type."""
 
     def setUp(self):
         """Create temporary skin with control defaults."""
@@ -239,7 +211,6 @@ class TestControlDefaults(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create Includes.xml with default
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <default type="button">
@@ -260,7 +231,7 @@ class TestControlDefaults(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_defaults_applied_to_matching_control_type(self):
-        """Defaults should be applied to controls of matching type (GUIIncludes.cpp:362-389)."""
+        """Defaults apply to controls of the matching type."""
         test_xml = """<control type="button">
     <label>Test</label>
 </control>"""
@@ -268,14 +239,13 @@ class TestControlDefaults(unittest.TestCase):
 
         kodi_resolve(self.skin, root, "16x9")
 
-        # Defaults should be applied
         self.assertIsNotNone(root.find("width"), "Width from default should be applied")
         self.assertEqual(root.find("width").text, "200")
         self.assertIsNotNone(root.find("height"), "Height from default should be applied")
         self.assertEqual(root.find("height").text, "50")
 
     def test_defaults_skip_position_when_posx_exists(self):
-        """Position defaults should be skipped if control has posx (GUIIncludes.cpp:375-380)."""
+        """Horizontal position defaults are skipped when the control has posx."""
         test_xml = """<control type="button">
     <posx>500</posx>
     <label>Test</label>
@@ -284,13 +254,11 @@ class TestControlDefaults(unittest.TestCase):
 
         kodi_resolve(self.skin, root, "16x9")
 
-        # left/right/centerleft/centerright should be skipped (has_posx = true)
         self.assertIsNone(root.find("left"), "Left default should be skipped when posx exists")
-        # But top should still be applied (only posx exists, not posy)
         self.assertIsNotNone(root.find("top"), "Top default should still be applied")
 
     def test_defaults_skip_position_when_posy_exists(self):
-        """Position defaults should be skipped if control has posy (GUIIncludes.cpp:375-380)."""
+        """Vertical position defaults are skipped when the control has posy."""
         test_xml = """<control type="button">
     <posy>300</posy>
     <label>Test</label>
@@ -299,14 +267,12 @@ class TestControlDefaults(unittest.TestCase):
 
         kodi_resolve(self.skin, root, "16x9")
 
-        # top/bottom/centertop/centerbottom should be skipped (has_posy = true)
         self.assertIsNone(root.find("top"), "Top default should be skipped when posy exists")
-        # But left should still be applied (only posy exists, not posx)
         self.assertIsNotNone(root.find("left"), "Left default should still be applied")
 
 
 class TestParameterMerging(unittest.TestCase):
-    """Test parameter merging behavior per GUIIncludes.cpp."""
+    """Call params merged over an include's defaults, and conditions they settle."""
 
     def setUp(self):
         """Create temporary skin with parameterized includes."""
@@ -368,7 +334,6 @@ class TestParameterMerging(unittest.TestCase):
 
         kodi_resolve(self.skin, root, "16x9")
 
-        # Call-site params should override defaults
         control = root.find(".//control")
         self.assertIsNotNone(control, "Control should exist after include resolution")
 
@@ -391,11 +356,9 @@ class TestParameterMerging(unittest.TestCase):
 
         control = root.find(".//control")
 
-        # Width overridden at call-site
         width_elem = control.find("width")
         self.assertEqual(width_elem.text, "300", "Call-site width should be used")
 
-        # Label not overridden, should use default
         label_elem = control.find("label")
         self.assertEqual(label_elem.text, "DefaultLabel", "Default label should be used")
 

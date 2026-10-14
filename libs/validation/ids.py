@@ -1,9 +1,4 @@
-"""
-ID validation for Kodi skins.
-
-Validates control and window ID references against their definitions,
-using resolved-tree ID extraction for accurate parameterized ID handling.
-"""
+"""Checks every control and window id a skin refers to against the ids it defines."""
 
 from __future__ import annotations
 
@@ -16,7 +11,7 @@ from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 logger = logging.getLogger(__name__)
 
 class ValidationIds:
-    """Validates control and window IDs in Kodi skins."""
+    """Checker for undefined ids, core window ids used by number, and windows Kodi will not load."""
 
     def __init__(self, addon, window_ids, window_names, validation_index=None,
                  window_filenames=(), modeless_ids=(), dialog_ids=()):
@@ -71,7 +66,7 @@ class ValidationIds:
         return [{"message": m, "file": p, "line": 1, "severity": sev} for p, m, sev in issues]
 
     def _window_name_message(self, name):
-        """Problem with a window name, or None when CWindowTranslator::TranslateWindow knows it."""
+        """Problem with a window name, or None when Kodi knows it."""
         key = name.lower()
         if key.endswith(".xml"):
             key = key[:-4]
@@ -156,7 +151,7 @@ class ValidationIds:
                                 or (usage.get('context') in ('Control.IsVisible', 'Control.HasFocus')
                                     and ref_id in all_view_ids)):
                             continue
-                        # a dialog leaves the stack before its onunload runs (GUIDialog.cpp:106)
+                        # a dialog leaves the stack before its onunload runs
                         unload_below = usage.get('unload') and usage_name in dialog_files
                         if ref_id not in defined_anywhere:
                             message = f"Control ID {ref_id} not defined"

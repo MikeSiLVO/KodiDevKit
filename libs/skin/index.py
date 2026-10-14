@@ -16,7 +16,7 @@ from ..utils.validation import normalize_control_id, skinshortcuts_files
 logger = logging.getLogger(__name__)
 
 _LABEL_TAGS = frozenset(['label', 'altlabel', 'label2', 'hinttext'])
-# the replacer atoi()s the body, so only the leading digits name the string (GUIInfoLabel.cpp)
+# Kodi reads only the body's leading digits as the string id
 _LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[\s*(\d+)")
 _LABEL_BLOCK_MARKERS = ("$INFO[", "$VAR[", "$PARAM[", "$NUMBER[", "$ADDON[", "$MAP[")
 _LABEL_ATTRS = {"viewtype": ("label",), "fontset": ("idloc",), "label": ("fallback",), "label2": ("fallback",),
@@ -25,12 +25,12 @@ _UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
 _NAVIGATION_TAGS = ("onup", "ondown", "onleft", "onright", "onnext", "onprev")
 _ACTION_TAGS = frozenset(_NAVIGATION_TAGS + ("onclick", "onback", "onfocus", "onunfocus", "oninfo", "ontextchange",
                                              "altclick", "onload", "onunload"))
-# arguments Kodi passes through CWindowTranslator: window_bools, Window(x) and the window builtins
+# arguments Kodi reads as window names or ids: Window.* conditions, Window(x) and window builtins
 _WINDOW_REFS = re.compile(
     r"\b(?:Window\.(?:IsMedia|Is|IsActive|IsVisible|IsTopmost|IsDialogTopmost|IsModalDialogTopmost"
     r"|Previous|Next)\(|Window\((?=[^()]*\)\.)|(?:ActivateWindow|ActivateWindowAndFocus|ReplaceWindow"
     r"|ReplaceWindowAndFocus|Dialog\.Close)\()\s*([^,()\s]+)", re.I)
-# where Kodi reads a control id (GUIInfoManager.cpp:8527, GUIControlBuiltins.cpp:222)
+# where Kodi reads a control id
 _CONTROL_REFS = (
     (re.compile(r"\bControl\.(HasFocus|IsVisible|IsEnabled|GetLabel)\(\s*(\d+)\s*\)", re.I), 2),
     (re.compile(r"\bControlGroup\(\s*(\d+)\s*\)", re.I), 1),
@@ -55,13 +55,13 @@ def custom_window(root, filename):
     kind = root.get("type")
     if kind is None:
         kind = root.findtext("type") or ""
-    # a dialog with <visible> is modeless unless marked modal (ApplicationSkinHandling.cpp:392)
+    # a dialog with <visible> is modeless unless marked modal
     modeless = (kind.strip().lower() == "dialog" and root.find("visible") is not None
                 and (root.get("modality") or "").lower() != "modal")
     raw = (raw or "").strip()
     if not raw.isdigit():
         return [], modeless
-    # Kodi registers it as id + WINDOW_HOME and translates any id below that the same way
+    # Kodi registers it as id + 10000 and translates any id below that the same way
     number = int(raw)
     return [str(number), str(number + 10000)], modeless
 
@@ -661,7 +661,7 @@ class SkinIndex:
         logger.info(f"  -> Checked {checked_count} unique image references")
 
     def _check_font_files(self, index, progress_callback=None):
-        """Classify each font file against the skin's fonts folder; core fonts are checked later."""
+        """Check each font file against the skin's fonts folder; core fonts are checked later."""
         if 'fonts_defined' not in index:
             return
 
@@ -802,7 +802,7 @@ class SkinIndex:
 
         for node in root.iter(*_NAVIGATION_TAGS):
             target = (node.text or "").strip()
-            # a bare number is where focus moves, in the control's own window (GUIAction.cpp:90)
+            # a bare number is where focus moves, in the control's own window
             if target.isdigit() and target != "0":
                 index['ids_referenced'][folder].setdefault(normalize_control_id(target), []).append(
                     {'file': path, 'line': getattr(node, 'sourceline', 0) or 0, 'type': 'control',

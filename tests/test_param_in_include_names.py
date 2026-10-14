@@ -1,14 +1,4 @@
-"""
-Tests for $PARAM resolution in include names.
-
-Tests the fix for the critical bug where includes with $PARAM in their names
-were completely skipped instead of being resolved (skin.py:1348-1351).
-
-Kodi behavior (GUIIncludes.cpp:628):
-- Defined params: Substitute value
-- Undefined params: Replace with empty string (NOT leave as-is)
-- Example: "Dialog_$PARAM[size]" with size undefined → "Dialog_" (param → "")
-"""
+"""$PARAM in include names: a defined param substitutes, an undefined one becomes empty."""
 
 import os
 import sys

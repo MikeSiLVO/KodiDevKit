@@ -31,7 +31,7 @@ class TestCheckSyntax(unittest.TestCase):
         self.assertValid("Integer.IsGreater(Container(50).NumItems,0)")
 
     def test_unknown_operand_name_still_parses(self):
-        # Kodi accepts any name and evaluates it false (GUIInfoManager.cpp:11444).
+        # Kodi accepts any name and evaluates it false
         self.assertValid("Totally.BogusInfo")
 
     def test_operators(self):
@@ -71,13 +71,11 @@ class TestCheckSyntax(unittest.TestCase):
         self.assertValid("Integer.IsGreater(ListItem.Year,$NUMBER[2000])")
 
     def test_localize_keyword_is_case_sensitive(self):
-        # Kodi matches the literal "$LOCALIZE[" (GUIInfoLabel.cpp:196), so a
-        # lowercase spelling keeps its bracket and breaks the parse.
+        # Kodi matches only the literal "$LOCALIZE["; a lowercase one keeps its bracket
         self.assertInvalid("String.IsEqual(ListItem.Label,$Localize[31000])", "misplaced '['")
 
     def test_unclosed_localize_reaches_the_parser(self):
-        # Kodi leaves an incomplete reference in place (GUIInfoLabel.cpp:214-218),
-        # so its '[' still breaks the parse.
+        # Kodi leaves an incomplete reference in place; its '[' still breaks the parse
         self.assertInvalid("String.IsEqual(ListItem.Label,$LOCALIZE[31000)", "missing ']'")
 
     def test_case_hint_only_when_the_keyword_is_miscased(self):
@@ -165,8 +163,7 @@ class TestNegationProbe(unittest.TestCase):
                          infobool.STATE_FALSE)
 
     def test_both_false_means_parse_failure(self):
-        # A failed parse becomes a constant false, so the negation is false too
-        # (InfoExpression.cpp:34-42).
+        # a failed parse becomes a constant false; its negation is false too
         cond = "String.IsEqual($VAR[Foo],x)"
         self.assertEqual(infobool.read_probe(self._response(cond, False, False), cond),
                          infobool.STATE_INVALID)
@@ -181,8 +178,7 @@ class TestNegationProbe(unittest.TestCase):
                          infobool.STATE_OFFLINE)
 
     def test_permission_gated_booleans_use_the_direct_value(self):
-        # The permission layer answers the direct key and the evaluator answers
-        # the negation (XBMCOperations.cpp:60-69), so the pair can disagree.
+        # the permission layer answers the direct key, the evaluator the negation; they can disagree
         cond = "System.CanShutdown"
         self.assertEqual(infobool.read_probe(self._response(cond, True, True), cond),
                          infobool.STATE_TRUE)

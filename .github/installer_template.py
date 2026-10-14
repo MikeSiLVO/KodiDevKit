@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-KodiDevKit Installer
-
-Installs KodiDevKit into Sublime Text's Packages directory.
-Detects OS and Sublime Text installation automatically.
-
-Usage:
-    python install.py
-    python install.py --uninstall
-"""
+"""Install KodiDevKit into Sublime Text's Packages folder, or remove it with --uninstall."""
 
 from __future__ import annotations
 
@@ -28,6 +19,7 @@ PACKAGE_DATA = "__PACKAGE_DATA__"
 
 
 def get_packages_paths() -> list[Path]:
+    """Get the Packages folders Sublime Text may use on this system, in search order."""
     system = platform.system()
     paths = []
     if system == "Windows":
@@ -49,6 +41,7 @@ def get_packages_paths() -> list[Path]:
 
 
 def find_packages_dir() -> Path | None:
+    """Find the first Packages folder Sublime Text may use that exists; None when none does."""
     for path in get_packages_paths():
         if path.is_dir():
             return path
@@ -56,6 +49,7 @@ def find_packages_dir() -> Path | None:
 
 
 def has_package_control(packages_dir: Path) -> bool:
+    """True when Package Control is installed, as a folder or a .sublime-package."""
     if (packages_dir / "Package Control").is_dir():
         return True
     installed = packages_dir.parent / "Installed Packages" / "Package Control.sublime-package"
@@ -63,6 +57,7 @@ def has_package_control(packages_dir: Path) -> bool:
 
 
 def extract_embedded(packages_dir: Path) -> bool:
+    """Extract the embedded package into the Packages folder; False when that fails."""
     dest = packages_dir / PACKAGE_NAME
     print("  Extracting package ...")
     try:
@@ -84,6 +79,7 @@ def extract_embedded(packages_dir: Path) -> bool:
 
 
 def uninstall(packages_dir: Path) -> bool:
+    """Uninstall the package, asking first for a git checkout; False when absent or declined."""
     dest = packages_dir / PACKAGE_NAME
     if not dest.exists():
         print(f"  {PACKAGE_NAME} is not installed.")
@@ -104,6 +100,7 @@ def uninstall(packages_dir: Path) -> bool:
 
 
 def main():
+    """Install the package, or remove it when asked, confirming before replacing an install."""
     is_uninstall = "--uninstall" in sys.argv
 
     print()
@@ -111,7 +108,6 @@ def main():
     print(f"  {'=' * 40}")
     print()
 
-    # Find Sublime Text
     print("  Looking for Sublime Text ...")
     packages_dir = find_packages_dir()
 
@@ -136,7 +132,6 @@ def main():
         input("\n  Press Enter to exit ...")
         return
 
-    # Check existing install
     dest = packages_dir / PACKAGE_NAME
     if dest.exists():
         print(f"  {PACKAGE_NAME} is already installed at:")
@@ -177,7 +172,6 @@ def main():
         shutil.rmtree(dest)
         print()
 
-    # Check Package Control
     if not has_package_control(packages_dir):
         print("  WARNING: Package Control is not installed.")
         print("  KodiDevKit needs Package Control for its dependencies")
@@ -195,7 +189,6 @@ def main():
             return
         print()
 
-    # Install
     success = extract_embedded(packages_dir)
 
     if not success:

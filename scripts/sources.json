@@ -1,0 +1,653 @@
+[
+  {
+    "symbol": "kodidevkit.py:KodiDevKit.find_end_bracket",
+    "kodi": [
+      "xbmc/utils/StringUtils.cpp:StringUtils::FindEndBracket"
+    ]
+  },
+  {
+    "symbol": "kodidevkit.py:_condition_verdict",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveExpressions"
+    ]
+  },
+  {
+    "symbol": "libs/infoprovider/checker.py:CheckerMixin._validate_enum_value",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create",
+      "xbmc/utils/XMLUtils.cpp:XMLUtils::GetBoolean"
+    ]
+  },
+  {
+    "symbol": "libs/infoprovider/checker.py:CheckerMixin.check_file",
+    "kodi": [
+      "xbmc/guilib/GUIListItemLayout.cpp:CGUIListItemLayout::LoadLayout"
+    ]
+  },
+  {
+    "symbol": "libs/infoprovider/tooltips.py:_is_addon_string_id",
+    "kodi": [
+      "xbmc/addons/kodi-dev-kit/include/kodi/AddonBase.h:GetLocalizedString"
+    ]
+  },
+  {
+    "symbol": "libs/skin/include.py:SkinInclude",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CONSTANT_ATTRIBUTES",
+      "xbmc/guilib/GUIIncludes.cpp:CONSTANT_NODES",
+      "xbmc/guilib/GUIIncludes.cpp:EXPRESSION_NODES"
+    ]
+  },
+  {
+    "symbol": "libs/skin/index.py:<module>",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:LocalizeReplacer",
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString",
+      "xbmc/interfaces/builtins/GUIControlBuiltins.cpp:ShiftPage",
+      "xbmc/input/WindowTranslator.cpp:CWindowTranslator::TranslateWindow"
+    ]
+  },
+  {
+    "symbol": "libs/skin/index.py:SkinIndex._extract_id_references_from_xml",
+    "kodi": [
+      "xbmc/guilib/GUIAction.cpp:CGUIAction::GetNavigation"
+    ]
+  },
+  {
+    "symbol": "libs/skin/index.py:custom_window",
+    "kodi": [
+      "xbmc/application/ApplicationSkinHandling.cpp:CApplicationSkinHandling::LoadCustomWindows"
+    ]
+  },
+  {
+    "symbol": "libs/skin/maps.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/maps.py:SkinMaps",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution._insert_nested",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::InsertNested"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution._resolve_constant_value",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveConstant"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution._resolve_params_for_node",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveParametersForNode"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution.resolve",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Resolve"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution.resolve_constants",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveConstants"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution.resolve_includes",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/resolution.py:SkinResolution.set_defaults",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::SetDefaults"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin.__init__",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin._load_constants",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadConstants"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin._load_defaults",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadDefaults"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin._load_expressions",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadExpressions"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin._load_includes",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin._load_maps",
+    "kodi": [
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::LoadMaps"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin._load_variables",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadVariables"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin.lookup_skin_map",
+    "kodi": [
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::Lookup"
+    ]
+  },
+  {
+    "symbol": "libs/skin/skin.py:Skin.update_includes",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Load_Internal"
+    ]
+  },
+  {
+    "symbol": "libs/utils/expressions.py:extract_expression_at_offset",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::GetOperator"
+    ]
+  },
+  {
+    "symbol": "libs/utils/expressions.py:flatten_expressions",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::FlattenExpression"
+    ]
+  },
+  {
+    "symbol": "libs/utils/files.py:read_xbt_names",
+    "kodi": [
+      "xbmc/guilib/XBTFReader.cpp:CXBTFReader::Open"
+    ]
+  },
+  {
+    "symbol": "libs/utils/infobool.py:<module>",
+    "kodi": [
+      "xbmc/interfaces/json-rpc/XBMCOperations.cpp:CXBMCOperations::GetInfoBooleans",
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::ReplaceSpecialKeywordReferences"
+    ]
+  },
+  {
+    "symbol": "libs/utils/infobool.py:check_syntax",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Parse"
+    ]
+  },
+  {
+    "symbol": "libs/utils/infobool.py:is_known_info",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
+    "symbol": "libs/utils/infobool.py:operands",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Parse"
+    ]
+  },
+  {
+    "symbol": "libs/utils/infobool.py:read_probe",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Initialize"
+    ]
+  },
+  {
+    "symbol": "libs/utils/infobool.py:split_info",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::SplitInfoString"
+    ]
+  },
+  {
+    "symbol": "libs/utils/xml.py:param_value",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::GetParameters"
+    ]
+  },
+  {
+    "symbol": "libs/validation/constants.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create",
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::GetInfoLabels",
+      "xbmc/utils/XMLUtils.cpp:XMLUtils::GetBoolean",
+      "xbmc/guilib/VisibleEffect.cpp:CAnimEffect::GetTweener"
+    ]
+  },
+  {
+    "symbol": "libs/validation/font.py:ValidationFont._unloaded_fonts",
+    "kodi": [
+      "xbmc/utils/URIUtils.cpp:URIUtils::HasExtension",
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFonts"
+    ]
+  },
+  {
+    "symbol": "libs/validation/hierarchy.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::Load",
+      "xbmc/windows/GUIMediaWindow.cpp:CGUIMediaWindow::Load",
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::LoadControl",
+      "xbmc/guilib/GUIImage.cpp:CGUIImage::CanFocus",
+      "xbmc/guilib/GUILabelControl.cpp:CGUILabelControl::CanFocus",
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create",
+      "xbmc/guilib/GUIBaseContainer.cpp:CGUIBaseContainer::LoadLayout",
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Load_Internal",
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFontsFromFile",
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadVariables",
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::LoadMaps",
+      "xbmc/guilib/GUIListItemLayout.cpp:CGUIListItemLayout::LoadLayout",
+      "xbmc/guilib/listproviders/StaticProvider.cpp:CStaticListProvider",
+      "xbmc/guilib/IGUIContainer.h:IGUIContainer",
+      "xbmc/guilib/SkinMapManager.cpp:LoadEntries"
+    ]
+  },
+  {
+    "symbol": "libs/validation/ids.py:ValidationIds._window_name_message",
+    "kodi": [
+      "xbmc/input/WindowTranslator.cpp:CWindowTranslator::TranslateWindow"
+    ]
+  },
+  {
+    "symbol": "libs/validation/ids.py:ValidationIds.check",
+    "kodi": [
+      "xbmc/guilib/GUIDialog.cpp:CGUIDialog::OnDeinitWindow"
+    ]
+  },
+  {
+    "symbol": "libs/validation/include.py:resolve_include_file",
+    "kodi": [
+      "xbmc/addons/Skin.cpp:CSkinInfo::GetSkinPath"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._validate_control_children",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::LoadControl"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._validate_label_brackets",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::Parse"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._validate_number",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::GetDimension"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_content",
+    "kodi": [
+      "xbmc/guilib/listproviders/StaticProvider.cpp:CStaticListProvider"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_controls",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::Load"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_coordinates",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::Load"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_font",
+    "kodi": [
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFontsFromFile"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_fonts",
+    "kodi": [
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFontsFromFile"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_fontset",
+    "kodi": [
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFontsFromFile"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_group_control",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::LoadControl"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_include_definition",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadIncludes"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_includes",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Load_Internal"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_layout",
+    "kodi": [
+      "xbmc/guilib/GUIListItemLayout.cpp:CGUIListItemLayout::LoadLayout"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_map",
+    "kodi": [
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::LoadMaps",
+      "xbmc/guilib/SkinMapManager.cpp:LoadEntries"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_variable",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadVariables"
+    ]
+  },
+  {
+    "symbol": "libs/validation/interpreter.py:XmlInterpreter._walk_window",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::Load"
+    ]
+  },
+  {
+    "symbol": "libs/validation/label.py:<module>",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
+    "symbol": "libs/validation/label.py:ValidationLabel.check",
+    "kodi": [
+      "xbmc/addons/Skin.h:SKIN_STRING_RANGE_START"
+    ]
+  },
+  {
+    "symbol": "libs/validation/skinmap.py:<module>",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::Parse",
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::LoadMaps"
+    ]
+  },
+  {
+    "symbol": "libs/validation/skinmap.py:ValidationMap._check_entries",
+    "kodi": [
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::LoadMaps",
+      "xbmc/guilib/SkinMapManager.cpp:LoadEntries"
+    ]
+  },
+  {
+    "symbol": "libs/validation/skinmap.py:extract_map_args",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::Parse"
+    ]
+  },
+  {
+    "symbol": "tests/test_constant_resolution_accuracy.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadConstants"
+    ]
+  },
+  {
+    "symbol": "tests/test_constant_resolution_accuracy.py:TestConstantResolutionAccuracy",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveConstant"
+    ]
+  },
+  {
+    "symbol": "tests/test_control_template_semantics.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create"
+    ]
+  },
+  {
+    "symbol": "tests/test_control_template_semantics.py:TestControlTemplateSemantics.test_button_label_fallback_warns",
+    "kodi": [
+      "xbmc/utils/XMLUtils.cpp:XMLUtils::GetString"
+    ]
+  },
+  {
+    "symbol": "tests/test_control_template_semantics.py:TestControlTemplateSemantics.test_texture_attributes_and_label_textwidth",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::GetTexture"
+    ]
+  },
+  {
+    "symbol": "tests/test_expression_resolution.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveExpressions"
+    ]
+  },
+  {
+    "symbol": "tests/test_extract_expression_at_offset.py:KodiGrammarSourceAnchoredTests",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::GetOperator",
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::Register",
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::ReplaceLocalize",
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Parse"
+    ]
+  },
+  {
+    "symbol": "tests/test_extract_expression_at_offset.py:KodiGrammarSourceAnchoredTests.test_bang_with_whitespace_before_operand",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Parse"
+    ]
+  },
+  {
+    "symbol": "tests/test_extract_expression_at_offset.py:KodiGrammarSourceAnchoredTests.test_nested_localize_inside_localize_stays_intact",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::ReplaceSpecialKeywordReferences"
+    ]
+  },
+  {
+    "symbol": "tests/test_extract_expression_at_offset.py:KodiGrammarSourceAnchoredTests.test_paren_is_operand_char_not_a_boundary",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Parse"
+    ]
+  },
+  {
+    "symbol": "tests/test_hierarchy.py:TestWindowChildren",
+    "kodi": [
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::Load"
+    ]
+  },
+  {
+    "symbol": "tests/test_ids.py:TestBuiltinControls",
+    "kodi": [
+      "xbmc/dialogs/GUIDialogMediaSource.cpp:CONTROL_OK"
+    ]
+  },
+  {
+    "symbol": "tests/test_ids.py:TestBuiltinControls.test_dialogmediasource_ok_cancel_buttons",
+    "kodi": [
+      "xbmc/dialogs/GUIDialogMediaSource.cpp:CONTROL_OK"
+    ]
+  },
+  {
+    "symbol": "tests/test_ids.py:TestWindowIDParser",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
+    "symbol": "tests/test_ids.py:TestWindowIDParser.test_all_window_functions_recognized",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
+    "symbol": "tests/test_infobool.py:TestCheckSyntax.test_localize_keyword_is_case_sensitive",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::ReplaceSpecialKeywordReferences"
+    ]
+  },
+  {
+    "symbol": "tests/test_infobool.py:TestCheckSyntax.test_unclosed_localize_reaches_the_parser",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::ReplaceSpecialKeywordReferences"
+    ]
+  },
+  {
+    "symbol": "tests/test_infobool.py:TestCheckSyntax.test_unknown_operand_name_still_parses",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
+    "symbol": "tests/test_infobool.py:TestNegationProbe.test_both_false_means_parse_failure",
+    "kodi": [
+      "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Initialize"
+    ]
+  },
+  {
+    "symbol": "tests/test_infobool.py:TestNegationProbe.test_permission_gated_booleans_use_the_direct_value",
+    "kodi": [
+      "xbmc/interfaces/json-rpc/XBMCOperations.cpp:CXBMCOperations::GetInfoBooleans"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Resolve"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestConstantWhitelist",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CONSTANT_ATTRIBUTES",
+      "xbmc/guilib/GUIIncludes.cpp:CONSTANT_NODES",
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveConstants"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestConstantWhitelist.test_constant_expands_in_whitelisted_attribute",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveConstant"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestControlDefaults",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::SetDefaults"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestControlDefaults.test_defaults_applied_to_matching_control_type",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::SetDefaults"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestControlDefaults.test_defaults_skip_position_when_posx_exists",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::SetDefaults"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestControlDefaults.test_defaults_skip_position_when_posy_exists",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::SetDefaults"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestExpressionWrapping",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadExpressions"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestExpressionWrapping.test_expression_wrapped_in_brackets",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadExpressions"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestKodiResolutionOrder",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Resolve"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestKodiResolutionOrder.test_resolution_order_constants_before_includes",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Resolve"
+    ]
+  },
+  {
+    "symbol": "tests/test_kodi_resolution.py:TestParameterMerging",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::GetParameters"
+    ]
+  },
+  {
+    "symbol": "tests/test_maps.py:TestMapArgSplitting",
+    "kodi": [
+      "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::Parse"
+    ]
+  },
+  {
+    "symbol": "tests/test_maps.py:TestMapLookup",
+    "kodi": [
+      "xbmc/guilib/SkinMapManager.cpp:CSkinMapManager::Lookup"
+    ]
+  },
+  {
+    "symbol": "tests/test_param_in_include_names.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveParameters"
+    ]
+  },
+  {
+    "symbol": "tests/test_param_resolution.py:TestParamResolution.test_undefined_param_resolves_to_base_name",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveParameters"
+    ]
+  },
+  {
+    "symbol": "tests/test_param_value.py:<module>",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::GetParameters"
+    ]
+  }
+]

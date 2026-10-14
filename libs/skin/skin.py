@@ -38,7 +38,7 @@ class Skin(Addon):
         super().__init__(*args, **kwargs)
         self.type = "skin"
 
-        # the five CGUIIncludes maps plus <map>, keyed by xml folder then name
+        # the five include maps plus <map>, keyed by xml folder then name
         self.include_map: dict[str, dict[str, tuple[Any, dict[str, str], str]]] = {}
         self.default_map: dict[str, dict[str, tuple[Any, str]]] = {}
         self.constant_map: dict[str, dict[str, str]] = {}
@@ -281,7 +281,7 @@ class Skin(Addon):
         return os.path.join(self.path, "media")
 
     def update_include_list(self):
-        """Rebuild every folder's maps from its Includes.xml, dropping the validation index."""
+        """Update every folder's maps from its Includes.xml, dropping the validation index."""
         start_time = time.time()
         logger.debug("update_include_list START")
 
@@ -329,7 +329,7 @@ class Skin(Addon):
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
     def update_includes(self, xml_file, folder, conditional=False):
-        """Update maps from a skin include file and nested ones (CGUIIncludes::Load_Internal)."""
+        """Update maps from a skin include file and nested ones."""
         xml_file = os.path.normpath(xml_file)
         if not os.path.exists(xml_file) or not is_inside(xml_file, self.path):
             logger.info("Could not find include file %s", xml_file)
@@ -351,7 +351,7 @@ class Skin(Addon):
         self._load_maps(root, folder, xml_file)
 
     def _keep_first(self, kind, table, folder, name, node, xml_file, value):
-        """Store the definition unless the name is taken, as try_emplace; record the loser."""
+        """Store the definition unless the name is taken; record the one that loses."""
         if name in table[folder]:
             self.shadowed_defs[folder].append({
                 "kind": kind, "name": name, "file": xml_file,
@@ -362,7 +362,7 @@ class Skin(Addon):
         return True
 
     def _load_defaults(self, root, folder, xml_file):
-        """Index <default type="X"> entries (CGUIIncludes::LoadDefaults)."""
+        """Load <default type="X"> entries, the first definition winning."""
         for node in root.findall("default"):
             control_type = node.attrib.get("type")
             if control_type and node.find("*") is not None:
@@ -370,7 +370,7 @@ class Skin(Addon):
                                  (node, xml_file))
 
     def _load_constants(self, root, folder, xml_file):
-        """Index <constant name="X">value</constant> (CGUIIncludes::LoadConstants)."""
+        """Load <constant name="X"> values, the first definition winning."""
         for node in root.findall("constant"):
             name = node.attrib.get("name")
             if name and node.text:
@@ -379,7 +379,7 @@ class Skin(Addon):
                     self.constant_source_map[folder][name] = (xml_file, node.sourceline or 0)
 
     def _load_expressions(self, root, folder, xml_file):
-        """Index <expression> entries, wrapped in [...] as CGUIIncludes::LoadExpressions does."""
+        """Load <expression> entries, each wrapped in [...], the first definition winning."""
         for node in root.findall("expression"):
             name = node.attrib.get("name")
             if name and node.text:
@@ -388,7 +388,7 @@ class Skin(Addon):
                     self.expression_source_map[folder][name] = (xml_file, node.sourceline or 0)
 
     def _load_variables(self, root, folder, xml_file):
-        """Index <variable name="X"> entries (CGUIIncludes::LoadVariables)."""
+        """Load <variable name="X"> entries, the first definition winning."""
         for node in root.findall("variable"):
             name = node.attrib.get("name")
             if name and node.find("*") is not None:
@@ -396,7 +396,7 @@ class Skin(Addon):
                                  (node, xml_file))
 
     def _load_maps(self, root, folder, xml_file):
-        """Index <map> entries as CSkinMapManager::LoadMaps does, last definition winning."""
+        """Load <map> entries, the last definition winning."""
         for node in root.findall("map"):
             self.map_defs[folder].append((node, xml_file))
             name = node.attrib.get("name")
@@ -404,7 +404,7 @@ class Skin(Addon):
                 self.map_map[folder][name] = (node, xml_file)
 
     def _load_includes(self, root, folder, xml_file, conditional=False):
-        """Index named includes and load <include file> ones in place (LoadIncludes)."""
+        """Load named includes, the first definition winning, and <include file> ones in place."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
             if name and node.find("*") is not None:
@@ -529,7 +529,7 @@ class Skin(Addon):
         return None
 
     def lookup_skin_map(self, folder, map_name, key, _visited=None):
-        """The key's value: own entries first, then the ref chain, per CSkinMapManager::Lookup."""
+        """Look up a key: own entries, then the ref chain; the key itself on a miss."""
         visited = _visited or []
         if map_name in visited:
             logger.warning("Skin map '%s' has a circular ref chain", map_name)

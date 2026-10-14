@@ -1,3 +1,5 @@
+"""JSON-RPC client for a running Kodi, plus the install's paths and language files."""
+
 import os
 from ..utils.files import check_paths
 from ..addon.translations import get_po_file
@@ -71,7 +73,7 @@ class KodiJsonrpc:
 
     @run_async
     def request_async(self, method, params):
-        """Fire-and-forget version of `request()` (runs on a worker thread)."""
+        """Request on a worker thread, fire and forget."""
         return self.request(method, params)
 
     def request(self, method, params=None):
@@ -109,8 +111,7 @@ class KodiJsonrpc:
         logger.debug("Kodi request START: method=%s url=%s", method, self.json_url)
 
         try:
-            # Tight timeout: tooltips can fire from the main thread, so a long
-            # block here freezes the editor (e.g. when the display sleeps).
+            # hovers call this on the main thread
             raw = urlopen(req, timeout=0.5).read()
             request_duration = time.time() - request_start
             logger.debug("Kodi request SUCCESS: method=%s duration=%.3fs", method, request_duration)
@@ -145,7 +146,6 @@ class KodiJsonrpc:
             if bool(s.get("debug_mode", False)):
                 logger.info("RPC transport error for %s: %s", method, exc)
 
-            # 2-second cooldown so repeated tooltips don't all hit the timeout in turn.
             self._cooldown_until = time.time() + 2.0
             logger.debug("Kodi cooldown set: next retry after %.1fs", 2.0)
             return None
@@ -185,7 +185,7 @@ class KodiJsonrpc:
         return None
 
     def get_userdata_addons(self):
-        """List addon folder names under `<userdata>/addons`."""
+        """Get the addon folder names under `<userdata>/addons`."""
         if not self.user_addons_path or not os.path.exists(self.user_addons_path):
             return []
         path = self.user_addons_path
@@ -224,7 +224,7 @@ class KodiJsonrpc:
         return f"{scheme}://{host}:{port}"
 
     def update_labels(self):
-        """Reload PO files: prefer user-installed languages, fall back to core."""
+        """Update `po_files`, preferring user-installed languages over core."""
         po_files = self.get_po_files(self.user_addons_path)
         languages = {i.language for i in po_files}
         core_po_files = self.get_po_files(self.core_addons_path)
@@ -232,7 +232,7 @@ class KodiJsonrpc:
         self.po_files = po_files + core_po_files
 
     def get_po_files(self, folder):
-        """Return PO files for the configured languages under `folder`."""
+        """Get the PO files of the configured languages under the folder."""
         if not folder:
             return []
         po_files = []

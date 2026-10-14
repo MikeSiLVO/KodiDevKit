@@ -46,7 +46,7 @@ _PARSE_MESSAGES = (
 
 
 def _parse_xml_file(xml_file):
-    """Parse a file into its root, as TinyXML reads it when only Kodi-tolerated faults break it."""
+    """Parse a file into its root, recording any error; Kodi-tolerated faults still load."""
     try:
         root = ET.parse(xml_file, PARSER).getroot()
         tolerated_xml_errors.pop(xml_file, None)
@@ -76,6 +76,7 @@ def _syntax_error(xml_file, e):
         found = pattern.match(message)
         if found:
             return {"message": plain.format(*found.groups()), "line": line, "file": xml_file}
+    # the tag-balance pass finds the real line; lxml reports where it gave up
     better = _check_tag_balance(xml_file)
     if better:
         return {"message": better["message"], "line": better["line"], "file": xml_file}
@@ -83,7 +84,7 @@ def _syntax_error(xml_file, e):
 
 
 def _parse_as_tinyxml(xml_file):
-    """Root of the file rewritten as TinyXML reads it, None when Kodi cannot load it either."""
+    """Root of the file with its Kodi-tolerated faults rewritten, None when others remain."""
     try:
         with open(xml_file, "rb") as f:
             text = f.read().decode("utf-8-sig")
@@ -99,7 +100,7 @@ def _parse_as_tinyxml(xml_file):
 
 
 def _as_tinyxml(text):
-    """Rewrite the text as TinyXML reads it: stray '&' dropped, '<' and ']]>' escaped."""
+    """Rewrite the faults Kodi's parser forgives: stray '&' dropped, '<' and ']]>' escaped."""
     out = []
     lead = re.match(r"\s+(?=<\?xml)", text)
     i = lead.end() if lead else 0
@@ -160,7 +161,7 @@ def _copy_tag(text, i, out):
 
 
 def parse_error_issue(xml_file):
-    """Error row for a file that failed to parse or loaded only as TinyXML reads it."""
+    """Error row for a file that failed to parse or loaded only once its faults were rewritten."""
     err = tolerated_xml_errors.get(xml_file) or next(
         (e for e in last_xml_errors if e["file"] == xml_file), None)
     return {
@@ -173,7 +174,7 @@ def parse_error_issue(xml_file):
 
 
 def _extract_type_attr(text, attr_start, attr_end):
-    """The type attribute inside the tag span, empty when it has none."""
+    """Extract the type attribute inside the tag span, empty when it has none."""
     idx = text.find('type=', attr_start, attr_end)
     if idx == -1:
         return ""
@@ -187,7 +188,7 @@ def _extract_type_attr(text, attr_start, attr_end):
 
 
 def _check_tag_balance(xml_file):
-    """Find the opening tag that is never closed as {message, line}, None when they all match."""
+    """Check tag balance: the first fault as {message, line}, or None when all match."""
     try:
         with open(xml_file, 'r', encoding='utf-8', errors='replace') as f:
             text = f.read()
@@ -369,7 +370,7 @@ def check_brackets(label):
 
 
 def param_value(param, value_attr):
-    """Value of one <param>, the attribute before the text (see GUIIncludes.cpp:583)."""
+    """Value of one <param>, the attribute before the text."""
     value = param.get(value_attr)
     if value is None:
         value = (param.text or "").strip()
@@ -377,7 +378,7 @@ def param_value(param, value_attr):
 
 
 def get_params(include, value_attr):
-    """Get an include's named <param> values, keeping the first of each name as Kodi does."""
+    """Get an include's named <param> values; the first of each name wins."""
     params = {}
     for param in include.findall("param"):
         name = param.get("name")

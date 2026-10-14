@@ -1,10 +1,4 @@
-"""
-Tests for constant resolution matching Kodi behavior.
-
-Kodi resolves bare constant names (no $-prefix syntax) in whitelisted
-attribs/nodes via comma-split lookup. See GUIIncludes.cpp:139-153 (load),
-:320-342 (traversal), :641-651 (resolve algorithm).
-"""
+"""Constant resolution: bare names in the listed tags and attributes, swapped piece by piece."""
 
 import os
 import sys
@@ -21,7 +15,7 @@ from tests.test_utils import kodi_resolve
 
 
 class TestConstantResolutionAccuracy(unittest.TestCase):
-    """Constant resolution matches CGUIIncludes::ResolveConstant (GUIIncludes.cpp:641-651)."""
+    """Resolution of bare constant names in the listed tags and attributes."""
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()

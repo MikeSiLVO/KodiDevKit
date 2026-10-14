@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-Build a self-contained install.py with embedded package data.
-
-Zips the package files (excluding dev-only content), base64-encodes the zip,
-and injects it into installer_template.py to produce install.py.
-
-Usage:
-    python build_installer.py [version]
-"""
+"""Build install.py: the package files zipped, base64-encoded and put in the installer template."""
 
 from __future__ import annotations
 
@@ -26,6 +18,7 @@ EXCLUDE = {
 
 
 def should_include(rel: Path) -> bool:
+    """True when no part of the path is excluded or compiled."""
     for part in rel.parts:
         if part in EXCLUDE or part.endswith(".pyc"):
             return False
@@ -33,11 +26,11 @@ def should_include(rel: Path) -> bool:
 
 
 def main():
+    """Build install.py at the repo root, stamped with the version given or "dev"."""
     version = sys.argv[1] if len(sys.argv) > 1 else "dev"
     root = Path(__file__).resolve().parent.parent
     template_path = Path(__file__).resolve().parent / "installer_template.py"
 
-    # Build zip
     buf = io.BytesIO()
     count = 0
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
@@ -53,7 +46,6 @@ def main():
     encoded = base64.b64encode(buf.getvalue()).decode("ascii")
     print(f"Bundled {count} files, zip size: {len(buf.getvalue()) // 1024} KB")
 
-    # Inject into template
     template = template_path.read_text(encoding="utf-8")
     output = template.replace("__VERSION__", version)
     output = output.replace("__PACKAGE_DATA__", encoded)

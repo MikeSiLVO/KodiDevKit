@@ -77,7 +77,7 @@ def eol_info_from_path_patterns(
 
 
 def get_platform() -> str:
-    """Return `'linux'`, `'windows'`, or `'osx'`; falls back to stdlib outside Sublime."""
+    """Get `'linux'`, `'windows'` or `'osx'`, from the stdlib outside Sublime."""
     try:
         import sublime
         return sublime.platform()
@@ -99,7 +99,7 @@ def get_sublime_path() -> str | None:
 
 
 def get_absolute_file_paths(directory: str):
-    """Yield the absolute path of every file under the directory."""
+    """Get the absolute path of every file under the directory, one at a time."""
     for dirpath, _, filenames in os.walk(directory):
         for filename in filenames:
             yield os.path.abspath(os.path.join(dirpath, filename))
@@ -135,7 +135,7 @@ def check_bom(filepath: str) -> bool:
 
 
 def read_xbt_names(path: str) -> Optional[set[str]]:
-    """Lowercased paths packed in an .xbt, read from its index as CXBTFReader::Open does."""
+    """Lowercased paths packed in an .xbt, read from its index."""
     try:
         with open(path, "rb") as f:
             if f.read(4) != b"XBTF" or f.read(1) < b"2":

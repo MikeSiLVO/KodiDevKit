@@ -196,20 +196,15 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
 
 
 class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
-    """Tests that pin the helper's behavior to specific lines of Kodi's
-    InfoExpression / GUIInfoLabel / GUIInfoManager source. If Kodi changes the
-    grammar, these are what to update.
-    """
+    """Tests pinning the helper's operator and keyword handling to Kodi's condition grammar."""
 
     def _at(self, line, needle):
         idx = line.index(needle)
         return idx + len(needle) // 2
 
-    # InfoExpression.cpp:125-139 — operator set is exactly [ ] ! + |
-    # Anything else (including ( ) , . $ etc.) is part of an operand.
+    # operators are exactly [ ] ! + |; anything else, ( ) , . $ included, is operand text
 
     def test_paren_is_operand_char_not_a_boundary(self):
-        # InfoExpression.cpp:276 — non-operator chars accumulate into operand
         line = '<v>String.IsEqual(A,B) + Window.IsActive(home)</v>'
         cursor = self._at(line, "IsEqual")
         self.assertEqual(
@@ -233,9 +228,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
             "$INFO[ListItem.Label]",
         )
 
-    # GUIInfoManager.cpp:11441 — Register() calls ReplaceLocalize on the
-    # expression before the boolean parser sees it.
-    # GUIInfoLabel.cpp:276-282 — ReplaceLocalize handles $LOCALIZE and $NUMBER.
+    # $LOCALIZE and $NUMBER are replaced before the boolean parser sees the expression
 
     def test_localize_brackets_are_masked(self):
         line = '<v>String.IsEqual(Label,$LOCALIZE[40211]) + Skin.HasSetting(x)</v>'
@@ -254,7 +247,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_nested_localize_inside_localize_stays_intact(self):
-        # GUIInfoLabel.cpp:204 — FindEndBracket counts nesting
+        # the closing bracket is found by counting nesting
         line = '<v>String.IsEqual(L,$LOCALIZE[$LOCALIZE[40211]])</v>'
         cursor = self._at(line, "40211")
         self.assertEqual(
@@ -270,11 +263,10 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
             "String.IsEqual($LOCALIZE[1],$LOCALIZE[2])",
         )
 
-    # InfoExpression.cpp:131-132, 266-267 — `!` is a unary prefix that toggles
-    # the invert flag for the operand it precedes.
+    # `!` is a unary prefix inverting the operand it precedes
 
     def test_single_bang_round_trips(self):
-        # Without the `!`, the boolean Kodi returns is INVERTED — silent bug.
+        # dropping the ! would invert the result
         line = '<v>!Skin.HasSetting(Disable.Fanart)</v>'
         cursor = self._at(line, "HasSetting")
         self.assertEqual(
@@ -292,7 +284,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_bang_with_whitespace_before_operand(self):
-        # InfoExpression.cpp:271-272 — whitespace skipped between operators.
+        # whitespace between operators is skipped
         line = '<v>!  Skin.HasSetting(x)</v>'
         cursor = self._at(line, "HasSetting")
         self.assertEqual(
@@ -313,7 +305,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         cursor = self._at(line, "B")
         self.assertEqual(extract_expression_at_offset(line, cursor), "B")
 
-    # InfoExpression.cpp:127-130 — [ and ] are grouping operators at top level.
+    # [ and ] are grouping operators at top level
 
     def test_grouping_brackets_are_top_level_boundaries(self):
         line = '<v>[A | B] + C</v>'
@@ -329,17 +321,14 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_bang_before_grouping(self):
-        # Real Kodi syntax: ![A + B] negates the group.
-        # Cursor on `A` — we return just `A` (the leaf), not the whole group.
+        # cursor on A returns the leaf, not the negated group
         line = '<v>![A + B]</v>'
         cursor = self._at(line, "A")
         self.assertEqual(extract_expression_at_offset(line, cursor), "A")
 
-    # GUIInfoManager.cpp:11450 — InfoExpression vs InfoSingle dispatch on
-    # presence of any of |+[]! — single-condition strings have no operators.
+    # a condition without any of | + [ ] ! is one item, not an expression
 
     def test_single_condition_with_no_operators(self):
-        # Goes through InfoSingle path in Kodi; for us, just one operand.
         line = '<v>Window.IsActive(home)</v>'
         cursor = self._at(line, "home")
         self.assertEqual(

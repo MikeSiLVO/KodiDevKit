@@ -1,4 +1,4 @@
-"""Build, package, and version management commands."""
+"""Commands that zip the add-on, build theme bundles and bump the version."""
 
 from __future__ import annotations
 
@@ -21,14 +21,16 @@ SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 
 def _infos():
+    """Look up the plugin's shared InfoProvider at call time."""
     from .kodidevkit import INFOS
     return INFOS
 
 
 class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
-    """Create an installable zip archive of the currently open addon."""
+    """Command building an installable zip of the loaded skin."""
 
     def is_visible(self):
+        """True when a skin is loaded."""
         infos = _infos()
         if not infos:
             return False
@@ -37,6 +39,7 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
 
     @run_async
     def run(self, pack_textures=True):
+        """Pack the textures unless turned off, zip the result and offer to open its folder."""
         infos = _infos()
         if not infos:
             return None
@@ -56,9 +59,10 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
 
 
 class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
-    """Select and build a theme of the currently open skin."""
+    """Command building one of the skin's themes into its texture bundle."""
 
     def is_visible(self):
+        """True for a skin with a themes folder."""
         infos = _infos()
         if not infos:
             return False
@@ -69,6 +73,7 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
         return addon.type == "skin" and theme_path and os.path.exists(theme_path)
 
     def run(self):
+        """Show the skin's themes in a quick panel."""
         infos = _infos()
         if not infos:
             return None
@@ -84,12 +89,14 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
                                      selected_index=0)
 
     def on_done(self, index: int) -> None:
+        """Build the picked theme in the background."""
         if index == -1:
             return
         self._build_theme_async(index)
 
     @run_async
     def _build_theme_async(self, index: int) -> None:
+        """Build the theme's images into <theme>.xbt and offer to open the theme folder."""
         infos = _infos()
         if not infos:
             return
@@ -125,16 +132,18 @@ def _next_versions(version):
 
 
 class KodidevkitBumpVersionCommand(sublime_plugin.WindowCommand):
-    """Bump the addon version in addon.xml and open blank news and changelog entries for it."""
+    """Command bumping the add-on version, with blank news and changelog entries to fill."""
 
     addon: Addon
     options: list[tuple[str, str]]
 
     def is_visible(self):
+        """True when an add-on is loaded."""
         infos = _infos()
         return bool(infos and getattr(infos, "addon", None))
 
     def run(self):
+        """Offer the next versions and a custom one in a quick panel."""
         infos = _infos()
         addon = getattr(infos, "addon", None) if infos else None
         if not addon:
@@ -147,6 +156,7 @@ class KodidevkitBumpVersionCommand(sublime_plugin.WindowCommand):
         self.window.show_quick_panel(items=items, on_select=self.on_done, selected_index=0)
 
     def on_done(self, index):
+        """Bump to the picked version, or ask for one when Custom is picked."""
         if index == -1:
             return
         version = self.options[index][1]

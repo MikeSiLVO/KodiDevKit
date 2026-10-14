@@ -23,7 +23,7 @@ from libs.validation.hierarchy import (
 
 
 class TestWindowChildren(unittest.TestCase):
-    """Verify WINDOW_CHILDREN matches GUIWindow.cpp:186-268."""
+    """WINDOW_CHILDREN, the tags a window reads."""
 
     def test_tags_kodi_stopped_reading_are_gone(self):
         self.assertNotIn("allowoverlay", WINDOW_CHILDREN)

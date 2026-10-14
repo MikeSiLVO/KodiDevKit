@@ -1,7 +1,4 @@
-"""Rebuild each release's windows.json and obsolete_windows.json from a local xbmc clone.
-
-    python3 scripts/windows.py /path/to/xbmc [remote]
-"""
+"""Rebuild windows.json and obsolete_windows.json per release: windows.py <xbmc clone> [remote]."""
 
 from __future__ import annotations
 
@@ -14,7 +11,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# the engine lives at <root>/libs in KodiDevKit and <root>/src/kdk/libs in kdk
+# shared verbatim between KodiDevKit and kdk; kdk keeps the engine under src/kdk
 _LAYOUTS = [(REPO_ROOT, REPO_ROOT / "data"), (REPO_ROOT / "src" / "kdk", REPO_ROOT / "src" / "kdk" / "data")]
 PACKAGE_ROOT, DATA_DIR = next(((pkg, data) for pkg, data in _LAYOUTS if (pkg / "libs").is_dir()), _LAYOUTS[0])
 
@@ -35,11 +32,11 @@ class Kodi:
         return subprocess.run(["git", "-C", self.src, *args], capture_output=True, text=True).stdout
 
     def show(self, path):
-        """Text of one file at this ref."""
+        """Show one file's text at this ref."""
         return self.git("show", f"{self.ref}:{path}")
 
     def window_ids(self):
-        """Every WINDOW_ constant in WindowIDs.h with its evaluated id."""
+        """Every WINDOW_ constant Kodi defines, with its evaluated id."""
         consts = {}
         for name, expr in re.findall(r"^#define (WINDOW_[A-Z0-9_]+)\s+(.+?)\s*(?://.*)?$",
                                      self.show("xbmc/guilib/WindowIDs.h"), re.M):
@@ -70,7 +67,7 @@ class Kodi:
 
 
 def resolve(src, remote, spec):
-    """The local ref for an `Addon.RELEASES` github_ref."""
+    """Resolve an `Addon.RELEASES` github_ref to a local ref, the newest tag for a glob."""
     kind, _, value = spec.partition(":")
     if kind == "branch":
         return f"{remote}/{value}"
@@ -81,7 +78,7 @@ def resolve(src, remote, spec):
 
 
 def build(src, remote, release):
-    """Write both tables for one release."""
+    """Build both window tables for one release and write them to its data folder."""
     kodi = Kodi(src, resolve(src, remote, release["github_ref"]))
     consts = kodi.window_ids()
     translator = kodi.show("xbmc/input/WindowTranslator.cpp")
@@ -142,6 +139,7 @@ def build(src, remote, release):
 
 
 def main() -> int:
+    """Build the window tables of every release; 1 without a clone path."""
     if len(sys.argv) < 2:
         print(__doc__, file=sys.stderr)
         return 1

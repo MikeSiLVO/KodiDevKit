@@ -34,7 +34,7 @@ def normalize_control_id(control_id):
 
 
 def create_issue(message, file="", line=0, **kwargs):
-    """Build a validation-issue dict with the standard fields plus any extras."""
+    """Create an issue dict with the standard fields plus any extras."""
     issue = {
         "message": message,
         "file": file,
@@ -48,7 +48,7 @@ _PARAM_PATTERN = re.compile(r'\$PARAM\[([^\]]+)\]')
 
 
 def resolve_param_in_name(name, param_context=None, cache=None):
-    """Replace $PARAM in a name from the context, emptying unknown ones as Kodi does."""
+    """Resolve $PARAM in a name from the context, emptying unknown ones."""
     if not name or "$PARAM[" not in name:
         return name
 
@@ -215,7 +215,7 @@ def should_report_progress(count, total):
 
 
 def deduplicate_issues(issues):
-    """Drop issues repeating a file, line and message already seen."""
+    """Deduplicate issues on file, line and message, keeping the first of each."""
     seen = set()
     result = []
     for issue in issues:

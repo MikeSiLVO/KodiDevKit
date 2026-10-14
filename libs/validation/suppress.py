@@ -8,10 +8,10 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# Matches <!-- kdk-ignore --> and <!-- kdk-ignore-file: labels, images -->
+# matches <!-- kdk-ignore --> and <!-- kdk-ignore-file: labels, images -->
 DIRECTIVE = re.compile(r"<!--\s*kdk-ignore(-file)?\s*(?::([^>]*?))?\s*-->", re.IGNORECASE)
 
-# A bare directive with no category list mutes every check.
+# a bare directive with no category list mutes every check
 ALL = "*"
 
 
@@ -30,7 +30,7 @@ def _categories(raw):
 
 
 def _key(path):
-    """Compare paths the way the host filesystem does."""
+    """Key a path so it compares the way the host filesystem does."""
     return os.path.normcase(os.path.abspath(str(path)))
 
 
@@ -42,16 +42,18 @@ class Suppressions:
         self.lines = {}
 
     def add_file(self, path, categories):
+        """Add a file-wide mute for the categories."""
         self.files.setdefault(_key(path), set()).update(categories)
 
     def add_line(self, path, line, categories):
+        """Add a one-line mute for the categories."""
         self.lines.setdefault((_key(path), line), set()).update(categories)
 
     def __bool__(self):
         return bool(self.files or self.lines)
 
     def muted(self, category, path, line):
-        """True if `category` is muted for this file, or for this line of it."""
+        """True when the category is muted for the file, or for that line of it."""
         if not path:
             return False
         wanted = normalize(category)
@@ -63,14 +65,14 @@ class Suppressions:
         return False
 
     def filter(self, category, issues):
-        """Drop the issues in `category` that a directive mutes."""
+        """Drop the category's issues that a directive mutes."""
         if not self:
             return issues
         return [i for i in issues if not self.muted(category, i.get("file"), i.get("line") or 0)]
 
 
 def scan(paths):
-    """Collect every directive found in `paths`."""
+    """Scan the files for every directive."""
     found = Suppressions()
 
     for path in paths:
@@ -89,8 +91,7 @@ def scan(paths):
             if not matches:
                 continue
 
-            # Nothing is ever reported against a comment, so a directive with no
-            # markup beside it must mean the line below
+            # nothing is reported against a comment; a directive alone covers the line below
             alone = not DIRECTIVE.sub("", line).strip()
 
             for match in matches:
@@ -104,7 +105,7 @@ def scan(paths):
 
 
 def scan_skin(addon):
-    """Every directive in the skin's XML folders, Font.xml included."""
+    """Scan the skin's XML folders for every directive, Font.xml included."""
     paths = []
     for folder in getattr(addon, "xml_folders", []) or []:
         directory = os.path.join(addon.path, folder)

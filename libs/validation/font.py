@@ -304,7 +304,7 @@ class ValidationFont:
             filename = (font.get("filename") or "").strip()
             if not name or not filename or is_dynamic_expression(filename):
                 continue
-            # URIUtils::HasExtension compares the lowercased name (GUIFontManager.cpp:604)
+            # Kodi compares the extension of the lowercased name
             (loads if filename.lower().endswith(".ttf") else skips).add(name)
         return skips - loads
 

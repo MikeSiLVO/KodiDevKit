@@ -9,7 +9,6 @@ class ProgressScratchView:
     """Scratch view showing a long task's progress, safe to update from any thread."""
 
     def __init__(self, window, title, icon="📊"):
-        """Create the scratch view in `window` with `title` and tab `icon`."""
         self.window = window
         self.title = title
         self.icon = icon
@@ -19,7 +18,7 @@ class ProgressScratchView:
         self._create_view()
 
     def _create_view(self):
-        """Create the scratch view (must run on main thread)."""
+        """Create the scratch view, retrying on the main thread when it fails."""
         def create():
             self._view = self.window.new_file()
             self._view.set_scratch(True)
@@ -63,19 +62,12 @@ class ProgressScratchView:
         sublime.set_timeout(close_view, 0)
 
     def close_sync(self):
-        """Close the view immediately. Call only from the main thread, so the
-        tab is gone before a follow-up panel or dialog is shown over it."""
+        """Close the view now, from the main thread, before a panel or dialog opens over it."""
         if self._view and self._view.is_valid():
             self._view.close()
 
     def to_results_view(self, name, content, file_regex, line_regex="", base_dir=""):
-        """Repurpose this tab into a read-only results view (main thread).
-
-        `result_file_regex` / `result_line_regex` make matching lines open on
-        double-click and via F4 / Shift+F4, the same as build output. Reusing
-        the tab avoids the flicker of closing the progress view and opening a
-        fresh one.
-        """
+        """Turn this tab into a read-only results view whose lines open like build output."""
         if not (self._view and self._view.is_valid()):
             return
         view = self._view
@@ -87,8 +79,6 @@ class ProgressScratchView:
             settings.set("result_line_regex", line_regex)
         if base_dir:
             settings.set("result_base_dir", base_dir)
-        # Declutter: drop the gutter line numbers (redundant next to the inline
-        # ones), the active-line highlight, and indent guides.
         settings.set("line_numbers", False)
         settings.set("highlight_line", False)
         settings.set("draw_indent_guides", False)
@@ -119,7 +109,7 @@ class ProgressScratchView:
         raise NotImplementedError
 
     def is_valid(self):
-        """Check if the view is still valid."""
+        """True while the view is still open."""
         return self._view is not None and self._view.is_valid()
 
 
@@ -127,12 +117,11 @@ class ValidationProgressView(ProgressScratchView):
     """Validation-specific progress view with a spinner and progress bar."""
 
     def __init__(self, window, check_type):
-        """`check_type` is shown in the tab title (e.g. 'general', 'font')."""
         super().__init__(window, f"Validation Progress - {check_type}", icon="🔍")
         self.check_type = check_type
         self._created_at = time.time()
-        self._min_display_ms = 500  # Hold the progress tab this long so fast checks don't flash
-        self._current_progress = None  # Store current progress state for animation
+        self._min_display_ms = 500
+        self._current_progress = None
 
     def show_file_progress(self, filename, current, total):
         """Render progress for file-by-file validation (e.g. 'File 12 of 50')."""
@@ -219,7 +208,7 @@ class ValidationProgressView(ProgressScratchView):
         sublime.set_timeout(self._animate_spinner, 200)
 
     def remaining_min_display_ms(self):
-        """Delay before swapping to results so a fast check doesn't flash the tab."""
+        """Stop the spinner; the ms left before the tab has shown for its minimum time."""
         self._animation_timer = None
         self._current_progress = None
         elapsed_ms = (time.time() - self._created_at) * 1000
@@ -234,7 +223,7 @@ class ReportProgressView(ProgressScratchView):
         self._current_step = 0
         self._total_steps = 0
         self._last_update_time = 0
-        self._min_update_interval = 0.1  # Minimum 100ms between UI updates (prevent spam)
+        self._min_update_interval = 0.1
         self._pending_message = None
         self._base_message = ""
 
@@ -244,7 +233,7 @@ class ReportProgressView(ProgressScratchView):
         self._current_step = 0
 
     def update_step(self, step, message):
-        """Update progress to `step` with `message`. Throttled to ~10 Hz."""
+        """Update to the step and message, throttling how often it redraws."""
         self._current_step = step
         self._pending_message = (step, message)
 
@@ -275,7 +264,7 @@ class ReportProgressView(ProgressScratchView):
                 self._last_update_time = current_time
 
     def _do_update(self, step, message):
-        """Render the progress panel for `step`/`message`."""
+        """Update the view with the progress bar and step line for the step and message."""
         progress_pct = int((step / self._total_steps) * 100) if self._total_steps > 0 else 0
         bar_width = 50
         filled = int(bar_width * step / self._total_steps) if self._total_steps > 0 else 0
@@ -290,7 +279,7 @@ class ReportProgressView(ProgressScratchView):
             count_str = f"File ({count_match.group(1)}/{count_match.group(2)})"
 
             step_label = f"  Step {step} of {self._total_steps}:"
-            # 13 chars for "  Progress: [" plus the bar width plus the closing ']'.
+            # width of "  Progress: [", the bar and "]"
             total_width = 13 + bar_width + 1
             line1 = f"{step_label}{count_str:>{total_width - len(step_label)}}"
 
@@ -330,5 +319,5 @@ class ReportProgressView(ProgressScratchView):
 
     def close(self):
         """Close the progress view and stop animation timer."""
-        self._animation_timer = None  # Stop animation
+        self._animation_timer = None
         super().close()

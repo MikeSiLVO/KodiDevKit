@@ -12,7 +12,7 @@ logger.propagate = True
 
 
 def get_po_file(po_file_path):
-    """Parsed PO file, or None when it fails to parse."""
+    """Get the parsed PO file, or None when it fails to parse."""
     try:
         return pofile(po_file_path)
     except Exception:
@@ -21,7 +21,7 @@ def get_po_file(po_file_path):
 
 
 def create_new_po_file(path=None):
-    """Create an unsaved PO file with Kodi-style metadata."""
+    """Create an unsaved PO file with a dated gettext header."""
     po_file = polib.POFile(fpath=path)
     mail = ""
     actual_date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())

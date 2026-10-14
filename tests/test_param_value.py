@@ -1,4 +1,4 @@
-"""Include call params are read as GetParameters does, the value attribute before the text."""
+"""An include call param takes its value attribute before its text."""
 
 import os
 import sys

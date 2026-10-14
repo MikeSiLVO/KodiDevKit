@@ -328,7 +328,7 @@ class TestMapReleaseGate(MapTestCase):
 
 
 class TestMapLookup(MapTestCase):
-    """`Skin.lookup_skin_map` against CSkinMapManager::Lookup."""
+    """`Skin.lookup_skin_map`: own entries first, then the ref chain."""
 
     def _skin(self, body):
         self._includes(body)
@@ -374,7 +374,7 @@ class TestMapLookup(MapTestCase):
 
 
 class TestMapArgSplitting(ValidationTestCase):
-    """`extract_map_args` against CGUIInfoLabel::Parse."""
+    """`extract_map_args`: the leading `$MAP[...]` args, None when unclosed."""
 
     def test_two_arguments(self):
         self.assertEqual(

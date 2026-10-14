@@ -1,16 +1,8 @@
-"""Static hierarchy data for context-aware XML validation.
-
-Defines valid children at each nesting level, derived from Kodi C++ source.
-All sets are verified against GUIWindow.cpp, GUIControlFactory.cpp,
-GUIBaseContainer.cpp, GUIEPGGridContainer.cpp, GUIIncludes.cpp,
-GUIFontManager.cpp, and StaticProvider.cpp.
-"""
+"""Which child tags Kodi reads at each nesting level, taken from the loaders in its source."""
 
 from __future__ import annotations
 
-# Window level (GUIWindow.cpp:186-268).
-# Tags processed in CGUIWindow::Load() before and inside the child loop.
-# <include> is valid at author time but resolved before Load() runs.
+# a window's own tags; <include> is resolved before load but valid as written
 WINDOW_CHILDREN = frozenset({
     "previouswindow",
     "defaultcontrol",
@@ -26,43 +18,34 @@ WINDOW_CHILDREN = frozenset({
     "onload",
     "onunload",
     "include",
-    "description",  # Silently ignored by Kodi, universal documentation tag
-    # read by media windows (GUIMediaWindow.cpp)
+    "description",  # ignored by Kodi, allowed anywhere as documentation
+    # read by media windows
     "views",
 })
 
-# <controls> (GUIWindow.cpp:258-268).
-# Only <control> elements are loaded; everything else is silently skipped.
+# a window loads only <control> here and skips the rest
 CONTROLS_CHILDREN = frozenset({"control", "include", "description"})
 
-# <coordinates> (GUIWindow.cpp:234-250).
-# Sub-elements inside <coordinates system="1">.
 COORDINATES_CHILDREN = frozenset({
     "posx", "posy", "left", "top",
     "origin",
 })
 
-# Control types that are groups (GUIControlGroup.h:74, GUIControlGroupList.h).
-# IsGroup() returns true; child <control> elements are recursively loaded
-# by GUIWindow::LoadControl() (GUIWindow.cpp:302).
+# group types, whose child controls the window loads too
 GROUP_TYPES = frozenset({"group", "grouplist"})
 
-# Control types whose CanFocus() always returns false (GUIImage.cpp:446, GUILabelControl.cpp:152).
 NEVER_FOCUSABLE = frozenset({
     "fadelabel", "image", "label", "multiimage", "progress", "ranges", "textbox",
     "videowindow", "visualisation", "renderaddon",
 })
 
-# Container types (GUIControlFactory.cpp:70-107).
-# These inherit IGUIContainer and use LoadLayout() for itemlayout/focusedlayout.
+# container types, which load layouts
 CONTAINER_TYPES = frozenset({
     "list", "panel", "wraplist", "fixedlist",
     "epggrid", "gamecontrollerlist",
 })
 
-# Layout tags (GUIBaseContainer.cpp:1317-1334, GUIEPGGridContainer.cpp:1641-1694).
-# Standard containers use itemlayout + focusedlayout.
-# EPG grid has 6 layout tags.
+# the layouts a container loads; the EPG grid has its own
 STANDARD_LAYOUT_TAGS = frozenset({"itemlayout", "focusedlayout"})
 
 EPG_LAYOUT_TAGS = frozenset({
@@ -71,24 +54,18 @@ EPG_LAYOUT_TAGS = frozenset({
     "rulerlayout", "rulerdatelayout",
 })
 
-# Union of all layout tags (for general checks)
 ALL_LAYOUT_TAGS = STANDARD_LAYOUT_TAGS | EPG_LAYOUT_TAGS
 
-# Layout children: layouts only contain <control> elements
-# (each layout is a CGUIListItemLayout which extends CGUIControlGroup).
+# a layout is a control group
 LAYOUT_CHILDREN = frozenset({"control", "include"})
 
-# <content> children (StaticProvider.cpp:20-34).
-# Static content contains <item> elements. <include> valid at author time.
 CONTENT_CHILDREN = frozenset({"item", "default", "include"})
 
-# <includes> root element (GUIIncludes.cpp:88-99).
-# Child types loaded by Load_Internal(); <map> since Kodi 22.
+# <map> only from Kodi 22
 INCLUDES_CHILDREN = frozenset({
     "include", "default", "constant", "variable", "expression", "map",
 })
 
-# Font.xml hierarchy (GUIFontManager.cpp:67, 426-510).
 FONTS_CHILDREN = frozenset({"fontset"})
 
 FONTSET_CHILDREN = frozenset({"font"})
@@ -98,12 +75,10 @@ FONT_CHILDREN = frozenset({
     "color", "shadow", "aspect", "linespacing",
 })
 
-# <variable> children (GUIIncludes.cpp:160-168, 244-257).
-# Only <value> children with optional condition attribute.
+# <value> with an optional condition
 VARIABLE_CHILDREN = frozenset({"value"})
 
-# <map> children (SkinMapManager.cpp:22-40).
-# Only <entry key="..."> children; anything else is skipped.
+# <entry key> only, the rest skipped
 MAP_CHILDREN = frozenset({"entry"})
 
 

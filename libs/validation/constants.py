@@ -29,13 +29,13 @@ LITERAL_TAGS = frozenset({
     "usecontrolcoords", "width", "wrapmultiline",
 })
 
-# Tags whose text is a bracketed condition that must balance
+# tags whose text is a bracketed condition that must balance
 BRACKET_TAGS = {"visible", "enable", "usealttexture", "selected", "expression", "onclick", "onback"}
 
-# Tags that are valid only in include definitions, not in expanded controls
+# tags that are valid only in include definitions, not in expanded controls
 INCLUDE_DEFINITION_TAGS = {"param", "definition", "nested"}
 
-# Action-ish tags that should be "noop" when intentionally empty
+# action tags that should be "noop" when intentionally empty
 NOOP_TAGS = {
     "onclick",
     "onfocus",
@@ -47,7 +47,6 @@ NOOP_TAGS = {
     "onback",
 }
 
-# Position/dimension tags
 POS_TAGS = {
     "posx",
     "posy",
@@ -84,19 +83,19 @@ POS_TAGS = {
     "depth",
 }
 
-# Control tags Kodi reads every copy of, any other only once (GUIControlFactory.cpp:582)
+# control tags Kodi reads every copy of, any other only once
 REPEATABLE_TAGS = {
     "visible", "animation", "include", "description",
     "onup", "ondown", "onleft", "onright", "onnext", "onprev", "onback", "oninfo",
     "onclick", "ontextchange", "onfocus", "onunfocus", "altclick",
 }
 
-# Repeatable per control type; other controls use only the first <label> or <info>
+# repeatable per control type; other controls use only the first <label> or <info>
 ALLOWED_MULTI = {
     ("control", "fadelabel"): {"label", "info"},
 }
 
-# Read through GetInfoLabels, which skips an empty copy (GUIControlFactory.cpp:683)
+# Kodi skips an empty copy of these
 LABEL_READ_TAGS = {
     "label", "info", "hinttext", "texture", "imagepath", "videofilter", "stretchmode", "rotation",
     "pixels", "imagefilter", "diffusefilter", "controllerid", "controlleraddress", "portaddress",
@@ -148,10 +147,9 @@ ALLOWED_VALUES = {
     "easing": {"inout", "in", "out"},
 }
 
-# Enum types that Kodi parses case-insensitively (see XMLUtils.cpp:213, VisibleEffect.cpp:102)
+# Kodi compares these case-insensitively
 CASE_INSENSITIVE_ENUMS = {"bool", "orientation", "tween", "easing", "aspect"}
 
-# Severity levels for validation issues
 SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"
 

@@ -24,7 +24,7 @@ def _xml_folders(addon_path):
 
 
 class KodiAdb:
-    """Class to communicate with Android Devices via ADB."""
+    """ADB client that pushes files to and pulls logs from an Android Kodi device."""
 
     def __init__(self):
         self.is_busy = False
@@ -35,7 +35,7 @@ class KodiAdb:
         self.setup(DEFAULT_SETTINGS)
 
     def setup(self, settings):
-        """Pull `remote_ip` and `remote_userdata_folder` out of `settings`."""
+        """Set up the device address and userdata folder from the settings."""
         self.settings = settings
         self.userdata_folder = self.settings.get("remote_userdata_folder")
         self.remote_ip = self.settings.get("remote_ip")
@@ -48,7 +48,7 @@ class KodiAdb:
 
     @staticmethod
     def cmd(program, args):
-        """Run `program` with `args` via cmd shell, logging output."""
+        """Run the program with its args, logging its output; a failure is logged, never raised."""
         command = [program]
         for arg in args:
             command.append(arg)
@@ -62,7 +62,7 @@ class KodiAdb:
             logging.warning(e)
 
     def adb_connect(self, server_ip):
-        """`adb connect <server_ip>`."""
+        """Connect adb to the device and remember its address."""
         self.remote_ip = server_ip
         logging.warning("Connect to remote with server_ip %s" % server_ip)
         self.cmd("adb", ["connect", server_ip])
@@ -70,7 +70,7 @@ class KodiAdb:
 
     @check_busy
     def adb_reconnect(self, server_ip=""):
-        """Disconnect, then reconnect to `server_ip` (defaults to the saved one)."""
+        """Reconnect adb, to the given address or else the saved one."""
         if not server_ip:
             server_ip = self.remote_ip
         self.adb_disconnect()
@@ -82,16 +82,14 @@ class KodiAdb:
         self.adb_reconnect(server_ip)
 
     def adb_disconnect(self):
-        """
-        disconnect adb devices
-        """
+        """Disconnect adb from every device."""
         logging.warning("Disconnect from remote")
         self.cmd("adb", ["disconnect"])
         self.connected = False
 
     @check_busy
     def adb_pull(self, path, target):
-        """`adb pull <path> <target>`."""
+        """Pull a device path to the local target."""
         self.cmd("adb", ["pull", path, target])
 
     @run_async
@@ -128,7 +126,7 @@ class KodiAdb:
     @run_async
     @check_busy
     def get_screenshot(self, f_open, target):
-        """Take a device screenshot, pull it to `target`, then open with `f_open`."""
+        """Get a device screenshot and open it."""
         logging.warning("Pull screenshot from remote")
         self.cmd("adb", ["shell", "screencap", "-p", "/sdcard/screen.png"])
         self.cmd("adb", ["pull", "/sdcard/screen.png", target])
@@ -139,7 +137,7 @@ class KodiAdb:
     @run_async
     @check_busy
     def clear_cache(self):
-        """Delete `<userdata>/temp` on the device."""
+        """Clear the device cache by deleting temp in Kodi's home folder."""
         if not self.userdata_folder:
             logging.warning("remote_userdata_folder not configured")
             return
@@ -147,7 +145,5 @@ class KodiAdb:
 
     @run_async
     def reboot(self):
-        """
-        complete device reboot
-        """
+        """Reboot the device."""
         self.cmd("adb", ["reboot"])

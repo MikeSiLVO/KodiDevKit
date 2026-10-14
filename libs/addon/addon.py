@@ -14,7 +14,6 @@ from ..polib import polib
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
-    # Avoid duplicate handlers after reloads; defer to root if present.
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
@@ -97,7 +96,7 @@ class Addon:
         return self.xml_folders[0]
 
     def load_xml_folders(self):
-        """Record the Default/720p or 1080i skin folder when the addon has one."""
+        """Load the Default/720p or 1080i skin folder when the addon has one."""
         paths = [os.path.join(self.path, "resources", "skins", "Default", "720p"),
                  os.path.join(self.path, "resources", "skins", "Default", "1080i")]
         folder = check_paths(paths)
@@ -144,11 +143,11 @@ class Addon:
         return Addon(path=path, settings=settings)
 
     def update_labels(self):
-        """Reload `po_files` from the language folder."""
+        """Update `po_files` from the language folder."""
         self.po_files = self.get_po_files(self.lang_path)
 
     def get_po_files(self, folder):
-        """PO files of the configured resource.language.* add-on, no English fallback."""
+        """Get the PO files of the configured resource.language.* add-on, no English fallback."""
         po_files = []
 
         lang = (self.settings.get("language") or "").strip()
@@ -179,7 +178,7 @@ class Addon:
         return self._index_builder
 
     def update_xml_files(self):
-        """Rebuild `window_files`: every .xml under each folder but Font.xml, dropping the index."""
+        """Update `window_files`: every .xml under each folder but Font.xml, dropping the index."""
         self.validation_index = None
         self.window_files = {}
         for path in self.xml_folders:
@@ -237,7 +236,7 @@ class Addon:
         self.po_files[0].save()
 
     def translate_path(self, path):
-        """Absolute path of a texture, resolving special://skin/ or the media folder."""
+        """Translate a texture path to absolute, via special://skin/ or the media folder."""
         if path.startswith("special://skin/"):
             return os.path.join(self.path, path.replace("special://skin/", ""))
         else:

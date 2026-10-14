@@ -1,12 +1,4 @@
-"""Refresh bundled Kodi reference snapshots from upstream xbmc/xbmc.
-
-For each release listed in `Addon.RELEASES`, fetch the latest `colors.xml` and
-`strings.po` matching its `github_ref` and write them to the package's
-`data/kodi/<release>/`. Compares SHA256 first; only writes on change.
-
-Snapshots are committed, so this runs only when refreshing them. Requires no
-extra Python deps - uses `urllib`.
-"""
+"""Refresh each release's bundled colors.xml and strings.po from xbmc/xbmc when they change."""
 
 from __future__ import annotations
 
@@ -22,8 +14,7 @@ from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The engine lives at <root>/libs in KodiDevKit and <root>/src/kdk/libs in kdk;
-# this script is shared verbatim, so find the layout rather than assume one.
+# shared verbatim between KodiDevKit and kdk; kdk keeps the engine under src/kdk
 _LAYOUTS = [(REPO_ROOT, REPO_ROOT / "data"), (REPO_ROOT / "src" / "kdk", REPO_ROOT / "src" / "kdk" / "data")]
 PACKAGE_ROOT, DATA_DIR = next(((pkg, data) for pkg, data in _LAYOUTS if (pkg / "libs").is_dir()), _LAYOUTS[0])
 DATA_ROOT = DATA_DIR / "kodi"
@@ -31,7 +22,6 @@ DATA_ROOT = DATA_DIR / "kodi"
 GITHUB_API = "https://api.github.com/repos/xbmc/xbmc"
 GITHUB_RAW = "https://raw.githubusercontent.com/xbmc/xbmc"
 
-# Files to fetch from each ref. (remote_path, local_filename).
 FILES = [
     ("system/colors.xml", "colors.xml"),
     ("addons/resource.language.en_gb/resources/strings.po", "strings.po"),
@@ -39,8 +29,8 @@ FILES = [
 
 
 def _gh(url: str) -> bytes:
-    # Anonymous callers get 60 requests/hour per IP, which shared CI runners
-    # burn through, so use a token when one is in the environment.
+    """Get the URL's body, sent with the environment's GitHub token when there is one."""
+    # anonymous calls are limited per IP, and shared CI runners use that up
     headers = {"User-Agent": "kdk-update-kodi-refs"}
     token = os.environ.get("GITHUB_TOKEN")
     if token:
@@ -69,19 +59,19 @@ def _resolve_ref(spec: str) -> str:
     ]
     if not candidates:
         raise RuntimeError(f"no {kind} matched {value!r} in xbmc/xbmc")
-    # Releases endpoint returns most-recent first.
+    # the releases endpoint lists newest first
     return candidates[0]["tag_name"]
 
 
 def _load_releases() -> list[dict]:
-    """Return `Addon.RELEASES` entries that declare a `github_ref`."""
+    """Load the `Addon.RELEASES` entries that declare a `github_ref`."""
     sys.path.insert(0, str(PACKAGE_ROOT.parent))
     addon = importlib.import_module(f"{PACKAGE_ROOT.name}.libs.addon.addon")
     return [r for r in addon.Addon.RELEASES if r.get("github_ref")]
 
 
 def _refresh_one(release: dict) -> list[str]:
-    """Fetch `release`'s files; return list of changed local paths (relative to DATA_ROOT)."""
+    """Refresh one release's files; the changed ones as paths relative to the repo root."""
     name = release["name"]
     ref_spec = release["github_ref"]
     resolved = _resolve_ref(ref_spec)
@@ -96,7 +86,7 @@ def _refresh_one(release: dict) -> list[str]:
         try:
             content = _gh(url)
         except (HTTPError, URLError) as e:
-            # Continuing here would ship a release with no Kodi-core data.
+            # carrying on would ship a release without Kodi-core data
             raise RuntimeError(f"{remote_path}: {e}") from e
 
         new_hash = hashlib.sha256(content).hexdigest()
@@ -120,6 +110,7 @@ def _refresh_one(release: dict) -> list[str]:
 
 
 def main() -> int:
+    """Refresh every release with a github_ref; 0 when done, 1 with none, 2 on a failure."""
     releases = _load_releases()
     if not releases:
         print("No releases with `github_ref` configured in Addon.RELEASES", file=sys.stderr)

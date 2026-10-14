@@ -1,4 +1,4 @@
-"""Validation and check orchestration mixin for InfoProvider."""
+"""InfoProvider mixin that runs the validators and the per-file checks."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def _core_po(path):
 
 
 class CheckerMixin:
-    """All validation: dispatching, per-file checks, reporting."""
+    """Mixin running every check, the validators and the per-file ones."""
 
     addon: Any
     template_attribs: dict
@@ -122,7 +122,7 @@ class CheckerMixin:
         return set()
 
     def _get_includes_for_folder(self, folder: str) -> list:
-        """Flatten the folder's include, variable and default maps into one list of rows."""
+        """Get the folder's include, variable and default maps as one list of rows."""
         if not self.addon:
             return []
 
@@ -166,7 +166,7 @@ class CheckerMixin:
         return [{"message": f"No {kind} issues found", "file": "", "line": 0}]
 
     def resolve_xml(self, path_or_root, *, folder=None, strict=False):
-        """Include-resolved copy of a tree or file; without strict, failures fall back."""
+        """Resolve a skin's tree or file on a copy; on failure None or the input, or raise."""
         from ..skin.skin import Skin
 
         if hasattr(path_or_root, "tag"):
@@ -193,7 +193,7 @@ class CheckerMixin:
             return root
 
         try:
-            # resolve() mutates in place, as CGUIIncludes::Resolve does
+            # resolve() mutates in place
             resolved_root = copy.deepcopy(root)
             sk.resolver.resolve(resolved_root, f)
             return resolved_root
@@ -224,7 +224,7 @@ class CheckerMixin:
         return fn(progress_callback=progress_callback) or []
 
     def get_suppressions(self):
-        """Cached `kdk-ignore` directives for the current skin; rebuilt when the skin reloads."""
+        """Get the skin's `kdk-ignore` directives, cached until the skin reloads."""
         cached = getattr(self.addon, "_kdk_suppressions", None)
         if cached is None:
             cached = scan_skin(self.addon)
@@ -364,7 +364,7 @@ class CheckerMixin:
         return listitems
 
     def _add_issue(self, listitems, node, message, identifier="", severity=SEVERITY_WARNING):
-        """Append an issue at the node's line; check_file fills in the file later."""
+        """Add an issue at the node's line; check_file fills in the file later."""
         issue = create_issue(
             message=message,
             file="",
@@ -376,7 +376,7 @@ class CheckerMixin:
         listitems.append(issue)
 
     def _validate_brackets(self, listitems, node, text):
-        """Report an empty or unbalanced condition; returns whether the text is usable."""
+        """Validate a condition, reporting it if empty or unbalanced; returns whether it passed."""
         if not text:
             self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR)
             return False
@@ -389,7 +389,7 @@ class CheckerMixin:
         return True
 
     def _validate_enum_value(self, listitems, node, value, value_type, attr_name=None):
-        """Report a value outside ALLOWED_VALUES for its type; returns whether it passed."""
+        """Validate a value against ALLOWED_VALUES, reporting a miss; returns whether it passed."""
         if value_type not in ALLOWED_VALUES:
             return True
         if is_dynamic_expression(value):
@@ -400,7 +400,7 @@ class CheckerMixin:
                 self._add_issue(listitems, node, problem, value, severity=SEVERITY_WARNING)
             return problem is None
 
-        # lowercased by Kodi first (GUIControlFactory.cpp orientation, XMLUtils::GetBoolean)
+        # Kodi lowercases these before comparing
         if value_type in CASE_INSENSITIVE_ENUMS:
             normalized_value = value.lower()
             if normalized_value not in ALLOWED_VALUES[value_type]:
@@ -420,7 +420,7 @@ class CheckerMixin:
         return True
 
     def _validate_variable_values(self, listitems, node, var_text, value_type, folder, tag_name=None):
-        """Check every <value> of the $VAR definition against the tag's value type."""
+        """Validate every <value> of the $VAR definition against the tag's value type."""
         var_name = extract_variable_name(var_text)
         if not var_name:
             return True
@@ -674,7 +674,6 @@ class CheckerMixin:
                     else:
                         seen.add(tag_low)
 
-            # attribute names always checked; values wait for the resolved pass when it runs
             for k, v in subnode.attrib.items():
                 if k == "description":
                     continue
@@ -692,7 +691,7 @@ class CheckerMixin:
                     continue
                 value_type = subnodes[subnode.tag][k]
                 if value_type in ["int", "position"]:
-                    # CGUIListItemLayout falls back to the container size for a non-numeric size
+                    # a layout falls back to the container size for a non-numeric size
                     if subnode.tag in ALL_LAYOUT_TAGS and v == "auto":
                         continue
                     vv = v.rstrip("%r") if value_type == "position" else v
@@ -720,7 +719,7 @@ class CheckerMixin:
         if self._can_resolve():
             resolved_issues = self._check_file_resolved(root, path, folder)
             if resolved_issues:
-                # Source-pass issues take priority on collision.
+                # source-pass issues win on collision
                 seen = {(item["line"], item["message"]) for item in listitems}
                 for item in resolved_issues:
                     key = (item["line"], item["message"])

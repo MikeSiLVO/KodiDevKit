@@ -1,4 +1,4 @@
-"""Image validation for Kodi skins."""
+"""Checks image references against the index's findings, one issue per usage site."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationImage:
-    """Validates image references used by Kodi skins."""
+    """Checker for missing, miscased and misplaced images, and for texture bundles."""
 
     def __init__(self, addon, validation_index=None, window_filenames=()):
         self.addon = addon

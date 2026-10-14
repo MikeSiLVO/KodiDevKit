@@ -215,7 +215,7 @@ def expression_names(text: str) -> list[str]:
 
 def flatten_expressions(text: str, expression_map: dict[str, str],
                         _resolved: Optional[list[str]] = None) -> tuple[str, set[str]]:
-    """Expand $EXP per CGUIIncludes::FlattenExpression, keeping unknown names for the caller."""
+    """Flatten $EXP references, keeping unknown names for the caller."""
     if not text:
         return text, set()
 
@@ -273,7 +273,7 @@ def _kodi_macro_mask(text: str) -> set:
 
 def extract_expression_at_offset(line_text: str, cursor_offset: int) -> str:
     """Smallest Kodi boolean sub-expression around the offset, its leading ! included."""
-    # operators are [ ] ! + | (InfoExpression::GetOperator); parens hold a call together
+    # operators are [ ] ! + |; parens hold a call together
     if not line_text:
         return ""
     n = len(line_text)

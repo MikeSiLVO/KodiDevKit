@@ -1,10 +1,10 @@
-"""SkinMaps: the five CGUIIncludes maps the resolver reads."""
+"""SkinMaps: the five include maps the resolver reads."""
 
 from __future__ import annotations
 
 
 class SkinMaps:
-    """The five CGUIIncludes maps, each keyed by xml folder."""
+    """Includes, defaults, constants, variables and expressions, each keyed by xml folder."""
 
     def __init__(self):
         self.includes = {}

@@ -1,4 +1,4 @@
-"""Skin map validation for Kodi skins (CSkinMapManager)."""
+"""Checks `<map>` definitions and `$MAP[]` usage against what Kodi loads."""
 
 from __future__ import annotations
 
@@ -16,15 +16,15 @@ from .constants import SEVERITY_ERROR
 
 logger = logging.getLogger(__name__)
 
-# CSkinMapManager landed in Kodi 22; older releases print $MAP[] as plain text.
+# skin maps start with Kodi 22; older releases print $MAP[] as plain text
 MAPS_SINCE_RELEASE = "piers"
 
-# Kodi matches the format prefixes case-sensitively (GUIInfoLabel.cpp:340-346).
+# Kodi matches the format prefixes case-sensitively
 MAP_REF_REGEX = re.compile(r"\$(?:ESC)?MAP\[")
 
 
 def extract_map_args(match_text):
-    r"""Extract the leading `$MAP[...]` args as CGUIInfoLabel::Parse does; None when unclosed."""
+    """Extract the leading `$MAP[...]` args; None when unclosed."""
     start = match_text.find('[')
     if start == -1:
         return None
@@ -42,15 +42,14 @@ def extract_map_args(match_text):
 
 
 class ValidationMap:
-    """Validates `<map>` definitions and `$MAP[]` usage in Kodi skins."""
+    """Checker for `<map>` definitions and `$MAP[]` usage."""
 
     def __init__(self, addon):
         self.addon = addon
-        # Cache for parameter resolution: (map_name, frozenset(params)) -> resolved_name
         self._resolution_cache = {}
 
     def check(self, progress_callback=None):
-        """Find malformed, undefined, or unused skin maps."""
+        """Check skin maps, one issue row per malformed, undefined or unused map."""
         issues = []
         supported = self._release_supports_maps()
 
@@ -92,11 +91,11 @@ class ValidationMap:
         return resolve_param_in_name(map_name, param_context, self._resolution_cache)
 
     def _collect_definitions(self, folder):
-        """Every `<map>` in load order, with its ref and where it was written."""
+        """Collect every `<map>` in load order, with its ref and where it was written."""
         definitions = []
         for node, file_path in getattr(self.addon, "map_defs", {}).get(folder, []):
             definitions.append({
-                # Kodi stores name/ref verbatim, so whitespace is not trimmed here.
+                # Kodi stores name and ref verbatim, whitespace included
                 "name": node.attrib.get("name") or "",
                 "ref": node.attrib.get("ref") or "",
                 "node": node,
@@ -106,7 +105,7 @@ class ValidationMap:
         return definitions
 
     def _collect_usages(self, folder, progress_callback=None):
-        """Every `$MAP[]` / `$ESCMAP[]` reference in the folder and the shortcuts files."""
+        """Collect every `$MAP[]` / `$ESCMAP[]` reference in the folder and the shortcuts files."""
         paths = [
             os.path.join(self.addon.path, folder, xml_file)
             for xml_file in self.addon.window_files.get(folder, [])
@@ -137,7 +136,7 @@ class ValidationMap:
         return usages
 
     def _check_definitions(self, definitions, winners):
-        """Names Kodi drops, entries it skips, and refs that go nowhere."""
+        """Check for names Kodi drops, entries it skips, and refs that go nowhere."""
         issues = []
         seen = {}
 
@@ -174,7 +173,7 @@ class ValidationMap:
         return issues
 
     def _check_entries(self, definition):
-        """`<entry>` children Kodi refuses to load (SkinMapManager.cpp:22-40)."""
+        """Check for `<entry>` children Kodi refuses to load."""
         issues = []
         name = definition["name"]
         keys = set()
@@ -214,7 +213,7 @@ class ValidationMap:
         return issues
 
     def _check_refs(self, winners):
-        """Unknown ref targets and ref chains that loop back on themselves."""
+        """Check for unknown ref targets and ref chains that loop back on themselves."""
         issues = []
         reported_cycles = set()
 
@@ -253,7 +252,7 @@ class ValidationMap:
 
     @staticmethod
     def _ref_cycle(name, winners):
-        """Names forming the loop `name` leads into, or None when the chain ends."""
+        """Names forming the loop the map leads into, or None when the chain ends."""
         chain = [name]
         current = name
         while True:
@@ -266,7 +265,7 @@ class ValidationMap:
             current = ref
 
     def _check_usages(self, folder, winners, usages):
-        """Broken `$MAP[]` syntax, unknown map names, and definitions nothing reaches."""
+        """Check for broken `$MAP[]` syntax, unknown map names, and definitions nothing reaches."""
         issues = []
         referenced = set()
 
@@ -308,7 +307,7 @@ class ValidationMap:
         return issues
 
     def _check_unused(self, winners, referenced):
-        """Maps no `$MAP[]` reaches, directly or through another map's ref."""
+        """Check for maps no `$MAP[]` reaches, directly or through another map's ref."""
         reachable = set()
         pending = [name for name in referenced if name in winners]
         while pending:

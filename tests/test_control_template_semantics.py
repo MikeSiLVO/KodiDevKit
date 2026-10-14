@@ -1,4 +1,4 @@
-"""Tests for control tags and attributes Kodi consumes, checked against GUIControlFactory.cpp."""
+"""Tests for the control tags and attributes Kodi reads."""
 
 import os
 import shutil
@@ -129,7 +129,7 @@ class TestControlTemplateSemantics(unittest.TestCase):
 </control>""")
 
     def test_texture_attributes_and_label_textwidth(self):
-        """Every texture GetTexture reads takes its attributes; a label reads textwidth."""
+        """Every texture tag Kodi reads takes the texture attributes; a label reads textwidth."""
         self._assert_clean("""
 <control type="button">
     <texturefocus background="true" infill="false">a.png</texturefocus>
@@ -162,7 +162,7 @@ class TestControlTemplateSemantics(unittest.TestCase):
 </control>""")
 
     def test_button_label_fallback_warns(self):
-        """Buttons read their label through GetString, which ignores fallback."""
+        """Buttons read their label as a plain string, which ignores fallback."""
         issues = self._issues("""
 <control type="button">
     <label fallback="424">$INFO[ListItem.Label]</label>

@@ -666,7 +666,7 @@ def _generate_file_section(file_path, issues, server_port):
     if has_valid_file:
         file_name = os.path.basename(file_path)
         try:
-            file_link = Path(file_path).as_uri()  # Cross-platform file:// URL
+            file_link = Path(file_path).as_uri()
         except (ValueError, OSError):
             file_link = None
     else:
@@ -727,7 +727,7 @@ def _generate_file_section(file_path, issues, server_port):
 
 
 def _get_css_styles():
-    """Return CSS styles for the HTML report."""
+    """Get the report's CSS."""
     return """
         * {
             margin: 0;

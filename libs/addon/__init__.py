@@ -1,1 +1,1 @@
-"""Kodi addon package for addon representation and management."""
+"""Addon model and its PO file helpers."""

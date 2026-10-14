@@ -705,7 +705,7 @@ class TestAlarmClockException(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create minimal Includes.xml (required for validation to work)
+        # validation needs an Includes.xml, even an empty one
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
 </includes>"""
@@ -861,20 +861,12 @@ class TestAlarmClockException(ValidationTestCase):
 
 
 class TestWindowIDParser(ValidationTestCase):
-    """Test Window.* vs Control.* function distinction.
-
-    Window.* functions take window IDs (not control IDs).
-    Based on Kodi source: xbmc/GUIInfoManager.cpp lines 7971-7979
-
-    Reference: libs/skin.py line 3179 (window_regex)
-    Bug fix: Eliminated 6 false positives for undefined custom windows
-    """
+    """Window.* conditions, which take window ids, never control ids."""
 
     def setUp(self):
         """Create temporary skin directory for each test."""
         self.test_dir = tempfile.mkdtemp()
 
-        # Create addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -889,7 +881,7 @@ class TestWindowIDParser(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create minimal Includes.xml (required for validation to work)
+        # validation needs an Includes.xml, even an empty one
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
 </includes>"""
@@ -919,11 +911,9 @@ class TestWindowIDParser(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Should be flagged as undefined WINDOW ID, not control ID
         window_issues = [i for i in issues if "99999" in i.get("message", "") and "window" in i.get("message", "").lower()]
         self.assertTrue(len(window_issues) > 0, "Should flag 99999 as undefined window ID")
 
-        # Should NOT be flagged as control ID
         control_issues = [i for i in issues if "99999" in i.get("message", "") and "control" in i.get("message", "").lower()]
         self.assertEqual(len(control_issues), 0, f"Should NOT flag 99999 as control ID. Found: {control_issues}")
 
@@ -944,13 +934,11 @@ class TestWindowIDParser(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Should check 1105 as window ID (may or may not be defined)
-        # Key is that it's NOT validated as a control ID
         control_issues = [i for i in issues if "1105" in i.get("message", "") and "control" in i.get("message", "").lower()]
         self.assertEqual(len(control_issues), 0, "Window.Previous should not validate 1105 as control ID")
 
     def test_all_window_functions_recognized(self):
-        """All Window.* functions from GUIInfoManager.cpp recognized."""
+        """Every Window.* condition and Dialog.Close is read as a window reference."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -987,7 +975,6 @@ class TestWindowIDParser(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # All these IDs should be checked as window IDs, not control IDs
         test_ids = ["88888", "88889", "88890", "88891", "88892", "88893", "88894", "88895"]
 
         for test_id in test_ids:
@@ -1015,12 +1002,9 @@ class TestWindowIDParser(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Control.IsVisible(10000) should check for control ID
         control_issues = [i for i in issues if "10000" in i.get("message", "") and "control" in i.get("message", "").lower()]
         self.assertTrue(len(control_issues) > 0, "Control.IsVisible should validate 10000 as control ID")
 
-        # Window.IsActive(10000) should check for window ID (10000 is valid home window)
-        # It should NOT appear in control ID errors
         window_as_control_issues = [i for i in issues
                                     if "10000" in i.get("message", "")
                                     and "window" in i.get("message", "").lower()
@@ -1030,21 +1014,12 @@ class TestWindowIDParser(ValidationTestCase):
 
 
 class TestBuiltinControls(unittest.TestCase):
-    """Test Kodi builtin controls from C++ source.
-
-    Kodi creates certain controls programmatically in C++ code.
-    These controls don't appear in the skin XML but can be referenced.
-
-    Reference: data/kodi_builtin_controls.xml
-    Kodi source: xbmc/dialogs/GUIDialogMediaSource.cpp lines 54-55
-    Bug fix: Eliminated 2 false positives for DialogMediaSource OK/Cancel
-    """
+    """The controls Kodi creates in code, which skins may reference without defining."""
 
     def setUp(self):
         """Create temporary skin directory for each test."""
         self.test_dir = tempfile.mkdtemp()
 
-        # Create addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1059,7 +1034,6 @@ class TestBuiltinControls(unittest.TestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Create minimal Includes.xml (required for validation to work)
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
 </includes>"""
@@ -1072,13 +1046,8 @@ class TestBuiltinControls(unittest.TestCase):
             shutil.rmtree(self.test_dir)
 
     def test_dialogmediasource_ok_cancel_buttons(self):
-        """DialogMediaSource controls 18/19 (OK/Cancel) should be recognized.
-
-        These are created in C++ code (GUIDialogMediaSource.cpp):
-        - Control 18: CONTROL_OK
-        - Control 19: CONTROL_CANCEL
-        """
-        # Note: DialogMediaSource.xml is the standard filename for window ID 10128
+        """DialogMediaSource's OK and Cancel buttons, ids 18 and 19, count as defined."""
+        # DialogMediaSource.xml is window 10128's file
         dialog_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window type="dialog" id="10128">
     <controls>
@@ -1101,7 +1070,6 @@ class TestBuiltinControls(unittest.TestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Controls 18 and 19 should NOT be flagged as undefined
         id_18_issues = [i for i in issues if "18" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         id_19_issues = [i for i in issues if "19" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
 
@@ -1112,7 +1080,6 @@ class TestBuiltinControls(unittest.TestCase):
 
     def test_builtin_controls_only_in_correct_window(self):
         """Builtin controls should only be valid in their specific windows."""
-        # DialogMediaSource controls 18, 19 should NOT be valid in Home.xml
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -1129,7 +1096,6 @@ class TestBuiltinControls(unittest.TestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Control 18 SHOULD be flagged in Home.xml (only valid in DialogMediaSource)
         id_18_issues = [i for i in issues if "18" in i.get("message", "") and "Home.xml" in i.get("file", "")]
         self.assertTrue(len(id_18_issues) > 0,
                        "Control 18 should be flagged in Home.xml (only valid in DialogMediaSource)")
@@ -1155,7 +1121,6 @@ class TestBuiltinControls(unittest.TestCase):
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=provider.get_validation_index())
         issues = checker.check()
 
-        # Control 99999 should still be flagged (not a builtin)
         id_99999_issues = [i for i in issues if "99999" in i.get("message", "")]
         self.assertTrue(len(id_99999_issues) > 0,
                        "Non-builtin control 99999 should still be flagged as undefined")

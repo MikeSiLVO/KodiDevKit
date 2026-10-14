@@ -20,7 +20,6 @@ class ResultsDisplayPanel:
     """Output panel / scratch view for displaying JSON-RPC results and similar dicts."""
 
     def __init__(self, panel_name="kodidevkit"):
-        """`panel_name` is the output-panel name without the `output.` prefix."""
         self.panel_name = panel_name
         self._window = None
         self._panel = None
@@ -49,12 +48,12 @@ class ResultsDisplayPanel:
         self.window.run_command('show_panel', {"panel": f"output.{self.panel_name}"})
 
     def append_msg(self, msg):
-        """Append `msg` and reveal the panel."""
+        """Append a line and reveal the panel."""
         self.panel.run_command("append", {"characters": f'{msg}\n'})
         self.show_panel()
 
     def _format_dict_items(self, data, key_order=None, indent=""):
-        """Render `data` as a list of lines, respecting `key_order` if given."""
+        """Format the dict as key and arrow-value lines, in the given key order if any."""
         lines = []
 
         if key_order:
@@ -72,7 +71,7 @@ class ResultsDisplayPanel:
         return lines
 
     def display_dict(self, data, clear_first=True, key_order=None):
-        """Display `data` in the output panel as plain key/value lines."""
+        """Display the dict in the output panel as key and value lines."""
         if clear_first:
             self.clear()
 
@@ -84,7 +83,7 @@ class ResultsDisplayPanel:
         self.show_panel()
 
     def display_dict_as_scratch_view(self, data, title, window=None, key_order=None):
-        """Display `data` in a new scratch view with a header box; returns the view."""
+        """Display the dict in a new scratch view under a header box; returns the view."""
         if window is None:
             window = sublime.active_window()
 
@@ -113,10 +112,7 @@ class ResultsDisplayPanel:
         return view
 
     def display_results(self, data, title, mode, window=None, key_order=None):
-        """Show `data` in either a scratch view or the output panel.
-
-        `mode` is either "scratch_view" or anything else (treated as panel).
-        """
+        """Display the results in a scratch view, or else the output panel."""
         if mode == "scratch_view":
             self.display_dict_as_scratch_view(
                 data=data,
@@ -128,7 +124,7 @@ class ResultsDisplayPanel:
             self.display_dict(data=data, clear_first=True, key_order=key_order)
 
     def display_error(self, error_message, mode, window=None):
-        """Show `error_message` in either a scratch view or the output panel."""
+        """Display the error in a scratch view, or else the output panel."""
         if mode == "scratch_view":
             if window is None:
                 window = sublime.active_window()
@@ -146,11 +142,7 @@ class ResultsDisplayPanel:
 
 
 def enable_file_logging(log_file_path=None):
-    """Attach a rotating file handler at DEBUG level and return the log path.
-
-    Defaults to `<cache>/KodiDevKit/logs/kodidevkit_debug.log`. Rotates at 5 MB
-    per file, keeping 5 backups (~30 MB total).
-    """
+    """Enable a rotating DEBUG log file and set the root logger to DEBUG; returns the path."""
     import os
     from logging.handlers import RotatingFileHandler
 

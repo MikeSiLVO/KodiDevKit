@@ -1,4 +1,4 @@
-"""Skin-only Sublime commands: search, navigation, and the validation quick panel."""
+"""Skin commands: label, font, image and builtin search, jump to definitions and the checks."""
 
 from __future__ import annotations
 
@@ -20,13 +20,13 @@ logger = logging.getLogger("KodiDevKit.skin")
 
 
 def _infos():
+    """Look up the plugin's shared InfoProvider at call time."""
     from .kodidevkit import INFOS
     return INFOS
 
 
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
-# Friendly names for the results view title/header, keyed by check_type.
 CHECK_LABELS = {
     "general": "General",
     "file": "File",
@@ -41,9 +41,6 @@ CHECK_LABELS = {
     "repo": "Kodi Repo",
 }
 
-# Results view navigation (build-output style): a file header line (col 0, ends
-# in an extension) sets the file; an indented "<line>  message" row opens at that
-# line on double-click / F4. Pathless rows are indented text and stay plain.
 RESULT_FILE_REGEX = r"^(\S.*\.[A-Za-z0-9]+)\s*$"
 RESULT_LINE_REGEX = r"^\s+([0-9]+)\s"
 
@@ -61,6 +58,7 @@ def _rel_path(file_path, base_dir):
 
 
 def _as_int(value):
+    """The value as an int, 0 when it is not one."""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -68,8 +66,7 @@ def _as_int(value):
 
 
 def _results_body(nodes, base_dir):
-    """Group issues under a per-file header with indented rows; pathless
-    issues go under a trailing "Skin-wide" block as non-navigable text."""
+    """Results view body: issues under their file headers, pathless ones last as plain text."""
     by_file = {}
     pathless = []
     for issue in nodes:
@@ -101,12 +98,14 @@ class _QuickPanelMixin:
     window: sublime.Window
 
     def is_visible(self):
+        """True when an add-on is loaded."""
         infos = _infos()
         if not infos:
             return False
         return bool(getattr(infos, "addon", None))
 
     def on_done(self, index):
+        """Open the picked row's file at its line and select its identifier."""
         if index == -1:
             return None
         node = self.nodes[index]
@@ -115,6 +114,7 @@ class _QuickPanelMixin:
         self.select_text(view, node)
 
     def show_preview(self, index):
+        """Preview the highlighted row's file at its line."""
         if index >= 0:
             node = self.nodes[index]
             self.window.open_file(
@@ -146,7 +146,10 @@ class _QuickPanelMixin:
 
 
 class KodidevkitShowFontRefsCommand(_QuickPanelMixin, sublime_plugin.WindowCommand):
+    """Quick panel of the font references in the current file's xml folder."""
+
     def run(self):
+        """Show the folder's font references, previewing each as it is highlighted."""
         self.nodes = []
         view = self.window.active_view()
         if not view:
@@ -184,7 +187,10 @@ class KodidevkitShowFontRefsCommand(_QuickPanelMixin, sublime_plugin.WindowComma
 
 
 class KodidevkitSearchFileForLabelsCommand(_QuickPanelMixin, sublime_plugin.WindowCommand):
+    """Quick panel of the labels the current file uses, with their text."""
+
     def run(self):
+        """Show each label the file uses with its text, previewing each as it is highlighted."""
         self.nodes = []
         items = []
 
@@ -238,8 +244,10 @@ class KodidevkitSearchFileForLabelsCommand(_QuickPanelMixin, sublime_plugin.Wind
 
 
 class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCommand):
-    """Run a skin validation pass and show results in a quick panel."""
+    """Command running one skin check and showing its issues in a results view."""
+
     def run(self, check_type):
+        """Open a progress view and run the check in the background."""
         from .libs.sublime.scratch import ValidationProgressView
         self.progress = ValidationProgressView(self.window, check_type)
 
@@ -262,7 +270,7 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
         thread.start()
 
     def _run_validation_async(self, check_type):
-        """Run validation in background thread, then update UI on main thread."""
+        """Run the check off the main thread, then hand the issues back to the main thread."""
         def progress_callback(*args):
             if len(args) == 3:
                 path, current, total = args
@@ -366,9 +374,10 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
 
 
 class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
-    """Quick-panel search across all PO labels; inserts the chosen one as `$LOCALIZE[...]`."""
+    """Quick-panel label search; inserts the pick as a localize expression shaped for its scope."""
 
     def is_visible(self):
+        """True when an add-on with language files is loaded."""
         infos = _infos()
         if not infos:
             return False
@@ -377,6 +386,7 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
         return bool(addon) and bool(get_po_files and get_po_files())
 
     def run(self):
+        """Show every label, once per id, in a quick panel."""
         infos = _infos()
         if not infos:
             return None
@@ -395,6 +405,7 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
                                      selected_index=0)
 
     def label_search_ondone_action(self, index):
+        """Insert the picked label's localize expression at the caret."""
         if index == -1:
             return None
         infos = _infos()
@@ -410,11 +421,13 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
 
 
 class _SearchAndInsertMixin:
-    """Show an `InfoProvider` list in a quick panel and insert the pick, for a `WindowCommand`."""
-    _data_attr = ""  # override in subclass
+    """Quick-panel search of the `InfoProvider` list a subclass names; inserts the pick."""
+
+    _data_attr = ""
     window: sublime.Window
 
     def run(self):
+        """Show the subclass's list in a quick panel."""
         infos = _infos()
         if not infos:
             return None
@@ -425,6 +438,7 @@ class _SearchAndInsertMixin:
                                      selected_index=0)
 
     def _on_done(self, index):
+        """Insert the picked entry at the caret."""
         if index == -1:
             return None
         view = self.window.active_view()
@@ -434,17 +448,23 @@ class _SearchAndInsertMixin:
 
 
 class KodidevkitSearchForBuiltinCommand(_SearchAndInsertMixin, sublime_plugin.WindowCommand):
+    """Quick-panel search of Kodi's builtins; inserts the pick at the caret."""
+
     _data_attr = "builtins"
 
 
 class KodidevkitSearchForVisibleConditionCommand(_SearchAndInsertMixin, sublime_plugin.WindowCommand):
+    """Quick-panel search of Kodi's boolean conditions; inserts the pick at the caret."""
+
     _data_attr = "conditions"
 
 
 class KodidevkitSearchForJsonCommand(sublime_plugin.WindowCommand):
-    """Quick-panel search through Kodi's JSONRPC.Introspect types/methods/notifications."""
+    """Quick-panel search of a running Kodi's JSON-RPC types, methods and notifications."""
+
     @run_async
     def run(self):
+        """Ask Kodi for its JSON-RPC schema and list every name in a quick panel."""
         from .libs.kodi.jsonrpc import kodi
         result = kodi.request(method="JSONRPC.Introspect")
 
@@ -460,6 +480,7 @@ class KodidevkitSearchForJsonCommand(sublime_plugin.WindowCommand):
                                      selected_index=0)
 
     def builtin_search_on_done(self, index):
+        """Insert the picked name at the caret."""
         if index == -1:
             return None
         view = self.window.active_view()
@@ -469,8 +490,10 @@ class KodidevkitSearchForJsonCommand(sublime_plugin.WindowCommand):
 
 
 class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
-    """Quick-panel browse media files; insert path or open the image."""
+    """Quick-panel browse of the media files; inserts the path or opens the image."""
+
     def is_visible(self):
+        """True when the add-on has a media folder."""
         infos = _infos()
         if not infos:
             return False
@@ -478,6 +501,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
         return bool(addon and addon.media_path)
 
     def run(self, edit):
+        """List the media files, previewing each as it is highlighted."""
         infos = _infos()
         if not infos:
             return None
@@ -491,6 +515,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
                                                  on_highlight=self.show_preview)
 
     def on_done(self, index):
+        """Offer to insert the picked file's path or open it; refocus the view on cancel."""
         items = ["Insert path", "Open Image"]
         if index >= 0:
             sublime.active_window().show_quick_panel(items=items,
@@ -500,6 +525,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
             sublime.active_window().focus_view(self.view)
 
     def insert_char(self, index, fileindex):
+        """Insert the picked file's path, or open it in the system viewer."""
         if index == 0:
             self.view.run_command("insert", {"characters": self.files[fileindex]})
         elif index == 1:
@@ -518,6 +544,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
         sublime.active_window().focus_view(self.view)
 
     def show_preview(self, index):
+        """Preview the highlighted media file in a transient view."""
         if index >= 0:
             infos = _infos()
             if not infos:
@@ -533,6 +560,7 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
     """Quick-panel pick from Font.xml; inserts the chosen font name."""
 
     def is_visible(self):
+        """True when the add-on has fonts."""
         infos = _infos()
         if not infos:
             return False
@@ -540,6 +568,7 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
         return bool(addon and addon.fonts)
 
     def run(self, edit):
+        """List the fonts of the current file's xml folder with their size and file."""
         infos = _infos()
         if not infos:
             return None
@@ -560,15 +589,17 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
                                                  selected_index=0)
 
     def on_done(self, index):
+        """Insert the picked font name and refocus the view."""
         if index >= 0:
             self.view.run_command("insert", {"characters": self.fonts[index][0]})
         sublime.active_window().focus_view(self.view)
 
 
 class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
-    """Jump to the definition of the include / font / etc. under the cursor."""
+    """Command jumping to the definition of the include, font, color or label under the cursor."""
 
     def run(self):
+        """Jump to where the word under the cursor is defined, looked up in its xml folder."""
         infos = _infos()
         if not infos:
             return None
@@ -589,9 +620,10 @@ class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
 
 
 class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
-    """Open the image path under the cursor in the OS default image viewer."""
+    """Command opening the image path under the cursor in the system's default viewer."""
 
     def is_visible(self):
+        """True when the path under the cursor names an existing file of the skin."""
         infos = _infos()
         if not infos:
             return False
@@ -612,6 +644,7 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
 
     @run_async
     def run(self, pack_textures=True):
+        """Open the image under the cursor in the system's default viewer."""
         infos = _infos()
         if not infos:
             return None
@@ -630,8 +663,10 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
 
 
 class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
-    """Preview the image path under the cursor as a transient view inside Sublime."""
+    """Command previewing the image path under the cursor in a transient view."""
+
     def is_visible(self):
+        """True when the text under the cursor looks like a path, in a skin with a media folder."""
         infos = _infos()
         if not infos:
             return False
@@ -645,6 +680,7 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
         return "/" in content or "\\" in content
 
     def run(self, edit):
+        """List the image, or each image in the folder, previewing each as it is highlighted."""
         infos = _infos()
         if not infos:
             return None
@@ -672,18 +708,22 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
                                                  on_highlight=self.show_preview)
 
     def on_done(self, index):
+        """Refocus the view once the panel closes."""
         sublime.active_window().focus_view(self.view)
 
     def show_preview(self, index):
+        """Preview the highlighted image in a transient view."""
         if index >= 0:
             file_path = self.files[index]
             sublime.active_window().open_file(file_path, sublime.TRANSIENT)
 
 
 class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowCommand):
-    """Ask Kodi which window XML is active and open it locally."""
+    """Command asking Kodi which window xml is active and opening it locally."""
+
     @run_async
     def run(self):
+        """Open the active window's xml file Kodi names, else the skin's copy, this folder first."""
         from .libs.kodi.jsonrpc import kodi
         view = self.window.active_view()
         if not view:
@@ -738,9 +778,10 @@ class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowComman
 
 
 class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCommand):
-    """Open the same filename in another resolution folder (e.g. 1080i ↔ 720p)."""
+    """Command opening the same filename in another resolution folder, such as 1080i or 720p."""
 
     def is_visible(self):
+        """True for a skin with more than one xml folder."""
         infos = _infos()
         if not infos:
             return False
@@ -748,6 +789,7 @@ class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCo
         return bool(addon) and len(addon.xml_folders) > 1
 
     def run(self):
+        """List the xml folders, previewing the same file at the same line in each."""
         infos = _infos()
         if not infos:
             return None
@@ -773,6 +815,7 @@ class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCo
                                      on_highlight=self.show_preview)
 
     def on_done(self, index):
+        """Open the file in the picked folder at the same line."""
         if index == -1:
             return None
         node = self.nodes[index]
@@ -781,14 +824,16 @@ class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCo
 
 
 class KodidevkitShowDependenciesCommand(sublime_plugin.WindowCommand):
-    """List addons available for the current Kodi API version, with mirror links."""
+    """Command listing the Kodi repo's add-ons for this release, with mirror links."""
     def is_visible(self):
+        """True when an add-on is loaded."""
         infos = _infos()
         if not infos:
             return False
         return bool(getattr(infos, "addon", None))
 
     def run(self):
+        """List the Kodi repo's add-ons for this release, with their versions."""
         infos = _infos()
         if not infos:
             return None
@@ -808,6 +853,7 @@ class KodidevkitShowDependenciesCommand(sublime_plugin.WindowCommand):
         )
 
     def on_done(self, index):
+        """Open the picked add-on's page on the Kodi mirror."""
         if index == -1:
             return
         infos = _infos()

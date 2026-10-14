@@ -132,7 +132,7 @@ class ValidationRepo:
                                                     f"so {name} will not load it")
 
     def _validate(self, element, schema_name):
-        """Report each schema error at the addon.xml line it names."""
+        """Validate against a schema, reporting each error at the addon.xml line it names."""
         schema = XMLSchema(ET.parse(os.path.join(SCHEMA_DIR, schema_name)))
         if not schema.validate(element):
             for error in schema.error_log:
@@ -142,7 +142,7 @@ class ValidationRepo:
                 self._add("addon.xml", error.line, _plain_schema_error(error.message))
 
     def _check_artwork(self, root):
-        """Declared artwork exists and has an accepted type, size and file size."""
+        """Check declared artwork exists and has an accepted type, size and file size."""
         for kind, (extensions, sizes, max_kb) in ARTWORK.items():
             images = [node.text for node in root.findall(f"extension/assets/{kind}")]
             fallback = {"icon": "icon.png", "fanart": "fanart.jpg"}.get(kind) if not images else None
@@ -169,7 +169,7 @@ class ValidationRepo:
                     self._add(image.strip(), 0, f"{kind} is {os.path.getsize(path) // 1024}KB, over {max_kb}KB")
 
     def _check_languages(self):
-        """Language folders use resource.language.<code>, en_gb exists, each strings.po parses."""
+        """Check language folders use resource.language.<code> and include en_gb, then each po."""
         found_en_gb = False
         for base in ("language", os.path.join("resources", "language")):
             base_path = os.path.join(self.addon.path, base)
@@ -193,7 +193,7 @@ class ValidationRepo:
             self._add("addon.xml", 0, "no resource.language.en_gb folder with the default strings")
 
     def _check_po(self, rel, path):
-        """The po header Kodi needs is present, there is no BOM and the file parses."""
+        """Check a strings.po is UTF-8, has Kodi's header, no BOM or duplicate ids, and parses."""
         try:
             with open(path, encoding="utf-8") as f:
                 contents = f.read()

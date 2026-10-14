@@ -1,20 +1,4 @@
-"""Mirror the shared validation engine from KodiDevKit into kdk, and verify it stayed mirrored.
-
-KodiDevKit is canonical. kdk vendors the same `libs/` tree and the same test
-suite, minus the parts that only make sense inside the editor.
-
-    python scripts/sync.py --check   # report drift, non-zero on unexpected drift
-    python scripts/sync.py --apply   # copy canonical -> kdk
-
-Point it at the other tree with --kdk or KDK_ROOT; it defaults to a sibling
-checkout next to this one, then /mnt/c/kdk.
-
-A file either mirrors whole or is listed as one repo's own (FRONTEND, EDITOR_ONLY).
-Anything else differing in a mirrored file is drift, which is what forked these two
-trees before. EXEMPT allows named symbols to differ inside a file that otherwise
-mirrors; prefer moving the divergence into a front-end file over adding an entry,
-because an exempt file is skipped wholesale by --apply and must be ported by hand.
-"""
+"""Mirror the shared engine from KodiDevKit, the canonical copy, into kdk, or check it still is."""
 
 from __future__ import annotations
 
@@ -27,29 +11,23 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
 
-# libs/<name> in KodiDevKit  ->  src/kdk/libs/<name> in kdk
 SHARED_LIB_DIRS = ("addon", "infoprovider", "polib", "reporting", "skin", "utils", "validation")
 
-# Modules sitting directly in libs/ rather than a subpackage.
 SHARED_LIB_FILES = ("__init__.py", "coredata.py")
 
-# Reference data drives validation results, so it mirrors too, including the
-# Kodi-core snapshots both repos now commit.
 SHARED_DATA = ("kodi_builtin_controls.xml",)
 SHARED_DATA_DIRS = ("omega", "piers", "kodi/omega", "kodi/piers", "addon_schema")
 
-# Written to run under either layout, so both repos carry the same file.
 SHARED_SCRIPTS = ("refresh.py", "windows.py")
 
-# Each repo's own front end. Same path in both trees, different contents by design,
-# so there is nothing here to keep in sync.
+# each repo's own front end: same path in both trees, different on purpose
 FRONTEND = {
     "libs/infoprovider/loader.py",
     "libs/infoprovider/provider.py",
     "libs/reporting/text.py",
 }
 
-# Never leaves KodiDevKit: needs Sublime, mdpopups, or the live-Kodi client.
+# never leaves KodiDevKit: needs Sublime, mdpopups or the live-Kodi client
 EDITOR_ONLY = {
     "libs/sublime", "libs/kodi",
     "libs/infoprovider/tooltips.py", "libs/infoprovider/navigation.py",
@@ -58,22 +36,21 @@ EDITOR_ONLY = {
     "libs/utils/decorators.py",
 }
 
-# Test modules covering editor-only features; the rest of tests/ mirrors.
 EDITOR_ONLY_TESTS = {
     "run_tests.py", "test_hover.py",
     "test_negation_twin_filter.py", "test_report_filtering.py",
     "test_include_param_roles.py", "test_pystrings.py",
 }
 
-# Mirrored files that legitimately differ, and the symbols allowed to differ.
-# Adding an entry is a decision; a symbol appearing here that isn't listed is drift.
+# --apply skips these files whole; move a divergence into a FRONTEND file where possible
 EXEMPT: dict[str, set[str]] = {}
 
 
 class StripDocs(ast.NodeTransformer):
-    """Drop docstrings so comparison sees logic, not prose."""
+    """Transformer dropping docstrings, leaving only the logic to compare."""
 
     def _strip(self, node):
+        """Strip the node's docstring after visiting its children."""
         self.generic_visit(node)
         if (node.body and isinstance(node.body[0], ast.Expr)
                 and isinstance(node.body[0].value, ast.Constant)
@@ -97,7 +74,7 @@ def _bound_names(node) -> list[str]:
 
 
 def units(path: Path) -> dict[str, str]:
-    """Qualified name -> normalized source for every comparable piece of `path`."""
+    """Comparable pieces of the file by qualified name, as source without docstrings."""
     try:
         tree = StripDocs().visit(ast.parse(path.read_text(encoding="utf-8")))
     except (OSError, SyntaxError):
@@ -105,9 +82,7 @@ def units(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
 
     def walk(node, prefix=""):
-        # Anything that binds no plain name (`logger.propagate = x`, `A["k"] = v`,
-        # tuple targets, imports, bare calls) still changes behaviour, so it is
-        # compared as one lump rather than falling through uncompared.
+        # statements binding no plain name still change behavior; compare them as one lump
         residual = []
         for child in node.body:
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -115,7 +90,7 @@ def units(path: Path) -> dict[str, str]:
             elif isinstance(child, ast.ClassDef):
                 walk(child, prefix + child.name + ".")
             elif names := _bound_names(child):
-                # Whitelists and severity constants drift as readily as code.
+                # whitelists and severity constants drift as readily as code
                 for name in names:
                     out[prefix + name] = ast.unparse(child)
             else:
@@ -129,6 +104,7 @@ def units(path: Path) -> dict[str, str]:
 
 
 def find_kdk(explicit: str | None) -> Path:
+    """Find kdk: the path given, KDK_ROOT, a sibling kdk folder or /mnt/c/kdk; exit when none is."""
     for candidate in (explicit, os.environ.get("KDK_ROOT"),
                       str(HERE.parent / "kdk"), "/mnt/c/kdk"):
         if candidate and (Path(candidate) / "src" / "kdk" / "libs").is_dir():
@@ -137,7 +113,7 @@ def find_kdk(explicit: str | None) -> Path:
 
 
 def pairs(kdk: Path):
-    """(relative label, canonical path, kdk path) for everything that mirrors."""
+    """Yield (label, canonical path, kdk path) for every file that mirrors."""
     for fname in SHARED_LIB_FILES:
         src = HERE / "libs" / fname
         if src.is_file():
@@ -173,6 +149,7 @@ def pairs(kdk: Path):
 
 
 def check(kdk: Path) -> int:
+    """Check every mirrored file and print a summary; 1 on drift or a missing file, else 0."""
     drifted, missing, exempt_ok, textonly, clean = [], [], 0, 0, 0
     for rel, src, dst in pairs(kdk):
         if not dst.exists():
@@ -217,6 +194,7 @@ def check(kdk: Path) -> int:
 
 
 def apply(kdk: Path) -> int:
+    """Apply the mirror, copying each changed file into kdk, then confirm kdk still imports."""
     copied = 0
     for rel, src, dst in pairs(kdk):
         if rel in EXEMPT:
@@ -234,7 +212,7 @@ def apply(kdk: Path) -> int:
 
 
 def _verify_importable(kdk: Path) -> int:
-    """Import kdk's engine in a subprocess; a mirror that breaks it must fail loudly."""
+    """Verify kdk's engine imports, in a subprocess; 1 when the mirror broke it."""
     import subprocess
     probe = ("import importlib, pkgutil, sys; sys.path.insert(0, %r); import kdk.libs; "
              "[importlib.import_module(m.name) "
@@ -249,6 +227,7 @@ def _verify_importable(kdk: Path) -> int:
 
 
 def main() -> int:
+    """Run --check or --apply against the kdk checkout found."""
     ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--check", action="store_true", help="report drift without writing")
     ap.add_argument("--apply", action="store_true", help="copy canonical files into kdk")

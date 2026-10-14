@@ -1,4 +1,4 @@
-"""Checks a resolved tree as Kodi's loaders read it: element placement, values and conditions."""
+"""Checks element placement, values and conditions in a resolved skin tree."""
 
 from __future__ import annotations
 
@@ -42,7 +42,6 @@ from .constants import (
     INCLUDE_DEFINITION_TAGS,
 )
 
-# Use canonical checks from utils to avoid drift
 from ..utils.expressions import (
     is_dynamic_expression as _is_dynamic,
     contains_dynamic_expression as _contains_dynamic,
@@ -97,7 +96,7 @@ _STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAG
 
 
 class XmlInterpreter:
-    """Walker over a resolved tree, each walk mirroring the Kodi loader for that level."""
+    """Walker over a resolved tree with one walk per element level."""
 
     def __init__(
         self,
@@ -121,7 +120,7 @@ class XmlInterpreter:
         self.issues: list[dict] = []
 
     def interpret(self, root) -> list[dict]:
-        """Entry point: detect root tag type and dispatch."""
+        """Interpret the tree from its root tag, returning the issues found."""
         if root is None:
             return []
 
@@ -141,7 +140,7 @@ class XmlInterpreter:
         return self.issues
 
     def _walk_window(self, node):
-        """Validate direct children of <window>. (GUIWindow.cpp:186-268)"""
+        """Walk the children of <window> and check its defaultcontrols."""
         for child in node:
             tag = child.tag
             if tag == "controls":
@@ -149,7 +148,7 @@ class XmlInterpreter:
             elif tag == "coordinates":
                 self._walk_coordinates(child)
             elif tag == "include":
-                # An unresolved include here is reported by the unexpanded pass.
+                # an unresolved include here is reported by the unexpanded pass
                 pass
             elif tag not in WINDOW_CHILDREN:
                 self._add_issue(
@@ -175,7 +174,7 @@ class XmlInterpreter:
             self._add_issue(default, SEVERITY_ERROR, f"defaultcontrol {target} is {why}")
 
     def _walk_controls(self, node):
-        """Validate <controls> children. (GUIWindow.cpp:258-268)"""
+        """Walk the children of <controls>."""
         for child in node:
             tag = child.tag
             if tag == "control":
@@ -189,7 +188,7 @@ class XmlInterpreter:
                 )
 
     def _walk_coordinates(self, node):
-        """Validate <coordinates> children. (GUIWindow.cpp:234-250)"""
+        """Walk the children of <coordinates>."""
         for child in node:
             if child.tag not in COORDINATES_CHILDREN:
                 self._add_issue(
@@ -198,7 +197,7 @@ class XmlInterpreter:
                 )
 
     def _walk_control(self, node, *, inside_layout: bool):
-        """Dispatch a <control> based on its type (group / container / leaf)."""
+        """Walk a <control> as a group, container or plain control, by its type."""
         written = (node.attrib.get("type") or "").strip()
         control_type = written.lower()
         if written != control_type and "$" not in written:
@@ -211,10 +210,10 @@ class XmlInterpreter:
             self._walk_container(node, control_type, inside_layout=inside_layout)
         elif control_type:
             self._validate_control_children(node, control_type, inside_layout=inside_layout)
-        # No type attribute; skip (invalid control type is caught by the unexpanded pass).
+        # no type attribute: skip, the unexpanded pass reports an invalid type
 
     def _walk_group_control(self, node, control_type: str, *, inside_layout: bool):
-        """Walk a group control and the child controls CGUIWindow::LoadControl recurses into."""
+        """Walk a group control and the child controls the window loads with it."""
         self._validate_control_children(node, control_type, inside_layout=inside_layout)
         for child in node:
             if child.tag == "control":
@@ -241,7 +240,7 @@ class XmlInterpreter:
 
 
     def _walk_layout(self, node):
-        """Validate layout children: only <control> elements. (CGUIListItemLayout)"""
+        """Walk the children of a layout."""
         for child in node:
             tag = child.tag
             if tag == "control":
@@ -255,7 +254,7 @@ class XmlInterpreter:
                 )
 
     def _walk_content(self, node):
-        """Validate <content> children: <item> or <include>. (StaticProvider.cpp:20-34)"""
+        """Walk the children of a static <content> list."""
         for child in node:
             if child.tag not in CONTENT_CHILDREN:
                 self._add_issue(
@@ -275,9 +274,7 @@ class XmlInterpreter:
         for child in node:
             tag = child.tag
 
-            # Default-appended children are validated at their source in
-            # _walk_default; skip them here so a Defaults.xml error isn't
-            # reported again on every control that inherits the default.
+            # checked at source by _walk_default, else one Defaults.xml error repeats per control
             if (child.get("_kdk_inc_name") or "").startswith("default type="):
                 continue
             if tag in INCLUDE_DEFINITION_TAGS:
@@ -286,7 +283,6 @@ class XmlInterpreter:
                 continue
             if tag == "control":
                 if control_type not in GROUP_TYPES:
-                    # only groups load child controls (GUIWindow.cpp:302)
                     self._add_issue(child, SEVERITY_WARNING, f"<control> inside <control "
                                     f"type={control_type}> is ignored; only groups hold controls")
                 continue
@@ -431,16 +427,15 @@ class XmlInterpreter:
                 )
 
     def _validate_label_brackets(self, node):
-        """Report a label block whose ']' is missing, as CGUIInfoLabel::Parse logs it."""
+        """Report a label block whose ']' is missing."""
         prefix = unclosed_label_block(node.text or "")
         if prefix:
-            # the $INFO family ends the label there (GUIInfoLabel.cpp:429), the rest stay as text
             effect = ("Kodi drops the rest of the label" if prefix.rstrip("[") in _LABEL_ENDING
                       else "Kodi shows it as plain text")
             self._add_issue(node, SEVERITY_ERROR, f"Missing ']' after {prefix} in <{node.tag}>: {effect}")
 
     def _validate_brackets(self, node, text: str):
-        """Validate bracket matching in conditions."""
+        """Validate bracket matching in a condition or action, and report an empty one."""
         if not text:
             self._add_issue(node, SEVERITY_ERROR, f"Empty condition: {node.tag}")
             return
@@ -511,7 +506,6 @@ class XmlInterpreter:
         where = name if is_attr else f"<{name}>"
         if not text or _is_dynamic(text) or _contains_dynamic(text) or extract_number_value(text):
             return
-        # width and height take auto (GUIControlFactory::GetDimension)
         if not is_attr and name in ("width", "height") and text.lower().startswith("auto"):
             return
         if _is_number(text.rstrip("%r") if value_type == "position" else text):
@@ -556,7 +550,7 @@ class XmlInterpreter:
             self._validate_enum_value(node, value, value_type)
 
     def _walk_includes(self, node):
-        """Validate <includes> root children. (GUIIncludes.cpp:88-99)"""
+        """Walk the children of <includes>."""
         for child in node:
             if child.tag not in INCLUDES_CHILDREN:
                 self._add_issue(
@@ -573,7 +567,7 @@ class XmlInterpreter:
                 self._walk_include_definition(child)
 
     def _walk_include_definition(self, node):
-        """Report text beside a <definition>, which Kodi drops (GUIIncludes.cpp:211-213)."""
+        """Walk an include, reporting text beside its <definition> that Kodi drops."""
         children = list(node)
         if not any(c.tag == "definition" for c in children):
             return
@@ -598,7 +592,7 @@ class XmlInterpreter:
             self._validate_control_children(node, control_type, inside_layout=False)
 
     def _walk_variable(self, node):
-        """Validate <variable> children: only <value>. (GUIIncludes.cpp:160-168)"""
+        """Walk the children of <variable>."""
         for child in node:
             if child.tag not in VARIABLE_CHILDREN:
                 self._add_issue(
@@ -612,7 +606,7 @@ class XmlInterpreter:
                     self._validate_condition(child, condition, resolved=False)
 
     def _walk_map(self, node):
-        """Validate <map> children: only <entry>. (SkinMapManager.cpp:22-40)"""
+        """Walk the children of <map>."""
         for child in node:
             if child.tag not in MAP_CHILDREN:
                 self._add_issue(
@@ -621,7 +615,7 @@ class XmlInterpreter:
                 )
 
     def _walk_fonts(self, node):
-        """Validate <fonts> root children. (GUIFontManager.cpp:67)"""
+        """Walk the children of <fonts>."""
         for child in node:
             if child.tag not in FONTS_CHILDREN:
                 self._add_issue(
@@ -632,7 +626,7 @@ class XmlInterpreter:
                 self._walk_fontset(child)
 
     def _walk_fontset(self, node):
-        """Validate <fontset> children. (GUIFontManager.cpp:426-445)"""
+        """Walk the children of <fontset>."""
         for child in node:
             if child.tag not in FONTSET_CHILDREN:
                 self._add_issue(
@@ -643,7 +637,7 @@ class XmlInterpreter:
                 self._walk_font(child)
 
     def _walk_font(self, node):
-        """Validate <font> children. (GUIFontManager.cpp:482-510)"""
+        """Walk the children of <font>."""
         for child in node:
             if child.tag not in FONT_CHILDREN:
                 self._add_issue(
@@ -671,7 +665,7 @@ class XmlInterpreter:
             "severity": severity,
         }
 
-        # Include source location so the report can link to the actual line to fix
+        # so the report can link to the line to fix
         if inc_name:
             issue["include_name"] = inc_name
             issue["include_line"] = node.sourceline or 0

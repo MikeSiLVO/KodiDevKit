@@ -18,16 +18,16 @@ logger = logging.getLogger(__name__)
 
 # InfoProvider lists this before CheckerMixin, so super() reaches the engine
 class NavigationMixin(CheckerMixin):
-    """Handles jump-to-definition for fonts, includes, colors, labels."""
+    """Mixin for jump-to-definition of fonts, includes, colors and labels."""
 
     addon: Any
 
     def go_to_tag(self, keyword, folder):
-        """Get "path:line" of the include, font, color, label id or file the keyword names."""
+        """Get "path:line" of the definition, font, color, label or file named; False when none."""
         if not self.addon or not keyword:
             return False
         kw = str(keyword).strip()
-        # Caret lands in a whole `$MAP[Name, ListItem.X]` body; the name is the first arg.
+        # caret lands in a whole `$MAP[Name, ListItem.X]` body; the name is the first arg
         if "," in kw:
             kw = kw.split(",", 1)[0].strip()
 
@@ -86,7 +86,7 @@ class NavigationMixin(CheckerMixin):
         return False
 
     def _get_includes_for_folder(self, folder):
-        """Engine's list plus the expression/constant entries goto-def needs."""
+        """Get the engine's rows plus expression, map and constant rows for jump-to-definition."""
         result = super()._get_includes_for_folder(folder)
         if not self.addon or not hasattr(self.addon, "include_map"):
             return result

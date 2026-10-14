@@ -22,7 +22,7 @@ def to_hex(red: int, green: int, blue: int, alpha: Optional[int] = None) -> str:
 
 
 def get_contrast_color(col: str) -> str:
-    """Calculate contrasting color to ensure readability against given color."""
+    """Get a color that stays readable against the given one."""
     MIN_CONTRAST = 0.15
     (hue, lum, saturation) = colorsys.rgb_to_hls(
         int(col[1:3], 16) / 255.0,

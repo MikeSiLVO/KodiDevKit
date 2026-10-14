@@ -9,7 +9,7 @@ import os
 class SkinInclude(dict):
     """One include, variable or default definition, read through dict-style keys."""
 
-    # where constants and expressions expand, mirrored from GUIIncludes.cpp
+    # the tags and attributes where Kodi expands constants and expressions
     constant_attribs = frozenset({
         "acceleration", "border", "center", "delay", "end", "h", "height", "max",
         "min", "repeat", "start", "time", "w", "width", "x", "y",

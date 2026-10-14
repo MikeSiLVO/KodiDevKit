@@ -1,4 +1,4 @@
-"""$EXP resolution matches CGUIIncludes::ResolveExpressions: listed tag text, else the condition."""
+"""$EXP resolution: listed tag text, else the condition."""
 
 import os
 import sys

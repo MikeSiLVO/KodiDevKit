@@ -1,6 +1,4 @@
-"""
-Tests for $PARAM resolution in include names following Kodi's behavior.
-"""
+"""Tests for $PARAM resolution in include names."""
 
 import os
 import sys
@@ -45,13 +43,7 @@ class TestParamResolution(ValidationTestCase):
             shutil.rmtree(self.test_dir)
 
     def test_undefined_param_resolves_to_base_name(self):
-        """
-        Test that include names with undefined $PARAM resolve to base name.
-
-        Example: "Dialog_Blur$PARAM[size]" → "Dialog_Blur" when size is undefined.
-        This matches Kodi's behavior (GUIIncludes.cpp:628).
-        """
-        # Create includes file with base include and parameterized wrapper
+        """Undefined $PARAM in an include name resolves to the base name."""
         includes_xml = os.path.join(self.xml_dir, "Includes.xml")
         with open(includes_xml, "w", encoding="utf-8") as f:
             f.write("""<?xml version="1.0"?>
@@ -76,7 +68,6 @@ class TestParamResolution(ValidationTestCase):
     </include>
 </includes>""")
 
-        # Create window that uses the wrapper without passing size param
         window_xml = os.path.join(self.xml_dir, "Home.xml")
         with open(window_xml, "w", encoding="utf-8") as f:
             f.write("""<?xml version="1.0"?>
@@ -87,13 +78,10 @@ class TestParamResolution(ValidationTestCase):
     </controls>
 </window>""")
 
-        # Validate
         skin = Skin(path=self.skin_dir)
         checker = IncludeCheck(skin)
         issues = checker.check()
 
-        # Should not report "Dialog_Blur$PARAM[size]" as undefined
-        # because it resolves to "Dialog_Blur" which exists
         undefined = [i for i in issues if "not defined" in i.get("message", "")]
         undefined_names = [i["message"].replace("Include not defined: ", "") for i in undefined]
 

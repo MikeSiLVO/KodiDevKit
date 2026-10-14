@@ -50,7 +50,7 @@ def _entries(directory):
 
 def resolve_include_file(addon, folder, filename):
     """Resolve the path an `<include file>` opens, and the real name when only its case differs."""
-    # Kodi opens the joined path, no case fallback (CSkinInfo::GetSkinPath); case matters on Linux
+    # Kodi opens the joined path with no case fallback; case matters on Linux
     parts = posixpath.normpath(filename).split("/")
     ordered = [folder] + [f for f in addon.xml_folders if f != folder]
     near = None
