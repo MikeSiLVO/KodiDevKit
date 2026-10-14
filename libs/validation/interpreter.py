@@ -473,7 +473,7 @@ class XmlInterpreter:
     def _validate_condition(self, node, condition: str, *, resolved: bool):
         """Report unparseable conditions and unknown infos, $EXP faults at their definition."""
         text = condition.strip()
-        if not text or "$PARAM" in text.upper() or (not resolved and "$EXP[" in text.upper()):
+        if not text or "$PARAM" in text.upper() or (not resolved and "$EXP[" in text):
             return
         # unbalanced brackets are already reported by the bracket check
         if not _check_brackets(text):

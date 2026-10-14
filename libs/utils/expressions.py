@@ -196,12 +196,21 @@ def split_top_level_commas(text: str) -> list[str]:
     return [p for p in parts if p]
 
 
-_EXP_PATTERN = re.compile(r"\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
+def expression_references(text: str):
+    """Yield (start, end, name) per upper-case `$EXP[` reference, stopping at an unclosed one."""
+    pos = 0
+    while (start := text.find("$EXP[", pos)) != -1:
+        name = bracket_body(text[start + 4:])
+        end = start + len(name) + 6
+        if text[end - 1:end] != "]":
+            return
+        yield start, end, name
+        pos = end
 
 
 def expression_names(text: str) -> list[str]:
     """Names of the `$EXP` references written in the text, nested ones not followed."""
-    return _EXP_PATTERN.findall(text or "")
+    return [name for _, _, name in expression_references(text or "")]
 
 
 def flatten_expressions(text: str, expression_map: dict[str, str],
@@ -212,22 +221,24 @@ def flatten_expressions(text: str, expression_map: dict[str, str],
 
     resolved = _resolved or []
     unknown: set[str] = set()
-
-    def replacer(match):
-        name = match.group(1)
+    out = []
+    pos = 0
+    for start, end, name in expression_references(text):
+        out.append(text[pos:start])
+        pos = end
         if name in resolved:
             logger.error('Skin has a circular expression "%s": %s', resolved[-1], text)
-            return ""
-        if name not in expression_map:
+        elif name not in expression_map:
             unknown.add(name)
-            return match.group(0)
-        body, nested_unknown = flatten_expressions(
-            expression_map[name], expression_map, resolved + [name]
-        )
-        unknown.update(nested_unknown)
-        return body
-
-    return _EXP_PATTERN.sub(replacer, text), unknown
+            out.append(text[start:end])
+        else:
+            body, nested_unknown = flatten_expressions(
+                expression_map[name], expression_map, resolved + [name]
+            )
+            unknown.update(nested_unknown)
+            out.append(body)
+    out.append(text[pos:])
+    return "".join(out), unknown
 
 
 _KEYWORD_MACRO_RE = re.compile(

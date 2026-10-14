@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 
+from .expressions import expression_references
+
 STATE_TRUE = "true"
 STATE_FALSE = "false"
 STATE_INVALID = "invalid"
@@ -38,7 +40,6 @@ _PRESUBSTITUTED = re.compile(r"\$(?:LOCALIZE|NUMBER)\[")
 _LABEL_MACRO = re.compile(r"\$(VAR|ESCVAR|INFO|ESCINFO|MAP|ESCMAP|ADDON)\[", re.IGNORECASE)
 
 _PARAM = re.compile(r"\$PARAM\[", re.IGNORECASE)
-_EXP = re.compile(r"\$EXP\[\s*([A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
 _CASED_KEYWORD = re.compile(r"\$(?:localize|number)\[", re.IGNORECASE)
 
 
@@ -128,17 +129,13 @@ def check_syntax(condition: str) -> str | None:
 
 
 def check_condition(condition: str) -> tuple[str, str] | None:
-    """The `(state, reason)` blocking `condition`, or None when it can be sent to Kodi.
-
-    Expects `$EXP` already flattened: a leftover reference means the skin never
-    defined it, which Kodi erases to nothing at load (GUIIncludes.cpp:663).
-    """
+    """The (state, reason) blocking the condition, or None; expects `$EXP` already flattened."""
     if _PARAM.search(condition):
         return STATE_NEEDS_CONTEXT, "unresolved $PARAM"
 
-    unknown = _EXP.search(condition)
+    unknown = next(expression_references(condition), None)
     if unknown:
-        return STATE_INVALID, f"unknown expression {unknown.group(1)}"
+        return STATE_INVALID, f"unknown expression {unknown[2]}"
 
     macro = _LABEL_MACRO.search(condition)
     if macro:
