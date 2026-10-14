@@ -1,6 +1,7 @@
 """Checks the includes a skin calls and defines, and the include files it names."""
 
 import os
+import posixpath
 import re
 
 from lxml import etree as ET
@@ -50,14 +51,25 @@ def _entries(directory):
 def resolve_include_file(addon, folder, filename):
     """Resolve the path an `<include file>` opens, and the real name when only its case differs."""
     # Kodi opens the joined path, no case fallback (CSkinInfo::GetSkinPath); case matters on Linux
+    parts = posixpath.normpath(filename).split("/")
     ordered = [folder] + [f for f in addon.xml_folders if f != folder]
     near = None
     for name in ordered:
-        entries = _entries(os.path.join(addon.path, name))
-        if filename in entries:
-            return os.path.join(addon.path, name, filename), None
-        if near is None:
-            near = next((e for e in entries if e.lower() == filename.lower()), None)
+        current = os.path.join(addon.path, name)
+        actual = []
+        for part in parts:
+            entries = _entries(current)
+            match = part if part in entries else next(
+                (e for e in entries if e.lower() == part.lower()), None)
+            if match is None:
+                break
+            actual.append(match)
+            current = os.path.join(current, match)
+        else:
+            if actual == parts:
+                return current, None
+            if near is None:
+                near = "/".join(actual)
     return None, near
 
 
@@ -166,9 +178,10 @@ class ValidationInclude:
                     if not name:
                         continue
                     if "file" in node.attrib:
-                        include_file = os.path.join(self.addon.path, folder, node.attrib["file"])
+                        include_file = os.path.normpath(
+                            os.path.join(self.addon.path, folder, node.attrib["file"]))
                         if include_file not in self.addon.include_files[folder]:
-                            self.addon.update_includes(include_file)
+                            self.addon.update_includes(include_file, folder)
 
                     resolved_name = self._resolve_include_name(name)
 

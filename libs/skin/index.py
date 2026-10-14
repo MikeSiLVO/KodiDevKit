@@ -76,7 +76,7 @@ class SkinIndex:
         self.include_maps = None
 
     def build_validation_index(self, progress_callback=None):
-        """Build the validation index in one threaded pass over the skin's files."""
+        """Build the validation index: a threaded parse of the skin's files, then id expansion."""
         if progress_callback:
             progress_callback("Building validation index...")
 
@@ -119,7 +119,8 @@ class SkinIndex:
             index['custom_windows'][folder] = {}
             index['custom_dialog_files'][folder] = set()
             include_file_paths = getattr(self.skin, 'include_files', {}).get(folder, [])
-            index['include_files'][folder] = [os.path.basename(p) for p in include_file_paths]
+            folder_path = os.path.join(self.skin.path, folder)
+            index['include_files'][folder] = [os.path.relpath(p, folder_path) for p in include_file_paths]
             index['variables_defined'][folder] = {}
             index['images_referenced'][folder] = {}
 
@@ -221,7 +222,7 @@ class SkinIndex:
                         if window_id not in index['window_ids'][folder]:
                             index['window_ids'][folder].append(window_id)
 
-                    window_file = os.path.basename(path)
+                    window_file = os.path.relpath(path, os.path.join(self.skin.path, folder))
                     index['window_includes'][folder][window_file] = results['window_includes']
                     index['window_base_ids'][folder][window_file] = results['base_ids']
                     if results.get('root_tag') != 'window':
@@ -259,13 +260,13 @@ class SkinIndex:
                 progress_callback("Resolving windows for ID extraction...")
             resolve_count = 0
             for folder in self.skin.xml_folders:
-                basenames = list(index['window_base_ids'].get(folder, {}).keys())
-                for basename in basenames:
-                    path = os.path.join(self.skin.path, folder, basename)
+                window_files = list(index['window_base_ids'].get(folder, {}).keys())
+                for window_file in window_files:
+                    path = os.path.join(self.skin.path, folder, window_file)
                     root = get_root_from_file(path)
-                    if root is None or basename in index['non_window_files'][folder]:
-                        index['window_expanded_ids'][folder][basename] = \
-                            index['window_base_ids'][folder].get(basename, set())
+                    if root is None or window_file in index['non_window_files'][folder]:
+                        index['window_expanded_ids'][folder][window_file] = \
+                            index['window_base_ids'][folder].get(window_file, set())
                         continue
 
                     if tree_needs_expansion(root):
@@ -273,9 +274,9 @@ class SkinIndex:
                             resolved = copy.deepcopy(root)
                             self.skin.resolver.resolve(resolved, folder)
                         except Exception:
-                            logger.debug("Resolution failed for %s, using base IDs", basename)
-                            index['window_expanded_ids'][folder][basename] = \
-                                index['window_base_ids'][folder].get(basename, set())
+                            logger.debug("Resolution failed for %s, using base IDs", window_file)
+                            index['window_expanded_ids'][folder][window_file] = \
+                                index['window_base_ids'][folder].get(window_file, set())
                             continue
                     else:
                         resolved = root
@@ -296,7 +297,7 @@ class SkinIndex:
                         if ctrl_id and node.find('viewtype') is not None:
                             index['view_ids'][folder].add(normalize_control_id(ctrl_id))
 
-                    index['window_expanded_ids'][folder][basename] = expanded_ids
+                    index['window_expanded_ids'][folder][window_file] = expanded_ids
                     resolve_count += 1
 
                     if progress_callback and resolve_count % 10 == 0:
@@ -339,7 +340,7 @@ class SkinIndex:
             return min(cpu_count + 4, 8)
 
     def _process_window_file(self, path, folder):
-        """Fonts, labels, images and ids of one file as a fresh dict, so threads share nothing."""
+        """Process a file into its fonts, labels, images and ids; None if skipped or unread."""
         try:
             if "script-skinshortcuts-includes.xml" in path.lower():
                 return None
@@ -362,9 +363,10 @@ class SkinIndex:
                 'view_ids': set()
             }
 
-            window_ids, results['custom_modeless'] = custom_window(root, os.path.basename(path))
+            name = os.path.relpath(path, os.path.join(self.skin_path, folder))
+            window_ids, results['custom_modeless'] = custom_window(root, name)
             results['window_ids'][folder].extend(window_ids)
-            if os.path.basename(path).lower().startswith("custom"):
+            if name.lower().startswith("custom"):
                 results['custom_id'] = window_ids[0] if window_ids else None
                 kind = root.get("type") or root.findtext("type") or ""
                 results['custom_dialog'] = kind.strip().lower() == "dialog"

@@ -93,10 +93,7 @@ class ValidationIds:
                 or (f.lower() not in kodi_names and not f.lower().startswith("custom"))}
 
     def check(self, progress_callback=None):
-        """
-        Check undefined or invalid control/window IDs.
-        Returns list of {"message": str, "file": str, "line": int}.
-        """
+        """Check id references, window names and custom windows, one issue row per problem."""
         if not self._validation_index:
             return []
         total_ids = sum(len(ids) for ids in self._validation_index.get('ids_defined', {}).values())
@@ -151,24 +148,24 @@ class ValidationIds:
                     elif not ref_id:
                         continue
                     else:
-                        usage_basename = os.path.basename(usage_file)
-                        window_name = builtin_filename_map.get(usage_basename.lower())
-                        if (usage_basename in unscoped
-                                or ref_id in window_to_ids.get(usage_basename, set())
+                        usage_name = os.path.relpath(usage_file, os.path.join(self.addon.path, folder))
+                        window_name = builtin_filename_map.get(usage_name.lower())
+                        if (usage_name in unscoped
+                                or ref_id in window_to_ids.get(usage_name, set())
                                 or ref_id in builtin_controls.get(window_name, ())
                                 or (usage.get('context') in ('Control.IsVisible', 'Control.HasFocus')
                                     and ref_id in all_view_ids)):
                             continue
                         # a dialog leaves the stack before its onunload runs (GUIDialog.cpp:106)
-                        unload_below = usage.get('unload') and usage_basename in dialog_files
+                        unload_below = usage.get('unload') and usage_name in dialog_files
                         if ref_id not in defined_anywhere:
                             message = f"Control ID {ref_id} not defined"
                         elif (usage.get('context') != 'navigation'
-                              and (usage_basename in modeless_files or usage.get('after_switch') or unload_below)):
+                              and (usage_name in modeless_files or usage.get('after_switch') or unload_below)):
                             # Kodi resolves it in the topmost modal dialog or the active window
                             continue
                         else:
-                            message = f"Control ID {ref_id} not defined in {usage_basename}'s scope"
+                            message = f"Control ID {ref_id} not defined in {usage_name}'s scope"
                     if message:
                         listitems.append({
                             "message": message,

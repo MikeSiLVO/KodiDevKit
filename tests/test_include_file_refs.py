@@ -58,6 +58,15 @@ class TestResolve(_Base):
     def test_unreadable_folder_is_skipped_not_raised(self):
         self.assertEqual(resolve_include_file(self.addon, "nosuchfolder", "Nope.xml"), (None, None))
 
+    def test_reference_into_a_subfolder_resolves(self):
+        """A path below the resolution folder opens, its case checked part by part."""
+        os.makedirs(os.path.join(self.root, "16x9", "Sub"))
+        nested = os.path.join(self.root, "16x9", "Sub", "Data.xml")
+        with open(nested, "w", encoding="utf8") as f:
+            f.write("<includes/>")
+        self.assertEqual(resolve_include_file(self.addon, "16x9", "Sub/Data.xml"), (nested, None))
+        self.assertEqual(resolve_include_file(self.addon, "16x9", "sub/Data.xml"), (None, "Sub/Data.xml"))
+
     def test_other_resolution_folder_is_searched(self):
         # Kodi falls back to the default resolution when the closest one lacks the file.
         os.makedirs(os.path.join(self.root, "1080i"))
@@ -124,7 +133,9 @@ class TestCheckFileReportsIt(unittest.TestCase):
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def _write(self, name, body):
+        """Write a file under the temporary skin's 16x9 folder and return its path."""
         path = os.path.join(self.test_dir, "16x9", name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             f.write(body)
         return path
@@ -176,6 +187,21 @@ class TestCheckFileReportsIt(unittest.TestCase):
         skin = Skin(path=self.test_dir, settings={})
         ValidationInclude(skin).check()
         self.assertNotIn("Leak", skin.include_map.get("16x9", {}))
+
+    def test_include_files_in_a_subfolder_load(self):
+        """Nested file paths are taken from the resolution folder, and each file is checked."""
+        self._write("Includes.xml", '<includes><include file="Data/A.xml"/></includes>')
+        self._write("Data/A.xml", '<includes><include file="Data/B.xml"/></includes>')
+        nested = self._write("Data/B.xml", '<includes><include name="Deep"><control type="label"/>'
+                                           '</include></includes>')
+        self._write("Home.xml", "<window><controls><include>Deep</include></controls></window>")
+        provider = InfoProvider()
+        provider.addon = skin = Skin(path=self.test_dir, settings={})
+        provider.settings = {}
+        self.assertIn("Deep", skin.include_map["16x9"])
+        self.assertIn(nested, skin.include_files["16x9"])
+        self.assertIn(os.path.join("Data", "B.xml"), skin.window_files["16x9"])
+        self.assertEqual([i for i in provider.check_values() if "include file" in i["message"]], [])
 
     def test_reported_once(self):
         # check_values runs check_file over every file, so a second call site would double it.

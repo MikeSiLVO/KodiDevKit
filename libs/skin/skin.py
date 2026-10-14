@@ -309,7 +309,7 @@ class Skin(Addon):
 
             include_file = check_paths(paths)
             if include_file:
-                self.update_includes(include_file)
+                self.update_includes(include_file, folder)
             else:
                 logger.info("Could not find include file in %s", xml_folder)
 
@@ -328,14 +328,12 @@ class Skin(Addon):
         total_files = sum(len(files) for files in self.include_files.values())
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
-    def update_includes(self, xml_file, conditional=False):
+    def update_includes(self, xml_file, folder, conditional=False):
         """Update maps from a skin include file and nested ones (CGUIIncludes::Load_Internal)."""
-
+        xml_file = os.path.normpath(xml_file)
         if not os.path.exists(xml_file) or not is_inside(xml_file, self.path):
             logger.info("Could not find include file %s", xml_file)
             return None
-
-        folder = xml_file.split(os.sep)[-2]
 
         root = get_root_from_file(xml_file)
         if root is None:
@@ -422,15 +420,15 @@ class Skin(Addon):
                                  (node, params, xml_file))
             elif "file" in node.attrib:
                 nested_conditional = conditional or "condition" in node.attrib
-                self.update_includes(os.path.join(self.path, folder, node.attrib["file"]),
+                self.update_includes(os.path.join(self.path, folder, node.attrib["file"]), folder,
                                      nested_conditional)
 
     def reload(self, path):
         """Reload whichever caches an edit to the file affects: includes, colors or fonts."""
-        folder = path.split(os.sep)[-2]
+        folder = self.xml_folder_of(path)
 
         if folder in self.include_files:
-            if path in self.include_files[folder]:
+            if os.path.normpath(path) in self.include_files[folder]:
                 self.update_include_list()
             else:
                 # an untracked file may be an include that just became parseable

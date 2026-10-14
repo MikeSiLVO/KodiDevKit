@@ -7,7 +7,7 @@ import re
 import logging
 from typing import Any
 
-from ..utils.files import check_paths
+from ..utils.files import check_paths, is_inside
 from .translations import create_new_po_file, get_po_file
 from ..utils.xml import get_root_from_file
 from ..polib import polib
@@ -179,17 +179,25 @@ class Addon:
         return self._index_builder
 
     def update_xml_files(self):
-        """Rebuild `window_files`: every .xml per folder except Font.xml, dropping the index."""
+        """Rebuild `window_files`: every .xml under each folder but Font.xml, dropping the index."""
         self.validation_index = None
         self.window_files = {}
         for path in self.xml_folders:
             xml_folder = os.path.join(self.path, path)
             self.window_files[path] = []
-            if not os.path.exists(xml_folder):
-                continue
-            for xml_file in sorted(os.listdir(xml_folder)):
-                if xml_file.endswith(".xml") and xml_file.lower() != "font.xml":
-                    self.window_files[path].append(xml_file)
+            for dirpath, dirnames, filenames in os.walk(xml_folder):
+                dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+                for name in sorted(filenames):
+                    rel = os.path.relpath(os.path.join(dirpath, name), xml_folder)
+                    if name.endswith(".xml") and rel.lower() != "font.xml":
+                        self.window_files[path].append(rel)
+
+    def xml_folder_of(self, path):
+        """The xml folder holding the file at any depth, else the name of its parent folder."""
+        for folder in self.xml_folders:
+            if is_inside(path, os.path.join(self.path, folder)):
+                return folder
+        return os.path.basename(os.path.dirname(path))
 
     def create_new_label(self, word, filepath):
         """Add a label to the first PO file, creating it when none exists; None when ids run out."""

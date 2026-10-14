@@ -541,8 +541,7 @@ class CheckerMixin:
         name = os.path.basename(path)
         if name not in self.OBSOLETE_WINDOW_FILES:
             return None
-        included = {os.path.basename(f) for f in getattr(self.addon, "include_files", {}).get(folder, [])}
-        if name in included:
+        if os.path.normpath(path) in getattr(self.addon, "include_files", {}).get(folder, []):
             return None
         successor = self.OBSOLETE_WINDOW_FILES[name]
         message = f"{name} is not a window file in this Kodi release"
@@ -560,7 +559,7 @@ class CheckerMixin:
         return any(f'addon="{addon_id}"' in text for addon_id in ("script.skinvariables", "script.skinshortcuts"))
 
     def check_file(self, path):
-        """Validate one file as written plus the resolved pass for skins; None when excluded."""
+        """Check one file as written plus the resolved pass for skins; None when excluded."""
         exclude = set(self.settings.get("validation_exclude", ["shortcuts"]))
         path_parts = set(path.replace("\\", "/").split("/"))
         if exclude & path_parts:
@@ -570,7 +569,7 @@ class CheckerMixin:
         if root is None:
             return [parse_error_issue(path)]
 
-        folder = path.split(os.sep)[-2] if os.sep in path else ""
+        folder = self.addon.xml_folder_of(path)
         listitems = [parse_error_issue(path)] if path in tolerated_xml_errors else []
 
         obsolete = self._obsolete_window_issue(path, folder)

@@ -17,9 +17,9 @@ class ValidationImage:
         self._validation_index = validation_index
         self._kodi_files = {name.lower() for name in window_filenames if name}
 
-    def _in_addon_window(self, file_path):
+    def _in_addon_window(self, file_path, folder):
         """True for a window file an addon opens, which also searches the addon's own media."""
-        name = os.path.basename(file_path).lower()
+        name = os.path.relpath(file_path, os.path.join(self.addon.path, folder)).lower()
         if not self._kodi_files or name in self._kodi_files or name.startswith("custom"):
             return False
         index = self._validation_index or {}
@@ -28,7 +28,7 @@ class ValidationImage:
         return name not in shared
 
     def check(self, progress_callback=None):
-        """Validate image references and texture bundles used by the current skin."""
+        """Check bundles and image usages, one row per bad bundle or usage, else a status row."""
         if not self.addon:
             return [{"message": "Image checker unavailable (no addon)", "file": "", "line": 0}]
 
@@ -95,7 +95,7 @@ class ValidationImage:
                             "severity": SEVERITY_ERROR,
                         })
 
-                    elif status == 'missing' and self._in_addon_window(file_path):
+                    elif status == 'missing' and self._in_addon_window(file_path, folder):
                         continue
 
                     elif status == 'missing':

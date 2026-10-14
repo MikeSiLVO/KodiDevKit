@@ -345,7 +345,7 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def _create_skin_with_includes(self, includes_xml):
-        """Helper to create a Skin instance with given includes XML."""
+        """Create a Skin with its maps loaded from an Includes.xml written to the test folder."""
         inc_path = os.path.join(self.folder, "Includes.xml")
         with open(inc_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
@@ -360,7 +360,7 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         skin.shadowed_defs = {folder: []}
         skin.include_files = {folder: []}
         skin._resolver = None
-        skin.update_includes(inc_path)
+        skin.update_includes(inc_path, folder)
         return skin
 
     def _resolve_and_tostring(self, skin, window_xml):
