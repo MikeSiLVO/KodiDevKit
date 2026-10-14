@@ -80,7 +80,6 @@ class SkinIndex:
         if progress_callback:
             progress_callback("Building validation index...")
 
-        # every per-folder key is keyed by xml folder, then by name or id
         index = {
             'fonts_defined': {},
             'fonts_used': {},
@@ -264,7 +263,7 @@ class SkinIndex:
                 for basename in basenames:
                     path = os.path.join(self.skin.path, folder, basename)
                     root = get_root_from_file(path)
-                    if root is None:
+                    if root is None or basename in index['non_window_files'][folder]:
                         index['window_expanded_ids'][folder][basename] = \
                             index['window_base_ids'][folder].get(basename, set())
                         continue
