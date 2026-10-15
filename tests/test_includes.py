@@ -682,5 +682,23 @@ class TestNestedIncludes(unittest.TestCase):
             raise
 
 
+class TestReloadMany(unittest.TestCase):
+    """Reloading several edited files at once."""
+
+    def test_each_cache_reloads_once(self):
+        """Two include files, a colors file and Font.xml reload includes once, colors once."""
+        skin = Skin.__new__(Skin)
+        skin.path = os.path.join(os.sep, "skin")
+        skin.xml_folders = ["16x9"]
+        folder = os.path.join(skin.path, "16x9")
+        skin.include_files = {"16x9": [os.path.join(folder, "Includes.xml"), os.path.join(folder, "More.xml")]}
+        calls = []
+        skin.update_include_list = lambda: calls.append("includes")
+        skin._load_colors_and_fonts = lambda: calls.append("colors")
+        skin.reload(os.path.join(folder, "Includes.xml"), os.path.join(folder, "More.xml"),
+                    os.path.join(skin.path, "colors", "extra.xml"), os.path.join(folder, "Font.xml"))
+        self.assertEqual(calls, ["includes", "colors"])
+
+
 if __name__ == "__main__":
     unittest.main()

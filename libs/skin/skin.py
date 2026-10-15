@@ -423,25 +423,30 @@ class Skin(Addon):
                 self.update_includes(os.path.join(self.path, folder, node.attrib["file"]), folder,
                                      nested_conditional)
 
-    def reload(self, path):
-        """Reload the caches an edit to the file affects, include calls rebuilt on next use."""
+    def reload(self, *paths):
+        """Reload the caches edits to the files affect, each once; include calls rebuilt on use."""
         self.include_usages = {}
         self._include_usages_built = False
-        folder = self.xml_folder_of(path)
+        includes = colors_and_fonts = False
+        for path in paths:
+            folder = self.xml_folder_of(path)
+            if folder in self.include_files:
+                if os.path.normpath(path) in self.include_files[folder]:
+                    includes = True
+                else:
+                    # an untracked file may be an include that just became parseable
+                    root = get_root_from_file(path)
+                    if root is not None and root.tag == "includes":
+                        logger.info("Recovered include file detected: %s", path)
+                        includes = True
+            name = os.path.basename(path).lower()
+            in_colors = os.path.basename(os.path.dirname(path)).lower() == "colors"
+            if name == "font.xml" or (in_colors and name.endswith(".xml")):
+                colors_and_fonts = True
 
-        if folder in self.include_files:
-            if os.path.normpath(path) in self.include_files[folder]:
-                self.update_include_list()
-            else:
-                # an untracked file may be an include that just became parseable
-                root = get_root_from_file(path)
-                if root is not None and root.tag == "includes":
-                    logger.info("Recovered include file detected: %s", path)
-                    self.update_include_list()
-
-        if path.endswith("colors/defaults.xml"):
-            self._load_colors_and_fonts()
-        if path.endswith(("Font.xml", "font.xml")):
+        if includes:
+            self.update_include_list()
+        if colors_and_fonts:
             self._load_colors_and_fonts()
 
     def get_themes(self):

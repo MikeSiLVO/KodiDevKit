@@ -259,7 +259,7 @@ class Addon:
                     return node
         return None
 
-    def reload(self, path):
+    def reload(self, *paths):
         """No-op for python addons; overridden by Skin."""
         pass
 
