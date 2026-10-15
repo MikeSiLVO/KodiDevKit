@@ -162,7 +162,7 @@ class ValidationProgressView(ProgressScratchView):
             content = f"""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║  🔍  VALIDATION IN PROGRESS                                                  ║
+║  VALIDATION IN PROGRESS                                                      ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
@@ -181,7 +181,7 @@ class ValidationProgressView(ProgressScratchView):
             content = f"""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║  🔍  VALIDATION IN PROGRESS                                                  ║
+║  VALIDATION IN PROGRESS                                                      ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
@@ -264,7 +264,7 @@ class ReportProgressView(ProgressScratchView):
                 self._last_update_time = current_time
 
     def _do_update(self, step, message):
-        """Update the view with the progress bar and step line for the step and message."""
+        """Update the view with the progress bar and step line."""
         progress_pct = int((step / self._total_steps) * 100) if self._total_steps > 0 else 0
         bar_width = 50
         filled = int(bar_width * step / self._total_steps) if self._total_steps > 0 else 0
@@ -291,7 +291,7 @@ class ReportProgressView(ProgressScratchView):
         content = f"""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║  ⚙  GENERATING VALIDATION REPORT                                            ║
+║  GENERATING VALIDATION REPORT                                                ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
