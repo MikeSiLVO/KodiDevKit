@@ -628,8 +628,60 @@ def _in_addon(filename):
         return False
 
 
+_disk_states = {}
+
+
+def _disk_state(addon):
+    """Modified time and size of each xml and po file the add-on's caches read, by path."""
+    roots = [os.path.join(addon.path, folder) for folder in addon.xml_folders]
+    roots += [os.path.join(addon.path, "colors"), addon.lang_path]
+    paths = [addon.xml_file]
+    for root in roots:
+        for dirpath, _dirnames, filenames in os.walk(root):
+            paths += [os.path.join(dirpath, name) for name in filenames
+                      if name.lower().endswith((".xml", ".po"))]
+    state = {}
+    for path in paths:
+        try:
+            stat = os.stat(path)
+        except OSError:
+            continue
+        state[path] = (stat.st_mtime_ns, stat.st_size)
+    return state
+
+
+def _remember_disk_state():
+    """Remember the modified time and size of the loaded add-on's files, for later comparison."""
+    addon = getattr(INFOS, "addon", None) if INFOS else None
+    if addon:
+        _disk_states[addon.path] = _disk_state(addon)
+
+
+def _pick_up_disk_changes():
+    """Pick up files changed outside the editor since the last look, reloading what they affect."""
+    infos = INFOS
+    addon = getattr(infos, "addon", None) if infos else None
+    if not infos or not addon:
+        return
+    state = _disk_state(addon)
+    old = _disk_states.get(addon.path)
+    _disk_states[addon.path] = state
+    if old is None or old == state:
+        return
+    changed = sorted(p for p in state.keys() | old.keys() if state.get(p) != old.get(p))
+    logger.info("reloading %d file(s) changed outside the editor", len(changed))
+    if addon.xml_file in changed:
+        infos.init_addon(addon.path)
+        _remember_disk_state()
+        return
+    addon.update_xml_files()
+    addon.reload(*[p for p in changed if p.lower().endswith(".xml")])
+    if any(p.lower().endswith(".po") for p in changed):
+        addon.update_labels()
+
+
 def _sync_project(window):
-    """Load the window's project folder as the addon when it is not the one already loaded."""
+    """Sync the loaded addon to the window's folder and reload the Kodi client's settings."""
     if not INFOS or window is None:
         return
     project_folder = window.extract_variables().get("folder")
@@ -644,6 +696,7 @@ def _sync_project(window):
         if load_settings and init_addon:
             load_settings(KodiDevKit.settings)
             init_addon(project_folder)
+            _remember_disk_state()
             _show_fatal_xml_phantom()
         init_elapsed = time.time() - init_start
         if init_elapsed > 1.0:
@@ -1817,7 +1870,8 @@ class KodiDevKit(sublime_plugin.EventListener):
         _sync_project(window)
 
     def on_activated_async(self, view):
-        """Refresh the parse for the activated view and drop phantoms of closed views."""
+        """Reload outside edits, reparse the view and drop the phantoms of closed views."""
+        _pick_up_disk_changes()
         self.check_status()
         self._cleanup_orphaned_phantoms()
 
@@ -1849,7 +1903,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._modified_files.add(fname)
 
     def on_post_save_async(self, view):
-        """After saving an xml file: reload skin caches and revalidate the file."""
+        """On save: drop an image's media cache, reload po labels, reload and revalidate an xml."""
         import time
         save_start = time.time()
 
@@ -1896,6 +1950,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             folder = os.path.basename(os.path.dirname(filename_full))
 
             addon.reload(filename_full)
+            _remember_disk_state()
 
             from .libs.utils.xml import parse_error_issue
 
@@ -2014,6 +2069,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         elif ext == ".po":
             if addon:
                 addon.update_labels()
+                _remember_disk_state()
 
         save_duration = time.time() - save_start
         logger.debug("on_post_save_async COMPLETE: file=%s duration=%.3fs", os.path.basename(filename_full), save_duration)

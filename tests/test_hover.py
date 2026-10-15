@@ -200,6 +200,52 @@ class TestCallVerdicts(unittest.TestCase):
         self.assertEqual(self.sent, [])
 
 
+class TestDiskChanges(unittest.TestCase):
+    """Files changed outside the editor, picked up when a view gets focus."""
+
+    def setUp(self):
+        """Create a skin on disk and a fake add-on recording what it reloads."""
+        import tempfile
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, self.root, True)
+        for rel in ("addon.xml", "16x9/Home.xml", "colors/defaults.xml", "language/en/strings.po"):
+            self._write(rel, "<a/>")
+        self.calls = []
+        kodidevkit.INFOS.addon = types.SimpleNamespace(
+            path=self.root, xml_folders=["16x9"], lang_path=os.path.join(self.root, "language"),
+            xml_file=os.path.join(self.root, "addon.xml"),
+            update_xml_files=lambda: self.calls.append("files"),
+            reload=lambda *paths: self.calls.append(("reload", paths)),
+            update_labels=lambda: self.calls.append("labels"))
+        kodidevkit.INFOS.init_addon = lambda path: self.calls.append("init")
+        self.addCleanup(delattr, kodidevkit.INFOS, "init_addon")
+        kodidevkit._disk_states.clear()
+        kodidevkit._pick_up_disk_changes()
+
+    def _write(self, rel, text):
+        """Write a file under the temporary skin, creating its folders."""
+        path = os.path.join(self.root, *rel.split("/"))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return path
+
+    def test_nothing_changed_reloads_nothing(self):
+        kodidevkit._pick_up_disk_changes()
+        self.assertEqual(self.calls, [])
+
+    def test_changed_window_and_strings_reload(self):
+        home = self._write("16x9/Home.xml", "<window/>")
+        self._write("language/en/strings.po", "changed")
+        kodidevkit._pick_up_disk_changes()
+        self.assertEqual(self.calls, ["files", ("reload", (home,)), "labels"])
+
+    def test_changed_addon_xml_reopens_the_addon(self):
+        self._write("addon.xml", "<addon/>")
+        kodidevkit._pick_up_disk_changes()
+        self.assertEqual(self.calls, ["init"])
+
+
 class TestOnTagName(unittest.TestCase):
     """The tag-name gate that selects whole-statement evaluation."""
 
