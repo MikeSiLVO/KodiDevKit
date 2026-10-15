@@ -34,6 +34,8 @@ from .libs.utils.infobool import (  # noqa: E402
 from .libs.utils.expressions import (  # noqa: E402
     extract_expression_at_offset, flatten_expressions, split_top_level_commas)
 from .libs.utils.xml import get_root_from_file  # noqa: E402
+from .libs.utils.validation import (  # noqa: E402
+    CallContexts, is_runtime_placeholder, resolve_param_in_name)
 from .libs.sublime.view import jump_to_label_declaration  # noqa: E402
 from .libs.infoprovider.provider import InfoProvider  # noqa: E402
 from .libs.kodi.jsonrpc import kodi  # noqa: E402
@@ -129,6 +131,8 @@ POPUP_WRAP_COLUMN = 100
 # past this a tooltip cannot show the text, and a verdict on unseen text misleads
 EXPANSION_LIMIT = 1200
 
+CALL_VARIANT_LIMIT = 6
+
 # color and word, not emoji: emoji fonts differ across platforms
 _VERDICT_TEXT = {
     STATE_TRUE: ("kdk-true", "TRUE"),
@@ -185,13 +189,20 @@ def _skin_expressions(view):
     file_name = view.file_name()
     if not addon or not file_name:
         return {}
-    folder = os.path.basename(os.path.dirname(file_name))
+    folder = addon.xml_folder_of(file_name)
     return (getattr(addon, "expression_map", None) or {}).get(folder, {})
 
 
-def evaluate_condition(view, condition):
+def _enclosing_include(element):
+    """Name of the include definition holding the element, or None outside one."""
+    if element is None:
+        return None
+    return next((a.get("name") for a in element.iterancestors("include") if a.get("name")), None)
+
+
+def evaluate_condition(view, condition, element=None):
     """Popup HTML with a condition's verdict and, for one item, Kodi's help; None if neither."""
-    verdict = _condition_verdict(view, condition)
+    verdict = _condition_verdict(view, condition, _enclosing_include(element))
     help_text = _condition_help_text(_decode_entities(condition or ""))
     if not help_text:
         return verdict
@@ -201,11 +212,13 @@ def evaluate_condition(view, condition):
     return f'{verdict or ""}{rule}<div class="kdk-sub">{note}</div>'
 
 
-def _condition_verdict(view, condition):
+def _condition_verdict(view, condition, include=None):
     """Popup HTML giving a Kodi boolean condition's verdict, or None if there is none."""
     condition = _decode_entities(condition or "").strip()
     if not condition or not re.search(r"[A-Za-z]", condition):
         return None
+    if include and "$PARAM[" in condition:
+        return _call_verdicts(view, condition, include)
 
     # JSON-RPC never sees the skin's expressions; Kodi expands them at load
     flattened, unknown = flatten_expressions(condition, _skin_expressions(view))
@@ -236,6 +249,69 @@ def _condition_verdict(view, condition):
             allow_code_wrap=True,
         )
     return body
+
+
+_PARAM_REF = re.compile(r"\$PARAM\[([^\]]+)\]")
+
+
+def _call_verdicts(view, condition, include):
+    """Verdict rows, one per way the include's calls fill the condition's $PARAM, up to a limit."""
+    addon = getattr(INFOS, "addon", None)
+    file_name = view.file_name()
+    if addon is None or not file_name or getattr(addon, "include_usages", None) is None:
+        return _verdict_html(STATE_NEEDS_CONTEXT, "unresolved $PARAM")
+    contexts = CallContexts(addon, addon.xml_folder_of(file_name)).for_include(include)
+    if not contexts:
+        return _verdict_html(STATE_NEEDS_CONTEXT, f"nothing calls {include}")
+
+    names = list(dict.fromkeys(_PARAM_REF.findall(condition)))
+    variants = {}
+    for context in contexts:
+        filled = resolve_param_in_name(condition, context)
+        if not is_runtime_placeholder(filled):
+            values = ", ".join(f"{name}={_shortened(context.get(name, ''))}" for name in names)
+            variants.setdefault(filled, values)
+    if not variants:
+        return _verdict_html(STATE_NEEDS_CONTEXT, f"only runtime placeholders fill {include}'s params")
+
+    rows, probes = [], []
+    for filled, values in list(variants.items())[:CALL_VARIANT_LIMIT]:
+        flattened, unknown = flatten_expressions(filled, _skin_expressions(view))
+        problem = (check_condition(flattened) if not unknown
+                   else (STATE_INVALID, f"undefined expression {sorted(unknown)[0]}"))
+        if problem:
+            rows.append((problem[0], f"{values}: {problem[1]}", None))
+        elif len(flattened) > EXPANSION_LIMIT:
+            rows.append((STATE_OFFLINE, f"{values}: expression too large to evaluate", None))
+        else:
+            rows.append((None, values, flattened))
+            probes += probe_booleans(flattened)
+
+    result = None
+    if probes:
+        if getattr(kodi, "_cooldown_until", 0) > time.time():
+            return None
+        result = kodi.request(method="XBMC.GetInfoBooleans", params={"booleans": probes})
+    body = "".join(_verdict_row(state or read_probe(result, flattened), values)
+                   for state, values, flattened in rows)
+    hidden = len(variants) - CALL_VARIANT_LIMIT
+    if hidden > 0:
+        body += f'<div class="kdk-sub">and {hidden} more ways the calls fill it</div>'
+    return body
+
+
+def _shortened(value):
+    """A param value short enough for one popup row, quoted when empty."""
+    if not value:
+        return '""'
+    return value if len(value) <= 40 else value[:37] + "..."
+
+
+def _verdict_row(state, detail):
+    """Verdict pill with its detail on the same line."""
+    style, label = _VERDICT_TEXT.get(state, ("kdk-offline", "UNKNOWN"))
+    return (f'<div><span class="kdk-verdict {style}">{label}</span> '
+            f'<span class="kdk-sub">{html.escape(detail)}</span></div>')
 
 
 _WRAP_BREAK_CHARS = ",|+"
@@ -1226,7 +1302,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
         if element is not None and "condition" in element.attrib:
             if on_attr_name and scope_content.strip() == "condition":
-                verdict = evaluate_condition(view, element.attrib["condition"])
+                verdict = evaluate_condition(view, element.attrib["condition"], element)
                 if verdict:
                     return verdict
 
@@ -1239,7 +1315,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     # the item at the caret; the whole attribute shows on the `condition` name
                     cond = _operand_clause(line_text, cursor_offset)
                     if cond:
-                        verdict = evaluate_condition(view, cond)
+                        verdict = evaluate_condition(view, cond, element)
                         if verdict:
                             return verdict
 
@@ -1389,7 +1465,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     return None
 
             cond = re.sub(r"\s*\+\s*", " + ", cond.strip())
-            verdict = evaluate_condition(view, cond)
+            verdict = evaluate_condition(view, cond, owner)
             if verdict:
                 return verdict
 

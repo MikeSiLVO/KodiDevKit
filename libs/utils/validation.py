@@ -336,7 +336,7 @@ def find_font_line_in_include(inc, font_name):
     return int(inc.get("line") or 1)
 
 
-def _is_runtime_placeholder(text):
+def is_runtime_placeholder(text):
     """True when the text holds a placeholder only the running addon can fill in."""
     upper = text.upper()
     return "$SKINSHORTCUTS" in upper or "$PROPERTY[" in upper
@@ -378,7 +378,7 @@ def find_includes_in_skinshortcuts_template(template_path, known_include_names):
     try:
         for text in root.xpath(".//text()"):
             text_stripped = text.strip()
-            if not text_stripped or _is_runtime_placeholder(text_stripped):
+            if not text_stripped or is_runtime_placeholder(text_stripped):
                 continue
             for include_name in known_include_names:
                 if include_name in text_stripped:
@@ -387,7 +387,7 @@ def find_includes_in_skinshortcuts_template(template_path, known_include_names):
         for attr in ("content", "include"):
             for elem in root.xpath(f".//*[@{attr}]"):
                 value = elem.get(attr, "")
-                if not value or _is_runtime_placeholder(value):
+                if not value or is_runtime_placeholder(value):
                     continue
                 if value in known_include_names:
                     referenced.add(value)
@@ -415,7 +415,7 @@ def find_variables_in_skinshortcuts_file(template_path, known_variable_names):
     def _scan(text):
         for match in var_pattern.finditer(text):
             var_name = match.group(1).split(",")[0]
-            if _is_runtime_placeholder(var_name):
+            if is_runtime_placeholder(var_name):
                 continue
             if var_name in known_variable_names:
                 referenced.add(var_name)
@@ -452,7 +452,7 @@ def find_variable_definitions_in_skinshortcuts_template(template_path):
     try:
         for var_elem in root.iter("variable"):
             name = var_elem.get("name", "").strip()
-            if name and not _is_runtime_placeholder(name):
+            if name and not is_runtime_placeholder(name):
                 defined.add(name)
     except Exception:
         logger.exception("Error scanning variable definitions in %s", template_path)

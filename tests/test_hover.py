@@ -61,6 +61,20 @@ class FakeAddon:
     def __init__(self, expressions):
         self.expression_map = {"16x9": expressions}
 
+    def xml_folder_of(self, path):
+        """Every file of the fake skin sits in 16x9."""
+        return "16x9"
+
+
+class CallingAddon(FakeAddon):
+    """Fake skin whose include Shelf is called with the given param sets."""
+
+    def __init__(self, calls):
+        super().__init__({})
+        self.include_map = {"16x9": {"Shelf": (None, {}, "Includes.xml")}}
+        self.include_usages = {"16x9": {"Shelf": [{"params": c, "enclosing": None} for c in calls]}}
+        self._include_usages_built = True
+
 
 class TestEvaluateCondition(unittest.TestCase):
 
@@ -144,6 +158,45 @@ class TestEvaluateCondition(unittest.TestCase):
     def test_empty_and_wordless_conditions_are_ignored(self):
         self.assertEqual(kodidevkit.evaluate_condition(FakeView(), ""), None)
         self.assertEqual(kodidevkit.evaluate_condition(FakeView(), "  +  "), None)
+        self.assertEqual(self.sent, [])
+
+
+class TestCallVerdicts(unittest.TestCase):
+    """A $PARAM condition inside an include, judged once per way its calls fill it."""
+
+    ELEMENT = ET.fromstring('<includes><include name="Shelf"><definition><control>'
+                            '<visible>$PARAM[show]</visible></control></definition></include>'
+                            '</includes>').find(".//visible")
+
+    def setUp(self):
+        """Answer every probe: Player.HasVideo false, any other condition true."""
+        self.sent = []
+        kodidevkit.kodi._cooldown_until = 0.0
+        kodidevkit.kodi.request = self._request
+
+    def _request(self, method=None, params=None):
+        """Stand-in for Kodi's request that records each probe list it gets."""
+        booleans = (params or {}).get("booleans", [])
+        self.sent.append(booleans)
+        return {"result": {b: ("HasVideo" in b) == b.startswith("!") for b in booleans}}
+
+    def _run(self, calls):
+        """Run the $PARAM[show] hover against a fake skin that calls the include."""
+        kodidevkit.INFOS.addon = CallingAddon(calls)
+        return kodidevkit.evaluate_condition(FakeView(), "$PARAM[show]", self.ELEMENT) or ""
+
+    def test_each_way_of_filling_gets_a_row_from_one_request(self):
+        body = self._run([{"show": "Skin.HasSetting(a)"}, {"show": "Player.HasVideo"},
+                          {"show": "Skin.HasSetting(a)"}])
+        self.assertIn('TRUE</span> <span class="kdk-sub">show=Skin.HasSetting(a)', body)
+        self.assertIn('FALSE</span> <span class="kdk-sub">show=Player.HasVideo', body)
+        self.assertEqual(len(self.sent), 1)
+        self.assertEqual(len(self.sent[0]), 4)
+
+    def test_include_nothing_calls_says_so(self):
+        body = self._run([])
+        self.assertIn("NEEDS INCLUDE CONTEXT", body)
+        self.assertIn("nothing calls Shelf", body)
         self.assertEqual(self.sent, [])
 
 

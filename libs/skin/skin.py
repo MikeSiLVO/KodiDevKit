@@ -424,7 +424,9 @@ class Skin(Addon):
                                      nested_conditional)
 
     def reload(self, path):
-        """Reload whichever caches an edit to the file affects: includes, colors or fonts."""
+        """Reload the caches an edit to the file affects, include calls rebuilt on next use."""
+        self.include_usages = {}
+        self._include_usages_built = False
         folder = self.xml_folder_of(path)
 
         if folder in self.include_files:
