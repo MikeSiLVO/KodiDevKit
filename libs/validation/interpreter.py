@@ -264,7 +264,7 @@ class XmlInterpreter:
                 )
 
     def _validate_control_children(self, node, control_type: str, *, inside_layout: bool):
-        """Validate each child's tag, attributes and values against the control's template."""
+        """Validate each child against the template; flag duplicates and copies of the default."""
         subnodes = self.template_attribs.get(control_type)
         if subnodes is None:
             return
@@ -302,8 +302,9 @@ class XmlInterpreter:
 
             if tag in LITERAL_TAGS and _contains_dynamic(child.text or "", prefixes=RUNTIME_PREFIXES):
                 found = next(p for p in RUNTIME_PREFIXES if p in child.text.casefold())
-                self._add_issue(child, SEVERITY_ERROR, f"<{tag}> is read as a literal, Kodi does not "
-                                                       f"expand {found.upper()}] in it")
+                self._add_issue(child, SEVERITY_ERROR, f"<{tag}> takes its text as written: Kodi does "
+                                                       f"not expand {found.upper()}] in it, and this copy "
+                                                       f"still overrides any <default> value")
 
             tmpl_val = values.get(tag)
             if child.text and tmpl_val in ("int", "position"):

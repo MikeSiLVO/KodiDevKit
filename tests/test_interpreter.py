@@ -411,6 +411,7 @@ class TestLiteralTags(unittest.TestCase):
     """Kodi reads sizes, fonts and button textures literally, so no dynamic expression expands."""
 
     def test_dynamic_expression_in_literal_tag(self):
+        """A dynamic expression in a literal tag is reported, while one in a label is not."""
         interp = XmlInterpreter(template_attribs={"button": {"width": {}, "texturefocus": {}, "label": {}}},
                                 template_values={"button": {"width": "int"}})
         issues = interp.interpret(_parse("""
@@ -420,8 +421,10 @@ class TestLiteralTags(unittest.TestCase):
             <label>$INFO[ListItem.Label]</label>
         </control></controls></window>"""))
         self.assertEqual(sorted(i["message"] for i in issues), [
-            "<texturefocus> is read as a literal, Kodi does not expand $VAR[] in it",
-            "<width> is read as a literal, Kodi does not expand $INFO[] in it",
+            "<texturefocus> takes its text as written: Kodi does not expand $VAR[] in it, and this copy "
+            "still overrides any <default> value",
+            "<width> takes its text as written: Kodi does not expand $INFO[] in it, and this copy "
+            "still overrides any <default> value",
         ])
 
 class TestIncludesFile(unittest.TestCase):

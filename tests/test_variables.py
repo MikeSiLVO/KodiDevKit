@@ -888,8 +888,7 @@ class TestVariableValueValidation(ValidationTestCase):
         self.assertEqual(len(int_issues), 0, "Variable with valid integer values should pass")
 
     def test_variable_with_invalid_integer_value(self):
-        """Test variable with invalid integer value is flagged."""
-        # Create variable with one invalid integer
+        """A $VAR in a literal <width> is flagged; its invalid value is never read."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="ControlWidth">
@@ -902,7 +901,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -919,9 +917,9 @@ class TestVariableValueValidation(ValidationTestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_file(window_path)
 
-        # Kodi reads <width> literally, so the variable never expands and its values are not checked
         messages = [i.get("message", "") for i in issues]
-        self.assertIn("<width> is read as a literal, Kodi does not expand $VAR[] in it", messages)
+        self.assertIn("<width> takes its text as written: Kodi does not expand $VAR[] in it, and this copy "
+                      "still overrides any <default> value", messages)
         self.assertFalse([m for m in messages if "NotANumber" in m])
 
     def test_variable_with_dynamic_expression_values(self):
