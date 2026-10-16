@@ -425,12 +425,10 @@ class CheckerMixin:
         if not var_name:
             return True
 
-        var_def = getattr(self, '_variable_cache', {}).get(var_name)
-
-        if not var_def or var_def.get("node") is None:
+        var_node = getattr(self, '_variable_cache', {}).get(var_name)
+        if var_node is None:
             return True  # undefined vars are the variable check's job
 
-        var_node = var_def.get("node")
         value_nodes = var_node.findall("value")
 
         if not value_nodes:
@@ -579,12 +577,8 @@ class CheckerMixin:
         if obsolete:
             listitems.append(obsolete)
 
-        self._variable_cache = {}
-        for item in self._get_includes_for_folder(folder):
-            if item.get("type") == "variable":
-                var_name = item.get("name")
-                if var_name:
-                    self._variable_cache[var_name] = item
+        self._variable_cache = {name: node for name, (node, _) in
+                                getattr(self.addon, "variable_map", {}).get(folder, {}).items()}
 
         for node in root.xpath(".//include[@file]"):
             issue = check_include_file_ref(self.addon, folder, node.attrib["file"])
