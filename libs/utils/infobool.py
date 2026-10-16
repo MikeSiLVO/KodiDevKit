@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import re
 
 from .expressions import expression_references
@@ -129,10 +130,42 @@ def check_condition(condition: str) -> tuple[str, str] | None:
 
 def static_value(condition: str) -> bool | None:
     """True or False when the condition reads the same in any state, else None."""
+    tokens = _tokens(condition)
+    return None if tokens is None else _value(tokens, {})
+
+
+def condition_states(conditions: list[str], limit: int = 10) -> list[dict[str, bool]] | None:
+    """Each condition's value per operand state; None if one won't parse or there are too many."""
+    parsed = {}
+    for condition in set(conditions):
+        tokens = _tokens(condition)
+        if tokens is None:
+            return None
+        parsed[condition] = tokens
+    names = sorted({t for tokens in parsed.values() for t in tokens
+                    if t not in _OPERATORS and t.lower() not in _LITERALS})
+    if len(names) > limit:
+        return None
+    states = []
+    for combo in itertools.product((False, True), repeat=len(names)):
+        values = dict(zip(names, combo))
+        state = {condition: _value(tokens, values) for condition, tokens in parsed.items()}
+        if None in state.values():
+            return None
+        states.append(state)
+    return states
+
+
+def _tokens(condition: str) -> list[str] | None:
+    """The condition cut into operands and operators, or None when Kodi cannot parse it."""
     text, unclosed = _drop_presubstituted(condition)
     if unclosed or check_syntax(condition):
         return None
-    tokens = [t.strip() for t in re.split(r"([\[\]!+|])", text) if t.strip()]
+    return [t.strip() for t in re.split(r"([\[\]!+|])", text) if t.strip()]
+
+
+def _value(tokens: list[str], values: dict[str, bool]) -> bool | None:
+    """True or False for the parsed condition with the operands given, None where it cannot tell."""
     pos = 0
 
     def any_of():
@@ -162,7 +195,7 @@ def static_value(condition: str) -> bool | None:
             value = any_of()
             pos += 1
             return value
-        return _LITERALS.get(token.lower())
+        return _LITERALS.get(token.lower(), values.get(token))
 
     return any_of()
 

@@ -108,6 +108,7 @@ class XmlInterpreter:
         constants: set | frozenset = frozenset(),
         info_names: dict | None = None,
         expressions: dict | None = None,
+        settled_defaults: dict | None = None,
     ):
         self.template_attribs = template_attribs or {}
         self.template_values = template_values or {}
@@ -117,6 +118,7 @@ class XmlInterpreter:
         self.constants = constants
         self.info_names = info_names
         self.expressions = expressions or {}
+        self.settled_defaults = settled_defaults or {}
         self._condition_cache: dict[str, list[tuple[str, str]]] = {}
         self.issues: list[dict] = []
 
@@ -356,7 +358,8 @@ class XmlInterpreter:
         self._report_default_repeats(node, control_type)
 
     def _report_default_repeats(self, control, control_type: str):
-        """Report own tags that set exactly what the control type's <default> would supply."""
+        """Report own tags that set what the control type's <default> supplies in every state."""
+        settled = self.settled_defaults.get(control.get("type"))
         copies = {}
         for child in control:
             if not isinstance(child.tag, str) or len(child) or child.tag.lower() in REPEATABLE_TAGS:
@@ -368,6 +371,8 @@ class XmlInterpreter:
             defaults = [c for c in found if (c.get("_kdk_inc_name") or "").startswith("default type=")]
             others = [c for c in found if c not in defaults]
             if not defaults or len(others) != 1 or others[0].get("_kdk_inc_name") is not None:
+                continue
+            if settled is not None and tag not in settled:
                 continue
             if _same_value(others[0], defaults[0]):
                 self._add_issue(others[0], SEVERITY_WARNING,

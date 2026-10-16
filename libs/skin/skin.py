@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from ..utils.files import check_paths, is_inside
+from ..utils.infobool import condition_states
 from ..utils.xml import get_params, get_root_from_file
 from ..utils.validation import normalize_control_id
 from ..addon.addon import Addon
@@ -22,6 +23,11 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
+
+
+def _same_definition(a, b):
+    """Whether two definition elements have the same text and attributes."""
+    return b is not None and (a.text or "").strip() == (b.text or "").strip() and dict(a.attrib) == dict(b.attrib)
 
 
 class Skin(Addon):
@@ -53,6 +59,8 @@ class Skin(Addon):
         self.shadowed_defs: dict[str, list[dict]] = {}
         # include files loaded under a condition, which Kodi only reads when it holds
         self.conditional_files: dict[str, set[str]] = {}
+        # each <default> per type with its include conditions; a setting can swap which one wins
+        self.default_loads: dict[str, dict[str, list[tuple[Any, tuple[str, ...]]]]] = {}
 
         self.include_usages: dict = {}
         self._include_usages_built = False
@@ -306,6 +314,7 @@ class Skin(Addon):
             self.expression_source_map[folder] = {}
             self.shadowed_defs[folder] = []
             self.conditional_files[folder] = set()
+            self.default_loads[folder] = {}
 
             include_file = check_paths(paths)
             if include_file:
@@ -328,8 +337,8 @@ class Skin(Addon):
         total_files = sum(len(files) for files in self.include_files.values())
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
-    def update_includes(self, xml_file, folder, conditional=False):
-        """Update maps from a skin include file and nested ones."""
+    def update_includes(self, xml_file, folder, conditions=()):
+        """Update maps from an include file and nested ones, defaults with their load conditions."""
         xml_file = os.path.normpath(xml_file)
         if not os.path.exists(xml_file) or not is_inside(xml_file, self.path):
             logger.info("Could not find include file %s", xml_file)
@@ -340,14 +349,14 @@ class Skin(Addon):
             return []
 
         self.include_files[folder].append(xml_file)
-        if conditional:
+        if conditions:
             self.conditional_files[folder].add(xml_file)
 
-        self._load_defaults(root, folder, xml_file)
+        self._load_defaults(root, folder, xml_file, conditions)
         self._load_constants(root, folder, xml_file)
         self._load_expressions(root, folder, xml_file)
         self._load_variables(root, folder, xml_file)
-        self._load_includes(root, folder, xml_file, conditional)
+        self._load_includes(root, folder, xml_file, conditions)
         self._load_maps(root, folder, xml_file)
 
     def _keep_first(self, kind, table, folder, name, node, xml_file, value):
@@ -361,13 +370,29 @@ class Skin(Addon):
         table[folder][name] = value
         return True
 
-    def _load_defaults(self, root, folder, xml_file):
-        """Load <default type="X"> entries, the first definition winning."""
+    def _load_defaults(self, root, folder, xml_file, conditions=()):
+        """Load <default type="X"> entries, the first winning, each recorded with its conditions."""
         for node in root.findall("default"):
             control_type = node.attrib.get("type")
             if control_type and node.find("*") is not None:
                 self._keep_first("default", self.default_map, folder, control_type, node, xml_file,
                                  (node, xml_file))
+                self.default_loads[folder].setdefault(control_type, []).append((node, conditions))
+
+    def settled_default_tags(self, folder):
+        """Tags of each conditional default whose kept value holds in every setting state."""
+        conditional = {control_type: loads for control_type, loads in self.default_loads.get(folder, {}).items()
+                       if loads[0][1]}
+        states = condition_states([c for loads in conditional.values() for _, chain in loads for c in chain])
+        settled = {}
+        for control_type, loads in conditional.items():
+            kept = loads[0][0]
+            winners = [next((node for node, chain in loads if all(state[c] for c in chain)), None)
+                       for state in states or []]
+            tags = {c.tag for c in kept if isinstance(c.tag, str)} if winners else set()
+            settled[control_type] = {tag for tag in tags if all(
+                w is not None and _same_definition(kept.find(tag), w.find(tag)) for w in winners)}
+        return settled
 
     def _load_constants(self, root, folder, xml_file):
         """Load <constant name="X"> values, the first definition winning."""
@@ -403,7 +428,7 @@ class Skin(Addon):
             if name:
                 self.map_map[folder][name] = (node, xml_file)
 
-    def _load_includes(self, root, folder, xml_file, conditional=False):
+    def _load_includes(self, root, folder, xml_file, conditions=()):
         """Load named includes, the first definition winning, and <include file> ones in place."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
@@ -419,9 +444,8 @@ class Skin(Addon):
                 self._keep_first("include", self.include_map, folder, name, node, xml_file,
                                  (node, params, xml_file))
             elif "file" in node.attrib:
-                nested_conditional = conditional or "condition" in node.attrib
-                self.update_includes(os.path.join(self.path, folder, node.attrib["file"]), folder,
-                                     nested_conditional)
+                nested = conditions + ((node.attrib["condition"],) if "condition" in node.attrib else ())
+                self.update_includes(os.path.join(self.path, folder, node.attrib["file"]), folder, nested)
 
     def reload(self, *paths):
         """Reload the caches edits to the files affect, each once; include calls rebuilt on use."""

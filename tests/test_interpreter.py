@@ -769,6 +769,23 @@ class TestControlChildValidation(unittest.TestCase):
         self.assertIn('Redundant <aligny>: same value as <default type="label">', messages)
         self.assertFalse([m for m in messages if "Redundant <height>" in m or "Redundant <font>" in m])
 
+    def test_tag_whose_default_changes_with_a_setting_is_kept(self):
+        """A tag whose default changes with a setting is kept; a settled one is still redundant."""
+        attribs = {"label": {"aligny": {}, "font": {}}}
+        dflt = '_kdk_inc_name="default type=label" _kdk_call_line="3"'
+        root = _parse(f"""
+        <window><controls><control type="label">
+            <aligny>center</aligny>
+            <font>font12</font>
+            <aligny {dflt}>center</aligny>
+            <font {dflt}>font12</font>
+        </control></controls></window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values={"label": {}},
+                                settled_defaults={"label": {"aligny"}})
+        self.assertEqual([i["message"] for i in interp.interpret(root)],
+                         ['Redundant <aligny>: same value as <default type="label">'])
+
     def test_own_value_after_include_is_ignored(self):
         attribs = {"button": {"enable": {}, "selected": {}}}
         values = {"button": {}}

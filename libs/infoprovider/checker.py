@@ -487,7 +487,7 @@ class CheckerMixin:
         return isinstance(self.addon, Skin) and hasattr(self.addon, "resolver")
 
     def _check_file_resolved(self, root, path: str, folder: str) -> list[dict]:
-        """XmlInterpreter issues over the expanded tree, include definitions left as written."""
+        """Check the expanded tree with XmlInterpreter, include definitions left as written."""
         from ..skin.skin import Skin
 
         sk = self.addon
@@ -516,6 +516,7 @@ class CheckerMixin:
             constants=set(self.addon.get_constants(folder)) if self.addon else set(),
             info_names=self.INFO_NAMES,
             expressions=self._expression_sources(folder),
+            settled_defaults=sk.settled_default_tags(folder),
         )
         issues = interpreter.interpret(walk_root)
 
