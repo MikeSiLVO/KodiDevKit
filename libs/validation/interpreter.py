@@ -117,6 +117,7 @@ class XmlInterpreter:
         self.constants = constants
         self.info_names = info_names
         self.expressions = expressions or {}
+        self._condition_cache: dict[str, list[tuple[str, str]]] = {}
         self.issues: list[dict] = []
 
     def interpret(self, root) -> list[dict]:
@@ -488,7 +489,13 @@ class XmlInterpreter:
             self._add_issue(node, severity, message)
 
     def _condition_problems(self, text: str) -> list[tuple[str, str]]:
-        """Severity and message for each reason Kodi cannot read the condition."""
+        """Severity and message for each reason Kodi cannot read the condition, cached per text."""
+        if text not in self._condition_cache:
+            self._condition_cache[text] = self._read_condition(text)
+        return self._condition_cache[text]
+
+    def _read_condition(self, text: str) -> list[tuple[str, str]]:
+        """Read the condition, returning a severity and message per reason Kodi cannot use it."""
         short = text if len(text) <= 60 else text[:60] + "..."
         problem = check_condition(text)
         if problem and problem[0] == STATE_INVALID:
