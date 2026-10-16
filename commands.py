@@ -86,11 +86,8 @@ class KodidevkitOpenSourceFromLogCommand(sublime_plugin.TextCommand):
     """Command jumping from a Python traceback line in the log to its source file and line."""
 
     def run(self, edit):
-        """Open the file and line in the caret's traceback line; a selection is doubled instead."""
+        """Open the file and line named on the traceback line holding the caret or selection."""
         for region in self.view.sel():
-            if not region.empty():
-                self.view.insert(edit, region.begin(), self.view.substr(region))
-                continue
             line_contents = self.view.substr(self.view.line(region))
             match = FILE_ERROR_PATTERN.search(line_contents)
             if match:
