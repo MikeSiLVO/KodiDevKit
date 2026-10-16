@@ -45,7 +45,7 @@ SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 
 CONST_ATTRIBUTES = {"x", "y", "width", "height", "center", "max", "min", "w", "h", "time",
-                    "acceleration", "delay", "start", "end", "center", "border", "repeat"}
+                    "acceleration", "delay", "start", "end", "border", "repeat"}
 
 
 CONST_NODES = {"posx", "posy", "left", "centerleft", "right", "centerright", "top", "centertop",

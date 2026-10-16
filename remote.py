@@ -21,9 +21,6 @@ class KodidevkitRemoteActionsCommand(sublime_plugin.WindowCommand):
 
     settings: sublime.Settings
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def run(self):
         """Show the actions in a quick panel, the saved device first."""
         self.settings = sublime.load_settings(SETTINGS_FILE)

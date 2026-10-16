@@ -195,7 +195,6 @@ class KodidevkitReplaceXmlElementsCommand(sublime_plugin.TextCommand):
         offset = int(reg.group(1)) if reg else 0
         for i in range(int(num_items)):
             text = text + selected_text.replace("[%i]" % offset, str(i + offset)) + "\n"
-            i += 1
         for region in self.view.sel():
             self.view.replace(edit, region, text)
             break
@@ -835,7 +834,6 @@ class KodidevkitLanguageProbeCommand(sublime_plugin.ApplicationCommand):
             if addon_root:
                 a = Addon(path=addon_root, settings=s)
                 log.info("[probe] primary_lang_folder=%r", getattr(a, "primary_lang_folder", None))
-                log.info("[probe] secondary_lang_folders=%r", getattr(a, "secondary_lang_folders", None))
 
                 skin_candidates = []
                 if getattr(a, "primary_lang_folder", None):

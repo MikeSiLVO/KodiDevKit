@@ -662,7 +662,7 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
         return os.path.exists(translate_path(content))
 
     @run_async
-    def run(self, pack_textures=True):
+    def run(self):
         """Open the image under the cursor in the system's default viewer."""
         infos = _infos()
         if not infos:

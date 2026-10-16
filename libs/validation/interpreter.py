@@ -535,7 +535,7 @@ class XmlInterpreter:
         return re.match(r"^[A-Za-z_][\w.-]*$", value) is not None and value.lower() != "auto"
 
     def _validate_typed_attr(self, node, attr_name: str, value: str, value_type: str):
-        """Validate typed attribute values (int, color, enum)."""
+        """Validate typed attribute values (int, position, color, bool, enum)."""
         if not (value or "").strip():
             return
 
@@ -547,8 +547,8 @@ class XmlInterpreter:
                     node, SEVERITY_ERROR,
                     f"Invalid color for {attr_name}: {value}",
                 )
-        elif value_type == "bool" and attribute_bool_problem(attr_name, value):
-            self._add_issue(node, SEVERITY_ERROR, attribute_bool_problem(attr_name, value) or "")
+        elif value_type == "bool" and (problem := attribute_bool_problem(attr_name, value)):
+            self._add_issue(node, SEVERITY_ERROR, problem)
         elif value_type in ALLOWED_VALUES:
             self._validate_enum_value(node, value, value_type)
 

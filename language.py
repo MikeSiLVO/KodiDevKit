@@ -105,7 +105,6 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
         addon = getattr(infos, "addon", None)
         if not addon or not addon.path:
             return None
-        region = self.view.sel()[0]
         file_name = self.view.file_name()
         if not file_name:
             return None
