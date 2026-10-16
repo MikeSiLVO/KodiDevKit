@@ -103,9 +103,9 @@ def extract_variable_name(text: str) -> str | None:
 
 def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *,
                            escape: bool = False) -> tuple[str, str]:
-    """Substitute $PARAM names from the params, with a status saying how much resolved."""
-    # escape only text that is re-parsed as XML; unknown names stay as written
-    if not text or not isinstance(text, str):
+    """Resolve $PARAM references, with a status saying how much resolved."""
+    # escape only text that is re-parsed as XML
+    if not text or not isinstance(text, str) or "$" not in text:
         return text, "NO_PARAMS"
     if not params:
         if _PARAM_PATTERN.search(text):

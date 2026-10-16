@@ -315,6 +315,8 @@ class SkinResolution:
             return
 
         for attr_name, attr_value in list(node.attrib.items()):
+            if "$" not in attr_value:
+                continue
             resolved, status = resolve_params_in_text(attr_value, params)
 
             # a lone undefined $PARAM forwarded as a param value drops the <param>; default wins
@@ -328,10 +330,9 @@ class SkinResolution:
 
             node.attrib[attr_name] = resolved
 
-        if node.text:
+        if node.text and "$" in node.text:
             resolved, status = resolve_params_in_text(node.text, params)
 
-            # same for the text form
             if (status == "SINGLE_UNDEFINED" and
                 node.tag == "param" and
                 node.getparent() is not None and
