@@ -355,6 +355,7 @@ class CheckerMixin:
                 listitems.extend(result)
 
         listitems = self._reported("XML Validation", deduplicate_issues(merge_include_issues(listitems)))
+        listitems += self.get_suppressions().faults_in()
 
         if progress_callback:
             progress_callback(f"Complete: {len(listitems)} XML validation issues found")
@@ -560,9 +561,11 @@ class CheckerMixin:
         return any(f'addon="{addon_id}"' in text for addon_id in ("script.skinvariables", "script.skinshortcuts"))
 
     def check_file(self, path):
-        """Check one file, its muted rows marked; None when excluded."""
+        """Check one file, marking muted rows and adding kdk-ignore faults; None when excluded."""
         issues = self._file_issues(path)
-        return None if issues is None else self._reported("XML Validation", issues)
+        if issues is None:
+            return None
+        return self._reported("XML Validation", issues) + self.get_suppressions().faults_in(path)
 
     def _file_issues(self, path):
         """Issues of one file as written plus the resolved pass for skins; None when excluded."""

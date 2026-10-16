@@ -6,12 +6,21 @@ import logging
 import os
 import re
 
+from ..utils.validation import create_issue
+from .constants import SEVERITY_WARNING
+
 logger = logging.getLogger(__name__)
 
 DIRECTIVE = re.compile(r"<!--\s*kdk-ignore(-file)?\s*(?::([^;>]*?))?\s*(?:;(.*?))?\s*-->", re.IGNORECASE)
 
 # a bare directive with no category list mutes every check
 ALL = "*"
+
+CHECKS = ("Variables", "Maps", "Includes", "Labels", "Fonts", "IDs", "Images", "XML Validation",
+          "File Integrity", "Kodi Repo")
+
+FILE_FAULT = ("kdk-ignore-file mutes nothing until it names the checks and gives a reason, "
+              "such as <!-- kdk-ignore-file: labels; debug overlay -->")
 
 
 def normalize(name):
@@ -28,6 +37,12 @@ def _categories(raw):
     return names or {ALL}
 
 
+def _unknown(raw):
+    """Names in the `: a, b` part that match no check, as the skin wrote them."""
+    known = {normalize(name) for name in CHECKS}
+    return [part.strip() for part in (raw or "").split(",") if normalize(part) and normalize(part) not in known]
+
+
 def _key(path):
     """Key a path so it compares the way the host filesystem does."""
     return os.path.normcase(os.path.abspath(str(path)))
@@ -39,6 +54,7 @@ class Suppressions:
     def __init__(self):
         self.files = {}
         self.lines = {}
+        self.faults = []
 
     def add_file(self, path, categories, line=1, reason=""):
         """Add a file-wide mute for the categories, written at that line with that reason."""
@@ -48,6 +64,17 @@ class Suppressions:
         """Add a one-line mute for the categories, written on that line or the one above."""
         mute = {"line": written_at or line, "reason": reason}
         self.lines.setdefault((_key(path), line), []).append((categories, mute))
+
+    def add_fault(self, path, line, message):
+        """Add a warning at the line for a directive that mutes less than it says."""
+        self.faults.append(create_issue(message, file=path, line=line, severity=SEVERITY_WARNING))
+
+    def faults_in(self, path=None):
+        """Warnings for directives that mute less than they say, in the file or in all of them."""
+        if path is None:
+            return list(self.faults)
+        key = _key(path)
+        return [fault for fault in self.faults if _key(fault["file"]) == key]
 
     def __bool__(self):
         return bool(self.files or self.lines)
@@ -86,7 +113,7 @@ def muted_note(issue):
 
 
 def scan(paths):
-    """Scan the files for every directive."""
+    """Scan the files for every directive, noting each that mutes less than it says."""
     found = Suppressions()
 
     for path in paths:
@@ -105,13 +132,22 @@ def scan(paths):
             if not matches:
                 continue
 
-            # nothing is reported against a comment; a directive alone covers the line below
+            # a directive alone covers the line below
             alone = not DIRECTIVE.sub("", line).strip()
 
             for match in matches:
                 categories = _categories(match.group(2))
                 reason = (match.group(3) or "").strip()
-                if match.group(1):
+                unknown = _unknown(match.group(2))
+                if unknown:
+                    found.add_fault(path, number, f"kdk-ignore names a check that does not exist: "
+                                                  f"{', '.join(unknown)}. The checks are {', '.join(CHECKS)}")
+                    categories -= {normalize(name) for name in unknown}
+                if match.group(1) and (ALL in categories or not reason):
+                    found.add_fault(path, number, FILE_FAULT)
+                elif not categories:
+                    continue
+                elif match.group(1):
                     found.add_file(path, categories, number, reason)
                 else:
                     found.add_line(path, number + 1 if alone else number, categories, number, reason)

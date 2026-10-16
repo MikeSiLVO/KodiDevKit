@@ -1,6 +1,8 @@
 """Unit tests for `kdk-ignore` suppression comments."""
 
+import inspect
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -9,8 +11,9 @@ package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
+from libs.infoprovider.checker import CheckerMixin
 from libs.infoprovider.provider import InfoProvider
-from libs.validation.suppress import muted_note, scan
+from libs.validation.suppress import CHECKS, FILE_FAULT, muted_note, scan
 
 ADDON_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="Test">
@@ -28,18 +31,22 @@ class TestDirectiveParsing(unittest.TestCase):
     """The comment syntax itself."""
 
     def setUp(self):
+        """Set up a temp folder for the window."""
         self.temp_dir = tempfile.TemporaryDirectory()
 
     def tearDown(self):
+        """Tear down the temp folder."""
         self.temp_dir.cleanup()
 
     def write(self, text):
+        """Write the text as Home.xml and return its path."""
         path = os.path.join(self.temp_dir.name, "Home.xml")
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
         return path
 
     def test_bare_line_directive_mutes_every_category(self):
+        """A directive with no check list mutes every check on its line."""
         path = self.write('<window>\n<label>x</label> <!-- kdk-ignore -->\n</window>\n')
 
         found = scan([path])
@@ -48,6 +55,7 @@ class TestDirectiveParsing(unittest.TestCase):
         self.assertTrue(found.muted("Images", path, 2))
 
     def test_line_directive_limited_to_named_categories(self):
+        """A check list limits the directive to those checks."""
         path = self.write('<window>\n<label>x</label> <!-- kdk-ignore: labels -->\n</window>\n')
 
         found = scan([path])
@@ -83,7 +91,8 @@ class TestDirectiveParsing(unittest.TestCase):
         self.assertTrue(found.muted("Labels", path, 3))
 
     def test_file_directive_covers_every_line(self):
-        path = self.write('<!-- kdk-ignore-file: labels -->\n<window>\n<label>x</label>\n</window>\n')
+        """A file directive covers every line of its file, for the checks it names."""
+        path = self.write('<!-- kdk-ignore-file: labels; debug overlay -->\n<window>\n<label>x</label>\n</window>\n')
 
         found = scan([path])
 
@@ -92,7 +101,8 @@ class TestDirectiveParsing(unittest.TestCase):
         self.assertFalse(found.muted("Images", path, 3))
 
     def test_multiple_categories(self):
-        path = self.write('<!-- kdk-ignore-file: labels, images -->\n<window/>\n')
+        """A file directive can name several checks."""
+        path = self.write('<!-- kdk-ignore-file: labels, images; debug overlay -->\n<window/>\n')
 
         found = scan([path])
 
@@ -101,15 +111,16 @@ class TestDirectiveParsing(unittest.TestCase):
         self.assertFalse(found.muted("Fonts", path, 1))
 
     def test_category_name_spelling_is_forgiving(self):
-        """`XML Validation` is the display name, so accept the spellings a skinner would type."""
-        path = self.write('<!-- kdk-ignore-file: xml-validation -->\n<window/>\n')
+        """A check name matches without regard to case, spaces or hyphens: `xml-validation`."""
+        path = self.write('<!-- kdk-ignore-file: xml-validation; generated -->\n<window/>\n')
 
         found = scan([path])
 
         self.assertTrue(found.muted("XML Validation", path, 1))
 
     def test_case_insensitive_directive(self):
-        path = self.write('<!-- KDK-IGNORE-FILE: Labels -->\n<window/>\n')
+        """The directive itself is matched in any case."""
+        path = self.write('<!-- KDK-IGNORE-FILE: Labels; debug overlay -->\n<window/>\n')
 
         found = scan([path])
 
@@ -158,12 +169,86 @@ class TestDirectiveParsing(unittest.TestCase):
         self.assertEqual(found.muted("Labels", path, 2), {"line": 1, "reason": "whole file"})
 
     def test_unrelated_comment_ignored(self):
+        """An ordinary comment mutes nothing."""
         path = self.write('<window>\n<!-- just a note -->\n<label>x</label>\n</window>\n')
 
         found = scan([path])
 
         self.assertFalse(found)
         self.assertFalse(found.muted("Labels", path, 3))
+
+
+class TestFaults(unittest.TestCase):
+    """Directives that mute less than they say, and the warnings each one gets."""
+
+    def setUp(self):
+        """Set up a temp folder for the window."""
+        self.temp_dir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        """Tear down the temp folder."""
+        self.temp_dir.cleanup()
+
+    def scan_text(self, text):
+        """Scan a Home.xml holding the text; returns the path and what the scan found."""
+        path = os.path.join(self.temp_dir.name, "Home.xml")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return path, scan([path])
+
+    def test_file_directive_without_a_reason_mutes_nothing(self):
+        """A file-wide mute has to say why, or it is reported instead of applied."""
+        path, found = self.scan_text('<!-- kdk-ignore-file: labels -->\n<window/>\n')
+
+        self.assertIsNone(found.muted("Labels", path, 2))
+        self.assertEqual([(f["line"], f["message"], f["severity"]) for f in found.faults_in(path)],
+                         [(1, FILE_FAULT, "warning")])
+
+    def test_file_directive_without_checks_mutes_nothing(self):
+        """A file-wide mute has to name its checks, a reason alone is not enough."""
+        path, found = self.scan_text('<!-- kdk-ignore-file; debug overlay -->\n<window/>\n')
+
+        self.assertIsNone(found.muted("Labels", path, 2))
+        self.assertEqual([f["message"] for f in found.faults_in(path)], [FILE_FAULT])
+
+    def test_complete_file_directive_has_no_fault(self):
+        """Checks and a reason together make a file directive apply, with nothing reported."""
+        path, found = self.scan_text('<!-- kdk-ignore-file: labels; debug overlay -->\n<window/>\n')
+
+        self.assertTrue(found.muted("Labels", path, 2))
+        self.assertEqual(found.faults_in(), [])
+
+    def test_unknown_check_is_reported_and_known_ones_apply(self):
+        """A misspelled check is named in a warning; the checks it got right still mute."""
+        path, found = self.scan_text('<window>\n<label>x</label> <!-- kdk-ignore: lables, images -->\n</window>\n')
+
+        self.assertTrue(found.muted("Images", path, 2))
+        self.assertIsNone(found.muted("Labels", path, 2))
+        faults = found.faults_in(path)
+        self.assertEqual(len(faults), 1)
+        self.assertIn("does not exist: lables.", faults[0]["message"])
+
+    def test_only_unknown_checks_mute_nothing(self):
+        """A directive whose every check is unknown never falls back to muting all of them."""
+        path, found = self.scan_text('<window>\n<label>x</label> <!-- kdk-ignore: nope -->\n</window>\n')
+
+        self.assertIsNone(found.muted("Labels", path, 2))
+        self.assertFalse(found)
+        self.assertEqual(len(found.faults_in(path)), 1)
+
+    def test_faults_in_keeps_to_the_file(self):
+        """Faults asked for by file come only from that file."""
+        _, found = self.scan_text('<!-- kdk-ignore-file: labels -->\n<window/>\n')
+
+        self.assertEqual(found.faults_in(os.path.join(self.temp_dir.name, "Other.xml")), [])
+        self.assertEqual(len(found.faults_in()), 1)
+
+    def test_checks_name_every_category_the_checker_marks(self):
+        """Each category the checker passes for marking is one a directive can name."""
+        names = set(re.findall(r'_reported\("([^"]+)"', inspect.getsource(CheckerMixin)))
+
+        self.assertTrue(names)
+        self.assertLessEqual(names, set(CHECKS))
 
 
 class TestMarking(unittest.TestCase):
@@ -218,6 +303,7 @@ class TestSuppressionApplied(unittest.TestCase):
     """Directives marking findings in real check results, end to end."""
 
     def setUp(self):
+        """Set up a skin folder with an addon.xml and an empty xml folder."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.skin_path = self.temp_dir.name
         self.xml_dir = os.path.join(self.skin_path, "16x9")
@@ -226,9 +312,11 @@ class TestSuppressionApplied(unittest.TestCase):
             f.write(ADDON_XML)
 
     def tearDown(self):
+        """Tear down the skin folder."""
         self.temp_dir.cleanup()
 
     def write_window(self, name, text):
+        """Write a window file into the xml folder and return its path."""
         path = os.path.join(self.xml_dir, name)
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
@@ -243,6 +331,7 @@ class TestSuppressionApplied(unittest.TestCase):
         return provider.check_labels()
 
     def test_untranslated_label_reported_without_directive(self):
+        """Without a directive the untranslated label is reported."""
         self.write_window("Home.xml", (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<window>\n    <controls>\n        <control type="label">\n'
@@ -261,7 +350,7 @@ class TestSuppressionApplied(unittest.TestCase):
         """The label stays in the result, marked muted."""
         self.write_window("Home.xml", (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<!-- kdk-ignore-file: labels -->\n'
+            '<!-- kdk-ignore-file: labels; debug overlay -->\n'
             '<window>\n    <controls>\n        <control type="label">\n'
             '            <label>Player.Playing</label>\n'
             '        </control>\n    </controls>\n</window>\n'
@@ -272,9 +361,10 @@ class TestSuppressionApplied(unittest.TestCase):
         self.assertTrue(_muted(issues, "Player.Playing"), f"Directive should have marked the label, got: {issues}")
 
     def test_directive_does_not_leak_to_other_files(self):
+        """A file directive marks nothing in another file."""
         self.write_window("Home.xml", (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<!-- kdk-ignore-file: labels -->\n'
+            '<!-- kdk-ignore-file: labels; debug overlay -->\n'
             '<window>\n    <controls>\n        <control type="label">\n'
             '            <label>Player.Playing</label>\n'
             '        </control>\n    </controls>\n</window>\n'
@@ -303,7 +393,7 @@ class TestSuppressionApplied(unittest.TestCase):
         provider.init_addon(self.skin_path)
         self.assertFalse(_muted(self.labels(provider), "Player.Playing"))
 
-        self.write_window("Home.xml", "<!-- kdk-ignore-file: labels -->\n" + window)
+        self.write_window("Home.xml", "<!-- kdk-ignore-file: labels; debug overlay -->\n" + window)
         provider.addon.update_xml_files()
         provider.addon.reload(path)
 
@@ -313,7 +403,7 @@ class TestSuppressionApplied(unittest.TestCase):
         """A window file below a subfolder of the xml folder is scanned for directives too."""
         os.makedirs(os.path.join(self.xml_dir, "Custom"))
         self.write_window(os.path.join("Custom", "Extra.xml"), (
-            '<!-- kdk-ignore-file: labels -->\n'
+            '<!-- kdk-ignore-file: labels; debug overlay -->\n'
             '<window>\n<controls>\n<control type="label">\n<label>Player.Playing</label>\n'
             '</control>\n</controls>\n</window>\n'
         ))
@@ -335,6 +425,17 @@ class TestSuppressionApplied(unittest.TestCase):
 
         self.assertTrue(_muted(rows, "<bogus>"), f"Expected a muted <bogus> row, got: {rows}")
         self.assertEqual([r["muted"] for r in rows if r.get("muted")], [{"line": 4, "reason": "testing"}])
+
+    def test_faulty_directive_is_reported_by_both_file_checks(self):
+        """The full check and the file check behind the phantoms both carry the fault row."""
+        path = self.write_window("Home.xml", '<!-- kdk-ignore-file: labels -->\n<window/>\n')
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.skin_path)
+
+        for rows in (provider.check_values(), provider.check_file(path) or []):
+            faults = [r for r in rows if r["message"] == FILE_FAULT]
+            self.assertEqual([(r["file"], r["line"]) for r in faults], [(path, 1)])
 
 
 if __name__ == "__main__":
