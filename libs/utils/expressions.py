@@ -143,10 +143,10 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *
 
 def is_dynamic_expression(text: str, *, prefixes: Optional[tuple[str, ...]] = None) -> bool:
     """True when the text opens with a Kodi runtime expression such as $VAR or $INFO."""
-    if not isinstance(text, str):
+    if not isinstance(text, str) or "$" not in text:
         return False
     candidate = text.strip()
-    if not candidate:
+    if not candidate.startswith("$"):
         return False
     lowered = candidate.casefold()
     if prefixes:
@@ -163,9 +163,7 @@ def starts_with_param_reference(text: str) -> bool:
 
 def contains_dynamic_expression(text: str, *, prefixes: Optional[tuple[str, ...]] = None) -> bool:
     """True when a runtime expression appears anywhere, not only at the start."""
-    if not isinstance(text, str):
-        return False
-    if not text:
+    if not isinstance(text, str) or "$" not in text:
         return False
 
     lowered = text.casefold()
