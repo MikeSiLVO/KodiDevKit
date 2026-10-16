@@ -472,15 +472,12 @@ class XmlInterpreter:
         text = condition.strip()
         if not text or "$PARAM" in text.upper() or (not resolved and "$EXP[" in text):
             return
-        # unbalanced brackets are already reported by the bracket check
-        if not _check_brackets(text):
-            return
         found = self._condition_problems(text)
         for name in (node.get("_kdk_exp") or "").split("\t") if found else []:
             if name not in self.expressions:
                 continue
             exp_text, exp_file, exp_line = self.expressions[name]
-            exp_found = self._condition_problems(exp_text) if _check_brackets(exp_text) else []
+            exp_found = self._condition_problems(exp_text)
             for severity, message in exp_found:
                 self._add_issue_at(exp_file, exp_line, "expression", severity, message)
             if any(m.startswith("Kodi cannot parse") for _, m in exp_found):
@@ -490,13 +487,16 @@ class XmlInterpreter:
             self._add_issue(node, severity, message)
 
     def _condition_problems(self, text: str) -> list[tuple[str, str]]:
-        """Severity and message for each reason Kodi cannot read the condition, cached per text."""
+        """Severity and message per fault in a balanced condition, cached per text; else none."""
         if text not in self._condition_cache:
             self._condition_cache[text] = self._read_condition(text)
         return self._condition_cache[text]
 
     def _read_condition(self, text: str) -> list[tuple[str, str]]:
-        """Read the condition, returning a severity and message per reason Kodi cannot use it."""
+        """Read the faults of a balanced condition as severity and message; else none."""
+        # unbalanced brackets are already reported by the bracket check
+        if not _check_brackets(text):
+            return []
         short = text if len(text) <= 60 else text[:60] + "..."
         problem = check_condition(text)
         if problem and problem[0] == STATE_INVALID:

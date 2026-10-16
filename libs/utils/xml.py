@@ -22,6 +22,7 @@ _xml_parse_cache = {}
 
 _ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_NOT_BRACKET = re.compile(r"[^()\[\]]+")
 
 _PARSE_MESSAGES = (
     (re.compile(r"(?:EntityRef: expecting ';'|xmlParseEntityRef: no name)$"),
@@ -354,18 +355,11 @@ def blank_xml_comments(content):
 def check_brackets(label):
     """True when every round and square bracket in the text is closed by its own kind, in order."""
     stack = []
-    push_chars, pop_chars = "([", ")]"
-    for c in label:
-        if c in push_chars:
+    for c in _NOT_BRACKET.sub("", label):
+        if c in "([":
             stack.append(c)
-        elif c in pop_chars:
-            if not stack:
-                return False
-            else:
-                stack_top = stack.pop()
-                balancing_bracket = push_chars[pop_chars.index(c)]
-                if stack_top != balancing_bracket:
-                    return False
+        elif not stack or stack.pop() != ("(" if c == ")" else "["):
+            return False
     return not stack
 
 

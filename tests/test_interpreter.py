@@ -379,6 +379,12 @@ class TestConditions(unittest.TestCase):
             "Kodi has no info 'Window.IsVisble(1114)', it always reads false",
         ])
 
+    def test_unbalanced_condition_is_left_to_the_bracket_check(self):
+        """An unbalanced condition is left to the bracket check, its unknown info unreported."""
+        visible = "<visible>[Player.HasVideo | Player.HasVidoe</visible>"
+        self.assertEqual(self.messages(f'<window><controls><control type="button">{visible}</control>'
+                                       f'<control type="button">{visible}</control></controls></window>'), [])
+
     def test_parse_faults(self):
         cases = {
             "[Window.IsVisible(home) | Player.HasVideo] + !Player.HasVideo": None,
