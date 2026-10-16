@@ -67,6 +67,15 @@ class SkinResolution:
         for child in list(node):
             self.resolve(child, folder, _spliced=spliced)
 
+    def splice_includes(self, node, folder: str, _spliced=None):
+        """Splice includes through the subtree unstamped, leaving defaults, constants and $EXP."""
+        if next(node.iter("include"), None) is None:
+            return
+        spliced = set() if _spliced is None else _spliced
+        self.resolve_includes(node, folder, spliced, _stamp=False)
+        for child in list(node):
+            self.splice_includes(child, folder, spliced)
+
     def set_defaults(self, node, folder: str):
         """Set defaults: append the control type's default children, minus overridden positions."""
         if node.tag != "control":
@@ -165,7 +174,7 @@ class SkinResolution:
     # tab is attribute-safe and never appears in an include name
     _PATH_SEP = "\t"
 
-    def resolve_includes(self, node, folder: str, spliced=None):
+    def resolve_includes(self, node, folder: str, spliced=None, _stamp=True):
         """Resolve includes, skipping cyclic, always-false and repeated conditional ones."""
         if node is None:
             return
@@ -257,7 +266,7 @@ class SkinResolution:
                     for element in cloned_child.iter():
                         element.set("_kdk_inc_cond", "1")
 
-                if call_line and cloned_child.get("_kdk_call_line") is None:
+                if _stamp and call_line and cloned_child.get("_kdk_call_line") is None:
                     cloned_child.set("_kdk_call_line", call_line)
                     cloned_child.set("_kdk_inc_name", inc_name)
                     cloned_child.set("_kdk_inc_file", inc_file_for_stamp)

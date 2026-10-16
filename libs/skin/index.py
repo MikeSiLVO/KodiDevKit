@@ -272,7 +272,7 @@ class SkinIndex:
                     if tree_needs_expansion(root):
                         try:
                             resolved = copy.deepcopy(root)
-                            self.skin.resolver.resolve(resolved, folder)
+                            self.skin.resolver.splice_includes(resolved, folder)
                         except Exception:
                             logger.debug("Resolution failed for %s, using base IDs", window_file)
                             index['window_expanded_ids'][folder][window_file] = \
