@@ -153,6 +153,32 @@ class TestFontValidation(unittest.TestCase):
         self.assertIn("Font 'Key_2' is used but not defined in Font.xml", messages)
         self.assertFalse([m for m in messages if "Key_1" in m or "$PARAM" in m], messages)
 
+    def test_font_named_wholly_by_param_resolves_per_call(self):
+        """<font>$PARAM[f]</font> takes each call's font, or its default where a call drops it."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml("""<fonts><fontset id="Default">
+    <font><name>font13</name><filename>font.ttf</filename><size>13</size></font>
+    <font><name>Key_1</name><filename>font.ttf</filename><size>13</size></font>
+    <font><name>Fallback</name><filename>font.ttf</filename><size>13</size></font>
+</fontset></fonts>""")
+        self.create_includes_xml("""<includes>
+    <include name="Key">
+        <param name="f" default="Fallback" />
+        <definition><control type="label"><font>$PARAM[f]</font></control></definition>
+    </include>
+    <include name="Outer">
+        <definition>
+            <include content="Key"><param name="f" value="$PARAM[unset]" /></include>
+        </definition>
+    </include>
+</includes>""")
+        self.create_window_xml("""<window><controls>
+    <include content="Key"><param name="f" value="Key_1" /></include>
+    <include content="Outer" />
+</controls></window>""")
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertFalse([m for m in messages if "Key_1" in m or "Fallback" in m or "Font ''" in m], messages)
+
     def test_missing_font13(self):
         """Test detection of missing required font13."""
         self.create_font_file("font.ttf")
