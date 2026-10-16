@@ -36,8 +36,9 @@ class InfoProvider(LoaderMixin, TooltipMixin, NavigationMixin, CheckerMixin):
         self.kodi: KodiJsonrpc | None = None
 
     def get_check_listitems(self, check_type, progress_callback=None):
-        """Get the engine's rows, minus the include-originated warnings the quick panel hides."""
+        """Get the engine's rows, minus muted rows and the include warnings the panel hides."""
         rows = super().get_check_listitems(check_type, progress_callback=progress_callback)
+        rows = [r for r in rows if not r.get("muted")]
         if not self.settings.get("hide_include_warnings", True):
             return rows
         return [r for r in rows

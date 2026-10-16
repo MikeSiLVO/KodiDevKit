@@ -3,19 +3,23 @@
 from typing import Container
 
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
+from ..validation.suppress import muted_note
 
 
-def issue_visible(issue, hidden_severities, hide_include_warnings):
-    """True when the issue passes the HTML report's severity and include-warning filters."""
+def issue_visible(issue, hidden_severities, hide_include_warnings, hide_muted=False):
+    """True when the issue passes the HTML report's severity, include-warning and muted filters."""
     severity = issue.get("severity", SEVERITY_WARNING)
     if severity in hidden_severities:
+        return False
+    if hide_muted and issue.get("muted"):
         return False
     if hide_include_warnings and issue.get("include_name") and severity != SEVERITY_ERROR:
         return False
     return True
 
 
-def generate_text_report(report_data, *, hidden_severities: Container[str] = frozenset(), hide_include_warnings=False):
+def generate_text_report(report_data, *, hidden_severities: Container[str] = frozenset(),
+                         hide_include_warnings=False, hide_muted=False):
     """Generate the text report, honoring the same filters as the HTML report."""
     lines = []
     lines.append("=" * 80)
@@ -39,7 +43,7 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
     for category, issues in all_issues_raw.items():
         kept = []
         for issue in issues:
-            if not issue_visible(issue, hidden_severities, hide_include_warnings):
+            if not issue_visible(issue, hidden_severities, hide_include_warnings, hide_muted):
                 total_filtered_out += 1
                 continue
             kept.append(issue)
@@ -47,10 +51,13 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
             all_issues[category] = kept
 
     total_issues = sum(len(issues) for issues in all_issues.values())
-    lines.append(f"Total Issues: {total_issues}")
+    total_muted = sum(1 for issues in all_issues.values() for issue in issues if issue.get("muted"))
+    lines.append(f"Total Issues: {total_issues - total_muted}")
+    if total_muted:
+        lines.append(f"Muted: {total_muted}")
     lines.append(f"Categories: {len([c for c, issues in all_issues.items() if issues])}")
 
-    filter_notes = _describe_filters(hidden_severities, hide_include_warnings)
+    filter_notes = _describe_filters(hidden_severities, hide_include_warnings, hide_muted)
     if filter_notes:
         lines.append("")
         lines.append(f"Filters: {filter_notes} ({total_filtered_out} issue{'s' if total_filtered_out != 1 else ''} hidden)")
@@ -88,6 +95,8 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
                 issue_type = issue.get('type', '')
 
                 lines.append(f"    Line {line_num:4d}: {message}")
+                if issue.get("muted"):
+                    lines.append(f"                {muted_note(issue)}")
                 if issue_type:
                     lines.append(f"                Type: {issue_type}")
                 lines.append("")
@@ -100,7 +109,7 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
     return '\n'.join(lines)
 
 
-def _describe_filters(hidden_severities, hide_include_warnings):
+def _describe_filters(hidden_severities, hide_include_warnings, hide_muted=False):
     """Describe the active filters, or return an empty string when none are active."""
     parts = []
     for sev in (SEVERITY_ERROR, SEVERITY_WARNING):
@@ -108,4 +117,6 @@ def _describe_filters(hidden_severities, hide_include_warnings):
             parts.append(f"{sev}s hidden")
     if hide_include_warnings:
         parts.append("include warnings hidden")
+    if hide_muted:
+        parts.append("muted issues hidden")
     return ", ".join(parts)

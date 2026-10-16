@@ -135,11 +135,13 @@ class FileOpenHandler(BaseHTTPRequestHandler):
                 s for s in params.get('hidesev', [''])[0].split(',') if s
             }
             hide_include_warnings = params.get('hideinc', ['0'])[0] == '1'
+            hide_muted = params.get('hidemuted', ['0'])[0] == '1'
 
             text_content = generate_text_report(
                 _report_data,
                 hidden_severities=hidden_severities,
                 hide_include_warnings=hide_include_warnings,
+                hide_muted=hide_muted,
             )
 
             self.send_response(200)

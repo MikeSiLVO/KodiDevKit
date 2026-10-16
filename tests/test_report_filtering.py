@@ -112,5 +112,70 @@ class TestQuickPanelFiltering(unittest.TestCase):
         self.assertEqual(len(rows), 4)
 
 
+def _muted_report():
+    """Report whose second warning a `kdk-ignore` comment on the line above mutes."""
+    report = _report()
+    rows = report["all_issues"]["XML Validation"]
+    rows[1] = {**rows[1], "muted": {"line": 10, "reason": "debug overlay"}}
+    return report
+
+
+def _html(all_issues):
+    """HTML report text for the issues."""
+    import tempfile
+    out = os.path.join(tempfile.mkdtemp(), "r.html")
+    H.generate_html_report(all_issues, "skin.test", "/skin", output_path=out, server_port=48273)
+    with open(out, encoding="utf-8") as f:
+        return f.read()
+
+
+class TestMutedRows(unittest.TestCase):
+    """Muted rows, counted apart in both reports and kept out of the quick panel."""
+
+    def test_text_export_lists_muted_row_with_its_note(self):
+        """The row stays, its note follows it, and the totals count it apart."""
+        txt = T.generate_text_report(_muted_report())
+        self.assertEqual(_count(txt), 4)
+        self.assertIn("Muted by kdk-ignore at line 10: debug overlay", txt)
+        self.assertIn("Total Issues: 3", txt)
+        self.assertIn("Muted: 1", txt)
+
+    def test_text_export_hides_muted_when_asked(self):
+        """The muted filter drops the row and says so."""
+        txt = T.generate_text_report(_muted_report(), hide_muted=True)
+        self.assertEqual(_count(txt), 3)
+        self.assertNotIn("plain warning", txt)
+        self.assertIn("muted issues hidden", txt)
+
+    def test_html_marks_muted_row_and_counts_it_apart(self):
+        """Rows carry the class and note, with a separate total and a legend row."""
+        doc = _html(_muted_report()["all_issues"])
+        self.assertEqual(doc.count(' muted"'), 2)
+        self.assertEqual(doc.count("Muted by kdk-ignore at line 10: debug overlay"), 2)
+        self.assertIn('<div class="stat-number stat-number-muted">1</div>', doc)
+        self.assertIn('<div class="stat-number stat-number-warning">1</div>', doc)
+        self.assertIn("toggleMuted(this)", doc)
+        self.assertIn("<strong>Muted</strong>", doc)
+
+    def test_html_without_muted_rows_has_no_muted_controls(self):
+        """A report with nothing muted shows no muted button, total, column or legend row."""
+        doc = _html(_report()["all_issues"])
+        self.assertNotIn("toggleMuted(this)", doc)
+        self.assertNotIn('class="stat-number stat-number-muted"', doc)
+        self.assertNotIn("<th>Muted</th>", doc)
+        self.assertNotIn("<strong>Muted</strong>", doc)
+
+    def test_quick_panel_drops_muted_rows(self):
+        """Muted rows stay out of the quick panel, the skinner's own view."""
+        from libs.infoprovider.provider import InfoProvider
+
+        provider = InfoProvider()
+        provider.settings = {"hide_include_warnings": False}
+        provider.check_variables = lambda *a, **k: _muted_report()["all_issues"]["XML Validation"]
+        rows = provider.get_check_listitems("variable")
+        self.assertNotIn("plain warning", [r["message"] for r in rows])
+        self.assertEqual(len(rows), 3)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,8 +8,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# matches <!-- kdk-ignore --> and <!-- kdk-ignore-file: labels, images -->
-DIRECTIVE = re.compile(r"<!--\s*kdk-ignore(-file)?\s*(?::([^>]*?))?\s*-->", re.IGNORECASE)
+DIRECTIVE = re.compile(r"<!--\s*kdk-ignore(-file)?\s*(?::([^;>]*?))?\s*(?:;(.*?))?\s*-->", re.IGNORECASE)
 
 # a bare directive with no category list mutes every check
 ALL = "*"
@@ -41,34 +40,49 @@ class Suppressions:
         self.files = {}
         self.lines = {}
 
-    def add_file(self, path, categories):
-        """Add a file-wide mute for the categories."""
-        self.files.setdefault(_key(path), set()).update(categories)
+    def add_file(self, path, categories, line=1, reason=""):
+        """Add a file-wide mute for the categories, written at that line with that reason."""
+        self.files.setdefault(_key(path), []).append((categories, {"line": line, "reason": reason}))
 
-    def add_line(self, path, line, categories):
-        """Add a one-line mute for the categories."""
-        self.lines.setdefault((_key(path), line), set()).update(categories)
+    def add_line(self, path, line, categories, written_at=None, reason=""):
+        """Add a one-line mute for the categories, written on that line or the one above."""
+        mute = {"line": written_at or line, "reason": reason}
+        self.lines.setdefault((_key(path), line), []).append((categories, mute))
 
     def __bool__(self):
         return bool(self.files or self.lines)
 
     def muted(self, category, path, line):
-        """True when the category is muted for the file, or for that line of it."""
+        """Where and why the category is muted for that line of the file, or None."""
         if not path:
-            return False
+            return None
         wanted = normalize(category)
         key = _key(path)
 
-        for scope in (self.files.get(key), self.lines.get((key, line))):
-            if scope and (ALL in scope or wanted in scope):
-                return True
-        return False
+        for scope in (self.lines.get((key, line)), self.files.get(key)):
+            for categories, mute in scope or ():
+                if ALL in categories or wanted in categories:
+                    return mute
+        return None
 
-    def filter(self, category, issues):
-        """Drop the category's issues that a directive mutes."""
+    def mark(self, category, issues):
+        """Mark the category's muted issues on copies, with the directive's line and reason."""
         if not self:
             return issues
-        return [i for i in issues if not self.muted(category, i.get("file"), i.get("line") or 0)]
+        marked = []
+        for issue in issues:
+            mute = self.muted(category, issue.get("file"), issue.get("line") or 0)
+            marked.append({**issue, "muted": dict(mute)} if mute else issue)
+        return marked
+
+
+def muted_note(issue):
+    """Line telling a reviewer where the issue was muted and the reason the skin gives."""
+    mute = issue["muted"]
+    reason = mute.get("reason")
+    if reason:
+        return f"Muted by kdk-ignore at line {mute['line']}: {reason}"
+    return f"Muted by kdk-ignore at line {mute['line']}, no reason given"
 
 
 def scan(paths):
@@ -96,10 +110,11 @@ def scan(paths):
 
             for match in matches:
                 categories = _categories(match.group(2))
+                reason = (match.group(3) or "").strip()
                 if match.group(1):
-                    found.add_file(path, categories)
+                    found.add_file(path, categories, number, reason)
                 else:
-                    found.add_line(path, number + 1 if alone else number, categories)
+                    found.add_line(path, number + 1 if alone else number, categories, number, reason)
 
     return found
 

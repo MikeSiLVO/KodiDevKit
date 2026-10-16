@@ -1,14 +1,4 @@
-"""
-Expression parsing tests.
-
-Consolidated from:
-- test_number_expressions.py: $NUMBER[] expression parsing and validation
-- test_contains_dynamic_expression.py: Dynamic expression detection
-
-Test organization:
-- $NUMBER[] Parsing: Extraction, validation, case-insensitive
-- Dynamic Expression Detection: $VAR, $INFO, $PARAM detection
-"""
+"""Tests for $NUMBER[] parsing and validation, and dynamic expression detection."""
 
 import unittest
 import os
@@ -87,9 +77,8 @@ class TestNumberExpressions(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT flag $NUMBER[25] as invalid integer
         integer_issues = [i for i in issues if "invalid integer value for limit" in i.get("message", "")]
         self.assertEqual(len(integer_issues), 0, "$NUMBER[25] should be valid integer expression")
 
@@ -107,9 +96,8 @@ class TestNumberExpressions(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT flag $NUMBER[500] as invalid integer
         integer_issues = [i for i in issues if "invalid integer" in i.get("message", "").lower() and "500" in i.get("message", "")]
         self.assertEqual(len(integer_issues), 0, "$NUMBER[500] should be valid for id attribute")
 
@@ -127,9 +115,8 @@ class TestNumberExpressions(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # SHOULD flag $NUMBER[invalid] as invalid integer
         integer_issues = [i for i in issues if "invalid integer value for limit" in i.get("message", "")]
         self.assertTrue(len(integer_issues) > 0, "$NUMBER[invalid] should be flagged as invalid")
 
@@ -150,9 +137,8 @@ class TestNumberExpressions(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT flag regular integers
         integer_issues = [i for i in issues if "invalid integer" in i.get("message", "").lower()]
         self.assertEqual(len(integer_issues), 0, "Regular integers should still validate correctly")
 
@@ -176,9 +162,8 @@ class TestNumberExpressions(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT flag any case variations
         integer_issues = [i for i in issues if "invalid integer value for limit" in i.get("message", "")]
         self.assertEqual(len(integer_issues), 0, "$NUMBER[] should be case-insensitive")
 

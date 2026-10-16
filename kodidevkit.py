@@ -2016,6 +2016,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                     issues = [
                         i for i in all_issues
                         if severity_rank.get(i.get("severity", "warning"), 1) <= max_rank
+                        and not i.get("muted")
                         and self._issue_in_file(i, filename_full)
                         and not (hide_include_warnings
                                  and i.get("include_name")

@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
+from ..validation.suppress import muted_note
 
 CATEGORY_DESCRIPTIONS = {
     "Variables": (
@@ -187,13 +188,28 @@ def _generate_html_template(skin_name, skin_path,
 
     total_errors = 0
     total_warnings = 0
+    total_muted = 0
     for issues in all_issues.values():
         for issue in issues:
             sev = issue.get("severity", "warning")
-            if sev == SEVERITY_ERROR:
+            if issue.get("muted"):
+                total_muted += 1
+            elif sev == SEVERITY_ERROR:
                 total_errors += 1
             elif sev == SEVERITY_WARNING:
                 total_warnings += 1
+
+    muted_button = ""
+    if total_muted:
+        muted_button = ('<button class="sev-toggle active" data-filter="muted" '
+                        'onclick="toggleMuted(this)" '
+                        'title="Findings a kdk-ignore comment mutes">Muted</button>')
+    muted_stat = (f"""
+                <div class="stat-box stat-box-muted">
+                    <div class="stat-number stat-number-muted">{total_muted}</div>
+                    <div class="stat-label">Muted</div>
+                </div>""" if total_muted else "")
+    muted_header = "\n                        <th>Muted</th>" if total_muted else ""
 
     category_sections = []
     category_count = 0
@@ -327,6 +343,7 @@ def _generate_html_template(skin_name, skin_path,
 
         const hiddenSeverities = new Set();
         let includeWarningsHidden = {inc_hidden_js};
+        let mutedHidden = false;
 
         function toggleSeverity(severity, btn) {{
             if (hiddenSeverities.has(severity)) {{
@@ -345,7 +362,14 @@ def _generate_html_template(skin_name, skin_path,
             applyFilters();
         }}
 
+        function toggleMuted(btn) {{
+            mutedHidden = !mutedHidden;
+            btn.classList.toggle('active', !mutedHidden);
+            applyFilters();
+        }}
+
         function elementHidden(el) {{
+            if (mutedHidden && el.classList.contains('muted')) return true;
             if (el.classList.contains('severity-error') && hiddenSeverities.has('error')) return true;
             if (el.classList.contains('severity-warning') && hiddenSeverities.has('warning')) return true;
             if (includeWarningsHidden && el.classList.contains('from-include')) return true;
@@ -358,6 +382,7 @@ def _generate_html_template(skin_name, skin_path,
             const params = new URLSearchParams();
             if (hiddenSeverities.size) params.set('hidesev', Array.from(hiddenSeverities).join(','));
             if (includeWarningsHidden) params.set('hideinc', '1');
+            if (mutedHidden) params.set('hidemuted', '1');
             const qs = params.toString();
             link.href = 'http://localhost:{server_port}/export' + (qs ? '?' + qs : '');
         }}
@@ -369,15 +394,20 @@ def _generate_html_template(skin_name, skin_path,
 
             let totalErrors = 0;
             let totalWarnings = 0;
+            let totalMuted = 0;
+            const isMuted = tr => tr.classList.contains('muted');
+            const counted = (rows, cls) =>
+                rows.filter(tr => !isMuted(tr) && tr.classList.contains(cls)).length;
 
             document.querySelectorAll('.category-section').forEach(section => {{
-                const rows = section.querySelectorAll('tbody tr');
-                const visible = Array.from(rows).filter(tr => tr.style.display !== 'none').length;
+                const rows = Array.from(section.querySelectorAll('tbody tr'))
+                    .filter(tr => tr.style.display !== 'none');
                 const badge = section.querySelector('h3 .badge');
-                if (badge) badge.textContent = visible;
-                section.style.display = visible === 0 ? 'none' : '';
-                totalErrors += Array.from(rows).filter(tr => tr.style.display !== 'none' && tr.classList.contains('severity-error')).length;
-                totalWarnings += Array.from(rows).filter(tr => tr.style.display !== 'none' && tr.classList.contains('severity-warning')).length;
+                if (badge) badge.textContent = rows.length;
+                section.style.display = rows.length === 0 ? 'none' : '';
+                totalErrors += counted(rows, 'severity-error');
+                totalWarnings += counted(rows, 'severity-warning');
+                totalMuted += rows.filter(isMuted).length;
             }});
 
             document.querySelectorAll('.summary-table tbody tr').forEach(row => {{
@@ -388,13 +418,16 @@ def _generate_html_template(skin_name, skin_path,
                 if (!section) return;
                 const visibleRows = Array.from(section.querySelectorAll('tbody tr'))
                     .filter(tr => tr.style.display !== 'none');
-                const errCount = visibleRows.filter(tr => tr.classList.contains('severity-error')).length;
-                const warnCount = visibleRows.filter(tr => tr.classList.contains('severity-warning')).length;
+                const errCount = counted(visibleRows, 'severity-error');
+                const warnCount = counted(visibleRows, 'severity-warning');
+                const mutedCount = visibleRows.filter(isMuted).length;
                 const errBadge = row.querySelector('.badge-error');
                 const warnBadge = row.querySelector('.badge-warning');
+                const mutedBadge = row.querySelector('.badge-muted');
                 if (errBadge) errBadge.textContent = errCount;
                 if (warnBadge) warnBadge.textContent = warnCount;
-                row.style.display = (errCount + warnCount) === 0 ? 'none' : '';
+                if (mutedBadge) mutedBadge.textContent = mutedCount;
+                row.style.display = visibleRows.length === 0 ? 'none' : '';
             }});
 
             document.querySelectorAll('.file-section').forEach(section => {{
@@ -407,8 +440,10 @@ def _generate_html_template(skin_name, skin_path,
 
             const errorStat = document.querySelector('.stat-number-error');
             const warningStat = document.querySelector('.stat-number-warning');
+            const mutedStat = document.querySelector('.stat-number-muted');
             if (errorStat) errorStat.textContent = totalErrors;
             if (warningStat) warningStat.textContent = totalWarnings;
+            if (mutedStat) mutedStat.textContent = totalMuted;
 
             updateExportLink();
         }}
@@ -467,6 +502,7 @@ def _generate_html_template(skin_name, skin_path,
                         <button class="sev-toggle active" data-severity="error" onclick="toggleSeverity('error', this)">&#x2716; Errors</button>
                         <button class="sev-toggle active" data-severity="warning" onclick="toggleSeverity('warning', this)">&#x26A0; Warnings</button>
                         <button class="sev-toggle{inc_btn_active}" data-filter="include" onclick="toggleIncludeWarnings(this)" title="Warnings sourced from &lt;include&gt; content (mostly educational)">&#x26A0; Include warnings</button>
+                        {muted_button}
                     </div>
                 </div>
             </div>
@@ -482,7 +518,7 @@ def _generate_html_template(skin_name, skin_path,
                 <div class="stat-box stat-box-warning">
                     <div class="stat-number stat-number-warning">{total_warnings}</div>
                     <div class="stat-label">Warnings</div>
-                </div>
+                </div>{muted_stat}
                 <div class="stat-box">
                     <div class="stat-number">{len(categories)}</div>
                     <div class="stat-label">Categories</div>
@@ -494,7 +530,7 @@ def _generate_html_template(skin_name, skin_path,
             </div>
 
 
-            {_generate_severity_legend()}
+            {_generate_severity_legend(bool(total_muted))}
 
             <h3>Issues by Category</h3>
             <table class="summary-table">
@@ -502,12 +538,12 @@ def _generate_html_template(skin_name, skin_path,
                     <tr>
                         <th>Category</th>
                         <th>Errors</th>
-                        <th>Warnings</th>
+                        <th>Warnings</th>{muted_header}
                         <th>Link</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {_generate_category_summary_rows(all_issues)}
+                    {_generate_category_summary_rows(all_issues, bool(total_muted))}
                 </tbody>
             </table>
         </section>
@@ -538,8 +574,20 @@ def _generate_html_template(skin_name, skin_path,
 </html>"""
 
 
-def _generate_severity_legend():
-    """Generate a severity level legend box."""
+def _generate_severity_legend(with_muted=False):
+    """Generate a severity level legend box, with a muted row when asked."""
+    muted_row = ""
+    if with_muted:
+        muted_row = """
+                <div class="legend-row">
+                    <span class="legend-indicator legend-muted"></span>
+                    <div class="legend-content">
+                        <strong>Muted</strong> - The skin marks it as intended.
+                        <div class="legend-note">A kdk-ignore comment in the skin covers it.
+                        The row gives the comment's line and its reason.
+                        Muted rows are not counted as errors or warnings.</div>
+                    </div>
+                </div>"""
     return """
             <div class="severity-legend">
                 <div class="legend-row">
@@ -555,22 +603,28 @@ def _generate_severity_legend():
                         <strong>Warning</strong> - Skin still works.
                         <div class="legend-note">Kodi silently ignores unknown XML tags and skips unrecognized attributes. Textures.xbt resolves filenames case-insensitively, but skins without packed textures use direct filesystem paths and case mismatches will fail on Linux.</div>
                     </div>
-                </div>
+                </div>""" + muted_row + """
             </div>"""
 
 
-def _generate_category_summary_rows(all_issues):
-    """Generate table rows for category summary with error/warning split."""
+def _generate_category_summary_rows(all_issues, with_muted=False):
+    """Generate table rows for category summary with error/warning split, and muted when asked."""
     rows = []
     for category, issues in sorted(all_issues.items(), key=lambda x: -len(x[1])):
         category_id = category.lower().replace(" ", "-")
-        error_count = sum(1 for i in issues if i.get("severity") == SEVERITY_ERROR)
-        warning_count = sum(1 for i in issues if i.get("severity") == SEVERITY_WARNING)
+        counted = [i for i in issues if not i.get("muted")]
+        error_count = sum(1 for i in counted if i.get("severity") == SEVERITY_ERROR)
+        warning_count = sum(1 for i in counted if i.get("severity") == SEVERITY_WARNING)
+        muted_count = len(issues) - len(counted)
+        muted_cell = ""
+        if with_muted:
+            muted_cell = f'<td><span class="badge badge-muted">{muted_count}</span></td>'
         rows.append(f"""
                     <tr>
                         <td><strong>{html.escape(category)}</strong></td>
                         <td><span class="badge badge-error">{error_count}</span></td>
                         <td><span class="badge badge-warning">{warning_count}</span></td>
+                        {muted_cell}
                         <td><a href="#cat-{category_id}">View →</a></td>
                     </tr>""")
     return ''.join(rows)
@@ -608,12 +662,14 @@ def _generate_category_section(category, issues, server_port):
         inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
         subtype = _classify_subtype(message)
         subtype_html = f'<span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
+        muted_class, muted_tag, note_html = _muted_parts(issue)
+        subtype_html += muted_tag
         issue_rows.append(f"""
-                    <tr class="{sev_class}{inc_class}">
+                    <tr class="{sev_class}{inc_class}{muted_class}">
                         <td><span class="sev-badge {sev_class}">{html.escape(severity)}</span>{subtype_html}</td>
                         <td>{file_display}</td>
                         <td class="line-number">{line if line else "N/A"}</td>
-                        <td>{html.escape(message)}{source_html}</td>
+                        <td>{html.escape(message)}{source_html}{note_html}</td>
                         <td><code>{html.escape(issue_type)}</code></td>
                     </tr>""")
 
@@ -638,6 +694,14 @@ def _generate_category_section(category, issues, server_port):
                 </tbody>
             </table>
         </div>"""
+
+
+def _muted_parts(issue):
+    """Row class, tag and note marking an issue a `kdk-ignore` comment mutes; empty otherwise."""
+    if not issue.get("muted"):
+        return "", "", ""
+    return (" muted", '<span class="subtype-tag muted-tag">muted</span>',
+            f'<div class="muted-note">{html.escape(muted_note(issue))}</div>')
 
 
 def _open_url(server_port, file_path, line):
@@ -692,13 +756,15 @@ def _generate_file_section(file_path, issues, server_port):
             inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
             subtype = _classify_subtype(message)
             subtype_html = f' <span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
+            muted_class, muted_tag, note_html = _muted_parts(issue)
+            subtype_html += muted_tag
             issue_items.append(f"""
-                        <li class="{sev_class}{inc_class}">
+                        <li class="{sev_class}{inc_class}{muted_class}">
                             <span class="sev-badge {sev_class}">{html.escape(severity)}</span>{subtype_html}
                             <a href="{localhost_url}" class="file-link" target="_blank" title="Open in Sublime Text at line {line}">
                                 <span class="line-number">Line {line}:</span>
                             </a>
-                            {html.escape(message)}{source_html}
+                            {html.escape(message)}{source_html}{note_html}
                         </li>""")
 
         category_groups.append(f"""
@@ -1148,6 +1214,13 @@ def _get_css_styles():
             background: #e65100;
         }
 
+        .stat-box-muted { border-left-color: #757575; }
+        .stat-number-muted { color: #757575; }
+        .badge-muted { background-color: #757575; }
+        tr.muted, li.muted { opacity: 0.7; }
+        .muted-tag { background-color: #eeeeee; color: #616161; }
+        .muted-note { margin-top: 3px; font-size: 0.85em; font-style: italic; color: #616161; }
+
         .severity-legend {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
@@ -1199,6 +1272,8 @@ def _get_css_styles():
         .legend-warning {
             background: #e65100;
         }
+
+        .legend-muted { background-color: #757575; }
 
         .category-desc {
             padding: 8px 20px 12px;

@@ -782,7 +782,6 @@ class TestVariableValueValidation(ValidationTestCase):
 
     def test_variable_with_valid_color_values(self):
         """Test variable with all valid color values passes validation."""
-        # Create variable with valid colors
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="HighlightColor">
@@ -795,7 +794,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable in a color-type tag
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -809,15 +807,13 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # Should NOT flag - all values are valid colors
         color_issues = [i for i in issues if "invalid color value" in i.get("message", "").lower()]
         self.assertEqual(len(color_issues), 0, "Variable with valid color values should pass")
 
     def test_variable_with_invalid_color_value(self):
         """Test variable with invalid color value is flagged."""
-        # Create variable with one invalid color
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="HighlightColor">
@@ -830,7 +826,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -844,16 +839,14 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # SHOULD flag InvalidColorName
         color_issues = [i for i in issues if "invalid color value" in i.get("message", "").lower() and "InvalidColorName" in i.get("message", "")]
         self.assertEqual(len(color_issues), 1, "Variable with invalid color value should be flagged")
         self.assertIn("HighlightColor", color_issues[0]["message"])
 
     def test_variable_with_valid_integer_values(self):
         """Test variable with valid integer values in width tag."""
-        # Create variable with valid integers
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="ControlWidth">
@@ -866,7 +859,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable in width tag
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -881,9 +873,8 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # Should NOT flag - all values are valid integers
         int_issues = [i for i in issues if "invalid integer value" in i.get("message", "").lower()]
         self.assertEqual(len(int_issues), 0, "Variable with valid integer values should pass")
 
@@ -915,7 +906,7 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
         messages = [i.get("message", "") for i in issues]
         self.assertIn("<width> takes its text as written: Kodi does not expand $VAR[] in it, and this copy "
@@ -924,7 +915,6 @@ class TestVariableValueValidation(ValidationTestCase):
 
     def test_variable_with_dynamic_expression_values(self):
         """Test variable with dynamic expressions in values are not flagged."""
-        # Create variable with values containing dynamic expressions
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="DynamicColor">
@@ -936,7 +926,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -950,15 +939,13 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # Should NOT flag - dynamic expressions should be skipped
         color_issues = [i for i in issues if "invalid color value" in i.get("message", "").lower()]
         self.assertEqual(len(color_issues), 0, "Variable values with dynamic expressions should be skipped")
 
     def test_variable_with_number_expression_in_value(self):
         """Test variable value containing $NUMBER[] expression validates correctly."""
-        # Create variable with $NUMBER[] in value
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="DynamicWidth">
@@ -970,7 +957,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -985,15 +971,13 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # Should NOT flag - $NUMBER[500] should extract to valid integer
         int_issues = [i for i in issues if "invalid integer value" in i.get("message", "").lower()]
         self.assertEqual(len(int_issues), 0, "Variable value with $NUMBER[] should validate correctly")
 
     def test_variable_multiple_invalid_values(self):
         """Test variable with multiple invalid values flags all of them."""
-        # Create variable with multiple invalid colors
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="BadColors">
@@ -1006,7 +990,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using the variable
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -1020,15 +1003,13 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # SHOULD flag both InvalidColor1 and InvalidColor2
         color_issues = [i for i in issues if "invalid color value" in i.get("message", "").lower() and "BadColors" in i.get("message", "")]
         self.assertEqual(len(color_issues), 2, "Should flag all invalid values in variable")
 
     def test_escvar_expression_validation(self):
         """Test that $ESCVAR[] expressions are also validated."""
-        # Create variable with invalid color
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="MyColor">
@@ -1039,7 +1020,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using $ESCVAR[]
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -1053,15 +1033,13 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # SHOULD flag InvalidColorName
         color_issues = [i for i in issues if "invalid color value" in i.get("message", "").lower() and "InvalidColorName" in i.get("message", "")]
         self.assertEqual(len(color_issues), 1, "$ESCVAR[] should also be validated")
 
     def test_variable_in_tag_text_content(self):
         """Test variable validation works for tag text content (not just attributes)."""
-        # Create variable with invalid value for an enum type
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="TextColor">
@@ -1073,7 +1051,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using variable in tag text
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -1087,9 +1064,8 @@ class TestVariableValueValidation(ValidationTestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
-        # SHOULD flag notacolor
         color_issues = [i for i in issues if "invalid color value" in i.get("message", "") and "TextColor" in i.get("message", "")]
         self.assertEqual(len(color_issues), 1, "Variable in tag text content should be validated")
 

@@ -232,12 +232,12 @@ class CheckerMixin:
             cached = self._suppressions = (files, scan(paths))
         return cached[1]
 
-    def _shown(self, category, issues):
-        """Drop the issues a `kdk-ignore` comment mutes and those inside a generated file."""
+    def _reported(self, category, issues):
+        """Drop the issues inside a generated file and mark those a `kdk-ignore` comment mutes."""
         issues = [issue for issue in issues if not is_runtime_generated_file(issue.get("file", ""))]
         if not self.addon or not issues:
             return issues
-        return self.get_suppressions().filter(category, issues)
+        return self.get_suppressions().mark(category, issues)
 
     def get_validation_index(self, progress_callback=None):
         """Get the cached validation index, building it on first access."""
@@ -261,7 +261,7 @@ class CheckerMixin:
             return self._no_issues("variable")
 
         checker = ValidationVariable(self.addon)
-        return self._shown("Variables", checker.check(progress_callback=progress_callback))
+        return self._reported("Variables", checker.check(progress_callback=progress_callback))
 
     def check_maps(self, progress_callback=None):
         """Check the skin's maps for malformed, undefined or unused ones."""
@@ -269,7 +269,7 @@ class CheckerMixin:
             return self._no_issues("map")
 
         checker = ValidationMap(self.addon)
-        return self._shown("Maps", checker.check(progress_callback=progress_callback))
+        return self._reported("Maps", checker.check(progress_callback=progress_callback))
 
     def check_includes(self, progress_callback=None):
         """Check the skin's includes for undefined or unused ones."""
@@ -277,7 +277,7 @@ class CheckerMixin:
             return self._no_issues("include")
 
         checker = ValidationInclude(self.addon)
-        return self._shown("Includes", checker.check(progress_callback=progress_callback))
+        return self._reported("Includes", checker.check(progress_callback=progress_callback))
 
     def check_fonts(self, progress_callback=None):
         """Check the skin's fonts, their files and fontsets, and where they are used."""
@@ -287,7 +287,7 @@ class CheckerMixin:
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationFont(self.addon, resolve_include_fn=self.resolve_xml,
                                  validation_index=index)
-        return self._shown("Fonts", checker.check(progress_callback=progress_callback))
+        return self._reported("Fonts", checker.check(progress_callback=progress_callback))
 
     def check_ids(self, progress_callback=None):
         """Check the skin's control and window id references."""
@@ -298,7 +298,7 @@ class CheckerMixin:
         checker = ValidationIds(self.addon, self.WINDOW_IDS, self.WINDOW_NAMES, validation_index=index,
                                 window_filenames=self.WINDOW_FILENAMES, modeless_ids=self.MODELESS_IDS,
                                 dialog_ids=self.DIALOG_IDS)
-        return self._shown("IDs", checker.check(progress_callback=progress_callback))
+        return self._reported("IDs", checker.check(progress_callback=progress_callback))
 
     def check_labels(self, progress_callback=None):
         """Check the skin's labels for undefined ids and untranslated text."""
@@ -307,7 +307,7 @@ class CheckerMixin:
 
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationLabel(self.addon, self.get_po_files, validation_index=index)
-        return self._shown("Labels", checker.check(progress_callback=progress_callback))
+        return self._reported("Labels", checker.check(progress_callback=progress_callback))
 
     def check_repo(self, progress_callback=None):
         """Check addon.xml, artwork, language files and file types against the Kodi repo rules."""
@@ -315,7 +315,7 @@ class CheckerMixin:
             return self._no_issues("Kodi repo")
 
         checker = ValidationRepo(self.addon)
-        return self._shown("Kodi Repo", checker.check(progress_callback=progress_callback))
+        return self._reported("Kodi Repo", checker.check(progress_callback=progress_callback))
 
     def check_file_integrity(self, progress_callback=None):
         """Check the skin's files for BOMs and non-Unix line endings."""
@@ -323,7 +323,7 @@ class CheckerMixin:
             return self._no_issues("file integrity")
 
         checker = ValidationFileCheck(self.addon)
-        return self._shown("File Integrity", checker.check(progress_callback=progress_callback))
+        return self._reported("File Integrity", checker.check(progress_callback=progress_callback))
 
     def check_images(self, progress_callback=None):
         """Check the skin's image references for missing, miscased or misplaced files."""
@@ -332,10 +332,10 @@ class CheckerMixin:
 
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationImage(self.addon, validation_index=index, window_filenames=self.WINDOW_FILENAMES)
-        return self._shown("Images", checker.check(progress_callback=progress_callback))
+        return self._reported("Images", checker.check(progress_callback=progress_callback))
 
     def check_values(self, progress_callback=None):
-        """Check every XML file with check_file, merging per-call include rows."""
+        """Check every XML file as check_file does, merging per-call include rows."""
         if not self.addon:
             return []
 
@@ -350,11 +350,11 @@ class CheckerMixin:
             if progress_callback and should_report_progress(index, total_files):
                 filename = os.path.basename(path)
                 progress_callback(f"Validating {filename} ({index}/{total_files})...")
-            result = self.check_file(path)
+            result = self._file_issues(path)
             if result:
                 listitems.extend(result)
 
-        listitems = self._shown("XML Validation", deduplicate_issues(merge_include_issues(listitems)))
+        listitems = self._reported("XML Validation", deduplicate_issues(merge_include_issues(listitems)))
 
         if progress_callback:
             progress_callback(f"Complete: {len(listitems)} XML validation issues found")
@@ -362,7 +362,7 @@ class CheckerMixin:
         return listitems
 
     def _add_issue(self, listitems, node, message, identifier="", severity=SEVERITY_WARNING):
-        """Add an issue at the node's line; check_file fills in the file later."""
+        """Add an issue at the node's line; _file_issues fills in the file later."""
         issue = create_issue(
             message=message,
             file="",
@@ -560,7 +560,12 @@ class CheckerMixin:
         return any(f'addon="{addon_id}"' in text for addon_id in ("script.skinvariables", "script.skinshortcuts"))
 
     def check_file(self, path):
-        """Check one file as written plus the resolved pass for skins; None when excluded."""
+        """Check one file, its muted rows marked; None when excluded."""
+        issues = self._file_issues(path)
+        return None if issues is None else self._reported("XML Validation", issues)
+
+    def _file_issues(self, path):
+        """Issues of one file as written plus the resolved pass for skins; None when excluded."""
         exclude = set(self.settings.get("validation_exclude", ["shortcuts"]))
         path_parts = set(path.replace("\\", "/").split("/"))
         if exclude & path_parts:

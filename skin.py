@@ -295,7 +295,7 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
                 if not infos:
                     return
                 check_file = getattr(infos, "check_file", None)
-                nodes = (check_file(filename) if check_file else []) or []
+                nodes = [n for n in (check_file(filename) if check_file else None) or [] if not n.get("muted")]
                 logger.info("[checks] done type=file issues=%d", len(nodes))
             else:
                 logger.info("[checks] start type=%s", check_type)

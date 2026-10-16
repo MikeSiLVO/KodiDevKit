@@ -1,6 +1,4 @@
-"""
-Tests for bracket validation in onclick and onback tags.
-"""
+"""Tests for bracket validation in onclick and onback tags."""
 
 import unittest
 import os
@@ -63,9 +61,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should detect unmatched bracket
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertTrue(len(bracket_issues) > 0, "Should detect unmatched bracket in onclick")
         self.assertIn("Control.IsVisible(100", bracket_issues[0]["message"])
@@ -84,9 +81,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should detect unmatched bracket
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertTrue(len(bracket_issues) > 0, "Should detect unmatched bracket in onback")
         self.assertIn("SetProperty(foo,bar", bracket_issues[0]["message"])
@@ -105,9 +101,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should not report matched brackets")
 
@@ -125,9 +120,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues with properly nested brackets
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should handle complex nested brackets correctly")
 
@@ -145,9 +139,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - $INFO expressions are dynamic
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should ignore parentheses in $INFO expressions")
 
@@ -165,9 +158,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - $VAR expressions are dynamic
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should ignore parentheses in $VAR expressions")
 
@@ -185,14 +177,13 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - $ADDON expressions are dynamic
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should ignore brackets in $ADDON expressions")
 
     def test_escinfo_with_unmatched_internal_parens_ignored(self):
-        """Test that $ESCINFO expressions are properly ignored even with internal unmatched parens."""
+        """Test that $ESCINFO is ignored even with unmatched parens inside it."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -205,14 +196,13 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - $ESCINFO expressions are dynamic
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should ignore all content in $ESCINFO expressions")
 
     def test_onclick_setproperty_with_escinfo_label_formatting(self):
-        """Test onclick with SetProperty containing $ESCINFO using label formatting [prefix],[suffix]."""
+        """Test onclick SetProperty holding $ESCINFO with [prefix],[suffix] label formatting."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -225,9 +215,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - all brackets are properly balanced
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should accept properly balanced brackets in SetProperty with $ESCINFO and label formatting")
 
@@ -245,15 +234,14 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # SHOULD detect bracket mismatch - extra closing paren
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 1, "Should detect extra closing parenthesis")
         self.assertIn("do not match", bracket_issues[0]["message"])
 
     def test_onclick_setproperty_with_info_label_formatting(self):
-        """Test onclick with SetProperty containing $INFO using label formatting [prefix],[suffix]."""
+        """Test onclick SetProperty holding $INFO with [prefix],[suffix] label formatting."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -266,14 +254,13 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - all brackets are properly balanced
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should accept properly balanced brackets in SetProperty with $INFO and label formatting")
 
     def test_onclick_setproperty_with_var_label_formatting(self):
-        """Test onclick with SetProperty containing $VAR using label formatting [prefix],[suffix]."""
+        """Test onclick SetProperty holding $VAR with [prefix],[suffix] label formatting."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -286,9 +273,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - all brackets are properly balanced
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should accept properly balanced brackets in SetProperty with $VAR and label formatting")
 
@@ -306,9 +292,8 @@ class TestBracketValidation(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
-        # Should NOT detect bracket issues - all brackets are properly balanced
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should accept properly balanced brackets with $ESCVAR and label formatting")
 

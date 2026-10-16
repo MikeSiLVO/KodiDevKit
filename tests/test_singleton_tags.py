@@ -62,7 +62,7 @@ class TestSingletonTags(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Single colordiffuse should be valid")
@@ -82,7 +82,7 @@ class TestSingletonTags(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "") and "colordiffuse" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 1, "Multiple colordiffuse in same control should be flagged")
@@ -107,7 +107,7 @@ class TestSingletonTags(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Separate controls should each be allowed their own colordiffuse")
@@ -132,7 +132,7 @@ class TestSingletonTags(unittest.TestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(xml_content)
 
-        issues = self.provider.check_file(xml_path)
+        issues = self.provider.check_file(xml_path) or []
 
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Nested controls should each be allowed their own colordiffuse")
@@ -167,7 +167,7 @@ class TestSingletonTags(unittest.TestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "Separate controls using same include should each be valid")
@@ -205,17 +205,18 @@ class TestSingletonTags(unittest.TestCase):
             f.write(window_xml)
 
         self.provider.init_addon(self.test_dir)
-        issues = self.provider.check_file(window_path)
+        issues = self.provider.check_file(window_path) or []
 
         multiple_tag_issues = [i for i in issues if "Invalid multiple tags" in i.get("message", "")]
         self.assertEqual(len(multiple_tag_issues), 0, "VAR with multiple conditional values should not trigger multiple tag errors")
 
 
     def _multiple_tag_rows(self, controls):
+        """Message and severity of each repeated-tag row for a window holding the controls."""
         xml_path = os.path.join(self.test_dir, "1080i", "Test.xml")
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(f"<window><controls>{controls}</controls></window>")
-        return [(i["message"], i["severity"]) for i in self.provider.check_file(xml_path)
+        return [(i["message"], i["severity"]) for i in self.provider.check_file(xml_path) or []
                 if "Invalid multiple tags" in i.get("message", "")]
 
     def test_any_read_once_tag_repeated_is_error(self):
