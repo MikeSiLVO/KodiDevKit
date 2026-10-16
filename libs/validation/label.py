@@ -18,6 +18,15 @@ INFOLABEL_PREFIXES = {
     'audiocodec', 'audiochannels', 'audiolanguage', 'subtitlelanguage'
 }
 
+# first part of every add-on id in the Kodi repo, plus repository
+ADDON_ID_PREFIXES = (
+    'audiodecoder', 'audioencoder', 'context', 'game', 'imagedecoder', 'inputstream', 'metadata',
+    'peripheral', 'plugin', 'pvr', 'repository', 'resource', 'screensaver', 'script', 'service',
+    'skin', 'vfs', 'visualization', 'weather', 'webinterface',
+)
+
+_ADDON_ID = re.compile(rf"^({'|'.join(ADDON_ID_PREFIXES)})\.[a-z0-9._-]+$")
+
 # names that read the same in every language
 BRAND_NAMES = {
     'imdb', 'tmdb', 'tvdb', 'trakt', 'youtube', 'netflix', 'spotify',
@@ -59,8 +68,7 @@ class ValidationLabel:
 
     def _is_addon_id(self, text):
         """True when the text looks like an addon ID."""
-        text = text.strip().lower()
-        return bool(re.match(r'^(script|service|plugin|skin|resource)\.[a-z0-9._-]+$', text))
+        return bool(_ADDON_ID.match(text.strip().lower()))
 
     def _is_brand_name(self, text):
         """True when the text is a known brand name that needs no translation."""

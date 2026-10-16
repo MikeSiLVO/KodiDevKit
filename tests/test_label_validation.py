@@ -1,6 +1,4 @@
-"""
-Tests for LabelCheck class (label translation validation).
-"""
+"""Tests for the label check's translation validation."""
 
 import os
 import sys
@@ -77,6 +75,31 @@ class TestLabelValidation(ValidationTestCase):
         untranslated_issues = [i for i in issues if "not translated" in i.get("message", "").lower()]
         self.assertTrue(len(untranslated_issues) > 0, "Should detect untranslated label text")
         self.assertIn("Untranslated Button Text", untranslated_issues[0]["message"])
+
+    def test_every_addon_type_id_read_as_an_addon_id(self):
+        """An id of any add-on type, repository included, gets the add-on id message."""
+        home_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="label" id="100">
+            <label>screensaver.arctic.mirage</label>
+        </control>
+        <control type="label" id="101">
+            <label>repository.xbmc.org</label>
+        </control>
+    </controls>
+</window>"""
+        xml_path = os.path.join(self.test_dir, "16x9", "Home.xml")
+        with open(xml_path, "w", encoding="utf-8") as f:
+            f.write(home_xml)
+
+        self.provider.init_addon(self.test_dir)
+        checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
+        messages = [i.get("message", "") for i in checker.check()]
+
+        for addon_id in ("screensaver.arctic.mirage", "repository.xbmc.org"):
+            self.assertIn(f"Possible addon ID: {addon_id}.", " ".join(messages))
+        self.assertFalse([m for m in messages if "not translated" in m.lower()])
 
     def test_numeric_label_no_untranslated_warning(self):
         """Test that numeric labels don't trigger untranslated warnings."""
