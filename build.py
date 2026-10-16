@@ -96,7 +96,7 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
 
     @run_async
     def _build_theme_async(self, index: int) -> None:
-        """Build the theme's images into <theme>.xbt and offer to open the theme folder."""
+        """Build the theme's images into media/<theme>.xbt and offer to open the media folder."""
         infos = _infos()
         if not infos:
             return
@@ -106,14 +106,17 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
         theme_path = getattr(addon, "theme_path", None)
         if not theme_path:
             return
-        media_path = os.path.join(theme_path, self.themes[index])
-        texturepacker(media_path=media_path,
-                      settings=sublime.load_settings(SETTINGS_FILE),
-                      xbt_filename=self.themes[index] + ".xbt")
+        theme = self.themes[index]
+        if not texturepacker(media_path=os.path.join(theme_path, theme),
+                             settings=sublime.load_settings(SETTINGS_FILE),
+                             output_path=os.path.join(addon.media_path, theme + ".xbt")):
+            sublime.error_message("TexturePacker did not finish. Check texturepacker_path in the "
+                                  "KodiDevKit settings, and the console for its output.")
+            return
         if sublime.ok_cancel_dialog(
-                "Theme file created!\n"
+                f"{theme}.xbt created in the media folder.\n"
                 "Do you want to show it with a file browser?"):
-            webbrowser.open(media_path)
+            webbrowser.open(addon.media_path)
 
 
 def _next_versions(version):

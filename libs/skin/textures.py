@@ -10,20 +10,25 @@ if not logger.handlers:
 logger.propagate = True
 
 
-def texturepacker(media_path, settings, xbt_filename="Textures.xbt"):
-    """Run TexturePacker over the media folder, writing the .xbt into it."""
+def texturepacker(media_path, settings, output_path=None):
+    """Run TexturePacker over the folder into its Textures.xbt or a given path; True on success."""
     tp_path = settings.get("texturepacker_path")
     if not tp_path:
-        return None
+        return False
     args = [tp_path, "-dupecheck",
             "-input", media_path,
-            "-output", os.path.join(media_path, xbt_filename)]
-    with subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        bufsize=1,
-        universal_newlines=True,
-    ) as p:
-        if p.stdout:
-            for line in p.stdout:
-                logger.warning(line)
+            "-output", output_path or os.path.join(media_path, "Textures.xbt")]
+    try:
+        with subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            bufsize=1,
+            universal_newlines=True,
+        ) as p:
+            if p.stdout:
+                for line in p.stdout:
+                    logger.warning(line)
+    except OSError as e:
+        logger.error("TexturePacker could not run: %s", e)
+        return False
+    return p.returncode == 0
