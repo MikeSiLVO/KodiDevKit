@@ -59,6 +59,15 @@ class TestImageInfo(unittest.TestCase):
         self.assertEqual(info["Type"], "png")
         self.assertEqual(info["Dimensions"], "800x600")
 
+    def test_replaced_file_is_read_again(self):
+        """An image overwritten at the same path reports its new dimensions."""
+        path = self._write("icon.png", _png(800, 600))
+        self.assertEqual(dict(get_image_info(path))["Dimensions"], "800x600")
+        self._write("icon.png", _png(512, 512))
+        stamp = os.stat(path).st_mtime_ns + 1_000_000_000
+        os.utime(path, ns=(stamp, stamp))
+        self.assertEqual(dict(get_image_info(path))["Dimensions"], "512x512")
+
     def test_gif(self):
         info = self._info("a.gif", _gif(64, 32))
         self.assertEqual(info["Type"], "gif")

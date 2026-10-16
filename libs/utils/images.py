@@ -28,27 +28,35 @@ def _image_kind(head: bytes) -> str | None:
     return None
 
 
-@functools.lru_cache(maxsize=128)
 def get_image_info(fname: str) -> _InfoList:
     """Get an image's type, dimensions and size as (key, value) pairs, empty when unreadable."""
-    if not fname or not os.path.exists(fname):
+    if not fname:
         return []
+    try:
+        stat = os.stat(fname)
+    except (OSError, ValueError):
+        return []
+    return _read_image_info(fname, stat.st_mtime_ns, stat.st_size)
 
+
+@functools.lru_cache(maxsize=128)
+def _read_image_info(fname: str, mtime_ns: int, size_bytes: int) -> _InfoList:
+    """Read the image's info, cached per version of the file on disk."""
     info: _InfoList = []
 
     try:
         with open(fname, "rb") as fh:
-            # Read a generous header to cover commented PGM headers.
+            # room for a PGM header with comments
             head = fh.read(2048)
             kind = _image_kind(head)
 
             if kind == "png":
-                # PNG IHDR is at offset 16..24 (big-endian).
+                # IHDR width and height
                 width, height = struct.unpack(">II", head[16:24])
                 info = [("Type", "png"), ("Dimensions", f"{width}x{height}")]
 
             elif kind == "gif":
-                # GIF width/height at offset 6..10 (little-endian).
+                # logical screen width and height
                 width, height = struct.unpack("<HH", head[6:10])
                 info = [("Type", "gif"), ("Dimensions", f"{width}x{height}")]
 
@@ -89,20 +97,16 @@ def get_image_info(fname: str) -> _InfoList:
     except Exception:
         return []
 
-    try:
-        size_bytes = os.path.getsize(fname)
-        units = ("B", "KB", "MB")
-        size = float(size_bytes)
-        u = 0
-        while size >= 1024 and u < len(units) - 1:
-            size /= 1024.0
-            u += 1
-        if u == 0:
-            info.append(("FileSize", f"{size_bytes} b"))
-        else:
-            info.append(("FileSize", f"{size:.1f} {units[u]}"))
-    except OSError:
-        pass
+    units = ("B", "KB", "MB")
+    size = float(size_bytes)
+    u = 0
+    while size >= 1024 and u < len(units) - 1:
+        size /= 1024.0
+        u += 1
+    if u == 0:
+        info.append(("FileSize", f"{size_bytes} b"))
+    else:
+        info.append(("FileSize", f"{size:.1f} {units[u]}"))
 
     return info
 
