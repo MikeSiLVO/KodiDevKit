@@ -1134,7 +1134,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         if "text.xml.kodi" not in scope_name:
             return []
 
-        folder = os.path.basename(os.path.dirname(filename))
+        folder = addon.xml_folder_of(filename)
 
         ctx_type, detail = self._get_completion_context(view, locations[0])
 
@@ -1476,8 +1476,8 @@ class KodiDevKit(sublime_plugin.EventListener):
                 addon = getattr(INFOS, "addon", None)
                 file_name = view.file_name()
                 resolver = getattr(addon, "resolve_param_role", None) if addon else None
-                if resolver and file_name:
-                    folder = os.path.basename(os.path.dirname(file_name))
+                if addon and resolver and file_name:
+                    folder = addon.xml_folder_of(file_name)
                     inc_name = parent.get("content")
                     param_name = element.get("name") or ""
                     role = resolver(folder, inc_name, param_name)
@@ -1559,7 +1559,7 @@ class KodiDevKit(sublime_plugin.EventListener):
             addon = getattr(INFOS, "addon", None)
             file_name = view.file_name()
             if addon and file_name:
-                folder = os.path.basename(os.path.dirname(file_name))
+                folder = addon.xml_folder_of(file_name)
                 maps = (
                     getattr(addon, "constant_map", {}),
                     getattr(addon, "expression_map", {}),
@@ -1589,10 +1589,10 @@ class KodiDevKit(sublime_plugin.EventListener):
         addon = getattr(INFOS, "addon", None)
         file_name = view.file_name()
         lookup = getattr(addon, "lookup_skin_map", None) if addon else None
-        if not lookup or not file_name:
+        if not addon or not lookup or not file_name:
             return raw
 
-        folder = os.path.basename(os.path.dirname(file_name))
+        folder = addon.xml_folder_of(file_name)
         mapped = lookup(folder, map_name, raw)
         return raw if mapped == raw else f"{raw} -> {mapped}"
 
@@ -1618,7 +1618,7 @@ class KodiDevKit(sublime_plugin.EventListener):
         file_path = view.file_name()
         if not file_path:
             return None
-        folder = os.path.basename(os.path.dirname(file_path))
+        folder = addon.xml_folder_of(file_path)
         return (addon, folder) if folder else None
 
     @staticmethod
@@ -1946,8 +1946,8 @@ class KodiDevKit(sublime_plugin.EventListener):
 
             addon.update_xml_files()
 
-            filename = os.path.basename(filename_full)
-            folder = os.path.basename(os.path.dirname(filename_full))
+            folder = addon.xml_folder_of(filename_full)
+            filename = os.path.relpath(filename_full, os.path.join(addon.path, folder))
 
             addon.reload(filename_full)
             _remember_disk_state()

@@ -201,6 +201,7 @@ class TestCheckFileReportsIt(unittest.TestCase):
         self.assertIn("Deep", skin.include_map["16x9"])
         self.assertIn(nested, skin.include_files["16x9"])
         self.assertIn(os.path.join("Data", "B.xml"), skin.window_files["16x9"])
+        self.assertEqual(skin.xml_folder_of(nested), "16x9")
         self.assertEqual([i for i in provider.check_values() if "include file" in i["message"]], [])
 
     def test_reported_once(self):

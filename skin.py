@@ -166,7 +166,7 @@ class KodidevkitShowFontRefsCommand(_QuickPanelMixin, sublime_plugin.WindowComma
         font_refs = addon.resource_loader.get_font_references(addon.window_files)
         if not font_refs:
             return None
-        folder = file_name.split(os.sep)[-2]
+        folder = addon.xml_folder_of(file_name)
 
         self.nodes = font_refs.get(folder, [])
 
@@ -579,7 +579,7 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
         if not file_name:
             return None
         self.fonts = []
-        folder = file_name.split(os.sep)[-2]
+        folder = addon.xml_folder_of(file_name)
         self.fonts = [
             [i["name"], "%s  -  %s" % (i["size"], i["filename"])]
             for i in addon.fonts[folder]
@@ -630,9 +630,10 @@ class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
         if not file_name:
             return None
         addon = getattr(infos, "addon", None)
-        folder = addon.xml_folder_of(file_name) if addon else file_name.split(os.sep)[-2]
-        position = go_to_tag(keyword=get_node_content(view, flags), folder=folder,
-                             kinds=_reference_kinds(view))
+        if not addon:
+            return None
+        position = go_to_tag(keyword=get_node_content(view, flags),
+                             folder=addon.xml_folder_of(file_name), kinds=_reference_kinds(view))
         if position:
             self.window.open_file(position, sublime.ENCODED_POSITION)
 
@@ -750,11 +751,6 @@ class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowComman
         if not file_name:
             return
 
-        try:
-            folder = file_name.split(os.sep)[-2]
-        except Exception:
-            return
-
         result = kodi.request(
             method="XBMC.GetInfoLabels",
             params={"labels": ["Window.Property(xmlfile)"]},
@@ -779,6 +775,7 @@ class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowComman
         if not addon or not addon.path:
             return
 
+        folder = addon.xml_folder_of(file_name)
         files_in_folder = addon.window_files.get(folder, [])
         for xml_file in files_in_folder:
             if xml_file == value:
@@ -822,7 +819,7 @@ class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCo
             return None
         self.nodes = []
         line, _ = view.rowcol(view.sel()[0].b)
-        filename = os.path.basename(file_name)
+        filename = os.path.relpath(file_name, os.path.join(addon.path, addon.xml_folder_of(file_name)))
         for folder in addon.xml_folders:
             node = {"file": os.path.join(addon.path, folder, filename),
                     "line": line + 1}

@@ -1,8 +1,4 @@
-"""Tests for the hover popup paths in ``kodidevkit``.
-
-Sublime, mdpopups and the Kodi connection are stubbed so the popup logic can be
-exercised outside the editor.
-"""
+"""Tests for the hover popups, with Sublime, mdpopups and the Kodi connection stubbed."""
 
 import os
 import re
@@ -370,10 +366,11 @@ class XmlView:
         return FakeRegion(match.start(), match.end()) if match else None
 
 
-class DefaultsAddon:
-    """Addon stub carrying only the `<default type="X">` map."""
+class DefaultsAddon(FakeAddon):
+    """Addon stub carrying the `<default type="X">` map."""
 
     def __init__(self, defaults):
+        super().__init__({})
         self.default_map = {"16x9": defaults}
         self.colors = []
 

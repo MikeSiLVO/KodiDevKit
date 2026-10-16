@@ -186,7 +186,7 @@ class CheckerMixin:
 
         f = folder
         if not f and src_path:
-            f = os.path.basename(os.path.dirname(src_path)) or None
+            f = sk.xml_folder_of(src_path) or None
         if not f and sk.xml_folders:
             f = sk.xml_folders[0]
         if not f:
