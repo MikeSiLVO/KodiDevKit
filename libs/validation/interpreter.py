@@ -270,6 +270,7 @@ class XmlInterpreter:
             return
 
         values = self.template_values.get(control_type, {})
+        allowed_multi = ALLOWED_MULTI.get((node.tag.lower(), control_type), set())
         first_singletons = {}
 
         for child in node:
@@ -278,18 +279,10 @@ class XmlInterpreter:
             # checked at source by _walk_default, else one Defaults.xml error repeats per control
             if (child.get("_kdk_inc_name") or "").startswith("default type="):
                 continue
-            if tag in INCLUDE_DEFINITION_TAGS:
-                continue
-            if tag == "include":
-                continue
-            if tag == "control":
-                if control_type not in GROUP_TYPES:
+            if tag in _STRUCTURAL_TAGS:
+                if tag == "control" and control_type not in GROUP_TYPES:
                     self._add_issue(child, SEVERITY_WARNING, f"<control> inside <control "
                                     f"type={control_type}> is ignored; only groups hold controls")
-                continue
-            if tag in ALL_LAYOUT_TAGS:
-                continue
-            if tag == "content":
                 continue
 
             if tag not in subnodes:
@@ -325,13 +318,10 @@ class XmlInterpreter:
                 if text or tag not in NOOP_TAGS:
                     self._validate_brackets(child, text)
 
-            if tag.lower() in LABEL_READ_TAGS or tag.lower() in ("label2", "altlabel"):
+            tag_low = tag.lower()
+            if tag_low in LABEL_READ_TAGS or tag_low in ("label2", "altlabel"):
                 self._validate_label_brackets(child)
 
-            tag_low = tag.lower()
-            allowed_multi = ALLOWED_MULTI.get(
-                (node.tag.lower(), control_type), set()
-            )
             if (
                 len(child) == 0
                 and tag_low not in REPEATABLE_TAGS
@@ -357,7 +347,7 @@ class XmlInterpreter:
                         f"invalid attribute for <{tag}>: {attr_name}",
                     )
                     continue
-                if _is_dynamic(attr_value) or _contains_dynamic(attr_value):
+                if _contains_dynamic(attr_value):
                     continue
                 value_type = subnodes[tag].get(attr_name)
                 if value_type:
@@ -509,15 +499,15 @@ class XmlInterpreter:
                 for operand in (unknown_infos(text, self.info_names) if self.info_names else [])]
 
     def _validate_number(self, node, name: str, is_attr: bool, value: str, value_type: str):
-        """Report a number field left holding a name Kodi cannot read as a number."""
+        """Validate a number field, reporting a leftover name or non-numeric attribute text."""
         text = value.strip()
-        where = name if is_attr else f"<{name}>"
-        if not text or _is_dynamic(text) or _contains_dynamic(text) or extract_number_value(text):
+        if not text or _is_number(text.rstrip("%r") if value_type == "position" else text):
+            return
+        if _contains_dynamic(text) or extract_number_value(text):
             return
         if not is_attr and name in ("width", "height") and text.lower().startswith("auto"):
             return
-        if _is_number(text.rstrip("%r") if value_type == "position" else text):
-            return
+        where = name if is_attr else f"<{name}>"
         if not self._looks_like_unresolved(text):
             # tag text also takes %, r and comma lists that the value types do not describe
             if is_attr:
