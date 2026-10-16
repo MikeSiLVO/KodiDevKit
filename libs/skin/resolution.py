@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
-import copy
 import re
 import logging
 
@@ -37,6 +36,11 @@ def _splice_key(parent, include_node, name, params):
             parent.tag, parent.get("type"), in_layout)
 
 
+def _clone(element):
+    """Clone an lxml element with its subtree."""
+    return element.__deepcopy__(None)
+
+
 class SkinResolution:
     """Resolver for a skin's includes, constants, expressions and defaults."""
 
@@ -49,14 +53,18 @@ class SkinResolution:
         self.constant_map = include_maps.constants
         self.variable_map = include_maps.variables
         self.expression_map = include_maps.expressions
+        self._ready_defaults_cache = {}
 
     def resolve(self, node, folder: str, *, source_file: str = "", _spliced=None):
         """Resolve defaults, constants, $EXP and includes, then children."""
-        if node is None:
+        if node is None or node.get("_kdk_ready") is not None:
             return
 
         if source_file:
             self._source_file = source_file
+        if _spliced is None:
+            # rebuilt per window so a reload never leaves stale defaults behind
+            self._ready_defaults_cache = {}
         spliced = set() if _spliced is None else _spliced
 
         # each guard repeats its step's own no-op test
@@ -99,31 +107,56 @@ class SkinResolution:
         has_posx = node.find("posx") is not None
         has_posy = node.find("posy") is not None
 
-        default_element = default_node
+        # stamp so issues point at the control, not Defaults.xml
+        call_line = str(node.sourceline) if node.sourceline else ""
+        call_file = getattr(self, "_source_file", "")
+        default_name = "default type=%s" % control_type
+        ready = self._ready_defaults(folder, control_type, default_node, default_file)
 
-        for child in default_element:
+        for child, ready_child in zip(default_node, ready):
             value = child.tag
-            skip = False
-
             if has_posx and value in ("left", "right", "centerleft", "centerright"):
-                skip = True
+                continue
             if has_posy and value in ("top", "bottom", "centertop", "centerbottom"):
-                skip = True
+                continue
 
-            if not skip:
-                cloned = copy.deepcopy(child)
-                # stamp so issues point at the control, not Defaults.xml
-                if cloned.get("_kdk_call_line") is None:
-                    call_line = str(node.sourceline) if node.sourceline else ""
-                    call_file = getattr(self, "_source_file", "")
-                    default_name = "default type=%s" % control_type
-                    if call_line:
-                        cloned.set("_kdk_call_line", call_line)
-                        cloned.set("_kdk_inc_name", default_name)
-                        cloned.set("_kdk_inc_file", default_file or "")
-                        cloned.set("_kdk_call_file", call_file)
-                        self._stamp_descendants(cloned, call_line, default_name, default_file or "", call_file=call_file)
-                node.append(cloned)
+            if ready_child is not None and call_line:
+                cloned = _clone(ready_child)
+                for element in cloned.iter():
+                    element.set("_kdk_call_line", call_line)
+                    element.set("_kdk_call_file", call_file)
+            else:
+                cloned = _clone(child)
+                if call_line:
+                    cloned.set("_kdk_call_line", call_line)
+                    cloned.set("_kdk_inc_name", default_name)
+                    cloned.set("_kdk_inc_file", default_file or "")
+                    cloned.set("_kdk_call_file", call_file)
+                    self._stamp_descendants(cloned, call_line, default_name, default_file or "", call_file=call_file)
+            node.append(cloned)
+
+    def _ready_defaults(self, folder: str, control_type: str, default_node, default_file):
+        """Default children resolved once per window; None for one with an include or control."""
+        cached = self._ready_defaults_cache.get((folder, control_type))
+        if cached is not None:
+            return cached
+        default_name = "default type=%s" % control_type
+        ready = []
+        for child in default_node:
+            # a splice or nested default depends on the window it lands in
+            if next(child.iter("include", "control"), None) is not None:
+                ready.append(None)
+                continue
+            ready_child = _clone(child)
+            for element in ready_child.iter():
+                element.set("_kdk_inc_name", default_name)
+                element.set("_kdk_inc_file", default_file or "")
+                self.resolve_constants(element, folder)
+                self.resolve_expressions(element, folder)
+            ready_child.set("_kdk_ready", "1")
+            ready.append(ready_child)
+        self._ready_defaults_cache[(folder, control_type)] = ready
+        return ready
 
     def resolve_constants(self, node, folder: str):
         """Resolve constants in listed tag text, else in listed attributes."""
@@ -265,7 +298,7 @@ class SkinResolution:
             # ancestry stamp is what the cycle check reads
             child_path_attr = self._PATH_SEP.join(path + [inc_name])
             for child in include_element:
-                cloned_child = copy.deepcopy(child)
+                cloned_child = _clone(child)
                 if conditional:
                     for element in cloned_child.iter():
                         element.set("_kdk_inc_cond", "1")
@@ -304,7 +337,7 @@ class SkinResolution:
         if nested is not None:
             for child in include_node:
                 if child.tag != "param":
-                    cloned = copy.deepcopy(child)
+                    cloned = _clone(child)
                     insert_index = list(target).index(nested)
                     target.insert(insert_index, cloned)
 

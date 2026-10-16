@@ -219,8 +219,15 @@ class TestControlDefaults(unittest.TestCase):
         <left>100</left>
         <top>100</top>
     </default>
+    <constant name="BarHeight">40</constant>
+    <default type="label">
+        <height>BarHeight</height>
+        <include>LabelFont</include>
+    </default>
+    <include name="LabelFont"><font>font12</font></include>
 </includes>"""
-        with open(os.path.join(self.skin_path, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
+        self.includes_path = os.path.join(self.skin_path, "16x9", "Includes.xml")
+        with open(self.includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
         self.skin = Skin(path=self.skin_path)
@@ -269,6 +276,31 @@ class TestControlDefaults(unittest.TestCase):
 
         self.assertIsNone(root.find("top"), "Top default should be skipped when posy exists")
         self.assertIsNotNone(root.find("left"), "Left default should still be applied")
+
+    def test_each_control_gets_its_own_resolved_default(self):
+        """Every label gets the default resolved, its include spliced, and its own call line."""
+        root = ET.fromstring('<control type="group">\n<control type="label"/>\n<control type="label"/>\n</control>')
+
+        kodi_resolve(self.skin, root, "16x9")
+
+        for label in root.findall("control"):
+            self.assertEqual(label.find("height").text, "40")
+            self.assertEqual(label.find("font").text, "font12")
+            self.assertEqual(label.find("height").get("_kdk_call_line"), str(label.sourceline))
+
+    def test_default_follows_a_reloaded_constant(self):
+        """The default follows a constant changed in Includes.xml once the skin reloads."""
+        with open(self.includes_path, encoding="utf-8") as f:
+            text = f.read()
+        kodi_resolve(self.skin, ET.fromstring('<control type="label"/>'), "16x9")
+        with open(self.includes_path, "w", encoding="utf-8") as f:
+            f.write(text.replace(">40<", ">60<"))
+        self.skin.update_include_list()
+
+        root = ET.fromstring('<control type="label"/>')
+        kodi_resolve(self.skin, root, "16x9")
+
+        self.assertEqual(root.find("height").text, "60")
 
 
 class TestParameterMerging(unittest.TestCase):
@@ -374,17 +406,10 @@ class TestParameterMerging(unittest.TestCase):
 
 
 class TestNestedParameterizedFanout(unittest.TestCase):
-    """A wrapper include that fans out to the same parameterized sub-include
-    several times must expand every instance.
-
-    Regression: resolve_includes tracked processed nodes by id(), and freed
-    lxml proxies had their address reused by newly spliced include nodes, so
-    some fan-out instances were skipped non-deterministically. This produced
-    false-positive "Control ID X not defined" errors for the missing panels
-    (e.g. DialogVideoInfo's 90011-90021 in Aeon Nox).
-    """
+    """Wrapper include calling one parameterized sub-include several times."""
 
     def setUp(self):
+        """Create a skin whose wrapper include calls the panel include once per id."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.skin_path = self.temp_dir.name
         os.makedirs(os.path.join(self.skin_path, "16x9"))
@@ -399,9 +424,6 @@ class TestNestedParameterizedFanout(unittest.TestCase):
         with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Layout: panel whose id comes from a param. Lists: a wrapper that
-        # instantiates Layout once per id. A window pulls Lists in via a
-        # conditional include nested inside a control (mirrors the real skin).
         instances = "\n".join(
             f'        <include content="Layout"><param name="id">{900_10 + n}</param></include>'
             for n in range(1, 12)
@@ -427,6 +449,7 @@ class TestNestedParameterizedFanout(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_all_fanout_ids_resolved(self):
+        """Every panel id the wrapper fans out to resolves, with no $PARAM left."""
         test_xml = """<window>
     <controls>
         <control type="group">
@@ -444,7 +467,6 @@ class TestNestedParameterizedFanout(unittest.TestCase):
             expected, resolved_ids & expected,
             f"Every fan-out panel id must resolve. Missing: {sorted(expected - resolved_ids)}",
         )
-        # No unresolved $PARAM left behind.
         self.assertNotIn("$PARAM[id]", resolved_ids)
 
 
