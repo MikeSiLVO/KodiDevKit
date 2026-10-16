@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def _install_stubs():
-    """Put fake sublime / sublime_plugin / mdpopups in place before import."""
+    """Install fake sublime, sublime_plugin and mdpopups, then import and return kodidevkit."""
     import mock_sublime
 
     for attr in ("COOPERATE_WITH_AUTO_COMPLETE", "CLASS_WORD_START",
@@ -25,7 +25,7 @@ def _install_stubs():
     sys.modules["sublime"] = mock_sublime
 
     plugin = types.ModuleType("sublime_plugin")
-    for name in ("EventListener", "TextCommand", "WindowCommand",
+    for name in ("EventListener", "TextCommand", "WindowCommand", "ApplicationCommand",
                  "ViewEventListener", "TextInputHandler"):
         setattr(plugin, name, type(name, (object,), {}))
     sys.modules["sublime_plugin"] = plugin

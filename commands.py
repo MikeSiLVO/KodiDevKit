@@ -662,6 +662,22 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
         thread.start()
 
 
+def _report_entry(report_path):
+    """Picker entry for a report: skin name and date from its file name, else its modified time."""
+    from datetime import datetime
+
+    stem = os.path.basename(report_path)[:-len(".html")]
+    parts = stem.rsplit("_", 2)
+    try:
+        timestamp = datetime.strptime("_".join(parts[1:]), "%Y%m%d_%H%M%S")
+        skin_name = parts[0].replace("_", " ")
+    except ValueError:
+        timestamp = datetime.fromtimestamp(os.path.getmtime(report_path))
+        skin_name = stem
+    return {"path": report_path, "skin_name": skin_name,
+            "date": timestamp.strftime("%Y-%m-%d %H:%M:%S"), "timestamp": timestamp}
+
+
 class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
     """Command opening an existing validation report from the report folder."""
 
@@ -701,9 +717,8 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
             )
 
     def run(self):
-        """Show a quick panel of existing reports and open the chosen one."""
+        """Show saved reports in a quick panel and open the pick, else open the report folder."""
         import glob
-        from datetime import datetime
         import pathlib
 
         settings = sublime.load_settings('kodidevkit.sublime-settings')
@@ -725,45 +740,7 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
             self._open_folder_and_notify(report_dir, created=False)
             return
 
-        reports = []
-        for report_path in report_files:
-            filename = os.path.basename(report_path)
-
-            try:
-                name_parts = filename.rsplit('_', 2)
-                if len(name_parts) >= 2:
-                    skin_name = name_parts[0].replace('_', ' ')
-                    timestamp_str = name_parts[1].replace('.html', '')
-
-                    try:
-                        timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
-                        date_display = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        mtime = os.path.getmtime(report_path)
-                        timestamp = datetime.fromtimestamp(mtime)
-                        date_display = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    skin_name = filename.replace('.html', '')
-                    mtime = os.path.getmtime(report_path)
-                    timestamp = datetime.fromtimestamp(mtime)
-                    date_display = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
-                reports.append({
-                    'path': report_path,
-                    'skin_name': skin_name,
-                    'date': date_display,
-                    'timestamp': timestamp
-                })
-            except Exception:
-                mtime = os.path.getmtime(report_path)
-                timestamp = datetime.fromtimestamp(mtime)
-                reports.append({
-                    'path': report_path,
-                    'skin_name': filename.replace('.html', ''),
-                    'date': timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    'timestamp': timestamp
-                })
-
+        reports = [_report_entry(report_path) for report_path in report_files]
         reports.sort(key=lambda x: x['timestamp'], reverse=True)
 
         items = []
