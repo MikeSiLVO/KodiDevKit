@@ -489,7 +489,7 @@ class CheckerMixin:
         return isinstance(self.addon, Skin) and hasattr(self.addon, "resolver")
 
     def _check_file_resolved(self, root, path: str, folder: str) -> list[dict]:
-        """XmlInterpreter issues over the tree with its includes and dynamic values expanded."""
+        """XmlInterpreter issues over the expanded tree, include definitions left as written."""
         from ..skin.skin import Skin
 
         sk = self.addon
@@ -499,7 +499,10 @@ class CheckerMixin:
         if tree_needs_expansion(root):
             try:
                 walk_root = copy.deepcopy(root)
-                sk.resolver.resolve(walk_root, folder, source_file=path)
+                # the walk reads no definition body; windows check those in context
+                parts = [c for c in walk_root if c.tag != "include"] if root.tag == "includes" else [walk_root]
+                for part in parts:
+                    sk.resolver.resolve(part, folder, source_file=path)
             except Exception:
                 logger.debug("Resolution failed for %s, skipping resolved pass", path, exc_info=True)
                 return []
