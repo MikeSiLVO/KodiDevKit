@@ -54,6 +54,7 @@ class SkinResolution:
         self.variable_map = include_maps.variables
         self.expression_map = include_maps.expressions
         self._ready_defaults_cache = {}
+        self._flattened_cache = {}
 
     def resolve(self, node, folder: str, *, source_file: str = "", _spliced=None):
         """Resolve defaults, constants, $EXP and includes, then children."""
@@ -63,8 +64,9 @@ class SkinResolution:
         if source_file:
             self._source_file = source_file
         if _spliced is None:
-            # rebuilt per window so a reload never leaves stale defaults behind
+            # rebuilt per window so a reload never leaves stale results behind
             self._ready_defaults_cache = {}
+            self._flattened_cache = {}
         spliced = set() if _spliced is None else _spliced
 
         # each guard repeats its step's own no-op test
@@ -170,9 +172,8 @@ class SkinResolution:
         if node.text and node.tag in SkinInclude.constant_nodes:
             node.text = self._resolve_constant_value(node.text, constants_for_folder)
         else:
-            for attr_name, attr_value in list(node.attrib.items()):
-                if attr_name in SkinInclude.constant_attribs:
-                    node.attrib[attr_name] = self._resolve_constant_value(attr_value, constants_for_folder)
+            for attr_name in SkinInclude.constant_attribs.intersection(node.attrib):
+                node.attrib[attr_name] = self._resolve_constant_value(node.attrib[attr_name], constants_for_folder)
 
     def _resolve_constant_value(self, value: str, constant_map: dict) -> str:
         """Resolve each comma-split piece naming a constant."""
@@ -193,20 +194,23 @@ class SkinResolution:
 
         names = []
         if node.text and node.tag in SkinInclude.exp_nodes:
-            names = expression_names(node.text)
-            node.text = self._resolve_expression_value(node.text, expressions_for_folder, [])
+            text_names, node.text = self._flattened(folder, node.text, expressions_for_folder)
+            names += text_names
         else:
-            for attr_name, attr_value in list(node.attrib.items()):
-                if attr_name in SkinInclude.exp_attribs:
-                    names += expression_names(attr_value)
-                    node.attrib[attr_name] = self._resolve_expression_value(
-                        attr_value, expressions_for_folder, [])
+            for attr_name in SkinInclude.exp_attribs.intersection(node.attrib):
+                attr_names, node.attrib[attr_name] = self._flattened(folder, node.attrib[attr_name],
+                                                                     expressions_for_folder)
+                names += attr_names
         if names:
             node.set("_kdk_exp", self._PATH_SEP.join(names))
 
-    def _resolve_expression_value(self, value: str, expression_map: dict, resolved: list) -> str:
-        """Resolve $EXP[name] references with circular detection."""
-        return flatten_expressions(value, expression_map, resolved)[0]
+    def _flattened(self, folder: str, value: str, expression_map: dict):
+        """The $EXP names written in the text and the text with them flattened, once per window."""
+        key = (folder, value)
+        if key not in self._flattened_cache:
+            self._flattened_cache[key] = (tuple(expression_names(value)),
+                                          flatten_expressions(value, expression_map, [])[0])
+        return self._flattened_cache[key]
 
     # tab is attribute-safe and never appears in an include name
     _PATH_SEP = "\t"

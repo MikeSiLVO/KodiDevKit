@@ -191,6 +191,19 @@ class TestExpressionWrapping(unittest.TestCase):
         self.assertEqual(visible_elem.text, "[Player.HasMedia]",
                         "Expression should be wrapped in brackets")
 
+    def test_repeated_text_resolves_at_every_use(self):
+        """The same $EXP text resolves at every tag and condition, each one naming it."""
+        root = ET.fromstring('<control type="group"><visible>$EXP[IsPlaying]</visible>'
+                             '<control type="label"><visible>$EXP[IsPlaying]</visible></control>'
+                             '<animation condition="$EXP[IsPlaying]" effect="fade"/></control>')
+
+        kodi_resolve(self.skin, root, "16x9")
+
+        uses = root.findall(".//visible") + root.findall("animation")
+        self.assertEqual([u.text if u.tag == "visible" else u.get("condition") for u in uses],
+                         ["[Player.HasMedia]"] * 3)
+        self.assertEqual({u.get("_kdk_exp") for u in uses}, {"IsPlaying"})
+
 
 class TestControlDefaults(unittest.TestCase):
     """Control defaults by control type."""
