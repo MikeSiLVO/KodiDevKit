@@ -5,6 +5,8 @@ import re
 import logging
 from functools import lru_cache
 
+from .expressions import resolve_params_in_text
+
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
@@ -93,11 +95,13 @@ class CallContexts:
         return self._filled[name]
 
     def expand(self, usage, depth=0):
-        """Expand a call's params, once per outer param set when it forwards $PARAM."""
+        """Expand a call's params per outer param set, dropping a lone undefined $PARAM."""
         params, outer = usage["params"], usage.get("enclosing")
         if not outer or depth >= _FORWARD_DEPTH or not any("$PARAM[" in v for v in params.values()):
             return [params]
-        return [{k: resolve_param_in_name(v, context) for k, v in params.items()}
+        # a lone undefined $PARAM drops the <param>, leaving the include's default
+        return [{k: resolve_param_in_name(v, context) for k, v in params.items()
+                 if resolve_params_in_text(v, context)[1] != "SINGLE_UNDEFINED"}
                 for context in self.for_include(outer, depth + 1)] or [params]
 
 
@@ -286,9 +290,7 @@ def merge_include_issues(issues):
 
 
 def resolve_include_content(inc, resolve_callback=None):
-    """The include body with its own default params substituted."""
-    from .expressions import resolve_params_in_text
-
+    """Resolve the include body with its own default params substituted."""
     if resolve_callback:
         return resolve_callback(inc)
 

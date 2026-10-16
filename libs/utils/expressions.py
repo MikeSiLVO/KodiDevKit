@@ -109,8 +109,7 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *
         return text, "NO_PARAMS"
     if not params:
         if _PARAM_PATTERN.search(text):
-            matches = _PARAM_PATTERN.findall(text)
-            if len(matches) == 1:
+            if _PARAM_PATTERN.fullmatch(text):
                 return text, "SINGLE_UNDEFINED"
             return text, "PARTIAL_RESOLVED"
         return text, "NO_PARAMS"
@@ -134,7 +133,7 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *
         status = "NO_PARAMS"
     elif undefined_params == 0:
         status = "ALL_RESOLVED"
-    elif total_params == 1 and undefined_params == 1:
+    elif undefined_params == 1 and _PARAM_PATTERN.fullmatch(text):
         status = "SINGLE_UNDEFINED"
     else:
         status = "PARTIAL_RESOLVED"

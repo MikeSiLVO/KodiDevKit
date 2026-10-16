@@ -400,6 +400,25 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
                  skin.return_node("Logo", self.folder_name, kinds=("variable",))]
         self.assertEqual([node and node["type"] for node in found], ["include", "variable"])
 
+    def test_forwarded_param_with_text_around_it_is_kept(self):
+        """Only a lone undefined $PARAM drops a forwarded param; one with text around it stays."""
+        skin = self._create_skin_with_includes("""
+            <includes>
+                <include name="Inner">
+                    <param name="f" default="Base" />
+                    <definition><control type="label"><font>$PARAM[f]</font></control></definition>
+                </include>
+                <include name="Outer">
+                    <definition>
+                        <include content="Inner"><param name="f" value="$PARAM[unset]"/></include>
+                        <include content="Inner"><param name="f" value="a$PARAM[unset]"/></include>
+                    </definition>
+                </include>
+            </includes>""")
+        root = ET.fromstring('<window><controls><include content="Outer"/></controls></window>')
+        kodi_resolve(skin, root, self.folder_name)
+        self.assertEqual([font.text for font in root.iter("font")], ["Base", "a$PARAM[unset]"])
+
     def test_identical_conditional_control_splices_once(self):
         """A repeated conditional call adds nothing; other params or unconditional calls do."""
         skin = self._create_skin_with_includes("""

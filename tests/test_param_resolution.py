@@ -42,6 +42,23 @@ class TestParamResolution(ValidationTestCase):
         if os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
 
+    def test_forwarded_param_left_undefined_keeps_the_default(self):
+        """A lone undefined $PARAM forwarded drops the param, keeping the include's default."""
+        from libs.utils.validation import CallContexts
+        with open(os.path.join(self.xml_dir, "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes><include name="Inner"><param name="f" default="Base"/>'
+                    '<definition><control type="label"/></definition></include>'
+                    '<include name="Outer"><definition><include content="Inner">'
+                    '<param name="f" value="$PARAM[unset]"/></include></definition></include>'
+                    '<include name="Prefixed"><definition><include content="Inner">'
+                    '<param name="f" value="pre$PARAM[unset]"/></include></definition></include>'
+                    '</includes>')
+        with open(os.path.join(self.xml_dir, "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><include content="Outer"/><include content="Prefixed"/>'
+                    '</controls></window>')
+        skin = Skin(path=self.skin_dir, settings={})
+        self.assertEqual(CallContexts(skin, "1080i").for_include("Inner"), [{"f": "Base"}, {"f": "pre"}])
+
     def test_undefined_param_resolves_to_base_name(self):
         """Undefined $PARAM in an include name resolves to the base name."""
         includes_xml = os.path.join(self.xml_dir, "Includes.xml")
