@@ -59,10 +59,14 @@ class SkinResolution:
             self._source_file = source_file
         spliced = set() if _spliced is None else _spliced
 
-        self.set_defaults(node, folder)
-        self.resolve_constants(node, folder)
-        self.resolve_expressions(node, folder)
-        self.resolve_includes(node, folder, spliced)
+        # each guard repeats its step's own no-op test
+        if node.tag == "control":
+            self.set_defaults(node, folder)
+        if node.text or len(node.attrib):
+            self.resolve_constants(node, folder)
+            self.resolve_expressions(node, folder)
+        if node.find("include") is not None:
+            self.resolve_includes(node, folder, spliced)
 
         for child in list(node):
             self.resolve(child, folder, _spliced=spliced)
@@ -348,10 +352,8 @@ class SkinResolution:
     @staticmethod
     def _stamp_descendants(node, call_line: str, inc_name: str, inc_file: str = "", *, call_file: str = ""):
         """Stamp every unstamped descendant with the call site and include name."""
-        for descendant in node.iter():
-            if descendant is node:
-                continue
-            if descendant.get("_kdk_call_line") is None:
+        for descendant in node.iterdescendants():
+            if "_kdk_call_line" not in descendant.attrib:
                 descendant.set("_kdk_call_line", call_line)
                 descendant.set("_kdk_inc_name", inc_name)
                 descendant.set("_kdk_inc_file", inc_file)
