@@ -1,4 +1,4 @@
-"""Defaults loaded from include files that only some skin settings pull in."""
+"""Redundant tags against control defaults, including defaults only some skin settings load."""
 
 import os
 import sys
@@ -63,6 +63,14 @@ class TestConditionalDefaults(unittest.TestCase):
         """A state that loads no defaults file keeps every tag the lone conditional file repeats."""
         self.assertEqual(self._redundant(['<include condition="Skin.HasSetting(Small)" '
                                           'file="Defaults_Small.xml"/>']), [])
+
+    def test_window_without_includes_is_checked(self):
+        """A window calling no include still gets its controls compared with their defaults."""
+        self._write("16x9/Home.xml", WINDOW.replace("<include>Spacer</include>", ""))
+        self.assertEqual(self._redundant(['<include file="Defaults_Small.xml"/>']), [
+            'Redundant <font>: same value as <default type="label">',
+            'Redundant <height>: same value as <default type="label">',
+        ])
 
     def test_unconditional_defaults_file_still_reports(self):
         """An unconditional defaults file still reports every repeated tag."""

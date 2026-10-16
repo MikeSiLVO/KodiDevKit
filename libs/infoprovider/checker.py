@@ -492,7 +492,8 @@ class CheckerMixin:
         if not isinstance(sk, Skin):
             return []
 
-        if tree_needs_expansion(root):
+        defaults = sk.default_map.get(folder, {})
+        if tree_needs_expansion(root) or any(c.get("type") in defaults for c in root.iter("control")):
             try:
                 walk_root = copy.deepcopy(root)
                 # the walk reads no definition body; windows check those in context
