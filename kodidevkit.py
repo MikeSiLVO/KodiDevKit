@@ -558,9 +558,8 @@ def plugin_unloaded():
 
 
 def plugin_loaded():
-    """Sublime entry point: load settings, init INFOS, wire reload hooks."""
+    """Sublime entry point: load settings and Kodi's labels, wire reload hooks, sync the project."""
     import sublime
-    from importlib import import_module
 
     settings = sublime.load_settings('kodidevkit.sublime-settings')
 
@@ -580,27 +579,6 @@ def plugin_loaded():
 
     try:
         KodiDevKit.settings = settings
-    except Exception:
-        pass
-
-    global INFOS
-    if 'INFOS' not in globals():
-        try:
-            provider = import_module('.libs.infoprovider.provider', __package__)
-            INFOS = provider.InfoProvider(settings)
-        except Exception:
-            INFOS = None
-
-    try:
-        if not INFOS:
-            return
-        if getattr(INFOS, "kodi", None) is None:
-            kodi_mod = import_module('.libs.kodi.kodi', __package__)
-            INFOS.kodi = kodi_mod.Kodi(settings)
-        else:
-            kodi_client = getattr(INFOS, "kodi", None)
-            if kodi_client:
-                kodi_client.load_settings(settings, force=True)
     except Exception:
         pass
 
