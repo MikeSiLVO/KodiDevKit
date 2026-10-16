@@ -307,6 +307,24 @@ class TestVariableBasicValidation(ValidationTestCase):
                         if i["message"].startswith("Unused"))
         self.assertEqual(unused, ["Unused variable: Title9"])
 
+    def test_variable_named_in_a_set_property_value_is_used(self):
+        """A variable named in a SetProperty value is used: an add-on reads it back as $VAR."""
+        files = {
+            "16x9/Includes.xml": '<includes><variable name="BlurA"><value>a</value></variable>'
+                                 '<variable name="BlurB"><value>b</value></variable>'
+                                 '<variable name="Idle"><value>c</value></variable></includes>',
+            "16x9/Home.xml": "<window><onload>SetProperty(Info.BlurVar,BlurA|BlurB,Home)</onload>"
+                             "<controls/></window>",
+        }
+        for rel, text in files.items():
+            with open(os.path.join(self.test_dir, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        self.provider.init_addon(self.test_dir)
+        unused = sorted(i["message"] for i in VariableCheck(self.provider.addon).check()
+                        if i["message"].startswith("Unused"))
+        self.assertEqual(unused, ["Unused variable: Idle"])
+
     def test_variable_from_the_generated_shortcuts_includes_is_defined(self):
         """Includes.xml pulling in script-skinshortcuts-includes.xml loads its variables."""
         files = {

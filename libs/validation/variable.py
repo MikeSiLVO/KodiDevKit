@@ -12,8 +12,25 @@ from ..utils.validation import (
     should_report_progress,
     skinshortcuts_files,
 )
-from ..utils.expressions import bracket_body
+from ..utils.expressions import bracket_body, split_top_level_commas
 from ..utils.xml import blank_xml_comments
+
+
+_SET_PROPERTY = re.compile(r"\bSetProperty\(", re.IGNORECASE)
+
+
+def _set_property_values(line):
+    """The value argument of each SetProperty call in the given text."""
+    values = []
+    for match in _SET_PROPERTY.finditer(line):
+        depth, end = 1, match.end()
+        while end < len(line) and depth:
+            depth += (line[end] == "(") - (line[end] == ")")
+            end += 1
+        args = split_top_level_commas(line[match.end():end - 1])
+        if len(args) > 1:
+            values.append(args[1])
+    return values
 
 
 class ValidationVariable:
@@ -34,6 +51,7 @@ class ValidationVariable:
         listitems = []
         for folder in self.addon.xml_folders:
             var_refs = []
+            known_variables = set(self.addon.variable_map.get(folder, {}).keys())
             file_count = 0
             files_list = self.addon.window_files[folder]
             for xml_file in files_list:
@@ -66,8 +84,14 @@ class ValidationVariable:
                             }
                         )
 
+                    # add-ons read a variable named in a property value back as $VAR[name]
+                    for value in _set_property_values(line):
+                        for name in value.split("|"):
+                            if name.strip() in known_variables:
+                                var_refs.append({"line": i, "type": "variable", "file": path,
+                                                 "name": name.strip()})
+
             template_path = find_skinshortcuts_template(self.addon.path)
-            known_variables = set(self.addon.variable_map.get(folder, {}).keys())
             for shortcuts_path in skinshortcuts_files(self.addon.path):
                 for var_name in find_variables_in_skinshortcuts_file(shortcuts_path, known_variables):
                     var_refs.append(
