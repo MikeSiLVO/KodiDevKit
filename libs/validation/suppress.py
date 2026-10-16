@@ -104,16 +104,23 @@ def scan(paths):
     return found
 
 
-def scan_skin(addon):
-    """Scan the skin's XML folders for every directive, Font.xml included."""
+def skin_paths(addon):
+    """Every xml file in the skin's xml folders, subfolders and Font.xml included."""
     paths = []
     for folder in getattr(addon, "xml_folders", []) or []:
-        directory = os.path.join(addon.path, folder)
+        for dirpath, dirnames, filenames in os.walk(os.path.join(addon.path, folder)):
+            dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+            paths.extend(os.path.join(dirpath, name) for name in sorted(filenames) if name.lower().endswith(".xml"))
+    return paths
+
+
+def stamp(paths):
+    """Modified time and size of each file, which a scan of them stays valid for."""
+    result = []
+    for path in paths:
         try:
-            entries = os.listdir(directory)
+            info = os.stat(path)
+            result.append((path, info.st_mtime_ns, info.st_size))
         except OSError:
-            continue
-        paths.extend(
-            os.path.join(directory, name) for name in entries if name.lower().endswith(".xml")
-        )
-    return scan(paths)
+            result.append((path, 0, 0))
+    return tuple(result)

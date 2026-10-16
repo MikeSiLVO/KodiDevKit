@@ -29,7 +29,7 @@ from ..validation.skinmap import ValidationMap
 from ..validation.filecheck import ValidationFileCheck
 from ..validation.repo import ValidationRepo
 from ..validation.include import check_include_file_ref
-from ..validation.suppress import scan_skin
+from ..validation.suppress import scan, skin_paths, stamp
 from ..validation.interpreter import XmlInterpreter
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
 from ..validation.constants import (
@@ -224,15 +224,13 @@ class CheckerMixin:
         return fn(progress_callback=progress_callback) or []
 
     def get_suppressions(self):
-        """Get the skin's `kdk-ignore` directives, cached until the skin reloads."""
-        cached = getattr(self.addon, "_kdk_suppressions", None)
-        if cached is None:
-            cached = scan_skin(self.addon)
-            try:
-                self.addon._kdk_suppressions = cached
-            except AttributeError:
-                pass
-        return cached
+        """Get the skin's `kdk-ignore` directives, rescanned once any of its xml files changes."""
+        paths = skin_paths(self.addon)
+        files = stamp(paths)
+        cached = getattr(self, "_suppressions", None)
+        if cached is None or cached[0] != files:
+            cached = self._suppressions = (files, scan(paths))
+        return cached[1]
 
     def _shown(self, category, issues):
         """Drop the issues a `kdk-ignore` comment mutes and those inside a generated file."""

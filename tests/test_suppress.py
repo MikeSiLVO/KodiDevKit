@@ -144,10 +144,12 @@ class TestSuppressionApplied(unittest.TestCase):
             f.write(text)
         return path
 
-    def labels(self):
-        provider = InfoProvider()
-        provider.settings = {}
-        provider.init_addon(self.skin_path)
+    def labels(self, provider=None):
+        """Label check rows, over a skin already loaded or else one loaded fresh."""
+        if provider is None:
+            provider = InfoProvider()
+            provider.settings = {}
+            provider.init_addon(self.skin_path)
         return provider.check_labels()
 
     def test_untranslated_label_reported_without_directive(self):
@@ -202,6 +204,33 @@ class TestSuppressionApplied(unittest.TestCase):
             any("Still Untranslated" in i["message"] for i in issues),
             f"Other files must still be checked, got: {issues}",
         )
+
+    def test_directive_added_after_a_check_applies(self):
+        """A directive saved into a file mutes its findings on the next check, without a re-init."""
+        window = ('<window>\n<controls>\n<control type="label">\n<label>Player.Playing</label>\n'
+                  '</control>\n</controls>\n</window>\n')
+        path = self.write_window("Home.xml", window)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.skin_path)
+        self.assertTrue(any("Player.Playing" in i["message"] for i in self.labels(provider)))
+
+        self.write_window("Home.xml", "<!-- kdk-ignore-file: labels -->\n" + window)
+        provider.addon.update_xml_files()
+        provider.addon.reload(path)
+
+        self.assertFalse(any("Player.Playing" in i["message"] for i in self.labels(provider)))
+
+    def test_directive_in_a_subfolder_window_applies(self):
+        """A window file below a subfolder of the xml folder is scanned for directives too."""
+        os.makedirs(os.path.join(self.xml_dir, "Custom"))
+        self.write_window(os.path.join("Custom", "Extra.xml"), (
+            '<!-- kdk-ignore-file: labels -->\n'
+            '<window>\n<controls>\n<control type="label">\n<label>Player.Playing</label>\n'
+            '</control>\n</controls>\n</window>\n'
+        ))
+
+        self.assertFalse(any("Player.Playing" in i["message"] for i in self.labels()))
 
 
 if __name__ == "__main__":
