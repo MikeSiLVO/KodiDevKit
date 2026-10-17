@@ -218,6 +218,22 @@ Checks file encoding and line endings across the entire skin directory.
 
 All of these block Kodi repo submission.
 
+## Muting a finding
+
+An XML comment mutes findings the skin has already judged. Text after a `;` is the reason:
+
+```xml
+<!-- kdk-ignore-file: labels; debug overlay -->   whole file, Labels only
+<!-- kdk-ignore: labels, images; add-on name -->   one line, Labels and Images
+<!-- kdk-ignore -->                                one line, every check
+```
+
+A comment sharing a line with markup covers that line; a comment on a line of its own covers the line below. Check names are the report's categories (`Variables`, `Maps`, `Includes`, `Labels`, `Fonts`, `IDs`, `Images`, `XML Validation`, `File Integrity`, `Kodi Repo`), matched without regard to case, spaces or hyphens.
+
+A file-wide comment needs both the checks it covers and a reason. If either is missing, it mutes nothing and is reported as a warning. A name that matches no check is reported as a warning too; the names it got right still apply.
+
+Muted findings stay out of the on-save phantoms, the results views and the quick panels. The HTML report still lists each one, marked muted with the comment's line and reason, and counts them apart from errors and warnings.
+
 ## Settings that affect validation
 
 | Setting | Default | Effect |
