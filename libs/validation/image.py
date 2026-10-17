@@ -28,7 +28,7 @@ class ValidationImage:
         return name not in shared
 
     def check(self, progress_callback=None):
-        """Check bundles and image usages, one row per bad bundle or usage, else a status row."""
+        """Check bundles and image usages, a row per bad one, or one saying the check cannot run."""
         if not self.addon:
             return [{"message": "Image checker unavailable (no addon)", "file": "", "line": 0}]
 
@@ -138,4 +138,4 @@ class ValidationImage:
         if progress_callback:
             progress_callback(f"Complete: {len(issues)} issues found")
 
-        return issues or [{"message": "No image issues found", "file": "", "line": 0}]
+        return issues

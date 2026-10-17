@@ -80,7 +80,7 @@ class ValidationFont:
             return {"message": message, "file": file_path, "line": line, "severity": severity}
 
         if not self.addon:
-            return [row("No font issues found", "", 0)]
+            return []
 
         kodi_path = ""
         if hasattr(self.addon, 'settings') and self.addon.settings:
@@ -294,7 +294,7 @@ class ValidationFont:
             else:
                 progress_callback("Complete: No font issues found")
 
-        return issues or [{"message": "No font issues found", "file": "", "line": 0}]
+        return issues
 
     def _unloaded_fonts(self, folder):
         """Casefolded names whose every definition names a file Kodi will not load, as not .ttf."""

@@ -324,16 +324,7 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
         self.nodes = nodes
         label = CHECK_LABELS.get(check_type, "Validation")
 
-        no_issues = (
-            not nodes
-            or (
-                len(nodes) == 1
-                and isinstance(nodes[0], dict)
-                and str(nodes[0].get("message", "")).lower().startswith("no ")
-            )
-        )
-
-        if no_issues:
+        if not nodes:
             self.window.status_message(f"✅ {label}: No issues found")
 
             def reveal_clean():
