@@ -171,13 +171,29 @@ def is_inside(path: str, root: str) -> bool:
         return False
 
 
+_entry_cache: dict[str, tuple[float, tuple[str, ...]]] = {}
+
+
+def folder_entries(folder: str) -> tuple[str, ...]:
+    """Names in the folder, reread whenever its mtime moves; empty when it cannot be read."""
+    try:
+        stamp = os.stat(folder).st_mtime
+    except OSError:
+        return ()
+    cached = _entry_cache.get(folder)
+    if cached and cached[0] == stamp:
+        return cached[1]
+    try:
+        listing = tuple(os.listdir(folder))
+    except OSError:
+        return ()
+    _entry_cache[folder] = (stamp, listing)
+    return listing
+
+
 def miscased_name(folder: str, name: str) -> Optional[str]:
     """On-disk name of the file in the folder when it differs from the name only by case."""
-    try:
-        entries = os.listdir(folder)
-    except OSError:
-        return None
-    for entry in entries:
+    for entry in folder_entries(folder):
         if entry != name and entry.casefold() == name.casefold():
             return entry
     return None

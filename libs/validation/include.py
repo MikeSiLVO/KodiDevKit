@@ -14,7 +14,7 @@ from ..utils.validation import (
     shadowed_issues,
     should_report_progress,
 )
-from ..utils.files import is_inside, miscased_name
+from ..utils.files import folder_entries, is_inside, miscased_name
 from ..utils.xml import PARSER, get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
@@ -28,26 +28,6 @@ RUNTIME_INCLUDE_PATTERNS = [
 RUNTIME_INCLUDE_FILE = re.compile(r'^script-.*-includes\.xml$', re.I)
 
 
-_dir_cache = {}
-
-
-def _entries(directory):
-    """List the directory's entries, rereading them whenever its mtime moves."""
-    try:
-        stamp = os.stat(directory).st_mtime
-    except OSError:
-        return ()
-    cached = _dir_cache.get(directory)
-    if cached and cached[0] == stamp:
-        return cached[1]
-    try:
-        listing = tuple(os.listdir(directory))
-    except OSError:
-        return ()
-    _dir_cache[directory] = (stamp, listing)
-    return listing
-
-
 def resolve_include_file(addon, folder, filename):
     """Resolve the path an `<include file>` opens, and the real name when only its case differs."""
     # Kodi opens the joined path with no case fallback; case matters on Linux
@@ -58,7 +38,7 @@ def resolve_include_file(addon, folder, filename):
         current = os.path.join(addon.path, name)
         actual = []
         for part in parts:
-            entries = _entries(current)
+            entries = folder_entries(current)
             match = part if part in entries else next(
                 (e for e in entries if e.lower() == part.lower()), None)
             if match is None:

@@ -70,6 +70,16 @@ class TestFileNameCase(unittest.TestCase):
         self.assertEqual(named[0]["severity"], "error")
         self.assertFalse([r for r in rows if "not defined" in r["message"]])
 
+    def test_renamed_file_is_seen_by_the_next_check(self):
+        """Renaming includes.xml to Includes.xml clears the error on the next check."""
+        self._write("Font.xml", FONTS_XML)
+        self._write("includes.xml", INCLUDES_XML)
+        self.assertTrue([r for r in self._check("include") if "must be named" in r["message"]])
+        os.rename(os.path.join(self.xml_dir, "includes.xml"), os.path.join(self.xml_dir, "Includes.xml"))
+        # a rename inside one clock tick can leave the folder's mtime where it was
+        os.utime(self.xml_dir, (1, 1))
+        self.assertFalse([r for r in self._check("include") if "must be named" in r["message"]])
+
     def test_correct_names_pass(self):
         self._write("Font.xml", FONTS_XML)
         self._write("Includes.xml", INCLUDES_XML)

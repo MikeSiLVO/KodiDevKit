@@ -6,7 +6,7 @@ import os
 import logging
 from lxml import etree as ET
 
-from ..utils.files import miscased_name
+from ..utils.files import folder_entries, miscased_name
 from ..utils.xml import file_needs_expansion, get_root_from_file
 from ..utils.validation import (
     CallContexts,
@@ -49,25 +49,13 @@ class ValidationFont:
         self.addon = addon
         self._resolve_include = resolve_include_fn
         self._validation_index = validation_index
-        self._dir_cache = {}
-
-    def _dir_listing(self, path):
-        """Case-folded name to on-disk name for one directory, cached; empty when unreadable."""
-        listing = self._dir_cache.get(path)
-        if listing is None:
-            try:
-                listing = {f.casefold(): f for f in os.listdir(path)}
-            except OSError:
-                listing = {}
-            self._dir_cache[path] = listing
-        return listing
 
     def _resolve_font_path(self, base_dir, rel):
         """Resolve the path to its on-disk spelling, ignoring case; None when absent."""
         current = base_dir
         parts = []
         for part in rel.split("/"):
-            match = self._dir_listing(current).get(part.casefold())
+            match = next((e for e in folder_entries(current) if e.casefold() == part.casefold()), None)
             if match is None:
                 return None
             parts.append(match)
@@ -91,7 +79,6 @@ class ValidationFont:
 
         skin_fonts_dir = os.path.join(self.addon.path, "fonts")
         core_dirs = []
-        self._dir_cache = {}
 
         if kodi_path:
             core_dirs = [
