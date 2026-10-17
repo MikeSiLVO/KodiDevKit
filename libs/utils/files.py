@@ -105,24 +105,24 @@ def get_absolute_file_paths(directory: str):
             yield os.path.abspath(os.path.join(dirpath, filename))
 
 
-def make_archive(folderpath: str, archive: str) -> None:
-    """Create the addon zip, leaving out loose media, themes, hidden and build files."""
-    file_list = get_absolute_file_paths(folderpath)
+def make_archive(folderpath: str, archive: str, root: str) -> None:
+    """Make the add-on zip in a top folder, skipping loose media, themes, hidden and build files."""
+    archive_path = os.path.abspath(archive)
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for addon_file in file_list:
-            path_list = re.split(r'[\\/]', addon_file)
+        for addon_file in get_absolute_file_paths(folderpath):
             rel_path = os.path.relpath(addon_file, folderpath)
-            if ".git" in path_list:
+            parts = re.split(r'[\\/]', rel_path)
+            if os.path.abspath(addon_file) == archive_path:
                 continue
-            if rel_path.startswith("media") and not rel_path.endswith(".xbt"):
+            if parts[0] == "media" and not rel_path.lower().endswith(".xbt"):
                 continue
-            if rel_path.startswith("themes"):
+            if parts[0] == "themes":
                 continue
-            if addon_file.endswith(('.pyc', '.pyo', '.zip')):
+            if addon_file.lower().endswith(('.pyc', '.pyo', '.zip')):
                 continue
-            if any(part.startswith('.') for part in path_list):
+            if any(part.startswith('.') for part in parts):
                 continue
-            zip_file.write(addon_file, rel_path)
+            zip_file.write(addon_file, os.path.join(root, rel_path))
             logger.info("zipped %s", rel_path)
 
 

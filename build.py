@@ -37,25 +37,39 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
         addon = getattr(infos, "addon", None)
         return bool(addon) and addon.type == "skin"
 
-    @run_async
     def run(self, pack_textures=True):
-        """Pack the textures unless turned off, zip the result and offer to open its folder."""
+        """Ask where to save the zip, opening in the add-on folder, named by its id and version."""
         infos = _infos()
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
         if not addon:
             return None
-        path = addon.media_path
-        if pack_textures:
-            texturepacker(media_path=path,
-                          settings=sublime.load_settings(SETTINGS_FILE))
-        make_archive(folderpath=path,
-                     archive=os.path.join(path, os.path.basename(path) + ".zip"))
-        if sublime.ok_cancel_dialog(
-                "Zip file created!\n"
-                "Do you want to show it with a file browser?"):
-            webbrowser.open(path)
+
+        def build(archive):
+            if archive:
+                self._build_async(addon, archive, pack_textures)
+
+        sublime.save_dialog(build, file_types=[("Zip archive", ["zip"])], directory=addon.path,
+                            name=f"{addon.name}-{addon.version}.zip", extension="zip")
+
+    @run_async
+    def _build_async(self, addon, archive, pack_textures):
+        """Pack textures if asked, zip the add-on unless packing failed, then offer its folder."""
+        if pack_textures and not texturepacker(media_path=addon.media_path,
+                                               settings=sublime.load_settings(SETTINGS_FILE)):
+            sublime.set_timeout(lambda: sublime.error_message(
+                "TexturePacker did not finish, so no zip was made. Check texturepacker_path in the "
+                "KodiDevKit settings, and the console for its output."), 0)
+            return
+        make_archive(folderpath=addon.path, archive=archive, root=addon.name)
+        sublime.set_timeout(lambda: self._offer_folder(archive), 0)
+
+    def _offer_folder(self, archive):
+        """Say the zip is made and offer to open its folder in the file browser."""
+        if sublime.ok_cancel_dialog(f"{os.path.basename(archive)} created.\n"
+                                    "Do you want to show it with a file browser?"):
+            webbrowser.open(os.path.dirname(archive))
 
 
 class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
@@ -110,8 +124,9 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
         if not texturepacker(media_path=os.path.join(theme_path, theme),
                              settings=sublime.load_settings(SETTINGS_FILE),
                              output_path=os.path.join(addon.media_path, theme + ".xbt")):
-            sublime.error_message("TexturePacker did not finish. Check texturepacker_path in the "
-                                  "KodiDevKit settings, and the console for its output.")
+            sublime.set_timeout(lambda: sublime.error_message(
+                "TexturePacker did not finish. Check texturepacker_path in the "
+                "KodiDevKit settings, and the console for its output."), 0)
             return
         if sublime.ok_cancel_dialog(
                 f"{theme}.xbt created in the media folder.\n"
