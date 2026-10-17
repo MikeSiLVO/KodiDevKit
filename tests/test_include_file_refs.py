@@ -188,6 +188,30 @@ class TestCheckFileReportsIt(unittest.TestCase):
         ValidationInclude(skin).check()
         self.assertNotIn("Leak", skin.include_map.get("16x9", {}))
 
+    def test_file_a_window_calls_loads_with_the_maps(self):
+        """A file a window's call names loads with the skin, and the include check adds none."""
+        self._write("Includes.xml", "<includes/>")
+        self._write("Extra.xml", '<includes><include name="Extra"><control type="label"/></include>'
+                                 '<variable name="V"><value>x</value></variable></includes>')
+        self._write("Home.xml", '<window><controls><include file="Extra.xml">Extra</include></controls></window>')
+        skin = Skin(path=self.test_dir, settings={})
+        self.assertIn("Extra", skin.include_map["16x9"])
+        self.assertIn("V", skin.variable_map["16x9"])
+        loaded = list(skin.include_files["16x9"])
+        ValidationInclude(skin).check()
+        self.assertEqual(skin.include_files["16x9"], loaded)
+
+    def test_saving_a_window_that_calls_a_new_file_loads_it(self):
+        """A window saved with a call naming a file not loaded yet reloads the maps with it."""
+        self._write("Includes.xml", "<includes/>")
+        self._write("Extra.xml", '<includes><include name="Extra"><control type="label"/></include></includes>')
+        home = self._write("Home.xml", "<window><controls/></window>")
+        skin = Skin(path=self.test_dir, settings={})
+        self.assertNotIn("Extra", skin.include_map["16x9"])
+        self._write("Home.xml", '<window><controls><include file="Extra.xml">Extra</include></controls></window>')
+        skin.reload(home)
+        self.assertIn("Extra", skin.include_map["16x9"])
+
     def test_include_files_in_a_subfolder_load(self):
         """Nested file paths are taken from the resolution folder, and each file is checked."""
         self._write("Includes.xml", '<includes><include file="Data/A.xml"/></includes>')

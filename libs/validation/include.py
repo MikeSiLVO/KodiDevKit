@@ -177,11 +177,6 @@ class ValidationInclude:
                     name = node.get("content") or (node.text or "").strip()
                     if not name:
                         continue
-                    if "file" in node.attrib:
-                        include_file = os.path.normpath(
-                            os.path.join(self.addon.path, folder, node.attrib["file"]))
-                        if include_file not in self.addon.include_files[folder]:
-                            self.addon.update_includes(include_file, folder)
 
                     resolved_name = self._resolve_include_name(name)
 

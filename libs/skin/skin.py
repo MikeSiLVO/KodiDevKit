@@ -61,6 +61,9 @@ class Skin(Addon):
         self.conditional_files: dict[str, set[str]] = {}
         # each <default> per type with its include conditions; a setting can swap which one wins
         self.default_loads: dict[str, dict[str, list[tuple[Any, tuple[str, ...]]]]] = {}
+        # files include calls name, which Kodi loads once a window resolves the call
+        self.window_calls: dict[str, dict[str, list[str]]] = {}
+        self.called_files: dict[str, list[str]] = {}
 
         self.include_usages: dict = {}
         self._include_usages_built = False
@@ -289,7 +292,7 @@ class Skin(Addon):
         return os.path.join(self.path, "media")
 
     def update_include_list(self):
-        """Update every folder's maps from its Includes.xml, dropping the validation index."""
+        """Update every folder's maps from its Includes.xml and called files, dropping the index."""
         start_time = time.time()
         logger.debug("update_include_list START")
 
@@ -301,6 +304,7 @@ class Skin(Addon):
             paths = [os.path.join(xml_folder, "Includes.xml"),
                      os.path.join(xml_folder, "includes.xml")]
             self.include_files[folder] = []
+            self.called_files[folder] = []
 
             # start empty so a renamed or deleted include does not linger across reloads
             self.include_map[folder] = {}
@@ -321,6 +325,7 @@ class Skin(Addon):
                 self.update_includes(include_file, folder)
             else:
                 logger.info("Could not find include file in %s", xml_folder)
+            self._load_called_files(folder)
 
             prev = self._last_include_count.get(folder)
             curr = (len(self.include_map.get(folder, {})) +
@@ -337,8 +342,34 @@ class Skin(Addon):
         total_files = sum(len(files) for files in self.include_files.values())
         logger.debug("update_include_list COMPLETE: %d include files loaded, duration=%.3fs", total_files, duration)
 
+    def _called_files(self, root, folder):
+        """Include files the tree's include calls name, which Kodi loads as it resolves a call."""
+        if root is None:
+            return []
+        # a direct child of <includes> is a load, not a call
+        calls = root.xpath("./*//include[@file]" if root.tag == "includes" else ".//include[@file]")
+        folder_path = os.path.join(self.path, folder)
+        return [os.path.normpath(os.path.join(folder_path, node.get("file")))
+                for node in calls if "$" not in node.get("file")]
+
+    def _load_called_files(self, folder):
+        """Load the files the folder's windows and include files call, window calls scanned once."""
+        if folder not in self.window_calls:
+            self.window_calls[folder] = {}
+            for rel in self.window_files.get(folder, []):
+                path = os.path.normpath(os.path.join(self.path, folder, rel))
+                root = get_root_from_file(path)
+                if root is not None and root.tag != "includes":
+                    self.window_calls[folder][path] = self._called_files(root, folder)
+        queue = self.called_files[folder]
+        queue.extend(called for calls in self.window_calls[folder].values() for called in calls)
+        # each load queues the calls in its own bodies
+        for called in queue:
+            if called not in self.include_files[folder]:
+                self.update_includes(called, folder)
+
     def update_includes(self, xml_file, folder, conditions=()):
-        """Update maps from an include file and nested ones, defaults with their load conditions."""
+        """Update maps from an include file and nested ones, noting if conditional; queue calls."""
         xml_file = os.path.normpath(xml_file)
         if not os.path.exists(xml_file) or not is_inside(xml_file, self.path):
             logger.info("Could not find include file %s", xml_file)
@@ -349,6 +380,7 @@ class Skin(Addon):
             return []
 
         self.include_files[folder].append(xml_file)
+        self.called_files.setdefault(folder, []).extend(self._called_files(root, folder))
         if conditions:
             self.conditional_files[folder].add(xml_file)
 
@@ -448,7 +480,7 @@ class Skin(Addon):
                 self.update_includes(os.path.join(self.path, folder, node.attrib["file"]), folder, nested)
 
     def reload(self, *paths):
-        """Reload the caches edits to the files affect, each once; include calls rebuilt on use."""
+        """Reload the caches edits to the files affect, each once; include usages rebuilt on use."""
         self.include_usages = {}
         self._include_usages_built = False
         includes = colors_and_fonts = False
@@ -463,6 +495,11 @@ class Skin(Addon):
                     if root is not None and root.tag == "includes":
                         logger.info("Recovered include file detected: %s", path)
                         includes = True
+                    elif root is not None and folder in self.window_calls:
+                        calls = self._called_files(root, folder)
+                        if calls != self.window_calls[folder].get(os.path.normpath(path), []):
+                            self.window_calls[folder][os.path.normpath(path)] = calls
+                            includes = True
             name = os.path.basename(path).lower()
             in_colors = os.path.basename(os.path.dirname(path)).lower() == "colors"
             if name == "font.xml" or (in_colors and name.endswith(".xml")):
