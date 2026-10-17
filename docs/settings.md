@@ -83,11 +83,8 @@ For deploying to Android-based Kodi devices.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `adb_path` | string | `""` | Full path to the `adb` executable. |
-| `adb_ip` | string | `""` | Android device IP address. |
-| `adb_port` | int | `5555` | ADB port. |
-| `adb_serial` | string | `""` | Device serial number (for multiple connected devices). |
-| `remote_ip` | string | `""` | Device IP for display and log retrieval. |
+| `adb_path` | string | `""` | Full path to the `adb` executable. Empty runs `adb` from the PATH. |
+| `remote_ip` | string | `""` | Device address `adb` connects to, as `ip` or `ip:port`. Remote Actions can also set it. |
 | `remote_userdata_folder` | string | `""` | Kodi userdata path on the remote device. |
 
 ## Debugging

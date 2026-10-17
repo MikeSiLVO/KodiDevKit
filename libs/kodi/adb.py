@@ -41,6 +41,11 @@ class KodiAdb:
         self.remote_ip = self.settings.get("remote_ip")
 
     @property
+    def adb_program(self):
+        """The adb program to run: the adb_path setting, else adb from the PATH."""
+        return (self.settings.get("adb_path") if self.settings else "") or "adb"
+
+    @property
     def home_folder(self):
         """Kodi's home folder on the device, the parent when the setting names userdata itself."""
         folder = (self.userdata_folder or "").rstrip("/")
@@ -65,7 +70,7 @@ class KodiAdb:
         """Connect adb to the device and remember its address."""
         self.remote_ip = server_ip
         logging.warning("Connect to remote with server_ip %s" % server_ip)
-        self.cmd("adb", ["connect", server_ip])
+        self.cmd(self.adb_program, ["connect", server_ip])
         self.connected = True
 
     @check_busy
@@ -84,13 +89,13 @@ class KodiAdb:
     def adb_disconnect(self):
         """Disconnect adb from every device."""
         logging.warning("Disconnect from remote")
-        self.cmd("adb", ["disconnect"])
+        self.cmd(self.adb_program, ["disconnect"])
         self.connected = False
 
     @check_busy
     def adb_pull(self, path, target):
         """Pull a device path to the local target."""
-        self.cmd("adb", ["pull", path, target])
+        self.cmd(self.adb_program, ["pull", path, target])
 
     @run_async
     @check_busy
@@ -106,11 +111,11 @@ class KodiAdb:
             target = '{}/addons/{}{}'.format(self.home_folder,
                                              os.path.basename(addon),
                                              root.replace(addon, "").replace('\\', '/'))
-            self.cmd("adb", ["shell", "mkdir", target])
+            self.cmd(self.adb_program, ["shell", "mkdir", target])
             for f in files:
                 if f.endswith(('.pyc', '.pyo')):
                     continue
-                self.cmd("adb", ["push",
+                self.cmd(self.adb_program, ["push",
                                  os.path.join(root, f).replace('\\', '/'),
                                  target.replace('\\', '/')])
         logging.warning("All files pushed")
@@ -128,9 +133,9 @@ class KodiAdb:
     def get_screenshot(self, f_open, target):
         """Get a device screenshot and open it."""
         logging.warning("Pull screenshot from remote")
-        self.cmd("adb", ["shell", "screencap", "-p", "/sdcard/screen.png"])
-        self.cmd("adb", ["pull", "/sdcard/screen.png", target])
-        self.cmd("adb", ["shell", "rm", "/sdcard/screen.png"])
+        self.cmd(self.adb_program, ["shell", "screencap", "-p", "/sdcard/screen.png"])
+        self.cmd(self.adb_program, ["pull", "/sdcard/screen.png", target])
+        self.cmd(self.adb_program, ["shell", "rm", "/sdcard/screen.png"])
         logging.warning("Finished pulling screenshot")
         f_open(os.path.join(target, "screen.png"))
 
@@ -141,9 +146,9 @@ class KodiAdb:
         if not self.userdata_folder:
             logging.warning("remote_userdata_folder not configured")
             return
-        self.cmd("adb", ["shell", "rm", "-rf", posixpath.join(self.home_folder, "temp")])
+        self.cmd(self.adb_program, ["shell", "rm", "-rf", posixpath.join(self.home_folder, "temp")])
 
     @run_async
     def reboot(self):
         """Reboot the device."""
-        self.cmd("adb", ["reboot"])
+        self.cmd(self.adb_program, ["reboot"])

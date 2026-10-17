@@ -147,7 +147,7 @@ Results display is controlled by [`json_rpc_output_mode`](settings.md#json-rpc-d
 
 ## Remote actions (ADB)
 
-For Android-based Kodi devices (Shield, Fire TV, etc.). Requires [`adb_path`](settings.md#adb-and-remote) to be configured. All actions are accessed via Command Palette: "KodiDevKit: Remote Actions", which opens a quick panel with:
+For Android-based Kodi devices (Shield, Fire TV, etc.). Runs `adb` from the PATH, or from [`adb_path`](settings.md#adb-and-remote) when set. All actions are accessed via Command Palette: "KodiDevKit: Remote Actions", which opens a quick panel with:
 
 - Set remote IP
 - Connect to remote device

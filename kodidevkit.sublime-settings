@@ -240,27 +240,18 @@
     /*
      * ADB executable path
      *
-     * Full path to the Android Debug Bridge (adb) executable.
-     * Used for deploying to Android-based Kodi devices (Shield, Fire TV, etc.).
+     * Full path to the Android Debug Bridge (adb) executable, for Remote Actions on
+     * Android-based Kodi devices (Shield, Fire TV, etc.). Leave empty to run adb from the PATH.
      * Backslashes must be escaped (\\) on Windows.
      */
     "adb_path": "",
 
     /*
-     * ADB connection settings
+     * Remote device
      *
-     * Network connection details for Android device running Kodi.
+     * The address adb connects to, and Kodi's userdata folder on the device.
      */
-    "adb_ip": "",           // Android device IP address
-    "adb_port": 5555,       // ADB port (default: 5555)
-    "adb_serial": "",       // Device serial (optional, for multiple devices)
-
-    /*
-     * Remote device settings (for ADB deployment)
-     *
-     * Target paths on the Android device for file operations.
-     */
-    "remote_ip": "",                                    // Device IP for display/logs
+    "remote_ip": "",                                    // Device address adb connects to, ip or ip:port
     "remote_userdata_folder": "",                       // Kodi userdata path on device
 
     //=============================================================================
