@@ -64,7 +64,7 @@ See [Validation](validation.md) for details on what each validator checks.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `auto_reload_skin` | bool | `false` | Automatically reload the Kodi skin after saving window XML or color files. Requires an active JSON-RPC connection. |
+| `auto_reload_skin` | bool | `false` | Automatically reload the Kodi skin after saving window XML or color files. Requires an active JSON-RPC connection and `script.toolbox` installed in Kodi. |
 
 ## JSON-RPC display
 

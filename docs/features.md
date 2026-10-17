@@ -92,7 +92,7 @@ Real-time communication with a running Kodi instance. Requires [connection setti
 
 **Reload Skin**: Send a ReloadSkin() command to Kodi to refresh the active skin immediately.
 
-**Execute builtin**: Run any Kodi builtin command from the Command Palette. Uses `script.toolbox` addon to execute. The previous command is remembered for quick re-execution.
+**Execute builtin**: Run any Kodi builtin command from the Command Palette. Needs `script.toolbox` installed in Kodi. The previous command is remembered for quick re-execution.
 
 **Display InfoLabels**: Enter comma-separated InfoLabel names (e.g., `Player.Title, Player.Duration`) to fetch their current values from Kodi.
 

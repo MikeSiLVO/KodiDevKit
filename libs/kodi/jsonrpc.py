@@ -3,7 +3,6 @@
 import os
 from ..utils.files import check_paths
 from ..addon.translations import get_po_file
-from ..utils.decorators import run_async
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 import socket
@@ -70,11 +69,6 @@ class KodiJsonrpc:
             self.load_settings(self.settings)
         except Exception:
             pass
-
-    @run_async
-    def request_async(self, method, params):
-        """Request on a worker thread, fire and forget."""
-        return self.request(method, params)
 
     def request(self, method, params=None):
         """Request the JSON-RPC method from Kodi; the parsed reply, or None on failure."""

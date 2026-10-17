@@ -309,13 +309,23 @@ class KodidevkitExecuteBuiltinPromptCommand(sublime_plugin.WindowCommand):
 class KodidevkitExecuteBuiltinCommand(sublime_plugin.WindowCommand):
     """Command running a Kodi builtin through the script.toolbox JSON-RPC bridge."""
 
+    _refusal_shown = False
+
+    @run_async
     def run(self, builtin):
-        """Execute the builtin in Kodi through script.toolbox."""
+        """Run the builtin in Kodi through script.toolbox, saying once if Kodi refuses one."""
         params = {"addonid": "script.toolbox",
                   "params": {"info": "builtin",
                              "id": builtin}}
-        kodi.request_async(method="Addons.ExecuteAddon",
-                           params=params)
+        reply = kodi.request(method="Addons.ExecuteAddon", params=params)
+        error = reply.get("error") if isinstance(reply, dict) else None
+        if not error or KodidevkitExecuteBuiltinCommand._refusal_shown:
+            return
+        KodidevkitExecuteBuiltinCommand._refusal_shown = True
+        message = (f"Kodi did not run {builtin}: {error.get('message', error)}\n\n"
+                   "KodiDevKit runs builtins, including the skin reload on save, through "
+                   "script.toolbox. Install it in Kodi from the Kodi repo and make sure it is enabled.")
+        sublime.set_timeout(lambda: sublime.message_dialog(message), 0)
 
 
 class _KodiQueryPromptMixin:

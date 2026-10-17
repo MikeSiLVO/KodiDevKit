@@ -196,7 +196,7 @@
      * Auto-reload skin on save
      *
      * When true, automatically reloads the Kodi skin after saving window XML files
-     * or color files. Requires active JSON-RPC connection.
+     * or color files. Requires active JSON-RPC connection and script.toolbox installed in Kodi.
      *
      * Note: Only reloads when saving files in recognized skin folders.
      */
