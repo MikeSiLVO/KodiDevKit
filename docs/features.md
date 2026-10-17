@@ -127,7 +127,7 @@ Results display is controlled by [`json_rpc_output_mode`](settings.md#json-rpc-d
 
 **Auto-reload skin** -- When [`auto_reload_skin`](settings.md#auto-reload) is enabled, saving a window XML or color file automatically sends a reload command to Kodi via JSON-RPC.
 
-**TexturePacker** -- Command Palette: "KodiDevKit: Build Skin" / "KodiDevKit: Build Theme". Requires [`texturepacker_path`](settings.md#build-and-packaging) to be set.
+**TexturePacker** -- Command Palette: "KodiDevKit: Build Skin" / "KodiDevKit: Build Theme". Requires [`texturepacker_path`](settings.md#build-and-packaging) to be set. Build Skin packs the skin's images into `media/Textures.xbt` and asks where to save an installable zip, starting in the skin's folder as `<id>-<version>.zip`. Build Theme packs the picked theme into `media/<theme>.xbt`.
 
 **Color picker** -- If the [ColorPicker](https://packagecontrol.io/packages/ColorPicker) plugin is installed, "KodiDevKit: Choose color" launches it and inserts a Kodi-formatted color string (`FFrrggbb`).
 
