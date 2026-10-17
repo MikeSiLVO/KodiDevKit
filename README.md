@@ -7,20 +7,22 @@ A Sublime Text 4 plugin for Kodi skin and addon development. Provides validation
 
 ## Documentation
 
-- [**Validation**](docs/validation.md) -- On-save XML checks and full-skin reports covering variables, includes, labels, fonts, IDs, images, and XML structure.
-- [**Features**](docs/features.md) -- Tooltips, auto-completion, keyboard shortcuts, fuzzy searches, context menu, JSON-RPC commands, Kodi log integration.
-- [**Settings**](docs/settings.md) -- Every setting with type, default, and description.
-- [**Skin Shortcuts**](docs/skinshortcuts.md) -- How KodiDevKit handles runtime-generated content from script.skinshortcuts.
+- [**Validation**](docs/validation.md): on-save XML checks and full-skin reports covering variables, includes, maps, labels, fonts, IDs, images, XML structure, file integrity and the Kodi repo rules.
+- [**Features**](docs/features.md): tooltips, auto-completion, keyboard shortcuts, fuzzy searches, context menu, JSON-RPC commands, Kodi log integration, building the skin.
+- [**Settings**](docs/settings.md): every setting with type, default, and description.
+- [**Skin Shortcuts**](docs/skinshortcuts.md): how KodiDevKit handles runtime-generated content from script.skinshortcuts.
 
 ## Requirements
 
 1. **Sublime Text 4** or later.
 2. **Project structure**: Open your Kodi addon root as the only folder (File > Open Folder or a saved project).
-3. **Configuration**: Set up KodiDevKit settings via Preferences > Package Settings > KodiDevKit. At minimum, set `kodi_path` to your Kodi installation folder.
+3. **Configuration**: Settings are under Preferences > Package Settings > KodiDevKit. Set `kodi_path` to your Kodi installation folder to read Kodi's own language and color files; without it, copies bundled for each Kodi release are used.
 
 ## Installation
 
 **Package Control** (recommended): Install Package Control if you don't have it, then open the Command Palette (`Ctrl+Shift+P`), select "Package Control: Install Package", and search for "KodiDevKit".
+
+**Installer**: Download `install.py` from the [latest release](https://github.com/MikeSiLVO/KodiDevKit/releases/latest) and run it with Python. It finds Sublime Text's `Packages` folder and installs the package there; `--uninstall` removes it.
 
 **Manual**: Clone into your Sublime Text `Packages` folder:
 
@@ -38,6 +40,10 @@ git clone https://github.com/MikeSiLVO/KodiDevKit.git
 ```
 
 Restart Sublime Text after installing.
+
+## Command line
+
+The same checks run without Sublime Text in [kdk](https://github.com/MikeSiLVO/kdk), a standalone validator for CI and the terminal: `pip install kdk`, then `kdk validate <skin folder>`.
 
 ## License
 
