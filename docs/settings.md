@@ -43,7 +43,7 @@ Configure the connection to Kodi's JSON-RPC interface. Enable it in Kodi under S
 | `phantom_severity_level` | string | `"warning"` | Minimum severity for on-save phantoms. Values: `"error"`, `"warning"`. Full reports always show everything. |
 | `hide_include_warnings` | bool | `true` | Hide warnings that originate from include content, everywhere: on-save phantoms, the validation results view, and the HTML report's initial state. Errors from includes are always shown, and `Defaults.xml` issues are reported at their source (not treated as include warnings). Set `false` to show them. |
 | `validation_exclude` | list | `["shortcuts"]` | Folder or file names to skip during validation. Matches any path component, so `"shortcuts"` skips any file inside a `shortcuts/` folder. |
-| `validation_report_directory` | string | `""` | Directory for HTML validation reports. Leave empty to use the default (`Packages/User/KodiDevKit/ValidationReports/`). |
+| `validation_report_directory` | string | `""` | Folder for the HTML validation report. Empty writes `validation_report.html` into the skin's folder, replaced on each run. A folder given here holds one `<skin>_validation_report.html` per skin. |
 
 **`phantom_severity_level` values:**
 - `"error"` -- Only show errors (broken brackets, invalid values, missing files). Best for experienced skinners.

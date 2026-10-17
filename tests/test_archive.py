@@ -13,7 +13,8 @@ if package_dir not in sys.path:
 from libs.utils.files import make_archive
 
 FILES = ("addon.xml", "1080i/Home.xml", "media/Textures.xbt", "media/loose.png", "themes/Blue/a.png",
-         ".git/config", "fonts/.hidden", "old.zip", "lib/cache.pyc", "colors/defaults.xml")
+         ".git/config", "fonts/.hidden", "old.zip", "lib/cache.pyc", "colors/defaults.xml",
+         "validation_report.html")
 
 
 class TestMakeArchive(unittest.TestCase):
@@ -42,7 +43,7 @@ class TestMakeArchive(unittest.TestCase):
         """Every entry sits in one folder named for the add-on, as install from zip needs."""
         archive = os.path.join(self.temp_dir.name, "skin.test-1.0.0.zip")
 
-        make_archive(self.addon, archive, "skin.test")
+        make_archive(self.addon, archive, "skin.test", leave_out=("validation_report.html",))
 
         self.assertEqual(self.names(archive), ["skin.test/1080i/Home.xml", "skin.test/addon.xml",
                                                "skin.test/colors/defaults.xml", "skin.test/media/Textures.xbt"])

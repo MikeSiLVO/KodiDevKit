@@ -9,6 +9,8 @@ from urllib.parse import quote
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 from ..validation.suppress import muted_note
 
+REPORT_NAME = "validation_report.html"
+
 CATEGORY_DESCRIPTIONS = {
     "Variables": (
         "<strong>Errors:</strong> Variable referenced but not defined, or defined but never used. "
@@ -138,7 +140,7 @@ def generate_html_report(all_issues, skin_name, skin_path, server_port, output_p
                          progress_callback=None, hide_include_warnings=True):
     """Generate the HTML report of the issues by check name; returns the path it wrote."""
     if output_path is None:
-        output_path = os.path.join(skin_path, "validation_report.html")
+        output_path = os.path.join(skin_path, REPORT_NAME)
 
     if progress_callback:
         progress_callback("Calculating statistics...")

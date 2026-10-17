@@ -20,7 +20,7 @@ KodiDevKit validates in two modes with different defaults:
 - `hide_include_warnings` (default: `true`) suppresses warnings that originate from include content, since an include may be valid in other contexts. Errors from includes are always shown. This is a plugin-wide setting -- it also applies to the results view and the HTML report.
 - Phantoms show navigation links (Next Issue, Dismiss) and group multiple issues per line.
 
-**Full reports** (Command Palette: "KodiDevKit: Generate Validation Report") run 9 checks across the entire skin: Variables, Includes, Maps, Labels, Fonts, IDs, Images, XML Validation, and File Integrity. They open in the browser as an interactive HTML page with:
+**Full reports** (Command Palette: "KodiDevKit: Generate Validation Report") run 9 checks across the entire skin: Variables, Includes, Maps, Labels, Fonts, IDs, Images, XML Validation, and File Integrity. The report is saved in the skin's folder, or in [`validation_report_directory`](settings.md#validation) when set, and opens in the browser as an interactive HTML page with:
 - Toggle buttons for errors, warnings, and include-originated warnings. Errors and warnings show by default; include warnings start hidden, following `hide_include_warnings`.
 - Category sections (Variables, Includes, Labels, etc.) with issue counts and descriptions.
 - Clickable file paths that open the file in Sublime Text at the correct line.
@@ -226,6 +226,6 @@ All of these block Kodi repo submission.
 | [`phantom_severity_level`](settings.md#validation) | `"warning"` | Minimum severity for on-save phantoms |
 | [`hide_include_warnings`](settings.md#validation) | `true` | Hide include-originated warnings (phantoms, results view, report) |
 | [`validation_exclude`](settings.md#validation) | `["shortcuts"]` | Paths to skip during validation |
-| [`validation_report_directory`](settings.md#validation) | `""` (auto) | Where HTML reports are saved |
+| [`validation_report_directory`](settings.md#validation) | `""` (skin folder) | Where the HTML report is saved |
 
 See [Settings](settings.md) for full details.

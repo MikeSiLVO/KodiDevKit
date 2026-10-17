@@ -141,7 +141,7 @@ Results display is controlled by [`json_rpc_output_mode`](settings.md#json-rpc-d
 
 **Reload language files** -- Command Palette: "KodiDevKit: Reload Language Files". Re-reads `.po` translation files without restarting Sublime Text.
 
-**Open validation report** -- Command Palette: "KodiDevKit: Open Validation Report". Opens the most recent HTML validation report in the browser.
+**Open validation report** -- Command Palette: "KodiDevKit: Open Validation Report". Opens the skin's HTML validation report in the browser without running the checks again, or a picker of the reports when [`validation_report_directory`](settings.md#validation) is set.
 
 **Syntax highlighting** -- Custom syntax definitions for Kodi language files (`.po`), Kodi SkinXML, and Kodi log files.
 

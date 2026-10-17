@@ -105,14 +105,14 @@ def get_absolute_file_paths(directory: str):
             yield os.path.abspath(os.path.join(dirpath, filename))
 
 
-def make_archive(folderpath: str, archive: str, root: str) -> None:
-    """Make the add-on zip in a top folder, skipping loose media, themes, hidden and build files."""
+def make_archive(folderpath: str, archive: str, root: str, leave_out: tuple[str, ...] = ()) -> None:
+    """Make the zip in one top folder, minus loose media, themes, hidden, build and listed files."""
     archive_path = os.path.abspath(archive)
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         for addon_file in get_absolute_file_paths(folderpath):
             rel_path = os.path.relpath(addon_file, folderpath)
             parts = re.split(r'[\\/]', rel_path)
-            if os.path.abspath(addon_file) == archive_path:
+            if os.path.abspath(addon_file) == archive_path or "/".join(parts) in leave_out:
                 continue
             if parts[0] == "media" and not rel_path.lower().endswith(".xbt"):
                 continue

@@ -14,6 +14,7 @@ from .libs.addon.addon import Addon
 from .libs.utils.files import make_archive
 from .libs.utils.decorators import run_async
 from .libs.skin.textures import texturepacker
+from .libs.reporting.html import REPORT_NAME
 
 logger = logging.getLogger("KodiDevKit.build")
 
@@ -62,7 +63,7 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
                 "TexturePacker did not finish, so no zip was made. Check texturepacker_path in the "
                 "KodiDevKit settings, and the console for its output."), 0)
             return
-        make_archive(folderpath=addon.path, archive=archive, root=addon.name)
+        make_archive(folderpath=addon.path, archive=archive, root=addon.name, leave_out=(REPORT_NAME,))
         sublime.set_timeout(lambda: self._offer_folder(archive), 0)
 
     def _offer_folder(self, archive):

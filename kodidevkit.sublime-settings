@@ -149,16 +149,10 @@
     /*
      * Validation report directory
      *
-     * Directory where HTML validation reports are saved.
-     * Leave empty to use the default location (Sublime's User/KodiDevKit/ValidationReports).
+     * Folder for the HTML validation report. Leave empty to write validation_report.html into
+     * the skin's own folder, replaced on each run. A folder given here holds one
+     * <skin>_validation_report.html per skin.
      * Backslashes must be escaped (\\) on Windows.
-     *
-     * Default: Packages/User/KodiDevKit/ValidationReports/
-     *
-     * Alternative suggestions:
-     *   - User's temp directory: Use system temp (reports deleted on restart)
-     *   - Desktop: Easily accessible for quick review
-     *   - Custom project folder: Keep reports with project documentation
      *
      * Example (Windows): "C:\\Users\\YourName\\Documents\\KodiReports"
      * Example (Linux):   "/home/yourname/kodi-validation-reports"

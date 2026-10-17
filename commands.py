@@ -479,42 +479,16 @@ class ValidationRunner:
         return self.all_issues
 
 
-class ReportGenerator:
-    """Paths for report files and cleanup of old ones."""
+def _report_path(addon_path, skin_name):
+    """Path of the skin's report: in its folder, or in the report directory, made if missing."""
+    from .libs.reporting.html import REPORT_NAME
 
-    @staticmethod
-    def get_report_path(skin_name):
-        """Get the timestamped report path, its folder, made if missing, and the safe skin name."""
-        from datetime import datetime
-
-        settings = sublime.load_settings('kodidevkit.sublime-settings')
-        report_dir = settings.get('validation_report_directory', None)
-
-        if not report_dir:
-            packages_path = sublime.packages_path()
-            report_dir = os.path.join(packages_path, 'User', 'KodiDevKit', 'ValidationReports')
-
-        os.makedirs(report_dir, exist_ok=True)
-
-        safe_skin_name = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in skin_name)
-        timestamp_file = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_filename = f"{safe_skin_name}_{timestamp_file}.html"
-
-        return os.path.join(report_dir, report_filename), report_dir, safe_skin_name
-
-    @staticmethod
-    def cleanup_old_reports(report_dir, safe_skin_name):
-        """Clean up the skin's earlier reports; the new one replaces them."""
-        try:
-            import glob
-            old_reports = glob.glob(os.path.join(report_dir, f"{safe_skin_name}_*.html"))
-            for old_report in old_reports:
-                try:
-                    os.remove(old_report)
-                except OSError:
-                    pass
-        except Exception:
-            pass
+    report_dir = sublime.load_settings(SETTINGS_FILE).get('validation_report_directory') or ""
+    if not report_dir:
+        return os.path.join(addon_path, REPORT_NAME)
+    os.makedirs(report_dir, exist_ok=True)
+    safe_skin_name = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in skin_name)
+    return os.path.join(report_dir, f"{safe_skin_name}_{REPORT_NAME}")
 
 
 class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
@@ -580,10 +554,8 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
                 import time
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                report_path, report_dir, safe_skin_name = ReportGenerator.get_report_path(skin_name)
-                ReportGenerator.cleanup_old_reports(report_dir, safe_skin_name)
-
                 addon_path = provider.addon.path if provider.addon else ""
+                report_path = _report_path(addon_path, skin_name)
                 report_server.set_report_data(all_issues, skin_name, addon_path, timestamp)
 
                 last_update = {'time': time.time(), 'stop_heartbeat': False}
@@ -659,23 +631,20 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
 
 
 def _report_entry(report_path):
-    """Picker entry for a report: skin name and date from its file name, else its modified time."""
+    """Picker entry for a report: skin name from its file name, date from when it was written."""
     from datetime import datetime
+    from .libs.reporting.html import REPORT_NAME
 
-    stem = os.path.basename(report_path)[:-len(".html")]
-    parts = stem.rsplit("_", 2)
-    try:
-        timestamp = datetime.strptime("_".join(parts[1:]), "%Y%m%d_%H%M%S")
-        skin_name = parts[0].replace("_", " ")
-    except ValueError:
-        timestamp = datetime.fromtimestamp(os.path.getmtime(report_path))
-        skin_name = stem
+    name = os.path.basename(report_path)
+    suffix = "_" + REPORT_NAME
+    skin_name = name[:-len(suffix)].replace("_", " ") if name.endswith(suffix) else name[:-len(".html")]
+    timestamp = datetime.fromtimestamp(os.path.getmtime(report_path))
     return {"path": report_path, "skin_name": skin_name,
             "date": timestamp.strftime("%Y-%m-%d %H:%M:%S"), "timestamp": timestamp}
 
 
 class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
-    """Command opening an existing validation report from the report folder."""
+    """Command opening a saved validation report without running the checks again."""
 
     def _open_folder_and_notify(self, folder_path, created=False):
         """Open the folder in the system file manager and say it was just created or is empty."""
@@ -713,16 +682,14 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
             )
 
     def run(self):
-        """Show saved reports in a quick panel and open the pick, else open the report folder."""
+        """Open the skin's report, or pick one in the report directory, else open that folder."""
         import glob
         import pathlib
 
-        settings = sublime.load_settings('kodidevkit.sublime-settings')
-        report_dir = settings.get('validation_report_directory', None)
-
+        report_dir = sublime.load_settings(SETTINGS_FILE).get('validation_report_directory') or ""
         if not report_dir:
-            packages_path = sublime.packages_path()
-            report_dir = os.path.join(packages_path, 'User', 'KodiDevKit', 'ValidationReports')
+            self._open_project_report()
+            return
 
         if not os.path.exists(report_dir):
             os.makedirs(report_dir, exist_ok=True)
@@ -760,6 +727,23 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
             on_select,
             placeholder="Select a validation report to open"
         )
+
+    def _open_project_report(self):
+        """Open the report in the loaded skin's folder, or say there is none yet."""
+        import pathlib
+        from .kodidevkit import INFOS
+        from .libs.reporting.html import REPORT_NAME
+
+        addon = getattr(INFOS, "addon", None)
+        if not addon:
+            sublime.message_dialog("No skin project detected.\n\nPlease open a Kodi skin folder as a project.")
+            return
+        report_path = os.path.join(addon.path, REPORT_NAME)
+        if not os.path.isfile(report_path):
+            sublime.message_dialog(f"No report yet in {addon.path}.\n\n"
+                                   "Generate one with KodiDevKit: Generate Validation Report.")
+            return
+        webbrowser.open(pathlib.Path(report_path).as_uri())
 
 
 logger = logging.getLogger("KodiDevKit.commands")
