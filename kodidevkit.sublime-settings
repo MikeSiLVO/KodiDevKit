@@ -137,6 +137,14 @@
     "hide_include_warnings": true,
 
     /*
+     * Kodi release to validate against
+     *
+     * "omega" (Kodi 21) or "piers" (Kodi 22). Leave empty to use the release the skin's
+     * xbmc.gui import names, or the newest when it names none.
+     */
+    "kodi_release": "",
+
+    /*
      * Exclude paths from XML validation
      *
      * List of folder or file names to skip during validation (on-save and reports).

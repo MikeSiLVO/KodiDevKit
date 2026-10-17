@@ -8,7 +8,7 @@ User overrides go in `Packages/User/kodidevkit.sublime-settings`.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `kodi_path` | string | `""` | Full path to your Kodi installation folder. Used to locate core language files, addons, and userdata. Backslashes must be escaped on Windows (`C:\\Program Files\\Kodi`). |
+| `kodi_path` | string | `""` | Full path to your Kodi installation folder. Used to locate core language files, addons, and userdata. Empty, or a folder without Kodi's `colors.xml` and `strings.po`, uses the copies bundled for the targeted release. Backslashes must be escaped on Windows (`C:\\Program Files\\Kodi`). |
 | `portable_mode` | bool | `false` | Set to `true` if Kodi runs in portable mode (userdata inside the Kodi installation folder). |
 | `userdata_folder` | string | `""` | Explicit override for Kodi's userdata folder path. Leave empty to auto-detect based on `kodi_path` and `portable_mode`. |
 
@@ -33,7 +33,7 @@ Configure the connection to Kodi's JSON-RPC interface. Enable it in Kodi under S
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `language` | string | `"en_gb"` | Language code for Kodi's core strings. Format: ISO 639-1 with optional region (e.g., `en_gb`, `de_de`, `fr_fr`). The plugin prepends `resource.language.` if not present. |
-| `language_folders` | list | `["resource.language.en_gb", "English"]` | Ordered list of language folders to search for `.po` files. First match is used. Useful for fallback languages. |
+| `language_folders` | list | `["resource.language.en_gb", "English"]` | Ordered list of language folders to search for `.po` files. First match is used. |
 
 ## Validation
 
@@ -42,12 +42,13 @@ Configure the connection to Kodi's JSON-RPC interface. Enable it in Kodi under S
 | `auto_skin_check` | bool | `true` | Run validation checks automatically when saving XML files. Results appear as inline phantoms. |
 | `phantom_severity_level` | string | `"warning"` | Minimum severity for on-save phantoms. Values: `"error"`, `"warning"`. Full reports always show everything. |
 | `hide_include_warnings` | bool | `true` | Hide warnings that originate from include content, everywhere: on-save phantoms, the validation results view, and the HTML report's initial state. Errors from includes are always shown, and `Defaults.xml` issues are reported at their source (not treated as include warnings). Set `false` to show them. |
+| `kodi_release` | string | `""` | Release to validate against: `"omega"` (Kodi 21) or `"piers"` (Kodi 22). Empty uses the release the skin's `xbmc.gui` import names, or the newest when it names none. An unknown value is reported and ignored. |
 | `validation_exclude` | list | `["shortcuts"]` | Folder or file names to skip during validation. Matches any path component, so `"shortcuts"` skips any file inside a `shortcuts/` folder. |
 | `validation_report_directory` | string | `""` | Folder for the HTML validation report. Empty writes `validation_report.html` into the skin's folder, replaced on each run. A folder given here holds one `<skin>_validation_report.html` per skin. |
 
 **`phantom_severity_level` values:**
-- `"error"` -- Only show errors (broken brackets, invalid values, missing files). Best for experienced skinners.
-- `"warning"` -- Show errors and warnings (invalid tags, duplicate tags). The default.
+- `"error"`: only errors (broken brackets, invalid values, conditions Kodi cannot parse).
+- `"warning"`: errors and warnings (invalid tags, repeated tags). The default.
 
 See [Validation](validation.md) for details on what each validator checks.
 
