@@ -147,7 +147,7 @@
     /*
      * Exclude paths from XML validation
      *
-     * List of folder or file names to skip during validation (on-save and reports).
+     * List of folder or file names XML validation skips, on save and in reports.
      * Matches any path component, so "shortcuts" skips any file inside a shortcuts/ folder.
      *
      * Example: ["shortcuts", "textures.xml", "experimental"]
