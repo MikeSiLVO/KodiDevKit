@@ -84,6 +84,13 @@ class TestXbt(unittest.TestCase):
             "Kodi repo: Dark.xbt ships beside the source images in media/",
         ])
 
+    def test_special_skin_path_is_not_looked_up_in_the_bundle(self):
+        """A special://skin/ path is looked up on disk only, never in the bundle."""
+        self._write("media/Textures.xbt", _xbt(["icons/a.png", "icons/b.png"]))
+        self._write("16x9/Home.xml", '<window><controls><control type="image">'
+                                     '<texture>special://skin/media/icons/a.png</texture></control></controls></window>')
+        self.assertEqual(self._messages(), ["Missing image 'special://skin/media/icons/a.png'"])
+
     def test_unreadable_bundle(self):
         self._write("media/Textures.xbt", b"not a bundle")
         self.assertIn("Textures.xbt is not a texture bundle Kodi can read", self._messages())

@@ -519,9 +519,7 @@ class SkinIndex:
         def _track(image_path, node, attr=None):
             if not image_path or is_dynamic_expression(image_path):
                 return
-            if image_path.startswith('special://skin/'):
-                image_path = image_path[len('special://skin/'):]
-            elif image_path.startswith(('special://', 'resource://')):
+            if image_path.startswith(('special://', 'resource://')) and not image_path.startswith('special://skin/'):
                 return
             low = image_path.lower()
             if any(m in low for m in ('$info[', '$var[', '$escinfo[', '$escvar[',
@@ -590,26 +588,18 @@ class SkinIndex:
                 return None
 
             if v.startswith("special://skin/"):
-                v = v[len("special://skin/"):]
+                return v[len("special://skin/"):].lstrip("/")
 
-            while v.startswith("./") or v.startswith("/"):
-                v = v[1:]
+            while v.startswith("./"):
+                v = v[2:]
+            return "media/" + v
 
-            known_roots = (
-                "media/", "resources/media/", "extras/",
-                "images/", "textures/", "fonts/"
-            )
-            if not any(v.lower().startswith(r) for r in known_roots):
-                v = "media/" + v
-
-            return v
-
-        def classify_path(val_norm):
+        def classify_path(val_norm, bundled):
             if val_norm is None:
                 return "external", None
-            in_xbt = (xbt_names is not None and val_norm.startswith("media/")
-                      and val_norm[len("media/"):].lower() in xbt_names)
-            if xbt_names is not None and not loose_media and val_norm.startswith("media/"):
+            # bundles are searched by the name as written, which no special://skin/ path matches
+            in_xbt = bundled and xbt_names is not None and val_norm[len("media/"):].lower() in xbt_names
+            if bundled and xbt_names is not None and not loose_media:
                 return ("exact", None) if in_xbt else ("missing", None)
             if val_norm in exact_relpaths:
                 return "exact", None
@@ -651,7 +641,7 @@ class SkinIndex:
                     progress_callback(f"Checking images... ({checked_count}/{total_images})")
 
                 normalized = normalize_ref(image_path)
-                status, detail = classify_path(normalized)
+                status, detail = classify_path(normalized, not image_path.startswith("special://skin/"))
 
                 index['image_files_checked'][folder][image_path] = {
                     'status': status,

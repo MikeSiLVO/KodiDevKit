@@ -128,7 +128,8 @@ class ValidationImage:
                         if detail:
                             hint = ", ".join(detail[:5]) if isinstance(detail, list) else detail
                             issues.append({
-                                "message": f"Wrong path '{image_path}'{attr_suffix}. File exists at: {hint}",
+                                "message": f"Wrong path '{image_path}'{attr_suffix}: Kodi looks for "
+                                           f"{check_result.get('normalized')}, the file is at {hint}",
                                 "file": file_path,
                                 "line": line_num,
                                 "severity": SEVERITY_WARNING,

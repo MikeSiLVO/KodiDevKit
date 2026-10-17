@@ -78,6 +78,20 @@ class TestImageValidation(ValidationTestCase):
         self.assertEqual(messages, ["'-' is not an empty texture in Kodi; leave the value empty",
                                     "'noop' is not an empty texture in Kodi; leave the value empty"])
 
+    def test_file_outside_media_is_found_only_through_special_skin(self):
+        """A file outside media/ is found through special://skin/; bare, it is a wrong path."""
+        os.makedirs(os.path.join(self.test_dir, "backgrounds"))
+        with open(os.path.join(self.test_dir, "backgrounds", "Default.jpg"), "wb") as f:
+            f.write(b"jpg")
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls>'
+                    '<control type="image"><texture>special://skin/backgrounds/Default.jpg</texture></control>'
+                    '<control type="image"><texture>backgrounds/Default.jpg</texture></control>'
+                    '</controls></window>')
+        messages = [i["message"] for i in self._build_checker().check() if i.get("file")]
+        self.assertEqual(messages, ["Wrong path 'backgrounds/Default.jpg': Kodi looks for "
+                                    "media/backgrounds/Default.jpg, the file is at backgrounds/Default.jpg"])
+
     def test_existing_image_no_issue(self):
         """Test that existing images don't trigger issues."""
         img_path = os.path.join(self.test_dir, "media", "button.png")
