@@ -3,20 +3,12 @@
 import re
 import logging
 
+from ..utils.colors import is_kodi_hex
+from ..utils.infobool import is_known_info
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
 
-
-# InfoLabel namespaces, to spot one missing its $INFO[]
-INFOLABEL_PREFIXES = {
-    'player', 'videoplayer', 'musicplayer', 'container', 'listitem',
-    'window', 'system', 'skin', 'control', 'weather', 'addon',
-    'library', 'playlist', 'pvr', 'string', 'integer', 'slideshow',
-    'fanart', 'game', 'retroplayer', 'visualisation', 'rds',
-    'network', 'platform', 'role', 'musicpartymode',
-    'audiocodec', 'audiochannels', 'audiolanguage', 'subtitlelanguage'
-}
 
 # first part of every add-on id in the Kodi repo, plus repository
 ADDON_ID_PREFIXES = (
@@ -53,18 +45,11 @@ TECHNICAL_TERMS = {
 class ValidationLabel:
     """Checker for undefined or out-of-range label ids and label text that looks untranslated."""
 
-    def __init__(self, addon, get_po_files_fn, validation_index=None):
+    def __init__(self, addon, get_po_files_fn, validation_index=None, info_names=None):
         self.addon = addon
         self._get_po_files = get_po_files_fn
         self._validation_index = validation_index
-
-    def _is_hex_color(self, text):
-        """True when the text is an 8-digit ARGB hex color, in either case."""
-        text = text.strip()
-        if len(text) != 8:
-            return False
-
-        return bool(re.match(r'^[0-9a-fA-F]{8}$', text))
+        self._info_names = info_names or {}
 
     def _is_addon_id(self, text):
         """True when the text looks like an addon ID."""
@@ -81,17 +66,11 @@ class ValidationLabel:
         return text in TECHNICAL_TERMS
 
     def _is_bare_infolabel(self, text):
-        """True when the text is a bare InfoLabel such as Player.Art(fanart1), no $INFO[]."""
+        """True when the text is an info Kodi knows, such as Player.Art(fanart), with no $INFO[]."""
         text = text.strip()
-
-        if '(' not in text or '.' not in text:
+        if not self._info_names or " " in text or "." not in text:
             return False
-
-        prefix = text.split('.')[0].lower()
-        if prefix not in INFOLABEL_PREFIXES:
-            return False
-
-        return bool(re.match(r'^[A-Za-z]+\.[A-Za-z]+\([^)]*\)$', text))
+        return is_known_info(text, self._info_names)
 
     def check(self, progress_callback=None):
         """Check labels, one issue row per bad id or text that looks untranslated."""
@@ -111,7 +90,7 @@ class ValidationLabel:
         for cached_item in cached_labels:
             label_text = cached_item.get('name', '') or cached_item.get('identifier', '')
 
-            if self._is_hex_color(label_text):
+            if is_kodi_hex(label_text.strip()):
                 continue
             elif self._is_brand_name(label_text):
                 continue
@@ -158,7 +137,7 @@ class ValidationLabel:
         skin_ids, core_ids = set(), set()
         for po_file in self._get_po_files():
             (skin_ids if id(po_file) in skin_po else core_ids).update(entry.msgctxt for entry in po_file)
-        # Kodi 22 reads a skin's own strings only in this range
+        # Kodi 22 reads a skin's own strings only in 31000-31999
         skin_range_only = getattr(self.addon, "api_version", None) not in (None, "omega")
         for ref in refs:
             key = "#" + ref["name"]

@@ -302,7 +302,8 @@ class CheckerMixin:
             return []
 
         index = self.get_validation_index(progress_callback=progress_callback)
-        checker = ValidationLabel(self.addon, self.get_po_files, validation_index=index)
+        checker = ValidationLabel(self.addon, self.get_po_files, validation_index=index,
+                                  info_names=self.INFO_NAMES)
         return self._reported("Labels", checker.check(progress_callback=progress_callback))
 
     def check_repo(self, progress_callback=None):

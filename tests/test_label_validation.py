@@ -101,6 +101,18 @@ class TestLabelValidation(ValidationTestCase):
             self.assertIn(f"Possible addon ID: {addon_id}.", " ".join(messages))
         self.assertFalse([m for m in messages if "not translated" in m.lower()])
 
+    def test_hex_color_passes_and_a_bare_info_asks_for_its_wrapper(self):
+        """A hex color is not untranslated text; a bare info Kodi knows asks for its $INFO[]."""
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="label"><label>FF00ff00</label></control>'
+                    '<control type="label"><label>Player.Title</label></control>'
+                    '<control type="label"><label>Hello.World</label></control></controls></window>')
+        self.provider.init_addon(self.test_dir)
+        messages = sorted(i["message"] for i in self.provider.check_labels() if i.get("file"))
+        self.assertEqual(len(messages), 2)
+        self.assertIn("not translated: Hello.World", messages[0])
+        self.assertTrue(messages[1].startswith("Possible missing $INFO[] wrapper: Player.Title."))
+
     def test_numeric_label_no_untranslated_warning(self):
         """Test that numeric labels don't trigger untranslated warnings."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
