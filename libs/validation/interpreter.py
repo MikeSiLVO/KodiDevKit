@@ -346,7 +346,8 @@ class XmlInterpreter:
                 if attr_name not in subnodes[tag]:
                     self._add_issue(
                         child, SEVERITY_WARNING,
-                        f"invalid attribute for <{tag}>: {attr_name}", rule="xml.invalid-attr", subject=attr_name,
+                        f"invalid attribute for <{tag}>: {attr_name}, which <{node.tag} type={control_type}> ignores",
+                        rule="xml.invalid-attr", subject=attr_name,
                     )
                     continue
                 if _contains_dynamic(attr_value):

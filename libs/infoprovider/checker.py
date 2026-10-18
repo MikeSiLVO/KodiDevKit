@@ -711,7 +711,8 @@ class CheckerMixin:
                 if k == "description":
                     continue
                 if k not in subnodes[subnode.tag]:
-                    self._add_issue(listitems, subnode, f"invalid attribute for <{subnode.tag}>: {k}", k, rule="xml.invalid-attr")
+                    self._add_issue(listitems, subnode, f"invalid attribute for <{subnode.tag}>: {k}, which "
+                                                        f"<{node.tag} type={c_type}> ignores", k, rule="xml.invalid-attr")
                     continue
                 if is_dynamic_expression(v):
                     value_type = subnodes[subnode.tag].get(k)

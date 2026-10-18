@@ -82,7 +82,7 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <height max="570">auto</height>
 </control>""")
 
-    def test_min_only_where_kodi_reads_it(self):
+    def test_min_only_where_kodi_uses_it(self):
         """Only grouplist, label, buttons and textbox use min; elsewhere it still warns."""
         issues = self._issues("""
 <control type="list">
@@ -95,9 +95,9 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <colorwidth min="10">40</colorwidth>
 </control>""", "piers")
         found = sorted(i["message"] for i in issues if "invalid attribute" in i["message"])
-        self.assertEqual(found, ["invalid attribute for <colorwidth>: min",
-                                 "invalid attribute for <height>: min",
-                                 "invalid attribute for <width>: min"])
+        self.assertEqual(found, ["invalid attribute for <colorwidth>: min, which <control type=colorbutton> ignores",
+                                 "invalid attribute for <height>: min, which <control type=list> ignores",
+                                 "invalid attribute for <width>: min, which <control type=image> ignores"])
 
     def test_group_enable(self):
         """A disabled group cannot take focus, so enable is meaningful."""
