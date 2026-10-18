@@ -13,10 +13,11 @@ if package_dir not in sys.path:
 
 from libs.infoprovider.provider import InfoProvider
 from libs.validation import rules
-from libs.validation.rules import RULES
+from libs.validation.rules import PREFIXES, RULES
 
-CHECKS = ("check_variables", "check_maps", "check_includes", "check_labels", "check_fonts", "check_ids",
-          "check_images", "check_values", "check_file_integrity", "check_repo")
+CHECKS = {"check_variables": "Variables", "check_maps": "Maps", "check_includes": "Includes",
+          "check_labels": "Labels", "check_fonts": "Fonts", "check_ids": "IDs", "check_images": "Images",
+          "check_values": "XML Validation", "check_file_integrity": "File Integrity", "check_repo": "Kodi Repo"}
 ADDON_XML = ('<addon id="skin.test" version="1.0"><requires><import addon="xbmc.gui" version="5.17.0"/>'
              '</requires><extension point="xbmc.gui.skin"><res folder="16x9" default="true"/></extension>'
              '</addon>')
@@ -26,8 +27,7 @@ HOME_XML = ('<window><controls><control type="label"><font>Nope</font><label>Hel
             '</controls></window>\n')
 
 # a file extension after the dot is a file name such as fonts.xml, never a problem
-RULE_ID = re.compile(r"(fonts|images|ids|labels|includes|variables|maps|xml|files|repo|kdk)"
-                     r"\.(?!(xml|po|py)$)[a-z0-9]+(-[a-z0-9]+)*")
+RULE_ID = re.compile(rf"({'|'.join(PREFIXES)})\.(?!(xml|po|py)$)[a-z0-9]+(-[a-z0-9]+)*")
 
 
 def _engine_literals():
@@ -65,7 +65,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual([r for r in RULES if r not in emitted and not r.startswith("kdk.")], [])
 
     def test_every_row_of_a_run_carries_a_registered_rule_and_a_subject(self):
-        """Each row every check returns names a registered rule and a string subject."""
+        """Each row carries a registered rule of the check it appears in, and a string subject."""
         with tempfile.TemporaryDirectory() as skin:
             os.makedirs(os.path.join(skin, "16x9"))
             with open(os.path.join(skin, "addon.xml"), "w", encoding="utf-8") as f:
@@ -75,9 +75,10 @@ class TestRules(unittest.TestCase):
             provider = InfoProvider()
             provider.settings = {}
             provider.init_addon(skin)
-            rows = [row for name in CHECKS for row in getattr(provider, name)() or []]
-        self.assertGreater(len({row["rule"] for row in rows}), 5)
-        self.assertEqual([row for row in rows if row.get("rule") not in RULES
+            rows = [(check, row) for name, check in CHECKS.items() for row in getattr(provider, name)() or []]
+        self.assertGreater(len({row["rule"] for _, row in rows}), 5)
+        self.assertEqual([row for check, row in rows if row.get("rule") not in RULES
+                          or PREFIXES[row["rule"].split(".")[0]] != check
                           or not isinstance(row.get("subject"), str)], [])
 
     def test_every_rule_says_what_it_reports(self):

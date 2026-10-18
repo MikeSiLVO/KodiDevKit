@@ -1,5 +1,20 @@
 """Rule ids every issue carries, each with what it reports; an id never changes once released."""
 
+# the part of an id before the dot, and the check whose results the issue appears in
+PREFIXES = {
+    "variables": "Variables",
+    "maps": "Maps",
+    "includes": "Includes",
+    "labels": "Labels",
+    "fonts": "Fonts",
+    "ids": "IDs",
+    "images": "Images",
+    "xml": "XML Validation",
+    "files": "File Integrity",
+    "repo": "Kodi Repo",
+    "kdk": "kdk",
+}
+
 RULES = {
     "fonts.kodi-path-missing": "The kodi_path setting names a folder that does not exist.",
     "fonts.misnamed-font-xml": "A Font.xml whose name differs only by case, which Kodi does not load on Linux.",
