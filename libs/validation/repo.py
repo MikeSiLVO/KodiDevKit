@@ -15,7 +15,9 @@ from ..utils.xml import PARSER
 from .constants import SEVERITY_WARNING
 from .filecheck import nested_addons, shipped_files
 
-SCHEMA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "addon_schema")
+# a frozen build keeps no libs folders on disk for ".." to step out of
+SCHEMA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "data",
+                                           "addon_schema"))
 
 # kodi_addon_checker/check_allowed_versions.py
 VERSION = re.compile(r"^(\d+\.\d+(\.\d+){0,4}([+~\w]+(\.\d+)?)?)$")
