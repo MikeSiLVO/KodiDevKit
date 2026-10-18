@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Builtins and boolean conditions Kodi 22 registers, 333 and 282 of them.
-     Maintained by hand: check new names against the registration maps in
-     GUIInfoManager.cpp and xbmc/interfaces/builtins/, not against the doxygen.
+<!-- Builtins and boolean conditions Kodi 22 registers.
+     Maintained by hand: check new names against Kodi's registration maps for conditions and
+     builtins, not against the doxygen.
 
      The names and descriptions below are taken from Kodi:
        Copyright (C) Team Kodi, https://kodi.tv
@@ -2078,6 +2078,10 @@
         <item>
             <code>RDS.HasStudio</code>
             <help>True if a studio name is present.</help>
+        </item>
+        <item>
+            <code>RetroPlayer.AchievementsHardcore</code>
+            <help>True if achievements are being earned in hardcore mode, False otherwise.</help>
         </item>
         <item>
             <code>RetroPlayer.AchievementsLoggedIn</code>
