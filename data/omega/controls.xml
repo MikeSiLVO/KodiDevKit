@@ -172,7 +172,7 @@
         <bordertexture border="coords" colordiffuse="color" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</bordertexture>
         <bordersize>int</bordersize>
         <info>info</info>
-        <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
+        <aspectratio align="aspectalign" aligny="aspectaligny" scalediffuse="bool">aspect</aspectratio>
     </control>
     <control type="multiimage" id="int">
         <width max="int">int</width>
@@ -186,7 +186,7 @@
         <pauseatend>int</pauseatend>
         <randomize>bool</randomize>
         <loop>bool</loop>
-        <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
+        <aspectratio align="aspectalign" aligny="aspectaligny" scalediffuse="bool">aspect</aspectratio>
     </control>
     <control type="radiobutton" id="int">
         <width max="int">int</width>
@@ -329,7 +329,7 @@
         <height max="int">int</height>
         <include>common</include>
         <texture border="coords" flipy="bool" flipx="bool" background="bool" colordiffuse="color" diffuse="path" fallback="path" infill="bool">path</texture>
-        <aspectratio align="align" aligny="aligny" scalediffuse="bool">aspect</aspectratio>
+        <aspectratio align="aspectalign" aligny="aspectaligny" scalediffuse="bool">aspect</aspectratio>
         <controllerid>label</controllerid>
         <controlleraddress>label</controlleraddress>
         <controllerdiffuse>color</controllerdiffuse>

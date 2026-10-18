@@ -613,6 +613,29 @@ class TestControlChildValidation(unittest.TestCase):
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         self.assertEqual(interp.interpret(root), [])
 
+    def test_values_kodi_compares_in_any_case(self):
+        """Slider action, spin subtype and aspectratio alignment take any case; <align> does not."""
+        attribs = {"slider": {"action": {}}, "spincontrol": {"subtype": {}},
+                   "image": {"aspectratio": {"align": "aspectalign", "aligny": "aspectaligny"}},
+                   "label": {"align": {}}}
+        values = {"slider": {"action": "action"}, "spincontrol": {"subtype": "subtype"},
+                  "image": {"aspectratio": "aspect"}, "label": {"align": "align"}}
+        root = _parse("""
+        <window>
+            <controls>
+                <control type="slider"><action>Volume</action></control>
+                <control type="spincontrol"><subtype>Int</subtype></control>
+                <control type="image">
+                    <aspectratio align="Center" aligny="Top">keep</aspectratio>
+                </control>
+                <control type="label"><align>Center</align></control>
+            </controls>
+        </window>
+        """)
+        interp = XmlInterpreter(template_attribs=attribs, template_values=values)
+        self.assertEqual([i["message"] for i in interp.interpret(root)],
+                         ["invalid value for align: Center (must be lowercase)"])
+
     def test_bracket_mismatch(self):
         attribs = {"button": {"visible": {}}}
         values = {"button": {}}

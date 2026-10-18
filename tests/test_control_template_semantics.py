@@ -151,6 +151,19 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <focusedcolor>FFFFFFFF</focusedcolor>
 </control>""")
 
+    def test_values_kodi_compares_in_any_case(self):
+        """Slider action, spin subtype and aspectratio alignment pass in any case."""
+        self._assert_clean("""
+<control type="slider">
+    <action>Volume</action>
+</control>
+<control type="spincontrol">
+    <subtype>Int</subtype>
+</control>
+<control type="image">
+    <aspectratio align="Center" aligny="Top">keep</aspectratio>
+</control>""")
+
     def test_toggle_condition_under_either_name(self):
         """Togglebuttons and radiobuttons take their toggle condition from either tag."""
         self._assert_clean("""
