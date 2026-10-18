@@ -170,8 +170,10 @@ def _tracked_files(root):
     """Relative paths with their executable bit: git's index in a checkout, else the folder."""
     if os.path.exists(os.path.join(root, ".git")):
         try:
+            # a skin's .git/config can name an fsmonitor command, which ls-files would run
+            cmd = ["git", "-c", "core.fsmonitor=false", "-C", root, "ls-files", "-s", "-z"]
             # on Windows a console program opens a window that takes focus from the editor
-            out = subprocess.run(["git", "-C", root, "ls-files", "-s", "-z"], capture_output=True, check=True,
+            out = subprocess.run(cmd, capture_output=True, check=True,
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
                                  ).stdout.decode("utf-8", "replace")
             # a PR ships what git tracks, with the mode git records

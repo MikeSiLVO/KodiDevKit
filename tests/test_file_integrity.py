@@ -113,6 +113,17 @@ class TestFileIntegrity(unittest.TestCase):
             subprocess.run(["git", "-C", self.skin_path, *args], check=True, capture_output=True)
         self.assertIn("Kodi repo: Home.xml is marked executable", [i["message"] for i in self.issues()])
 
+    @unittest.skipIf(os.name == "nt", "the fsmonitor command is a shell line")
+    def test_fsmonitor_command_in_the_skin_repo_never_runs(self):
+        """Reading git's index never runs a command the skin's .git/config names for fsmonitor."""
+        import subprocess
+        marker = os.path.join(self.skin_path, "ran")
+        self._put("16x9/Home.xml", b"<window/>")
+        for args in (["init", "-q"], ["add", "-A"], ["config", "core.fsmonitor", f"touch '{marker}'; false"]):
+            subprocess.run(["git", "-C", self.skin_path, *args], check=True, capture_output=True)
+        self.issues()
+        self.assertFalse(os.path.exists(marker))
+
     def test_crlf_reported(self):
         """A skin-authored file with Windows line endings is an error."""
         self.write("Home.xml", WINDOW_XML, crlf=True)
