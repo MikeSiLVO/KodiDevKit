@@ -29,6 +29,18 @@ LITERAL_TAGS = frozenset({
     "usecontrolcoords", "width", "wrapmultiline",
 })
 
+TEXTURE_TAGS = frozenset({
+    "alttexturefocus", "alttexturenofocus", "bordertexture", "icon", "lefttexture", "midtexture",
+    "overlaytexture", "progresstexture", "righttexture", "texture", "texturebg",
+    "texturecolordisabledmask", "texturecolormask", "texturedown", "texturedowndisabled",
+    "texturedownfocus", "texturefocus", "texturenofocus", "textureradiofocus", "textureradionofocus",
+    "textureradiooff", "textureradiooffdisabled", "textureradioofffocus", "textureradiooffnofocus",
+    "textureradioon", "textureradioondisabled", "textureradioonfocus", "textureradioonnofocus",
+    "texturesliderbackground", "texturesliderbar", "texturesliderbardisabled",
+    "texturesliderbarfocus", "textureslidernib", "textureslidernibdisabled",
+    "textureslidernibfocus", "textureup", "textureupdisabled", "textureupfocus", "thumb",
+})
+
 # tags whose text is a bracketed condition that must balance
 BRACKET_TAGS = {"visible", "enable", "usealttexture", "selected", "expression", "onclick", "onback"}
 
@@ -160,6 +172,7 @@ __all__ = [
     'BRACKET_TAGS',
     'CONDITION_TAGS',
     'LITERAL_TAGS',
+    'TEXTURE_TAGS',
     'INCLUDE_DEFINITION_TAGS',
     'NOOP_TAGS',
     'POS_TAGS',

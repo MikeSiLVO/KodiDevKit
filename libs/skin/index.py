@@ -12,6 +12,7 @@ from ..utils.files import read_xbt_names
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
 from ..utils.expressions import is_dynamic_expression
 from ..utils.validation import normalize_control_id, skinshortcuts_files
+from ..validation.constants import TEXTURE_TAGS
 
 logger = logging.getLogger(__name__)
 
@@ -505,11 +506,11 @@ class SkinIndex:
                     untranslated(value, element, f"attribute {attr}")
 
     def _extract_images_from_xml(self, root, path, folder, index):
-        """Extract static image paths from texture tags and their attributes into the index."""
-        image_tags = frozenset(['texture', 'icon', 'thumb', 'bordertexture', 'alttexture'])
+        """Extract static image paths from texture tags and image attributes into the index."""
         universal_attrs = ('diffuse', 'texturefocus', 'texturenofocus')
-        # fallback on <label> is text, so these only count on texture tags
+        # fallback on <label> is text, not an image
         texture_only_attrs = ('fallback', 'texture', 'thumb', 'icon')
+        attr_tags = ('texture', 'icon', 'thumb', 'bordertexture')
 
         if 'images_referenced' not in index:
             index['images_referenced'] = {}
@@ -539,14 +540,13 @@ class SkinIndex:
 
         for node in root.iter():
             tag_low = node.tag.lower() if isinstance(node.tag, str) else ''
-            is_texture_tag = tag_low in image_tags
-            if is_texture_tag and node.text:
+            if tag_low in TEXTURE_TAGS and node.text:
                 _track(node.text.strip(), node)
             for attr in universal_attrs:
                 val = node.attrib.get(attr)
                 if val:
                     _track(val.strip(), node, attr)
-            if is_texture_tag:
+            if tag_low in attr_tags:
                 for attr in texture_only_attrs:
                     val = node.attrib.get(attr)
                     if val:

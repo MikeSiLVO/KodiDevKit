@@ -242,6 +242,15 @@ class TestImageValidation(ValidationTestCase):
         found = {(i["rule"], i["severity"]) for i in self._build_checker().check() if "ase mismatch" in i["message"]}
         self.assertEqual(found, {("images.case-mismatch", "warning"), ("images.unbundled-case-mismatch", "error")})
 
+    def test_every_texture_tag_is_checked(self):
+        """Images in button and progress textures are checked like a <texture>."""
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="button"><texturefocus>gone_focus.png</texturefocus>'
+                    '</control><control type="progress"><midtexture>gone_mid.png</midtexture>'
+                    '<texturebg>gone_bg.png</texturebg></control></controls></window>')
+        found = sorted(i["subject"] for i in self._build_checker().check() if i["rule"] == "images.missing")
+        self.assertEqual(found, ["gone_bg.png", "gone_focus.png", "gone_mid.png"])
+
     def test_special_skin_media_path_breaks_once_media_is_packed(self):
         """A special://skin/media/ path to a file on disk is an error that names the bare path."""
         with open(os.path.join(self.test_dir, "media", "Button.png"), "wb") as f:
