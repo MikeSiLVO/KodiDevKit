@@ -136,7 +136,7 @@ Validates font definitions in `Font.xml` and font references throughout the skin
 
 **Errors:**
 - Font referenced but not defined in `Font.xml`, or defined only with different case.
-- Font whose file is not `.ttf`. Kodi never loads it.
+- Font whose file does not end in `.ttf`, including a file with no extension. Kodi never loads it.
 - Missing font file: `<filename>` names a file found neither in `fonts/` nor in Kodi's core fonts.
 - A `<font>` without `<name>` or `<filename>`, or with a negative or non-numeric size.
 - No `font13`, which Kodi needs.
@@ -147,7 +147,6 @@ Validates font definitions in `Font.xml` and font references throughout the skin
 - Unused font definition.
 - A fontset missing fonts that the first fontset defines, or missing `font13`.
 - Duplicate font name within a fontset.
-- Font filename without an extension.
 - The obsolete `unicode` attribute on a fontset. Kodi ignores it.
 
 Font filename issues point at the `<filename>` line in `Font.xml`, not the `<font>` parent.
@@ -179,9 +178,11 @@ Validates image file references against files on disk.
 
 **Warnings:**
 - Case mismatch in an image path (works on Windows and in `Textures.xbt`, but breaks on case-sensitive filesystems like Linux).
-- Wrong relative path, with where the file actually is.
+- An image not at its path but elsewhere in the skin, with where Kodi looks and where the file is.
 - `Textures.xbt` shipped beside the loose source images in `media/`.
 - An image found only in `Textures.xbt`, not among the loose images. The Kodi repo packs `Textures.xbt` from the loose images, so a repo build drops it.
+
+**Paths:** A bare path is looked up in `media/`. A `special://skin/` path starts at the skin folder and is read from disk only, never from `Textures.xbt`.
 
 **Textures.xbt:** When `media/` holds only a `Textures.xbt`, `media/` references are checked against the images packed in it, without regard to case.
 
