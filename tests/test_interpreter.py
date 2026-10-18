@@ -744,6 +744,7 @@ class TestControlChildValidation(unittest.TestCase):
         self.assertEqual([(i["line"], i["severity"]) for i in interp.interpret(root)], [(9, SEVERITY_WARNING)])
 
     def test_duplicate_severity_follows_which_copy_is_dropped(self):
+        """Severity and rule follow which copy Kodi drops; an own override of an include passes."""
         attribs = {"button": {"enable": {}, "selected": {}, "usealttexture": {}}}
         values = {"button": {}}
         root = _parse("""
@@ -762,9 +763,11 @@ class TestControlChildValidation(unittest.TestCase):
         """)
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         issues = interp.interpret(root)
-        self.assertEqual([(i["message"], i["severity"], i.get("include_name")) for i in issues], [
-            ("Invalid multiple tags for control: <enable>, include 'A' already sets it", SEVERITY_WARNING, None),
-            ("Invalid multiple tags for control: <usealttexture> (from include 'B')", SEVERITY_WARNING, "B"),
+        self.assertEqual([(i["message"], i["severity"], i["rule"], i.get("include_name")) for i in issues], [
+            ("Invalid multiple tags for control: <enable>, include 'A' already sets it", SEVERITY_WARNING,
+             "xml.include-duplicate-tag", None),
+            ("Invalid multiple tags for control: <usealttexture>, this copy is never read (from include 'B')",
+             SEVERITY_WARNING, "xml.include-duplicate-tag", "B"),
         ])
 
     def test_own_tag_repeating_default_is_redundant(self):

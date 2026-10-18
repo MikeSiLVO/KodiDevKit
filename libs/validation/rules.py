@@ -139,6 +139,7 @@ RULES = {
     "xml.empty-action": "An empty action tag where Kodi needs noop.",
     "xml.redundant": "A tag repeating what the control type's <default> already sets.",
     "xml.duplicate-tag": "A second copy of a tag Kodi reads once.",
+    "xml.include-duplicate-tag": "An include's copy of a read-once tag Kodi never reads, or an own copy that repeats the include's value.",
     "xml.unclosed-label": "A $INFO[, $LOCALIZE[ or similar block missing its closing ']'.",
     "xml.empty-condition": "A condition tag or attribute with no condition.",
     "xml.bad-brackets": "A condition or action whose brackets do not match.",

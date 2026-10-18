@@ -383,14 +383,17 @@ class XmlInterpreter:
         """Report a copy of a read-once tag that Kodi drops because an earlier copy wins."""
         message = f"Invalid multiple tags for {control.tag}: <{later.tag}>"
         first_inc = first.get("_kdk_inc_name")
-        if later.get("_kdk_inc_name") is not None:
+        later_inc = later.get("_kdk_inc_name")
+        if later_inc is not None:
             # own value beating an include's is an intended override, like a <default>
             if first_inc is not None or later.get("_kdk_inc_cond") == "1":
-                self._add_issue(later, SEVERITY_WARNING, message, rule="xml.duplicate-tag")
+                self._add_issue(later, SEVERITY_WARNING, f"{message}, this copy is never read",
+                                rule="xml.include-duplicate-tag")
         elif first_inc is None:
             self._add_issue(later, SEVERITY_ERROR, message, rule="xml.duplicate-tag")
         elif (later.text or "").strip() == (first.text or "").strip():
-            self._add_issue(later, SEVERITY_WARNING, f"{message}, include '{first_inc}' already sets it", rule="xml.duplicate-tag")
+            self._add_issue(later, SEVERITY_WARNING, f"{message}, include '{first_inc}' already sets it",
+                            rule="xml.include-duplicate-tag")
         else:
             self._add_issue(later, SEVERITY_ERROR, f"{message}, ignored because include '{first_inc}' sets it first", rule="xml.duplicate-tag")
 
