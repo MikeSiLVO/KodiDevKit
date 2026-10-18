@@ -12,6 +12,18 @@
     ]
   },
   {
+    "symbol": "libs/infonames.py:<module>",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
+    "symbol": "libs/infonames.py:dispatch",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"
+    ]
+  },
+  {
     "symbol": "libs/infoprovider/checker.py:CheckerMixin._validate_enum_value",
     "kodi": [
       "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create",

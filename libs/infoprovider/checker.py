@@ -18,6 +18,8 @@ from ..utils.expressions import (
 from ..utils.validation import (create_issue, deduplicate_issues, is_runtime_generated_file,
                                 merge_include_issues, should_report_progress)
 from ..addon.translations import get_po_file
+from ..infonames import from_tree
+from ..utils.infobool import info_name_sets
 from ..utils.colors import is_kodi_hex
 from ..validation.font import ValidationFont
 from ..validation.image import ValidationImage
@@ -87,6 +89,20 @@ class CheckerMixin:
     MODELESS_IDS: set
     DIALOG_IDS: set
     _variable_cache: dict
+    info_source: str = "snapshot"
+
+    def known_info_names(self) -> dict:
+        """Get kodi_path's info names, else the bundled ones; records which and notes a bad read."""
+        kodi_path = (self.settings.get("kodi_path") or "").strip() if self.settings else ""
+        try:
+            found = from_tree(kodi_path) if kodi_path else None
+        except (OSError, ValueError) as e:
+            if self.addon:
+                self.addon.add_notice(f"Info names in {kodi_path} could not be read ({e}), "
+                                      f"so the bundled list is used")
+            found = None
+        self.info_source = "snapshot" if found is None else "checkout"
+        return self.INFO_NAMES if found is None else info_name_sets(found)
 
     def get_po_files(self) -> list:
         """Get the skin's PO files plus Kodi-core strings.po from kodi_path or the snapshot."""
@@ -304,7 +320,7 @@ class CheckerMixin:
 
         index = self.get_validation_index(progress_callback=progress_callback)
         checker = ValidationLabel(self.addon, self.get_po_files, validation_index=index,
-                                  info_names=self.INFO_NAMES)
+                                  info_names=self.known_info_names())
         return self._reported("Labels", checker.check(progress_callback=progress_callback))
 
     def check_repo(self, progress_callback=None):
@@ -520,7 +536,7 @@ class CheckerMixin:
             color_labels=self.get_color_labels(),
             runtime_generator=self._imports_runtime_generator(),
             constants=set(self.addon.get_constants(folder)) if self.addon else set(),
-            info_names=self.INFO_NAMES,
+            info_names=self.known_info_names(),
             expressions=self._expression_sources(folder),
             settled_defaults=sk.settled_default_tags(folder),
         )

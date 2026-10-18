@@ -8,7 +8,7 @@ User overrides go in `Packages/User/kodidevkit.sublime-settings`.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `kodi_path` | string | `""` | Full path to your Kodi installation folder. Used to locate core language files, addons, and userdata. Empty, or a folder without Kodi's `colors.xml` and `strings.po`, uses the copies bundled for the targeted release. Backslashes must be escaped on Windows (`C:\\Program Files\\Kodi`). |
+| `kodi_path` | string | `""` | Full path to your Kodi installation folder. Used to locate core language files, addons, and userdata. Empty, or a folder without Kodi's `colors.xml` and `strings.po`, uses the copies bundled for the targeted release. An xbmc source checkout works too, and its info names replace the bundled list. Backslashes must be escaped on Windows (`C:\\Program Files\\Kodi`). |
 | `portable_mode` | bool | `false` | Set to `true` if Kodi runs in portable mode (userdata inside the Kodi installation folder). |
 | `userdata_folder` | string | `""` | Explicit override for Kodi's userdata folder path. Leave empty to auto-detect based on `kodi_path` and `portable_mode`. |
 
