@@ -165,14 +165,15 @@ def parse_error_issue(xml_file):
     """Error row for a file that failed to parse or loaded only once its faults were rewritten."""
     err = tolerated_xml_errors.get(xml_file) or next(
         (e for e in last_xml_errors if e["file"] == xml_file), None)
+    reason = err["message"] if err else "file could not be parsed"
     return {
-        "message": f"XML parse error: {err['message'] if err else 'file could not be parsed'}",
+        "message": f"XML parse error: {reason}",
         "line": err["line"] if err else 1,
         "file": xml_file,
         "severity": "error",
         "type": "XML",
         "rule": "xml.parse-error",
-        "subject": "",
+        "subject": reason,
     }
 
 

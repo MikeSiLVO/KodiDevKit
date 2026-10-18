@@ -14,6 +14,7 @@ if package_dir not in sys.path:
 
 from libs.infoprovider.provider import InfoProvider
 from libs.utils import xml
+from libs.validation.repo import ValidationRepo
 
 ADDON_XML = ('<addon id="skin.test" version="1.0.0"><requires>'
              '<import addon="xbmc.gui" version="5.18.0"/></requires>'
@@ -78,6 +79,29 @@ class TestParseErrors(unittest.TestCase):
         self.assertEqual(root.find("c").get("a"), "x<y")
         self.assertEqual(root.find("onclick").sourceline, 4)
         self.assertEqual(xml.parse_error_issue(path)["line"], 1)
+
+    def test_the_fault_is_the_subject(self):
+        """Two different faults in one file are two findings, never one that moved."""
+        subjects = []
+        for text in ("<window>\n<v>a < b</v>\n</window>", "<window>\n<v>\n</window>"):
+            path = self._write("Fault.xml", text)
+            xml.get_root_from_file(path)
+            issue = xml.parse_error_issue(path)
+            self.assertEqual("XML parse error: " + issue["subject"], issue["message"])
+            subjects.append(issue["subject"])
+        self.assertNotEqual(*subjects)
+
+    def test_a_strings_po_fault_is_the_subject(self):
+        """Each strings.po parse fault is its own subject, alike for one fault in every language."""
+        repo = ValidationRepo(type("Addon", (), {"path": self.path})())
+        header = 'msgid ""\nmsgstr ""\n\n'
+        for name, body in (("quote.po", 'msgctxt "#31000"\nmsgid "a "b" c"\nmsgstr ""\n'),
+                           ("order.po", 'msgctxt "#31087"\nmsgstr "x"\n')):
+            with open(os.path.join(self.path, name), "w", encoding="utf-8") as f:
+                f.write(header + body)
+            repo._check_po(name, os.path.join(self.path, name))
+        self.assertEqual([r["subject"] for r in repo.issues if r["rule"] == "repo.po-parse"],
+                         ["unescaped double quote found", 'msgstr cannot follow msgctxt "#31087"'])
 
     def test_a_later_fatal_fault_still_fails(self):
         path = self._write("Mixed.xml", "<window>\n<v>a&b</v>\n<v>a < b</v>\n</window>")

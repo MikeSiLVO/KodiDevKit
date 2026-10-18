@@ -235,12 +235,13 @@ class ValidationRepo:
             found = re.search(r"\(line (?P<line>\d+)\)\s*:\s*(?P<detail>[\s\S]+?)\s*$", str(error))
             bare = re.search(r"Syntax error[\s\S]+\(line (?P<line>\d+)\)\s*$", str(error))
             if found:
-                self._add(rel, int(found.group("line")), "repo.po-parse", f"{rel}: {found.group('detail')}")
+                line, reason = int(found.group("line")), found.group("detail")
             elif bare:
                 line = int(bare.group("line"))
-                self._add(rel, line, "repo.po-parse", f"{rel}: {_po_syntax_reason(cleaned, line)}")
+                reason = _po_syntax_reason(cleaned, line)
             else:
-                self._add(rel, 0, "repo.po-parse", f"{rel}: {error}")
+                line, reason = 0, str(error)
+            self._add(rel, line, "repo.po-parse", f"{rel}: {reason}", reason)
 
 
 def _po_syntax_reason(text, number):
