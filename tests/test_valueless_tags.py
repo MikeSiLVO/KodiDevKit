@@ -1,4 +1,4 @@
-"""Tag validation of tags that carry attributes but no template value."""
+"""Tag validation of tags that have no template value."""
 
 import unittest
 
@@ -18,8 +18,8 @@ if package_dir not in sys.path:
 from libs.infoprovider.provider import InfoProvider
 
 
-class TestTagValidationRegression(unittest.TestCase):
-    """Test that tag validation handles tags with only attributes (no text values)."""
+class TestValuelessTags(unittest.TestCase):
+    """Tag validation cases for tags that have no template value."""
 
     def setUp(self):
         """Create temporary skin directory for each test."""
@@ -115,7 +115,7 @@ class TestTagValidationRegression(unittest.TestCase):
             self.fail(f"KeyError raised during validation: {e}")
 
     def test_control_with_include_tag(self):
-        """Test that controls with nested <include> tags are handled correctly."""
+        """Test that controls with nested <include> tags don't cause KeyError."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
