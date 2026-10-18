@@ -6,6 +6,7 @@ import os
 import re
 import logging
 from ..utils.validation import (
+    create_issue,
     get_all_parameter_contexts,
     resolve_param_in_name,
     skinshortcuts_files,
@@ -85,10 +86,6 @@ class ValidationMap:
         if target not in names or MAPS_SINCE_RELEASE not in names:
             return True
         return names.index(target) >= names.index(MAPS_SINCE_RELEASE)
-
-    def _resolve_param_in_map_name(self, map_name, param_context=None):
-        """Resolve $PARAM[...] in map names using parameter values."""
-        return resolve_param_in_name(map_name, param_context, self._resolution_cache)
 
     def _collect_definitions(self, folder):
         """Collect every `<map>` in load order, with its ref and where it was written."""
@@ -286,10 +283,10 @@ class ValidationMap:
                 continue
 
             raw_name = args[0].strip()
-            names = {self._resolve_param_in_map_name(raw_name)}
+            names = {resolve_param_in_name(raw_name, None, self._resolution_cache)}
             if "$PARAM[" in raw_name:
                 for context in get_all_parameter_contexts(self.addon, folder):
-                    names.add(self._resolve_param_in_map_name(raw_name, context))
+                    names.add(resolve_param_in_name(raw_name, context, self._resolution_cache))
 
             referenced.update(names)
 
@@ -332,12 +329,5 @@ class ValidationMap:
 
     @staticmethod
     def _issue(file_path, line, message, name=""):
-        """One validation row in the shape the report and quick panel expect."""
-        return {
-            "name": name,
-            "type": "map",
-            "file": file_path,
-            "line": line,
-            "message": message,
-            "severity": SEVERITY_ERROR,
-        }
+        """One map error row in the shape the report and quick panel expect."""
+        return create_issue(message, file_path, line, name=name, type="map", severity=SEVERITY_ERROR)
