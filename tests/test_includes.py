@@ -115,7 +115,7 @@ class TestParamForwarding(unittest.TestCase):
         self.assertEqual(len(bracket_issues), 0, "Should not flag bracket issues in valid param forwarding")
 
     def test_nested_param_with_id_attributes(self):
-        """Test parameter forwarding where params define control IDs."""
+        """A control id an include call passes as a param counts as defined in the window."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="Hidden_List_Template">
@@ -143,6 +143,7 @@ class TestParamForwarding(unittest.TestCase):
 <window>
     <controls>
         <include>Widget_Panel</include>
+        <control type="button" id="10"><onup>650</onup></control>
     </controls>
 </window>"""
         window_path = os.path.join(self.test_dir, "1080i", "Home.xml")
@@ -152,10 +153,7 @@ class TestParamForwarding(unittest.TestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_ids()
 
-        # The ID 650 is defined via param forwarding - should be recognized
-        # Note: This may still show as undefined due to complexity of resolving params
-        # But at minimum it should not crash
-        self.assertIsInstance(issues, list, "Should handle param-defined IDs without crashing")
+        self.assertFalse([i for i in issues if "650" in i["message"]], issues)
 
     def test_triple_nested_param_forwarding(self):
         """Test parameters forwarded through three levels of includes."""
