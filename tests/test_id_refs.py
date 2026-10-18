@@ -84,14 +84,20 @@ class TestScope(unittest.TestCase):
         with open(os.path.join(self.path, rel), "w", encoding="utf-8") as f:
             f.write(text)
 
-    def _messages(self):
+    def _rows(self):
+        """Id check rows that point at a file, for the skin as written."""
         provider = InfoProvider()
         provider.settings = {}
         provider.load_data("piers")
         provider.init_addon(self.path)
-        return sorted(r["message"] for r in provider.get_check_listitems("id") if r.get("file"))
+        return [r for r in provider.get_check_listitems("id") if r.get("file")]
+
+    def _messages(self):
+        """Messages of the id check rows, sorted."""
+        return sorted(r["message"] for r in self._rows())
 
     def test_scope_tiers(self):
+        """Scope tiers flag only ids Kodi cannot find; a core window by number warns."""
         self._write("16x9/Home.xml", '<window><controls><control type="button" id="50"/>'
                                      '<control type="label"><visible>Control.HasFocus(60)</visible></control>'
                                      '<control type="label"><visible>Control.HasFocus(70)</visible></control>'
@@ -117,8 +123,9 @@ class TestScope(unittest.TestCase):
             "Control ID 60 not defined in DialogMusicInfo.xml's scope",
             "Control ID 60 not defined in Home.xml's scope",
             "Control ID 70 not defined",
-            "Window id: Please use yesnodialog instead of 100",
+            "Window id 100 works, but its name yesnodialog is preferred",
         ])
+        self.assertEqual({r["severity"] for r in self._rows() if r["rule"] == "ids.use-name"}, {"warning"})
 
 
     def test_id_built_from_an_unpassed_param(self):

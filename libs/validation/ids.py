@@ -36,7 +36,7 @@ class ValidationIds:
         name = self.window_names[self.window_ids.index(full_id)]
         if not name or "script-skinshortcuts-includes.xml" in usage_file.replace("\\", "/").lower():
             return None
-        return "ids.use-name", f"Window id: Please use {name} instead of {ref_id}"
+        return "ids.use-name", f"Window id {ref_id} works, but its name {name} is preferred"
 
     def _custom_window_issues(self, folder, custom_windows):
         """Custom windows Kodi refuses to load, or whose id sits outside the reviewed range."""
@@ -171,7 +171,7 @@ class ValidationIds:
                             "message": found[1],
                             "file": usage_file,
                             "line": usage.get('line', 0),
-                            "severity": SEVERITY_ERROR,
+                            "severity": SEVERITY_WARNING if found[0] == "ids.use-name" else SEVERITY_ERROR,
                             "rule": found[0],
                             "subject": ref_id,
                         })

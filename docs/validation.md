@@ -158,12 +158,12 @@ Validates control and window ID references.
 **Errors:**
 - Window ID referenced but not defined by any window XML file.
 - Window name Kodi does not recognize.
-- Kodi's own window referred to by number where it has a name (`Window id: Please use Home instead of 10000`).
 - Control ID referenced (via `<onup>`, `<onfocus>`, conditions, actions) but not defined in that window.
 - A custom window Kodi refuses to load: no id, a root other than `<window>`, or an id Kodi uses for its own window. Two custom windows sharing an id, of which Kodi loads one.
 
 **Warnings:**
 - A custom window id outside 1100-1199.
+- Kodi's own window referred to by number where it has a name; the number still works.
 
 **Scope:** A control ID must exist in the window that refers to it, counting its includes and Kodi's own controls for that window. References inside include files are not checked, since they have no window of their own. In modeless dialogs and add-on windows, after a window switch, and in a dialog's `<onunload>`, an ID defined anywhere in the skin is accepted, except in navigation tags such as `<onup>`.
 

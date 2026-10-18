@@ -37,8 +37,9 @@ CATEGORY_DESCRIPTIONS = {
         "fontsets, duplicate names in a fontset, a fontset without font13, and non-TTF files."
     ),
     "IDs": (
-        "<strong>Errors:</strong> Window or control id that is not defined, or a Kodi window referenced "
-        "by number where its name should be used."
+        "<strong>Errors:</strong> Window or control id that is not defined. "
+        "<strong>Warnings:</strong> A Kodi window referenced by number, which works, where its name is "
+        "preferred."
     ),
     "Images": (
         "<strong>Errors:</strong> Image file not found, so Kodi shows nothing; a special://skin/media/ "
