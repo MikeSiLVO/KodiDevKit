@@ -26,7 +26,7 @@ class Addon:
     # github_ref syntax is parsed by scripts/refresh.py _resolve_ref
     RELEASES = [
         {"name": "omega", "gui_version": "5.17.0", "gui_abi": "5.17.0", "github_ref": "release:21.*-Omega"},
-        {"name": "piers", "gui_version": "5.18.0", "gui_abi": "5.17.0", "github_ref": "branch:master"},
+        {"name": "piers", "gui_version": "5.18.0", "gui_abi": "5.17.0", "github_ref": "branch:Piers"},
     ]
 
     LANG_START_ID = 32000
