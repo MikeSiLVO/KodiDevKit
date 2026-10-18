@@ -77,7 +77,6 @@ _SUBTYPE_RULES = [
     ("missing font '", "INCONSISTENT"),
     ("has extra font '", "INCONSISTENT"),
     ("Duplicate font name", "DUPLICATE"),
-    ("no extension", "BAD FILENAME"),
     ("only loads .ttf", "NOT LOADED"),
     ("font13", "MISSING FONT13"),
     ("missing required", "MISSING TAG"),

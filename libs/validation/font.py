@@ -63,7 +63,7 @@ class ValidationFont:
         return "/".join(parts) if os.path.isfile(current) else None
 
     def check(self, progress_callback=None):
-        """Check the fonts, one issue row per problem with a definition, file, fontset or use."""
+        """Check the fonts, a row per bad font, file, fontset or use, or one for a bad Kodi path."""
         def row(message, file_path="", line=0, severity=SEVERITY_ERROR):
             return {"message": message, "file": file_path, "line": line, "severity": severity}
 
@@ -155,10 +155,7 @@ class ValidationFont:
                         if not exists and base.lower() not in core_safe:
                             issues.append(row(f"Missing font file '{filename}' for '{name or '?'}'", file_src, fn_line))
 
-                        _, ext = os.path.splitext(base)
-                        if not ext:
-                            issues.append(row(f"Warning: font filename has no extension: '{filename}'", file_src, fn_line, SEVERITY_WARNING))
-                        elif ext.lower() != ".ttf":
+                        if not base.lower().endswith(".ttf"):
                             issues.append(row(f"Kodi only loads .ttf fonts, so '{name or '?'}' ({filename}) is never "
                                               f"loaded", file_src, fn_line))
 
@@ -178,7 +175,8 @@ class ValidationFont:
             else:
                 for fs in fontsets:
                     if not any(f["name"] == "font13" for f in fs["fonts"]):
-                        issues.append(row(f"Warning: 'font13' not present in fontset '{fs['id']}'", fs["file"], fs["line"], SEVERITY_WARNING))
+                        issues.append(row(f"Fontset '{fs['id']}' has no font13, which Kodi uses for any font "
+                                          f"name the fontset lacks", fs["file"], fs["line"], SEVERITY_WARNING))
 
             for fs in fontsets:
                 name_to_locs = {}

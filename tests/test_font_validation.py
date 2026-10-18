@@ -1,8 +1,4 @@
-"""
-Unit tests for font validation functionality.
-Tests cover all aspects of check_fonts() behavior before refactoring.
-Python 3.8 compatible.
-"""
+"""Tests for the font check: definitions, files, fontsets and where fonts are used."""
 
 import os
 import sys
@@ -331,7 +327,7 @@ class TestFontValidation(unittest.TestCase):
         self.assertIn("lyrics/theboldfont.ttf", case_issues[0]["message"])
 
     def test_font_from_include_reported_against_include_file(self):
-        """A font spliced in from an include is blamed on the include's file, once, not once per fontset."""
+        """A font spliced in from an include is reported once, against the include's file."""
         self.create_font_file("font.ttf")
 
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -609,7 +605,7 @@ class TestFontValidation(unittest.TestCase):
         self.assertFalse([m for m in messages if "not defined" in m])
 
     def test_non_ttf_font_is_never_loaded(self):
-        """Kodi loads only .ttf (any case), so an .otf font is an error where defined and where used."""
+        """An .otf font is an error where defined and where used; .ttf in any case loads."""
         self.create_font_file("font.otf")
         self.create_font_file("Big.TTF")
         self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name>'
@@ -621,6 +617,24 @@ class TestFontValidation(unittest.TestCase):
         self.assertIn("Kodi only loads .ttf fonts, so 'Fancy' (font.otf) is never loaded", messages)
         self.assertIn("Font 'Fancy' is never loaded: Kodi only loads .ttf fonts", messages)
         self.assertFalse([m for m in messages if "font13" in m or "Big.TTF" in m], messages)
+
+    def test_font_file_with_no_extension_is_never_loaded(self):
+        """A file name with no extension gets the same never-loaded error as any other non-.ttf."""
+        self.create_font_file("Plain")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name>'
+                              '<filename>Plain</filename></font></fontset></fonts>')
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertIn("Kodi only loads .ttf fonts, so 'font13' (Plain) is never loaded", messages)
+
+    def test_fontset_without_font13_says_what_it_costs(self):
+        """A fontset lacking font13 while another has it gets a warning naming the fallback."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name><filename>font.ttf'
+                              '</filename></font></fontset><fontset id="Small"><font><name>font10</name>'
+                              '<filename>font.ttf</filename></font></fontset></fonts>')
+        messages = [i["message"] for i in self.init_provider().check_fonts()]
+        self.assertIn("Fontset 'Small' has no font13, which Kodi uses for any font name the fontset lacks",
+                      messages)
 
     def test_defined_but_unused_font(self):
         """Test detection of font defined but never used."""
