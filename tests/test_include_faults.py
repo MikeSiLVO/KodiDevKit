@@ -88,25 +88,25 @@ class TestIncludeFaults(unittest.TestCase):
         rows = [r for r in self.rows if "<fadetime>" in r[2]]
         self.assertEqual(rows, [("Includes.xml", 6, "invalid tag for <control type=label>: <fadetime>")])
 
-    def test_fault_that_depends_on_the_caller_names_the_calls(self):
-        """A caller-dependent fault gets one row naming the include and its call count."""
+    def test_fault_that_depends_on_the_caller_names_the_windows(self):
+        """A caller-dependent fault is one row naming its include and how many windows reach it."""
         rows = [r for r in self.rows if "<textureup>" in r[2]]
         self.assertEqual(rows, [("Includes.xml", 13, "invalid tag for <control type=radiobutton>: <textureup> "
-                                                     "(include 'SpinTextures', 2 calls)")])
+                                                     "(include 'SpinTextures', in 2 windows)")])
 
     def test_empty_action_from_a_missing_param_is_reported_at_the_definition(self):
         """An action left empty because no call passes its param is one row at the definition."""
         rows = [r for r in self.rows if "<onclick>" in r[2]]
         self.assertEqual(rows, [("Includes.xml", 19, "<onclick> is empty where a call passes no onclick; "
                                                      "give the onclick param a default of noop "
-                                                     "(include 'Press', 2 calls)")])
+                                                     "(include 'Press', in 2 windows)")])
 
     def test_empty_action_names_the_param_in_its_text(self):
-        """An empty action names the $PARAM in its text and counts calls its condition allows."""
+        """An empty action names the $PARAM in its text and counts windows its condition allows."""
         rows = [r for r in self.rows if "<onright>" in r[2]]
         self.assertEqual(rows, [("Includes.xml", 28, "<onright> is empty where a call passes no onright; "
                                                      "give the onright param a default of noop "
-                                                     "(include 'Scroll', 2 calls)")])
+                                                     "(include 'Scroll', in 2 windows)")])
 
     def test_param_fault_stays_at_each_call(self):
         """A fault in a $PARAM value keeps one row per call site."""

@@ -301,9 +301,9 @@ def merge_include_issues(issues):
         if key in direct:
             dropped.add(id(group))
             continue
-        count = len(calls)
+        count = len({path for path, _line in calls})
         group["message"] = (f"{group['message']} (include '{group['include_name']}', "
-                            f"{count} call{'' if count == 1 else 's'})")
+                            f"in {count} window{'' if count == 1 else 's'})")
     return [issue for issue in result if id(issue) not in dropped]
 
 
