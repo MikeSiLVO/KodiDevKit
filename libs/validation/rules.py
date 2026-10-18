@@ -157,3 +157,30 @@ RULES = {
     "kdk.unknown-check-type": "A check name kdk does not know.",
     "kdk.check-failed": "A check that crashed, so its results are missing.",
 }
+
+# the level kodi-addon-checker reports a rule at; a problem fails a Kodi repo PR, a warning does not
+ADDON_CHECKER = {
+    "files.executable": "problem",
+    "repo.asset-file-size": "problem",
+    "repo.asset-size": "problem",
+    "repo.asset-type": "problem",
+    "repo.empty-asset": "warning",
+    "repo.extension-point": "problem",
+    "repo.file-type": "warning",
+    "repo.gui-too-new": "problem",
+    "repo.gui-too-old": "problem",
+    "repo.id-mismatch": "problem",
+    "repo.language-code": "problem",
+    "repo.language-layout": "problem",
+    "repo.missing-asset": "problem",
+    "repo.no-en-gb": "problem",
+    "repo.no-metadata": "problem",
+    "repo.po-bom": "problem",
+    "repo.po-encoding": "problem",
+    "repo.po-header": "problem",
+    "repo.po-parse": "problem",
+    "repo.schema": "problem",
+    "repo.undeclared-asset": "problem",
+    "repo.version": "problem",
+    "xml.parse-error": "problem",
+}

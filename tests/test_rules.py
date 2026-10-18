@@ -13,7 +13,7 @@ if package_dir not in sys.path:
 
 from libs.infoprovider.provider import InfoProvider
 from libs.validation import rules
-from libs.validation.rules import PREFIXES, RULES
+from libs.validation.rules import ADDON_CHECKER, PREFIXES, RULES
 
 CHECKS = {"check_variables": "Variables", "check_maps": "Maps", "check_includes": "Includes",
           "check_labels": "Labels", "check_fonts": "Fonts", "check_ids": "IDs", "check_images": "Images",
@@ -80,6 +80,11 @@ class TestRules(unittest.TestCase):
         self.assertEqual([row for check, row in rows if row.get("rule") not in RULES
                           or PREFIXES[row["rule"].split(".")[0]] != check
                           or not isinstance(row.get("subject"), str)], [])
+
+    def test_addon_checker_levels_name_registered_rules(self):
+        """Each add-on checker level names a registered rule and is a problem or a warning."""
+        self.assertLessEqual(set(ADDON_CHECKER), set(RULES))
+        self.assertLessEqual(set(ADDON_CHECKER.values()), {"problem", "warning"})
 
     def test_every_rule_says_what_it_reports(self):
         """Each description is one line ending in a full stop."""
