@@ -601,6 +601,10 @@ class SkinIndex:
             in_xbt = bundled and xbt_names is not None and val_norm[len("media/"):].lower() in xbt_names
             if bundled and xbt_names is not None and not loose_media:
                 return ("exact", None) if in_xbt else ("missing", None)
+            # a repo build packs media/ into Textures.xbt and leaves no loose file for this path
+            if not bundled and val_norm.startswith("media/") and (
+                    val_norm in exact_relpaths or val_norm.casefold() in cf_rel_to_exact):
+                return "repo_packed", val_norm[len("media/"):]
             if val_norm in exact_relpaths:
                 return "exact", None
 

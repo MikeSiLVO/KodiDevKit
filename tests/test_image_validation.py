@@ -242,6 +242,16 @@ class TestImageValidation(ValidationTestCase):
         found = {(i["rule"], i["severity"]) for i in self._build_checker().check() if "ase mismatch" in i["message"]}
         self.assertEqual(found, {("images.case-mismatch", "warning"), ("images.unbundled-case-mismatch", "error")})
 
+    def test_special_skin_media_path_breaks_once_media_is_packed(self):
+        """A special://skin/media/ path to a file on disk is an error that names the bare path."""
+        with open(os.path.join(self.test_dir, "media", "Button.png"), "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n")
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="image"><texture>special://skin/media/Button.png'
+                    '</texture></control></controls></window>')
+        found = [i for i in self._build_checker().check() if i["rule"] == "images.special-skin-media"]
+        self.assertEqual([(i["severity"], i["message"].endswith("'Button.png'")) for i in found], [("error", True)])
+
 
 if __name__ == "__main__":
     unittest.main()

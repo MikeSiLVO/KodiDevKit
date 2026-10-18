@@ -138,6 +138,18 @@ class ValidationImage:
                             "subject": image_path,
                         })
 
+                    elif status == 'repo_packed':
+                        issues.append({
+                            "message": f"'{image_path}'{attr_suffix} is read from disk, but the Kodi repo packs "
+                                       f"media/ into Textures.xbt, so a repo install finds no file; write it as "
+                                       f"'{detail}'",
+                            "file": file_path,
+                            "line": line_num,
+                            "severity": SEVERITY_ERROR,
+                            "rule": "images.special-skin-media",
+                            "subject": image_path,
+                        })
+
                     elif status == 'case_mismatch_unbundled':
                         issues.append({
                             "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{detail}'); this "

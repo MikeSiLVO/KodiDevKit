@@ -175,6 +175,7 @@ Validates image file references against files on disk.
 - Image file not found, so Kodi shows nothing. Windows an add-on opens are left alone, since Kodi also searches the add-on's own media.
 - A placeholder such as `-` as an image value. Kodi has no empty texture; leave the value empty.
 - A texture bundle Kodi cannot read.
+- A `special://skin/media/` image path. The Kodi repo packs `media/` into `Textures.xbt`, so a repo install has no file there; write the path without `special://skin/media/`.
 - Case mismatch in a `special://skin/` image path. Kodi never reads that path from `Textures.xbt`, so it breaks on case-sensitive filesystems like Linux.
 
 **Warnings:**
