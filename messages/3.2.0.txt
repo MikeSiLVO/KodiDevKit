@@ -1,0 +1,76 @@
+  KodiDevKit 3.2.0
+  =================
+
+  Action required
+  ---------------
+  The HTML validation report is saved in the skin folder as
+  validation_report.html, replaced on each run. Add it to .gitignore, or set
+  'validation_report_directory' to keep reports elsewhere. Build Skin leaves
+  it out of the zip.
+
+  New checks
+  ----------
+  - Kodi Repo: addon.xml, artwork and language files against the Kodi repo's
+    add-on checker rules, as warnings labeled "Kodi repo".
+  - File Integrity: files Kodi repo review rejects, file names that clash on
+    case-insensitive systems, 16-bit PNGs, and a BOM in any text file.
+  - Skin maps: faults in <map> definitions and $MAP[] references.
+  - Conditions Kodi cannot parse, and info names it does not know.
+  - $VAR and $INFO in tags Kodi reads as written.
+  - Constants that are undefined, or used where Kodi does not substitute them.
+  - Includes, variables, expressions and constants Kodi drops as later
+    duplicates, and includes with a <param> but no <definition>.
+  - <include file> references Kodi cannot open, and a Font.xml or
+    Includes.xml named in the wrong case.
+  - Undefined ids in every action and navigation tag, checked against the
+    window that uses them.
+  - Images checked against Textures.xbt and theme bundles.
+  - A control tag that repeats its <default>, and an unknown <viewtype>.
+
+  Improvements
+  ------------
+  kdk-ignore comments mute findings for a whole file or a single line, with a
+  reason after ';'. Muted findings stay in the report, marked with the
+  comment's line and reason.
+
+  Every finding carries a rule id, shown as its tag in the report.
+
+  The 'kodi_release' setting picks the Kodi release to check against, and a
+  skin that release will not load is reported.
+
+  A Kodi source checkout as 'kodi_path' gives the info names its sources
+  define, in place of the bundled list.
+
+  Hovers show string ids in add-on Python, wrapper calls included, the help
+  for a condition, a control type's <default> block, and where each color
+  comes from.
+
+  Builtins complete in every action tag, and a completed condition or builtin
+  has a field on each parameter. A condition's listed values complete too.
+
+  Go to definition (Shift+Enter) opens the file an include reference names,
+  and looks only in the kind of definition referenced.
+
+  Move to language file offers similar existing labels and names their source.
+
+  Files changed outside the editor are picked up.
+
+  Build Skin zips the whole add-on to a path picked in a save dialog, Build
+  Theme writes its bundle into media, and Bump addon version adds blank news
+  and changelog entries to fill.
+
+  Fixes
+  -----
+  - A file that fails to parse is reported instead of skipped.
+  - An include or expression fault is reported once, at its definition.
+  - Issues come out in the same order on every run.
+  - Many tags, attributes and references Kodi accepts are no longer flagged.
+  - Remote Actions work on Linux and macOS, run adb from 'adb_path', pull
+    kodi.log, and push every xml folder the skin declares.
+  - Kodi's home folder is found on macOS, and 'userdata_folder' accepts the
+    userdata folder itself.
+  - Running a builtin says when Kodi refuses it and that it needs
+    script.toolbox.
+  - TexturePacker and adb no longer flash a console window on Windows.
+  - Switch to Add-on opens the add-on without 'subl' on the PATH.
+  - Other web pages can no longer read the report's text export.
