@@ -144,11 +144,13 @@ class TestRepo(unittest.TestCase):
         ])
 
     def test_file_types(self):
+        """A file ending outside the whitelist is reported; dotfiles and .xbt files are not."""
         self._addon()
         self._write("media/logo.psd", b"8BPS")
         self._write(".gitignore", "*.pyc")
         self._write("media/Textures.xbt", b"XBTF")
-        self.assertEqual(self._messages(), ["Kodi repo: media/logo.psd has a file type the repo does not accept"])
+        self.assertEqual(self._messages(), ["Kodi repo: media/logo.psd has a file ending the add-on checker does not whitelist, "
+                                            "so a repo PR gets a warning for it"])
 
 
 if __name__ == "__main__":

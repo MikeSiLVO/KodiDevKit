@@ -86,7 +86,8 @@ class ValidationRepo:
             if name.startswith(".") or name.lower().endswith(".xbt"):
                 continue
             if "." in name and not WHITELIST.match("." + name.rsplit(".", 1)[1]):
-                self._add(rel, 0, "repo.file-type", f"{rel} has a file type the repo does not accept")
+                self._add(rel, 0, "repo.file-type", f"{rel} has a file ending the add-on checker does not whitelist, "
+                                                   f"so a repo PR gets a warning for it")
         if progress_callback:
             progress_callback(f"Complete: {len(self.issues)} repo issues found")
         return self.issues

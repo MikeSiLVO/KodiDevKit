@@ -102,7 +102,7 @@ RULES = {
     "files.case-clash": "Two files whose names differ only by case; one overwrites the other on Windows and macOS.",
     "files.context-item": "A skin adding context menu items.",
     "repo.nested-addon": "A separate add-on inside this one; the Kodi repo takes one per submission.",
-    "repo.file-type": "A file type the Kodi repo does not accept.",
+    "repo.file-type": "A file ending the Kodi add-on checker does not whitelist.",
     "repo.version": "An addon.xml version that is not major.minor.revision.",
     "repo.id-mismatch": "An add-on id that differs from its folder name.",
     "repo.extension-point": "An extension point Kodi does not know.",
