@@ -20,6 +20,8 @@ def _install_stubs():
                  "CLASS_WORD_END", "HIDE_ON_MOUSE_MOVE_AWAY"):
         setattr(mock_sublime, attr, 1)
     setattr(mock_sublime, "Region", type("Region", (object,), {}))
+    setattr(mock_sublime, "Window", type("Window", (object,), {}))
+    setattr(mock_sublime, "Settings", type("Settings", (object,), {}))
     setattr(mock_sublime, "set_timeout", lambda *args, **kwargs: None)
     setattr(mock_sublime, "platform", lambda: "linux")
     sys.modules["sublime"] = mock_sublime
