@@ -19,7 +19,7 @@ from ..utils.validation import (create_issue, deduplicate_issues, is_runtime_gen
                                 merge_include_issues, should_report_progress)
 from ..addon.translations import get_po_file
 from ..infonames import from_tree
-from ..utils.infobool import info_name_sets
+from ..utils.infobool import info_name_sets, is_known_info
 from ..utils.colors import is_kodi_hex
 from ..validation.font import ValidationFont
 from ..validation.image import ValidationImage
@@ -735,7 +735,8 @@ class CheckerMixin:
                         self._add_issue(listitems, subnode, f"invalid integer value for {k}: {v}", v, severity=SEVERITY_ERROR,
                                         rule="xml.invalid-value", subject=k)
                 elif value_type == "color":
-                    if getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels() and not is_kodi_hex(v):
+                    if (getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels()
+                            and not is_kodi_hex(v) and not is_known_info(v, self.known_info_names())):
                         self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR,
                                         rule="xml.invalid-color", subject=k)
                 elif not skip_value_checks and value_type == "bool" and attribute_bool_problem(k, v):

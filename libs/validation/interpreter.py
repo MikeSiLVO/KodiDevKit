@@ -52,7 +52,7 @@ from ..utils.expressions import (
 )
 from ..skin.include import SkinInclude
 from ..utils.xml import check_brackets as _check_brackets
-from ..utils.infobool import STATE_INVALID, check_condition, unknown_infos
+from ..utils.infobool import STATE_INVALID, check_condition, is_known_info, unknown_infos
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 
 logger = logging.getLogger(__name__)
@@ -546,7 +546,8 @@ class XmlInterpreter:
         if value_type in ("int", "position"):
             self._validate_number(node, attr_name, True, value, value_type)
         elif value_type == "color":
-            if not _is_kodi_hex(value) and value not in self.color_labels:
+            if (not _is_kodi_hex(value) and value not in self.color_labels
+                    and not (self.info_names and is_known_info(value, self.info_names))):
                 self._add_issue(
                     node, SEVERITY_ERROR,
                     f"Invalid color for {attr_name}: {value}", rule="xml.invalid-color", subject=attr_name,
