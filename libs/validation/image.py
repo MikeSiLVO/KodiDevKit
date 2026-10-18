@@ -9,6 +9,11 @@ from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 logger = logging.getLogger(__name__)
 
 
+def _as_written(rel):
+    """A skin-relative path as a skin writes it: bare under media/, else via special://skin/."""
+    return rel[len("media/"):] if rel.startswith("media/") else "special://skin/" + rel
+
+
 class ValidationImage:
     """Checker for missing, miscased and misplaced images, and for texture bundles."""
 
@@ -130,7 +135,7 @@ class ValidationImage:
 
                     elif status == 'case_mismatch':
                         issues.append({
-                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{detail}'). A repo "
+                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{_as_written(detail)}'). A repo "
                                        f"install reads it from Textures.xbt, which ignores case, so only loose "
                                        f"images fail, where file names are case-sensitive, such as Linux",
                             "file": file_path,
@@ -154,7 +159,7 @@ class ValidationImage:
 
                     elif status == 'case_mismatch_unbundled':
                         issues.append({
-                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{detail}'); this "
+                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{_as_written(detail)}'); this "
                                        f"path skips Textures.xbt, so it fails where file names are case-sensitive, "
                                        f"such as Linux",
                             "file": file_path,
@@ -166,10 +171,11 @@ class ValidationImage:
 
                     elif status == 'wrong_path':
                         if detail:
-                            hint = ", ".join(detail[:5]) if isinstance(detail, list) else detail
+                            found = detail[:5] if isinstance(detail, list) else [detail]
+                            hint = ", ".join(f"'{_as_written(rel)}'" for rel in found)
                             issues.append({
-                                "message": f"Wrong path '{image_path}'{attr_suffix}: Kodi looks for "
-                                           f"{check_result.get('normalized')}, the file is at {hint}",
+                                "message": f"Wrong path '{image_path}'{attr_suffix}: no image there; one with "
+                                           f"that name is at {hint}",
                                 "file": file_path,
                                 "line": line_num,
                                 "severity": SEVERITY_WARNING,

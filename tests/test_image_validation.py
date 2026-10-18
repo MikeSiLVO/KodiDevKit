@@ -89,8 +89,8 @@ class TestImageValidation(ValidationTestCase):
                     '<control type="image"><texture>backgrounds/Default.jpg</texture></control>'
                     '</controls></window>')
         messages = [i["message"] for i in self._build_checker().check() if i.get("file")]
-        self.assertEqual(messages, ["Wrong path 'backgrounds/Default.jpg': Kodi looks for "
-                                    "media/backgrounds/Default.jpg, the file is at backgrounds/Default.jpg"])
+        self.assertEqual(messages, ["Wrong path 'backgrounds/Default.jpg': no image there; one with that "
+                                    "name is at 'special://skin/backgrounds/Default.jpg'"])
 
     def test_existing_image_no_issue(self):
         """Test that existing images don't trigger issues."""
