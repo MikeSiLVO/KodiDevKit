@@ -6,6 +6,7 @@ import os
 import re
 import logging
 import subprocess
+import sys
 
 from ..utils.files import check_bom, eol_info_from_path_patterns
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
@@ -174,7 +175,7 @@ def _tracked_files(root):
             cmd = ["git", "-c", "core.fsmonitor=false", "-C", root, "ls-files", "-s", "-z"]
             # on Windows a console program opens a window that takes focus from the editor
             out = subprocess.run(cmd, capture_output=True, check=True,
-                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
                                  ).stdout.decode("utf-8", "replace")
             # a PR ships what git tracks, with the mode git records
             return [(entry.split("\t", 1)[1], entry.startswith("100755")) for entry in out.split("\0") if "\t" in entry]

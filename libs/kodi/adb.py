@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from ..utils.decorators import check_busy, run_async
 import os
 import logging
@@ -53,13 +54,14 @@ class KodiAdb:
 
     @staticmethod
     def cmd(program, args):
-        """Run the program with its args, logging its output; a failure is logged, never raised."""
+        """Run a command and log its output; a failure is logged, never raised."""
         command = [program]
         for arg in args:
             command.append(arg)
         logging.warning(" ".join(command))
         try:
-            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+            output = subprocess.check_output(command, stderr=subprocess.STDOUT,
+                                             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
             logging.warning(output.decode("utf-8").replace('\r', '').replace('\n', ''))
         except subprocess.CalledProcessError as e:
             logging.warning("%s\nErrorCode: %s" % (e, str(e.returncode)))

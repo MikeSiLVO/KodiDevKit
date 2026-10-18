@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def texturepacker(media_path, settings, output_path=None):
             stdout=subprocess.PIPE,
             bufsize=1,
             universal_newlines=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         ) as p:
             if p.stdout:
                 for line in p.stdout:
