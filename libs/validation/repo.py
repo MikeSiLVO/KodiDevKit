@@ -230,12 +230,29 @@ class ValidationRepo:
         try:
             pofile(cleaned, encoding="utf-8")
         except Exception as error:
-            found = (re.search(r"\(line (?P<line>\d+)\)\s*:\s*(?P<detail>[\s\S]+?)\s*$", str(error))
-                     or re.search(r"(?P<detail>Syntax error)[\s\S]+\(line (?P<line>\d+)\)\s*$", str(error)))
+            found = re.search(r"\(line (?P<line>\d+)\)\s*:\s*(?P<detail>[\s\S]+?)\s*$", str(error))
+            bare = re.search(r"Syntax error[\s\S]+\(line (?P<line>\d+)\)\s*$", str(error))
             if found:
                 self._add(rel, int(found.group("line")), "repo.po-parse", f"{rel}: {found.group('detail')}")
+            elif bare:
+                line = int(bare.group("line"))
+                self._add(rel, line, "repo.po-parse", f"{rel}: {_po_syntax_reason(cleaned, line)}")
             else:
                 self._add(rel, 0, "repo.po-parse", f"{rel}: {error}")
+
+
+def _po_syntax_reason(text, number):
+    """What breaks the strings.po line a bare syntax error names, from it and the line before."""
+    lines = text.splitlines()
+    line = lines[number - 1].strip() if 0 < number <= len(lines) else ""
+    before = next((prev.strip() for prev in reversed(lines[:number - 1]) if prev.strip()), "")
+    word, _, value = line.partition(" ")
+    if word.startswith(("msgctxt", "msgid", "msgstr")) and not value.strip().startswith('"'):
+        return f"{word} has no quoted value"
+    if word.startswith(("msgctxt", "msgid", "msgstr")) or line.startswith('"'):
+        what = "quoted text" if line.startswith('"') else word
+        return f"{what} cannot follow {before}" if before else f"{what} cannot start the file"
+    return f"a line that is not a msgctxt, msgid, msgstr, comment or quoted text: {line}"
 
 
 def _plain_schema_error(message):

@@ -109,13 +109,26 @@ class TestRepo(unittest.TestCase):
             "Kodi repo: string id 31000 is defined twice (first on line 1)",
         ])
 
-    def test_po_bom_and_syntax_error_read_as_the_checker_reports_them(self):
+    def test_po_bom_and_a_msgid_without_value_are_reported(self):
+        """A BOM reads as the checker reports it, and a msgid with no value is named."""
         self._addon()
         self._write("language/resource.language.de_de/strings.po", b"\xef\xbb\xbf" + GOOD_PO.encode())
         self._write("language/resource.language.fr_fr/strings.po", GOOD_PO + 'msgctxt "#31001"\nmsgid\n')
         self.assertEqual(self._messages(), [
             "Kodi repo: language/resource.language.de_de/strings.po starts with a BOM (byte order mark)",
-            "Kodi repo: language/resource.language.fr_fr/strings.po: Syntax error",
+            "Kodi repo: language/resource.language.fr_fr/strings.po: msgid has no quoted value",
+        ])
+
+    def test_po_syntax_error_names_the_line_and_what_it_follows(self):
+        """A bare syntax error names what is wrong: an entry out of order, or an unreadable line."""
+        self._addon()
+        self._write("language/resource.language.cs_cz/strings.po",
+                    GOOD_PO + 'msgctxt "#31087"\nmsgstr "Prapor"\nmsgstr "Banner"\n')
+        self._write("language/resource.language.de_de/strings.po", GOOD_PO + "Banner Wall\n")
+        self.assertEqual(self._messages(), [
+            'Kodi repo: language/resource.language.cs_cz/strings.po: msgstr cannot follow msgctxt "#31087"',
+            "Kodi repo: language/resource.language.de_de/strings.po: a line that is not a msgctxt, msgid, msgstr, "
+            "comment or quoted text: Banner Wall",
         ])
 
     def test_nested_addon_reported_once_and_its_files_skipped(self):
