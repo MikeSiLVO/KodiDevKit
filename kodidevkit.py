@@ -1076,14 +1076,8 @@ class KodiDevKit(sublime_plugin.EventListener):
 
         if value_type == "include":
             inc_map = getattr(addon, "include_map", {}).get(folder, {})
-            if inc_map:
-                for nm in sorted(inc_map.keys()):
-                    items.append([f"{nm}\tinclude", nm])
-            else:
-                for node in addon.includes.get(folder, []):
-                    nm = node.get("name")
-                    if nm:
-                        items.append([f"{nm}\tinclude", nm])
+            for nm in sorted(inc_map.keys()):
+                items.append([f"{nm}\tinclude", nm])
             return items
 
         if value_type in ("path", "texture"):

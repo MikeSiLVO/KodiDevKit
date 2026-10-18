@@ -42,7 +42,6 @@ class Addon:
         self.window_files = {}
         self.include_files = {}
         self.font_file = None
-        self.includes = {}
         self.api_version = None
         self.validation_index = None
         self.notices: list[str] = []
@@ -242,21 +241,8 @@ class Addon:
         else:
             return os.path.join(self.media_path, path)
 
-    def return_node(self, keyword=None, folder=None, kinds=None):
-        """Look up a font or include by name, ignoring any param tail; or just one of the two."""
-        if not keyword or not folder:
-            return None
-
-        lookup_name = keyword.split(',')[0]
-
-        if folder in self.fonts and (kinds is None or "font" in kinds):
-            for node in self.fonts[folder]:
-                if node["name"] == lookup_name:
-                    return node
-        if folder in self.includes and (kinds is None or "include" in kinds):
-            for node in self.includes[folder]:
-                if node["name"] == lookup_name:
-                    return node
+    def return_node(self, keyword=None, folder=None, kinds=None) -> Any:
+        """Return the named definition; always None, as only a skin defines fonts and includes."""
         return None
 
     def reload(self, *paths):

@@ -127,7 +127,7 @@ class CheckerMixin:
             return []
 
         if not hasattr(self.addon, "include_map"):
-            return self.addon.includes.get(folder, [])
+            return []
 
         from ..skin.include import SkinInclude
 
