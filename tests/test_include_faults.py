@@ -37,6 +37,15 @@ INCLUDES = """<includes>
 </control>
 </definition>
 </include>
+<include name="Scroll">
+<param name="jumpbar" default="true"/>
+<param name="onright"/>
+<definition>
+<control type="scrollbar">
+<onright condition="!$PARAM[jumpbar]">$PARAM[onright]</onright>
+</control>
+</definition>
+</include>
 </includes>"""
 
 WINDOW = """<window>
@@ -45,6 +54,8 @@ WINDOW = """<window>
 <control type="image"><visible>$EXP[Broken]</visible></control>
 <control type="radiobutton"><include>SpinTextures</include></control>
 <include content="Press"/>
+<include content="Scroll"/>
+<include content="Scroll"><param name="jumpbar" value="false"/></include>
 </controls>
 </window>"""
 
@@ -85,10 +96,17 @@ class TestIncludeFaults(unittest.TestCase):
 
     def test_empty_action_from_a_missing_param_is_reported_at_the_definition(self):
         """An action left empty because no call passes its param is one row at the definition."""
-        rows = [r for r in self.rows if "noop" in r[2]]
+        rows = [r for r in self.rows if "<onclick>" in r[2]]
         self.assertEqual(rows, [("Includes.xml", 19, "<onclick> is empty where a call passes no onclick; "
                                                      "give the onclick param a default of noop "
                                                      "(include 'Press', 2 calls)")])
+
+    def test_empty_action_names_the_param_in_its_text(self):
+        """An empty action names the $PARAM in its text and counts calls its condition allows."""
+        rows = [r for r in self.rows if "<onright>" in r[2]]
+        self.assertEqual(rows, [("Includes.xml", 28, "<onright> is empty where a call passes no onright; "
+                                                     "give the onright param a default of noop "
+                                                     "(include 'Scroll', 2 calls)")])
 
     def test_param_fault_stays_at_each_call(self):
         """A fault in a $PARAM value keeps one row per call site."""

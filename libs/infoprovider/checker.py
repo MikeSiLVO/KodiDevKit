@@ -19,7 +19,7 @@ from ..utils.validation import (create_issue, deduplicate_issues, is_runtime_gen
                                 merge_include_issues, should_report_progress)
 from ..addon.translations import get_po_file
 from ..infonames import from_tree
-from ..utils.infobool import info_name_sets, is_known_info
+from ..utils.infobool import info_name_sets, is_known_info, static_value
 from ..utils.colors import is_kodi_hex
 from ..validation.font import ValidationFont
 from ..validation.image import ValidationImage
@@ -680,7 +680,7 @@ class CheckerMixin:
             if not skip_value_checks:
                 if subnode.tag in NOOP_TAGS:
                     text = (subnode.text or "").strip()
-                    if not text and len(subnode) == 0:
+                    if not text and len(subnode) == 0 and static_value(subnode.get("condition") or "") is not False:
                         self._add_issue(listitems, subnode, f"Use 'noop' for an empty <{subnode.tag}>", severity=SEVERITY_ERROR,
                                         rule="xml.empty-action")
 

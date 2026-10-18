@@ -270,8 +270,10 @@ def merge_include_issues(issues):
     for issue in issues:
         inc_file, inc_line = issue.get("include_file"), issue.get("include_line")
         message = _FROM_INCLUDE.sub("", issue["message"])
-        param = _PARAM_PATTERN.search(source_line(inc_file, inc_line)) if inc_file and inc_line else None
         empty_action = _EMPTY_ACTION.match(message)
+        line_text = source_line(inc_file, inc_line) if inc_file and inc_line else ""
+        # an empty action's $PARAM is the one in its text, not one in its condition
+        param = _PARAM_PATTERN.search(line_text.split(">", 1)[-1] if empty_action else line_text)
         # a $PARAM value is written at the call site, the line to fix, unless no call passes one
         if not (inc_file and inc_line) or (param and not empty_action):
             result.append(issue)

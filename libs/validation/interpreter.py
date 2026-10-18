@@ -52,7 +52,7 @@ from ..utils.expressions import (
 )
 from ..skin.include import SkinInclude
 from ..utils.xml import check_brackets as _check_brackets
-from ..utils.infobool import STATE_INVALID, check_condition, is_known_info, unknown_infos
+from ..utils.infobool import STATE_INVALID, check_condition, is_known_info, static_value, unknown_infos
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 
 logger = logging.getLogger(__name__)
@@ -309,7 +309,7 @@ class XmlInterpreter:
 
             if tag in NOOP_TAGS:
                 text = (child.text or "").strip()
-                if not text and len(child) == 0:
+                if not text and len(child) == 0 and static_value(child.get("condition") or "") is not False:
                     self._add_issue(
                         child, SEVERITY_ERROR,
                         f"Use 'noop' for an empty <{tag}>", rule="xml.empty-action",
