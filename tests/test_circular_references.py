@@ -1,14 +1,4 @@
-"""
-Tests for circular reference detection and handling.
-
-Ensures the validator doesn't get stuck in infinite loops when encountering:
-- Circular includes (A→B→A)
-- Circular variables
-- Self-referencing includes
-
-Kodi handles these by tracking processed nodes/depth limits.
-Our validator must do the same to avoid hangs.
-"""
+"""Tests that circular and self-referencing includes never hang the resolver."""
 
 import os
 import sys
@@ -16,7 +6,6 @@ import tempfile
 import unittest
 from lxml import etree as ET
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -34,7 +23,6 @@ class TestCircularReferences(unittest.TestCase):
         self.skin_path = self.temp_dir.name
         os.makedirs(os.path.join(self.skin_path, "16x9"))
 
-        # Create minimal addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test" provider-name="Test">
     <requires><import addon="xbmc.gui" version="5.15.0"/></requires>
@@ -52,8 +40,7 @@ class TestCircularReferences(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_simple_circular_include(self):
-        """Test detection of simple circular include (A→A)."""
-        # Include that references itself
+        """Test that a self-referencing include does not recurse forever."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="SelfReference">
@@ -71,16 +58,14 @@ class TestCircularReferences(unittest.TestCase):
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Should not hang - validator tracks processed nodes
         try:
             kodi_resolve(self.skin,root, "16x9")
-            # If we get here without hanging, the circular reference was handled
             self.assertTrue(True, "Circular include handled without infinite loop")
         except RecursionError:
             self.fail("Circular include caused infinite recursion")
 
     def test_mutual_circular_includes(self):
-        """Test detection of mutual circular includes (A→B→A)."""
+        """Test that two includes calling each other do not recurse forever."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="IncludeA">
@@ -107,7 +92,6 @@ class TestCircularReferences(unittest.TestCase):
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Should not hang
         try:
             kodi_resolve(self.skin,root, "16x9")
             self.assertTrue(True, "Mutual circular includes handled")
@@ -115,7 +99,7 @@ class TestCircularReferences(unittest.TestCase):
             self.fail("Mutual circular includes caused infinite recursion")
 
     def test_deep_circular_chain(self):
-        """Test detection of deep circular chain (A→B→C→A)."""
+        """Test that a loop through three includes does not recurse forever."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="ChainA">
@@ -142,7 +126,6 @@ class TestCircularReferences(unittest.TestCase):
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Should not hang
         try:
             kodi_resolve(self.skin,root, "16x9")
             self.assertTrue(True, "Deep circular chain handled")
@@ -151,7 +134,6 @@ class TestCircularReferences(unittest.TestCase):
 
     def test_non_circular_deep_nesting(self):
         """Test that legitimate deep nesting works without false positives."""
-        # Create deeply nested includes WITHOUT circularity
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="Level1">
@@ -183,7 +165,6 @@ class TestCircularReferences(unittest.TestCase):
 
         kodi_resolve(self.skin,root, "16x9")
 
-        # All 4 labels should be inserted
         labels = root.findall(".//label")
         self.assertEqual(len(labels), 4, "All 4 levels should be expanded")
         label_texts = [label.text for label in labels]
@@ -193,7 +174,7 @@ class TestCircularReferences(unittest.TestCase):
         self.assertIn("L4", label_texts)
 
     def test_circular_with_params(self):
-        """Test circular includes with parameters."""
+        """Test that an include calling itself with a param does not recurse forever."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="ParamCircular">
@@ -219,7 +200,6 @@ class TestCircularReferences(unittest.TestCase):
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Should not hang even with parameterized circular reference
         try:
             kodi_resolve(self.skin,root, "16x9")
             self.assertTrue(True, "Parameterized circular include handled")
@@ -228,7 +208,6 @@ class TestCircularReferences(unittest.TestCase):
 
     def test_multiple_same_include_not_circular(self):
         """Test that using same include multiple times is NOT circular."""
-        # This is valid - same include used multiple times in sequence
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="Button">
@@ -255,12 +234,11 @@ class TestCircularReferences(unittest.TestCase):
 
         kodi_resolve(self.skin,root, "16x9")
 
-        # Should have 3 button controls
         buttons = root.findall(".//control[@type='button']")
         self.assertEqual(len(buttons), 3, "Should expand same include 3 times")
 
     def test_circular_include_in_definition_tag(self):
-        """Test circular reference inside <definition> tag."""
+        """Test that an include calling itself inside <definition> does not recurse forever."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="DefCircular">
@@ -283,7 +261,6 @@ class TestCircularReferences(unittest.TestCase):
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Should not hang
         try:
             kodi_resolve(self.skin,root, "16x9")
             self.assertTrue(True, "Circular include in definition handled")
@@ -291,9 +268,7 @@ class TestCircularReferences(unittest.TestCase):
             self.fail("Circular include in definition caused infinite recursion")
 
     def test_indirect_circular_through_multiple_files(self):
-        """Test indirect circular reference across window and include file."""
-        # This tests the case where a window includes something that tries to include
-        # content already being processed
+        """Test that a loop reached from a window's include call does not recurse forever."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="ContentA">
@@ -311,7 +286,6 @@ class TestCircularReferences(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Window file that includes ContentA
         test_xml = """<window>
     <controls>
         <include>ContentA</include>
@@ -319,7 +293,6 @@ class TestCircularReferences(unittest.TestCase):
 </window>"""
         root = ET.fromstring(test_xml)
 
-        # Should handle gracefully
         try:
             kodi_resolve(self.skin,root, "16x9")
             self.assertTrue(True, "Cross-file circular reference handled")

@@ -1,15 +1,9 @@
-"""
-Test base classes and centralized imports.
-
-This module provides a single point of maintenance for all test imports.
-When refactoring code, only update imports here - all tests inherit from base classes.
-"""
+"""Base test classes, with the imports every test shares kept in one place."""
 
 import unittest
 import os
 import sys
 
-# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
@@ -31,14 +25,8 @@ from libs.addon.addon import Addon
 
 
 class KodiDevKitTestCase(unittest.TestCase):
-    """
-    Base test class for all KodiDevKit tests.
+    """Base for every test, with the classes under test as attributes."""
 
-    Provides common setup and utilities for testing.
-    All imports available as class attributes.
-    """
-
-    # Validation classes
     VariableCheck = VariableCheck
     LabelCheck = LabelCheck
     IdCheck = IdCheck
@@ -48,11 +36,9 @@ class KodiDevKitTestCase(unittest.TestCase):
     MapCheck = MapCheck
     XmlInterpreter = XmlInterpreter
 
-    # Skin classes
     Skin = Skin
     Include = SkinInclude
 
-    # Addon classes
     Addon = Addon
 
 

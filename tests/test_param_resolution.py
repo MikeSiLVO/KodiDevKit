@@ -6,7 +6,6 @@ import tempfile
 import shutil
 import unittest
 
-# Ensure parent directory is in path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.base import ValidationTestCase, IncludeCheck
@@ -22,7 +21,6 @@ class TestParamResolution(ValidationTestCase):
         self.skin_dir = os.path.join(self.test_dir, "skin.test")
         os.makedirs(self.skin_dir)
 
-        # Create addon.xml
         addon_xml = os.path.join(self.skin_dir, "addon.xml")
         with open(addon_xml, "w", encoding="utf-8") as f:
             f.write("""<?xml version="1.0"?>
@@ -33,7 +31,6 @@ class TestParamResolution(ValidationTestCase):
     </extension>
 </addon>""")
 
-        # Create 1080i directory
         self.xml_dir = os.path.join(self.skin_dir, "1080i")
         os.makedirs(self.xml_dir)
 
@@ -106,9 +103,7 @@ class TestParamResolution(ValidationTestCase):
                          "Include with undefined $PARAM should resolve to base name")
 
     def test_param_suffix_variants_resolve_correctly(self):
-        """
-        Test that different param positions in include names resolve correctly.
-        """
+        """An include name ending in an unset $PARAM is not reported as undefined."""
         includes_xml = os.path.join(self.xml_dir, "Includes.xml")
         with open(includes_xml, "w", encoding="utf-8") as f:
             f.write("""<?xml version="1.0"?>
@@ -129,8 +124,6 @@ class TestParamResolution(ValidationTestCase):
                 <!-- Suffix param: Button$PARAM[type] → Button (if undefined) -->
                 <include>Button$PARAM[type]</include>
 
-                <!-- Middle param: Button_$PARAM[style]_Special → Button__Special (if undefined) -->
-                <!-- Wait, this won't work - two underscores. Let me use suffix only. -->
                 <include content="Button$PARAM[modifier]"/>
             </control>
         </definition>
@@ -153,7 +146,6 @@ class TestParamResolution(ValidationTestCase):
         undefined = [i for i in issues if "not defined" in i.get("message", "")]
         undefined_names = [i["message"].replace("Include not defined: ", "").strip() for i in undefined]
 
-        # Both should resolve to "Button"
         self.assertNotIn("Button$PARAM[type]", undefined_names)
         self.assertNotIn("Button$PARAM[modifier]", undefined_names)
 

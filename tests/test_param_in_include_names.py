@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from lxml import etree as ET
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -24,7 +23,6 @@ class TestParamInIncludeNames(unittest.TestCase):
         self.skin_path = self.temp_dir.name
         os.makedirs(os.path.join(self.skin_path, "16x9"))
 
-        # Create minimal addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test" provider-name="Test">
     <requires><import addon="xbmc.gui" version="5.15.0"/></requires>
@@ -43,7 +41,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
     def test_simple_param_in_include_name_defined(self):
         """Test simple $PARAM in include name with defined parameter."""
-        # Create includes: Button_Primary and Button_Secondary
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="Button_Primary">
@@ -71,7 +68,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Call ButtonGroup with type=Secondary
         test_xml = """<window>
     <include content="ButtonGroup">
         <param name="type" value="Secondary"/>
@@ -80,7 +76,6 @@ class TestParamInIncludeNames(unittest.TestCase):
         root = ET.fromstring(test_xml)
         kodi_resolve(self.skin,root, "16x9")
 
-        # Should resolve Button_$PARAM[type] → Button_Secondary → insert button with width 150
         control = root.find(".//control[@type='button']")
         self.assertIsNotNone(control, "Button control should exist after resolution")
 
@@ -123,7 +118,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Call with size=Large, blur=NoBlur
         test_xml = """<window>
     <include content="DialogBackground">
         <param name="size" value="Large"/>
@@ -133,7 +127,6 @@ class TestParamInIncludeNames(unittest.TestCase):
         root = ET.fromstring(test_xml)
         kodi_resolve(self.skin,root, "16x9")
 
-        # Should resolve to Dialog_Large_NoBlur
         control = root.find(".//control[@type='image']")
         self.assertIsNotNone(control, "Image control should exist")
 
@@ -143,7 +136,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
     def test_undefined_param_in_include_name_becomes_empty(self):
         """Test that undefined $PARAM in include name becomes empty string (Kodi spec)."""
-        # Create include: Button_ (no suffix) and Button_Large
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="Button_">
@@ -170,8 +162,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Call ButtonWrapper WITHOUT providing size param
-        # Should resolve Button_$PARAM[size] → Button_ (param replaced with "")
         test_xml = """<window>
     <include>ButtonWrapper</include>
 </window>"""
@@ -223,8 +213,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Call MenuItemOuter with icon=Settings
-        # Should forward param through: MenuItemOuter → MenuItemInner → Icon_Settings
         test_xml = """<window>
     <include content="MenuItemOuter">
         <param name="icon" value="Settings"/>
@@ -267,21 +255,18 @@ class TestParamInIncludeNames(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Call ContentView WITHOUT providing layout param (should use default "Grid")
         test_xml = """<window>
     <include>ContentView</include>
 </window>"""
         root = ET.fromstring(test_xml)
         kodi_resolve(self.skin,root, "16x9")
 
-        # Should use default param value: Layout_$PARAM[layout] → Layout_Grid
         control = root.find(".//control[@type='panel']")
         self.assertIsNotNone(control, "Panel control should exist")
         self.assertEqual(control.attrib.get("id"), "50", "Should resolve to Layout_Grid (id=50)")
 
     def test_complex_param_pattern_real_world(self):
-        """Test complex real-world pattern from Arctic Fuse 2 skin."""
-        # This tests the actual pattern that was broken before the fix
+        """Test a prefix and suffix $PARAM where only the suffix is passed."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="View_Poster_Wrap">
@@ -308,7 +293,6 @@ class TestParamInIncludeNames(unittest.TestCase):
 
         self.skin.update_include_list()
 
-        # Test with Panel suffix
         test_xml = """<window>
     <include content="ViewTypeWrapper">
         <param name="view_suffix" value="Panel"/>

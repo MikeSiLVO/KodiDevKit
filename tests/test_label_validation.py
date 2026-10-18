@@ -6,10 +6,8 @@ import tempfile
 import shutil
 import unittest
 
-# Ensure parent directory is in path (base.py does this too, but be explicit)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Now we can import from base and libs
 from tests.base import ValidationTestCase, LabelCheck
 from libs.infoprovider.provider import InfoProvider
 
@@ -18,21 +16,18 @@ class TestLabelValidation(ValidationTestCase):
     """Test label translation validation."""
 
     def setUp(self):
-        """Create temporary skin directory for each test."""
+        """Create a temporary skin for each test, with kodi_path set when a portable Kodi exists."""
         self.test_dir = tempfile.mkdtemp()
         self.provider = InfoProvider()
 
-        # Configure settings with portable Kodi path if it exists
         portable_kodi = r"C:\Kodi - Piers"
         if os.path.exists(portable_kodi):
             self.provider.settings = {"kodi_path": portable_kodi}
         else:
             self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -45,7 +40,6 @@ class TestLabelValidation(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):
@@ -71,7 +65,6 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should detect untranslated label
         untranslated_issues = [i for i in issues if "not translated" in i.get("message", "").lower()]
         self.assertTrue(len(untranslated_issues) > 0, "Should detect untranslated label text")
         self.assertIn("Untranslated Button Text", untranslated_issues[0]["message"])
@@ -131,7 +124,6 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report numeric label as untranslated
         untranslated_issues = [i for i in issues if "not translated" in i.get("message", "").lower()]
         self.assertEqual(len(untranslated_issues), 0, "Should not report numeric labels as untranslated")
 
@@ -153,7 +145,6 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report $LOCALIZE as untranslated
         untranslated_issues = [i for i in issues if "not translated" in i.get("message", "").lower()]
         self.assertEqual(len(untranslated_issues), 0, "Should not report $LOCALIZE expressions as untranslated")
 
@@ -175,7 +166,6 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not crash or report empty labels
         self.assertIsInstance(issues, list)
 
     def test_xml_filename_in_label_ignored(self):
@@ -196,7 +186,6 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report .xml files as untranslated
         untranslated_issues = [i for i in issues if "not translated" in i.get("message", "").lower()]
         self.assertEqual(len(untranslated_issues), 0, "Should not report .xml filenames as untranslated")
 
@@ -218,13 +207,11 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report single-character labels (per the > 1 length check in code)
         untranslated_issues = [i for i in issues if "not translated" in i.get("message", "").lower() and "'X'" in i.get("message", "")]
         self.assertEqual(len(untranslated_issues), 0, "Should not report single-character labels as untranslated")
 
     def test_skinshortcuts_includes_ignored(self):
         """Test that script-skinshortcuts-includes.xml is ignored (user-entered labels)."""
-        # Create a normal window file with untranslated label (should be flagged)
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -237,7 +224,6 @@ class TestLabelValidation(ValidationTestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Create script-skinshortcuts-includes.xml with untranslated labels (should be ignored)
         shortcuts_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="skinshortcuts-template-music">
@@ -254,17 +240,14 @@ class TestLabelValidation(ValidationTestCase):
         checker = LabelCheck(self.provider.addon, self.provider.get_po_files, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should flag the normal window's untranslated label
         normal_issues = [i for i in issues if "Normal Untranslated" in i.get("message", "")]
         self.assertTrue(len(normal_issues) > 0, "Should flag untranslated labels in normal windows")
 
-        # Should NOT flag the script-skinshortcuts-includes.xml labels
         skinshortcuts_issues = [i for i in issues if "User Entered Music Label" in i.get("message", "")]
         self.assertEqual(len(skinshortcuts_issues), 0, "Should ignore labels in script-skinshortcuts-includes.xml")
 
     def test_kodi_core_labels_recognized(self):
         """Test that Kodi core labels are recognized."""
-        # Skip if kodi_path is not configured (no core labels available)
         if not self.provider.settings.get("kodi_path"):
             self.skipTest("Kodi installation path not configured - cannot test core labels")
 
@@ -289,7 +272,6 @@ class TestLabelValidation(ValidationTestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_labels()
 
-        # Should NOT flag these as undefined - they are Kodi core labels
         undefined_issues = [
             i for i in issues
             if "not defined" in i.get("message", "").lower()
@@ -306,8 +288,7 @@ class TestLabelValidation(ValidationTestCase):
             )
 
     def test_localize_format_with_core_labels(self):
-        """Test $LOCALIZE[] format with Kodi core labels"""
-        # Skip if kodi_path is not configured (no core labels available)
+        """A $LOCALIZE[] of a Kodi core label id is not reported as undefined."""
         if not self.provider.settings.get("kodi_path"):
             self.skipTest("Kodi installation path not configured - cannot test core labels")
 
@@ -326,7 +307,6 @@ class TestLabelValidation(ValidationTestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_labels()
 
-        # Should NOT flag these as undefined
         undefined_issues = [
             i for i in issues
             if "not defined" in i.get("message", "").lower()

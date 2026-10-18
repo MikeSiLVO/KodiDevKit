@@ -1,4 +1,4 @@
-"""Tests for XmlInterpreter — structural walk and provenance tracking."""
+"""Tests for XmlInterpreter's structural walk and provenance tracking."""
 
 import unittest
 from lxml import etree as ET
@@ -16,6 +16,7 @@ class TestWindowStructure(unittest.TestCase):
     """Test window-level structural validation."""
 
     def test_valid_window(self):
+        """A well-formed window gets no structural warnings."""
         root = _parse("""
         <window>
             <defaultcontrol>100</defaultcontrol>
@@ -29,7 +30,6 @@ class TestWindowStructure(unittest.TestCase):
         """)
         interp = XmlInterpreter()
         issues = interp.interpret(root)
-        # No structural issues in a well-formed window
         structural = [i for i in issues if i["severity"] == SEVERITY_WARNING]
         self.assertEqual(structural, [])
 
@@ -77,7 +77,7 @@ class TestGroupControl(unittest.TestCase):
             </controls>
         </window>
         """)
-        # Provide template_attribs so child validation runs
+        # template_attribs given so child validation runs
         attribs = {
             "group": {"posx": {}, "posy": {}, "control": {}, "label": {}},
             "label": {"label": {}, "posx": {}, "posy": {}},
@@ -85,7 +85,6 @@ class TestGroupControl(unittest.TestCase):
         values = {"group": {}, "label": {}}
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         issues = interp.interpret(root)
-        # No issues — label inside group is valid
         self.assertEqual(len(issues), 0)
 
 

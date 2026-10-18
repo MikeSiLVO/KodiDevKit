@@ -1,10 +1,4 @@
-"""
-Tests for include-param role inference (Skin.resolve_param_role).
-
-Used so a hover on `<param name="visible">SomeCondition</param>` inside an
-include call can know that "visible" is a boolean-condition role and route
-the value through JSON-RPC accordingly.
-"""
+"""Tests for Skin.resolve_param_role, which tells a hover the role an include param plays."""
 
 import os
 import sys
@@ -149,8 +143,7 @@ class TestIncludeParamRoles(unittest.TestCase):
         self.assertIsNone(role)
 
     def test_top_level_default_param_is_not_a_usage(self):
-        # The top-level <param> in an include def declares a default; it is
-        # not itself a usage of $PARAM elsewhere.
+        """A top-level <param> declares a default, not a use of $PARAM."""
         skin, _ = _make_skin("""
     <include name="WithDefault">
         <param name="visible">true</param>
@@ -162,7 +155,6 @@ class TestIncludeParamRoles(unittest.TestCase):
     </include>
 """)
         role = skin.resolve_param_role("16x9", "WithDefault", "visible")
-        # Only the <visible> usage counts as a role, not the default.
         self.assertEqual(role, ("tag", "visible"))
 
 

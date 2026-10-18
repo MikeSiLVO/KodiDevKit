@@ -1,6 +1,4 @@
-"""
-Tests for finding string ids under the cursor in add-on Python and the wrappers that forward them.
-"""
+"""Tests for finding string ids under the cursor in add-on Python, wrappers included."""
 
 import os
 import shutil

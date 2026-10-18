@@ -1,4 +1,4 @@
-"""Tests for hierarchy.py — validates data table correctness."""
+"""Tests for the hierarchy.py tables of the children each element accepts."""
 
 import unittest
 
@@ -41,7 +41,7 @@ class TestWindowChildren(unittest.TestCase):
 
 
 class TestControlsChildren(unittest.TestCase):
-    """Verify CONTROLS_CHILDREN — only <control> plus <include>."""
+    """The CONTROLS_CHILDREN table, which holds only <control>, <include> and <description>."""
 
     def test_only_control_and_include(self):
         self.assertEqual(CONTROLS_CHILDREN, frozenset({"control", "include", "description"}))

@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from lxml import etree as ET
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)

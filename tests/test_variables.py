@@ -6,10 +6,8 @@ import tempfile
 import shutil
 import unittest
 
-# Ensure parent directory is in path (base.py does this too, but be explicit)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Now we can import from base and libs
 from tests.base import ValidationTestCase, VariableCheck
 from libs.infoprovider.provider import InfoProvider
 
@@ -23,10 +21,8 @@ class TestVariableBasicValidation(ValidationTestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -46,7 +42,6 @@ class TestVariableBasicValidation(ValidationTestCase):
 
     def test_undefined_variable_detected(self):
         """Test detection of undefined variable reference."""
-        # Create includes file with one variable
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="DefinedVar">
@@ -57,7 +52,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that references undefined variable
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -74,13 +68,11 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should detect undefined variable
         undefined_issues = [i for i in issues if "UndefinedVar" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertTrue(len(undefined_issues) > 0, "Should detect undefined variable")
 
     def test_defined_variable_no_issue(self):
         """Test that defined variables don't trigger issues when used."""
-        # Create includes file with variable
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="MyVar">
@@ -91,7 +83,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that uses the variable
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -108,13 +99,11 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report MyVar as undefined
         myvar_issues = [i for i in issues if "MyVar" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(myvar_issues), 0, "Should not report defined variable as undefined")
 
     def test_unused_variable_detected(self):
         """Test detection of defined but unused variables."""
-        # Create includes file with unused variable
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="UnusedVar">
@@ -125,7 +114,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window without using the variable
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -142,13 +130,11 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should detect unused variable
         unused_issues = [i for i in issues if "UnusedVar" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertTrue(len(unused_issues) > 0, "Should detect unused variable")
 
     def test_escvar_syntax_detected(self):
         """Test detection of $ESCVAR syntax variable references."""
-        # Create includes file with variable
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="EscapedVar">
@@ -159,7 +145,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using $ESCVAR syntax
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -176,13 +161,11 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should recognize $ESCVAR syntax and not report as undefined
         escapedvar_issues = [i for i in issues if "EscapedVar" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(escapedvar_issues), 0, "Should handle $ESCVAR syntax")
 
     def test_variable_with_parameters(self):
         """Test that variable references with parameters extract the base name correctly."""
-        # Create includes file with parameterized variable
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="ParamVar">
@@ -194,7 +177,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using variable with parameters
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -211,13 +193,11 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should extract base name "ParamVar" before the comma and match it
         paramvar_issues = [i for i in issues if "ParamVar" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(paramvar_issues), 0, "Should extract base variable name from parameterized reference")
 
     def test_multiple_variables(self):
         """Test validation with multiple defined and used variables."""
-        # Create includes file with multiple variables
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="UsedVar1">
@@ -234,7 +214,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window using some variables
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -254,13 +233,11 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report used variables as undefined or unused
         usedvar1_issues = [i for i in issues if "UsedVar1" in i.get("message", "")]
         usedvar2_issues = [i for i in issues if "UsedVar2" in i.get("message", "")]
         self.assertEqual(len(usedvar1_issues), 0, "Should not report UsedVar1")
         self.assertEqual(len(usedvar2_issues), 0, "Should not report UsedVar2")
 
-        # Should report unused variable
         unused_issues = [i for i in issues if "UnusedVar" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertTrue(len(unused_issues) > 0, "Should report UnusedVar as unused")
 
@@ -380,7 +357,6 @@ class TestVariableBasicValidation(ValidationTestCase):
 
     def test_variables_used_in_skinshortcuts_template(self):
         """Test that variables referenced in shortcuts/template.xml are not flagged as unused."""
-        # Create includes file with variables that will be used only in template.xml
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="WidgetPosterArt">
@@ -400,7 +376,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create empty window (no variables used directly)
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -410,7 +385,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Create shortcuts/template.xml that references some variables
         shortcuts_dir = os.path.join(self.test_dir, "shortcuts")
         os.makedirs(shortcuts_dir, exist_ok=True)
         template_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -429,19 +403,15 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should not report WidgetPosterArt as unused (it's in template.xml without $SKINSHORTCUTS)
         poster_unused = [i for i in issues if "WidgetPosterArt" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(poster_unused), 0, "Should not flag variables used in template.xml as unused")
 
-        # Should not report WidgetFanArt as unused (it's in template.xml without $SKINSHORTCUTS)
         fanart_unused = [i for i in issues if "WidgetFanArt" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(fanart_unused), 0, "Should not flag variables used in template.xml as unused")
 
-        # SHOULD report DynamicWidgetVar as unused (referenced with $SKINSHORTCUTS, so skipped)
         dynamic_unused = [i for i in issues if "DynamicWidgetVar" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(dynamic_unused), 1, "Should flag variables with $SKINSHORTCUTS as unused (runtime placeholders ignored)")
 
-        # Should report UnusedVariable as unused (not in template.xml or anywhere else)
         truly_unused = [i for i in issues if "UnusedVariable" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(truly_unused), 1, "Should still flag actually unused variables")
 
@@ -471,7 +441,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # v3 templates.xml — variables in text content AND attributes
         shortcuts_dir = os.path.join(self.test_dir, "shortcuts")
         os.makedirs(shortcuts_dir, exist_ok=True)
         templates_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -494,21 +463,17 @@ class TestVariableBasicValidation(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Found via attribute value colordiffuse="$VAR[...]"
         backcolor_unused = [i for i in issues if "HomeWidgetBackColor" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(backcolor_unused), 0, "Should find variables in attribute values")
 
-        # Found via text content $VAR[...]
         fanart_unused = [i for i in issues if "HomeWidgetFanArtVar" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(fanart_unused), 0, "Should find variables in text content")
 
-        # $PROPERTY[id] is a runtime placeholder — skipped
-        # UnusedV3Var is genuinely unused
         truly_unused = [i for i in issues if "UnusedV3Var" in i.get("message", "") and "unused" in i.get("message", "").lower()]
         self.assertEqual(len(truly_unused), 1, "Should still flag actually unused variables")
 
     def test_variables_defined_in_skinshortcuts_template_not_undefined(self):
-        """Variables defined inside a SkinShortcuts template are generated at runtime."""
+        """Variables a SkinShortcuts template defines count as defined."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="SkinDefinedVar">
@@ -519,7 +484,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Window references a variable that only exists in the template
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -533,7 +497,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         with open(xml_path, "w", encoding="utf-8") as f:
             f.write(home_xml)
 
-        # Template defines the variable that will be generated at runtime
         shortcuts_dir = os.path.join(self.test_dir, "shortcuts")
         os.makedirs(shortcuts_dir, exist_ok=True)
         templates_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -557,7 +520,6 @@ class TestVariableBasicValidation(ValidationTestCase):
         undefined = [i for i in issues if "not defined" in i.get("message", "").lower() and "MainMenuBackgroundPathVar" in i.get("message", "")]
         self.assertEqual(len(undefined), 0, "Template-defined variable should not be flagged as undefined")
 
-        # Skin-defined variable should also work fine
         skin_undefined = [i for i in issues if "not defined" in i.get("message", "").lower() and "SkinDefinedVar" in i.get("message", "")]
         self.assertEqual(len(skin_undefined), 0, "Skin-defined variable should not be flagged as undefined")
 
@@ -571,10 +533,8 @@ class TestVariableCommentHandling(ValidationTestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "1080i"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -587,7 +547,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):
@@ -597,7 +556,6 @@ class TestVariableCommentHandling(ValidationTestCase):
 
     def test_variable_only_used_in_single_line_comment(self):
         """Test that variable only used in single-line comment is flagged as unused."""
-        # Define a variable
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="UnusedVar">
@@ -608,7 +566,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Use it only in a comment
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -626,7 +583,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # SHOULD flag UnusedVar as unused (not used in actual code)
         unused_issues = [i for i in issues if "UnusedVar" in i.get("message", "") and "Unused" in i.get("message", "")]
         self.assertEqual(len(unused_issues), 1, "Variable only used in comment should be flagged as unused")
 
@@ -665,7 +621,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # SHOULD flag CommentedVar as unused
         unused_issues = [i for i in issues if "CommentedVar" in i.get("message", "") and "Unused" in i.get("message", "")]
         self.assertEqual(len(unused_issues), 1, "Variable only used in multi-line comment should be flagged as unused")
 
@@ -698,7 +653,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should NOT flag UsedVar as unused (used in actual code)
         unused_issues = [i for i in issues if "UsedVar" in i.get("message", "") and "Unused" in i.get("message", "")]
         self.assertEqual(len(unused_issues), 0, "Variable used in active code should not be flagged even if also in comments")
 
@@ -730,7 +684,6 @@ class TestVariableCommentHandling(ValidationTestCase):
         checker = VariableCheck(self.provider.addon)
         issues = checker.check()
 
-        # Should NOT flag ActiveVar as unused
         unused_issues = [i for i in issues if "ActiveVar" in i.get("message", "") and "Unused" in i.get("message", "")]
         self.assertEqual(len(unused_issues), 0, "Variable used after comment end should be recognized as used")
 
@@ -756,10 +709,8 @@ class TestVariableValueValidation(ValidationTestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "1080i"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -772,7 +723,6 @@ class TestVariableValueValidation(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):

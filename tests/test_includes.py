@@ -1,16 +1,4 @@
-"""
-Include/parameter resolution tests.
-
-Consolidated from:
-- test_param_forwarding.py: Complex parameter forwarding patterns
-- test_param_resolution.py: $PARAM resolution and substitution
-- test_nested_includes.py: Nested include resolution
-
-Test organization:
-- Advanced Param Forwarding: Multi-level forwarding, ID attributes
-- Basic Param Resolution: $PARAM substitution, defaults, scoping
-- Nested Include Resolution: Include-within-include resolution
-"""
+"""Tests for include and $PARAM resolution: forwarding, defaults, scoping and nesting."""
 
 import unittest
 import os
@@ -19,7 +7,6 @@ import tempfile
 import shutil
 from lxml import etree as ET
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -42,10 +29,8 @@ class TestParamForwarding(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.provider = InfoProvider()
 
-        # Create minimal skin structure
         os.makedirs(os.path.join(self.test_dir, "1080i"))
 
-        # Create addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="Test">
     <requires>
@@ -65,7 +50,6 @@ class TestParamForwarding(unittest.TestCase):
 
     def test_param_forwarding_with_substitution(self):
         """Test parameters used in dynamic expressions with forwarding."""
-        # Pattern: Parent include forwards params to child, which uses them in expressions
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="Section_Container">
@@ -93,7 +77,6 @@ class TestParamForwarding(unittest.TestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Window that uses the parameterized include
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window type="window" id="2000">
     <controls>
@@ -110,7 +93,6 @@ class TestParamForwarding(unittest.TestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_values()
 
-        # Should NOT flag bracket mismatches in parameterized expressions
         bracket_issues = [i for i in issues if "bracket" in i.get("message", "").lower()]
         self.assertEqual(len(bracket_issues), 0, "Should not flag bracket issues in valid param forwarding")
 
@@ -205,7 +187,6 @@ class TestParamForwarding(unittest.TestCase):
         self.provider.init_addon(self.test_dir)
         issues = self.provider.check_values()
 
-        # Should not crash with deeply nested param forwarding
         self.assertIsInstance(issues, list, "Should handle triple-nested param forwarding without crashing")
 
 
@@ -325,10 +306,7 @@ class TestDynamicExpressionUtils(unittest.TestCase):
 
 
 class TestParamSubstitutionWithSkin(unittest.TestCase):
-    """
-    Tests for param substitution and include resolution.
-    Tests various edge cases including nested includes, missing params, and malformed XML.
-    """
+    """Param substitution and include resolution, covering nested includes and missing params."""
 
     def setUp(self):
         """Create temporary directory for test files."""
@@ -363,10 +341,9 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         return skin
 
     def _resolve_and_tostring(self, skin, window_xml):
-        """Helper to resolve includes and return string representation."""
+        """Resolve includes and return the markup as a string, provenance attributes dropped."""
         root = ET.fromstring(window_xml)
-        kodi_resolve(skin, root, self.folder_name)  # Modifies in-place, recurses
-        # Strip provenance attributes before serializing for clean comparisons
+        kodi_resolve(skin, root, self.folder_name)
         for elem in root.iter():
             for attr in list(elem.attrib):
                 if attr.startswith("_kdk_"):
@@ -622,7 +599,7 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         skin = self._create_skin_with_includes(includes_xml)
         result = self._resolve_and_tostring(skin, window_xml)
 
-        # Kodi behavior: unresolved includes stay in place safely
+        # Kodi logs an include it cannot find and leaves the tag in place
         self.assertIn('<include content="NoSuchInclude"', result)
         self.assertIn("<label>After</label>", result)
 
@@ -634,10 +611,8 @@ class TestNestedIncludes(unittest.TestCase):
         """Create temporary skin directory for each test."""
         self.test_dir = tempfile.mkdtemp()
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -656,8 +631,7 @@ class TestNestedIncludes(unittest.TestCase):
             shutil.rmtree(self.test_dir)
 
     def test_nested_include_resolution(self):
-        """Test that nested includes are properly resolved."""
-        # Create includes file with nested structure
+        """Test that an include nested in another expands into the window."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="OuterInclude">
@@ -675,21 +649,17 @@ class TestNestedIncludes(unittest.TestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Initialize skin
         skin = Skin(path=self.test_dir, settings={})
 
-        # Create XML with include reference
         xml = ET.fromstring("""<window>
     <controls>
         <include>OuterInclude</include>
     </controls>
 </window>""")
 
-        # This should not raise TypeError about positional arguments
         try:
-            kodi_resolve(skin,xml, "16x9")  # Modifies in-place, recurses
+            kodi_resolve(skin,xml, "16x9")
 
-            # Verify the nested include was resolved
             labels = xml.xpath(".//label")
             self.assertTrue(len(labels) > 0, "Nested include should be expanded")
             self.assertEqual(labels[0].text, "Nested Content")

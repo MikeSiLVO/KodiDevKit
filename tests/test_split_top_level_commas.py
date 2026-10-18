@@ -1,30 +1,14 @@
-"""
-Tests for ``utils.split_top_level_commas`` — the splitter that backs the
-``XBMC.GetInfoBooleans`` / ``XBMC.GetInfoLabels`` JSON-RPC prompts.
-
-These prompts let the user paste comma-separated InfoLabels or boolean
-conditions. A naive ``str.split(',')`` corrupts every expression that
-contains a comma inside parentheses or square brackets, e.g.::
-
-    String.IsEqual(ListItem.Label,$LOCALIZE[40211])
-    Container(50).ListItem.Property(foo)
-    $INFO[ListItem.Label, , - ]
-
-The splitter must only break on commas at depth 0. Cases below are mined
-from real ``skin.estuary`` XML and the Kodi C++ docs; the bug that triggered
-this test (``$LOCALIZE[40211]`` getting truncated to ``$LOCALIZE``) is the
-first regression case.
-"""
+"""Tests for split_top_level_commas, which splits the infolabel and condition prompts' input."""
 
 from tests.base import KodiDevKitTestCase
 from libs.utils.expressions import split_top_level_commas
 
 
 class SplitTopLevelCommasTests(KodiDevKitTestCase):
+    """Cases for splitting prompt input at commas outside any brackets."""
 
-    # The original bug: $LOCALIZE[N] inside an operand was severed at the
-    # comma, sending two corrupted halves to Kodi.
     def test_localize_inside_string_isequal_stays_intact(self):
+        """A comma inside an info's parentheses does not split it, $LOCALIZE[] included."""
         expr = "String.IsEqual(ListItem.Label,$LOCALIZE[40211])"
         self.assertEqual(split_top_level_commas(expr), [expr])
 
@@ -93,7 +77,7 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
 
 
     def test_info_macro_with_prefix_suffix(self):
-        # commas inside $INFO[] must not split the label
+        """The prefix and suffix commas inside $INFO[] do not split the label."""
         expr = "$INFO[ListItem.Label, , - ]"
         self.assertEqual(split_top_level_commas(expr), [expr])
 
@@ -104,9 +88,7 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
 
 
     def test_grouping_brackets_at_top_level(self):
-        # [A | B] is a single expression; outer brackets are operator-level
-        # but our splitter treats them as depth-tracking, which is correct:
-        # commas inside [ ] groups should still not split.
+        """A top-level [A | B] group is one piece."""
         expr = "[Window.IsActive(home) | Window.IsActive(music)]"
         self.assertEqual(split_top_level_commas(expr), [expr])
 
@@ -116,13 +98,12 @@ class SplitTopLevelCommasTests(KodiDevKitTestCase):
 
 
     def test_unmatched_open_paren_keeps_input_as_one_piece(self):
-        # Better to send the whole broken thing to Kodi (which will error)
-        # than to silently fragment it.
+        """An unclosed parenthesis keeps the input whole, for Kodi to reject, not in fragments."""
         expr = "String.IsEqual(ListItem.Label,foo"
         self.assertEqual(split_top_level_commas(expr), [expr])
 
     def test_unmatched_close_paren_does_not_underflow_depth(self):
-        # Stray ) shouldn't make subsequent commas fail to split.
+        """A stray `)` does not stop the commas after it from splitting."""
         self.assertEqual(
             split_top_level_commas("foo),bar"),
             ["foo)", "bar"],

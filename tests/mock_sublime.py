@@ -1,7 +1,4 @@
-"""
-Mock sublime module for unit testing.
-Provides minimal implementations of sublime API used by InfoProvider.
-"""
+"""Stub of the sublime module with the API the engine calls."""
 import os
 
 
@@ -26,10 +23,7 @@ def load_settings(name):
 
 
 def load_resource(resource_path):
-    """
-    Mock load_resource - loads actual files from the data directory.
-    Converts Packages/KodiDevKit/... paths to real filesystem paths.
-    """
+    """Load a Packages/KodiDevKit/... resource from the package folder on disk."""
     if resource_path.startswith("Packages/KodiDevKit/"):
         relative_path = resource_path.replace("Packages/KodiDevKit/", "")
         tests_dir = os.path.dirname(os.path.abspath(__file__))
@@ -50,7 +44,6 @@ def error_message(message):
     print(f"SUBLIME ERROR: {message}")
 
 
-# Module-level constants that might be used
 ENCODED_POSITION = 1
 TRANSIENT = 2
 FORCE_GROUP = 4

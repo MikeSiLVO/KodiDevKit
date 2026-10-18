@@ -1,3 +1,1 @@
-"""
-KodiDevKit test suite.
-"""
+"""KodiDevKit test suite."""

@@ -1,16 +1,4 @@
-"""
-ID validation tests.
-
-Consolidated from:
-- test_id_validation.py: Basic control and window ID validation
-- test_listitem_index.py: ListItem indices shouldn't be flagged as IDs
-- test_id_scoping.py: Window-scoped ID validation
-
-Test organization:
-- Basic ID Validation: Control IDs, window IDs, param-defined IDs
-- ListItem Index Handling: ListItemAbsolute, ListItemPosition, ListItemNoWrap
-- Window Scoping: IDs scoped to windows, include resolution
-"""
+"""Tests for the control and window id checks, list item indexes and window scope."""
 
 import os
 import sys
@@ -18,10 +6,8 @@ import tempfile
 import shutil
 import unittest
 
-# Ensure parent directory is in path (base.py does this too, but be explicit)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Now we can import from base and libs
 from tests.base import ValidationTestCase, IdCheck
 from libs.infoprovider.provider import InfoProvider
 
@@ -35,10 +21,8 @@ class TestBasicIDValidation(ValidationTestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -51,7 +35,6 @@ class TestBasicIDValidation(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):
@@ -83,13 +66,12 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should find undefined control ID 4321
         undefined_issues = [i for i in issues if "4321" in i.get("message", "")]
         self.assertTrue(len(undefined_issues) > 0, "Should detect undefined control ID 4321")
         self.assertIn("not defined", undefined_issues[0]["message"].lower())
 
     def test_defined_control_id_no_issue(self):
-        """Test that defined control IDs don't trigger issues when used in visible conditions."""
+        """Test that defined control IDs with no references don't trigger issues."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -112,7 +94,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Without any references, there should be no issues about undefined IDs
         undefined_issues = [i for i in issues if "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(undefined_issues), 0, "Should not report any undefined IDs when no references exist")
 
@@ -137,7 +118,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should report undefined window ID 99999
         window_issues = [i for i in issues if "99999" in i.get("message", "")]
         self.assertTrue(len(window_issues) > 0, "Should detect undefined window ID")
         self.assertIn("not defined", window_issues[0]["message"].lower())
@@ -166,7 +146,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should find undefined control ID 200
         undefined_issues = [i for i in issues if "200" in i.get("message", "")]
         self.assertTrue(len(undefined_issues) > 0, "Should detect undefined control ID 200 in <visible>")
 
@@ -197,7 +176,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report 100 or 200 (defined), but should report 300 (undefined)
         id_100_issues = [i for i in issues if "100" in i.get("message", "")]
         id_200_issues = [i for i in issues if "200" in i.get("message", "")]
         id_300_issues = [i for i in issues if "300" in i.get("message", "")]
@@ -227,7 +205,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report window ID 12345 since it's defined on root
         custom_window_issues = [i for i in issues if "12345" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(custom_window_issues), 0, "Should not report window ID defined on root element")
 
@@ -252,12 +229,10 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not crash or report empty ID
         self.assertIsInstance(issues, list)
 
     def test_control_id_defined_via_param(self):
         """Test that control IDs passed via params are recognized as defined."""
-        # Create includes file with parameterized include that defines a control ID
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="InfoDetailsPanel">
@@ -272,7 +247,6 @@ class TestBasicIDValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that uses the include with specific ID param values
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -296,7 +270,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report 4800 or 4801 as undefined (they're defined via params)
         id_4800_issues = [i for i in issues if "4800" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         id_4801_issues = [i for i in issues if "4801" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
 
@@ -304,8 +277,7 @@ class TestBasicIDValidation(ValidationTestCase):
         self.assertEqual(len(id_4801_issues), 0, "Should not report ID 4801 as undefined (defined via param)")
 
     def test_fadelabel_control_recognized(self):
-        """Test that fadelabel and other special control types are recognized."""
-        # Create includes file with variable referencing fadelabel control
+        """Test that a fadelabel control's id is recognized."""
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <variable name="TestVar">
@@ -317,7 +289,6 @@ class TestBasicIDValidation(ValidationTestCase):
         with open(includes_path, "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window file with fadelabel control
         video_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -341,7 +312,6 @@ class TestBasicIDValidation(ValidationTestCase):
             self.provider.WINDOW_NAMES, validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should not report 4412 as undefined (it's defined as fadelabel control)
         id_4412_issues = [i for i in issues if "4412" in i.get("message", "") and "not defined" in i.get("message", "").lower()]
         self.assertEqual(len(id_4412_issues), 0, "Should recognize fadelabel control IDs")
 
@@ -355,10 +325,8 @@ class TestListItemIndexHandling(ValidationTestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "1080i"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -371,7 +339,6 @@ class TestListItemIndexHandling(ValidationTestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):
@@ -400,7 +367,6 @@ class TestListItemIndexHandling(ValidationTestCase):
         checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should NOT flag 0 as undefined - it's a ListItemAbsolute index
         undefined_zero = [i for i in issues if "0" in i.get("message", "") and "not defined" in i.get("message", "")]
         self.assertEqual(len(undefined_zero), 0, "ListItemAbsolute(0) index should not be flagged as undefined ID")
 
@@ -431,7 +397,6 @@ class TestListItemIndexHandling(ValidationTestCase):
         checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should NOT flag 0, 1, or -1 as undefined
         listitem_indices = [i for i in issues if any(idx in i.get("message", "") for idx in ["0", "1"]) and "not defined" in i.get("message", "")]
         self.assertEqual(len(listitem_indices), 0, "ListItem(n) indices should not be flagged")
 
@@ -456,7 +421,6 @@ class TestListItemIndexHandling(ValidationTestCase):
         checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should NOT flag 0 as undefined
         undefined_zero = [i for i in issues if "0" in i.get("message", "") and "not defined" in i.get("message", "")]
         self.assertEqual(len(undefined_zero), 0, "ListItemPosition(0) index should not be flagged")
 
@@ -481,13 +445,11 @@ class TestListItemIndexHandling(ValidationTestCase):
         checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # Should NOT flag 2 as undefined
         undefined_two = [i for i in issues if "2" in i.get("message", "") and "not defined" in i.get("message", "")]
         self.assertEqual(len(undefined_two), 0, "ListItemNoWrap(2) index should not be flagged")
 
     def test_container_id_still_validated(self):
-        """Test that Container(ID) references are still validated correctly."""
-        # Create window WITHOUT defining container 9999
+        """Test that Container(ID) references are still validated."""
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -504,7 +466,6 @@ class TestListItemIndexHandling(ValidationTestCase):
         checker = IdCheck(self.provider.addon, [], [], validation_index=self.provider.get_validation_index())
         issues = checker.check()
 
-        # SHOULD flag 9999 as undefined (but NOT 0)
         undefined_9999 = [i for i in issues if "9999" in i.get("message", "") and "not defined" in i.get("message", "")]
         undefined_0 = [i for i in issues if "0" in i.get("message", "") and "not defined" in i.get("message", "")]
 
@@ -519,10 +480,8 @@ class TestWindowScoping(ValidationTestCase):
         """Create temporary skin directory for each test."""
         self.test_dir = tempfile.mkdtemp()
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -560,13 +519,11 @@ class TestWindowScoping(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Should NOT flag ID 100 as undefined
         undefined_issues = [i for i in issues if "not defined" in i.get("message", "").lower() and "100" in i.get("message", "")]
         self.assertEqual(len(undefined_issues), 0, f"Should not flag control 100 as undefined. Issues: {undefined_issues}")
 
     def test_control_from_include_valid(self):
         """Test that control from included file is valid."""
-        # Create include with control
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="CommonButtons">
@@ -578,7 +535,6 @@ class TestWindowScoping(ValidationTestCase):
         with open(os.path.join(self.test_dir, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Create window that uses the include
         dialog_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -595,13 +551,11 @@ class TestWindowScoping(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Should NOT flag ID 100 as undefined (it's in the included CommonButtons)
         undefined_issues = [i for i in issues if "not defined" in i.get("message", "").lower() and "100" in i.get("message", "")]
         self.assertEqual(len(undefined_issues), 0, f"Should not flag included control 100 as undefined. Issues: {undefined_issues}")
 
     def test_control_from_different_window_invalid(self):
-        """Test that control from different window is correctly flagged."""
-        # a modal dialog defines control 100
+        """Test that a SetFocus to a control only another dialog defines is flagged."""
         dialog_a_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -613,7 +567,7 @@ class TestWindowScoping(ValidationTestCase):
         with open(os.path.join(self.test_dir, "16x9", "DialogVideoInfo.xml"), "w", encoding="utf-8") as f:
             f.write(dialog_a_xml)
 
-        # another modal dialog resolves its own actions against itself
+        # a modal dialog resolves its own actions against itself
         dialog_b_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -630,13 +584,11 @@ class TestWindowScoping(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # SHOULD flag ID 100 as undefined in DialogMusicInfo
         dialogb_issues = [i for i in issues if "DialogMusicInfo.xml" in i.get("file", "") and "100" in i.get("message", "")]
         self.assertTrue(len(dialogb_issues) > 0, "Should flag control 100 as undefined in DialogMusicInfo.xml")
 
     def test_nested_includes_valid(self):
         """Test that controls from nested includes are valid."""
-        # Create nested includes structure
         includes_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="OuterInclude">
@@ -653,7 +605,6 @@ class TestWindowScoping(ValidationTestCase):
         with open(os.path.join(self.test_dir, "16x9", "Includes.xml"), "w", encoding="utf-8") as f:
             f.write(includes_xml)
 
-        # Window uses OuterInclude (which contains InnerInclude)
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -670,27 +621,17 @@ class TestWindowScoping(ValidationTestCase):
         provider.init_addon(self.test_dir)
         issues = provider.check_ids()
 
-        # Should NOT flag ID 100 (it's in nested InnerInclude)
         undefined_issues = [i for i in issues if "not defined" in i.get("message", "").lower() and "100" in i.get("message", "")]
         self.assertEqual(len(undefined_issues), 0, f"Should not flag nested include control 100 as undefined. Issues: {undefined_issues}")
 
 
 class TestAlarmClockException(ValidationTestCase):
-    """Test AlarmClock delayed execution exception.
-
-    AlarmClock(name, command, time) executes command after a delay.
-    Control IDs in the delayed command may not exist in the current window,
-    so they should NOT be validated.
-
-    Reference: libs/skin.py lines 3238-3271
-    Bug fix: Eliminated 9 false positives in Includes_Items.xml
-    """
+    """AlarmClock() commands, whose ids go unchecked as they run in whatever window is open."""
 
     def setUp(self):
         """Create temporary skin directory for each test."""
         self.test_dir = tempfile.mkdtemp()
 
-        # Create addon structure
         os.makedirs(os.path.join(self.test_dir, "16x9"))
 
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -718,11 +659,7 @@ class TestAlarmClockException(ValidationTestCase):
             shutil.rmtree(self.test_dir)
 
     def test_alarmclock_ids_not_validated(self):
-        """Control IDs inside AlarmClock() should NOT be validated.
-
-        Pattern: AlarmClock(name, SetFocus(ID), time, silent)
-        The ID is executed after a delay and may not exist in current window.
-        """
+        """An id in AlarmClock(name, SetFocus(id), time) is not checked against the window."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -741,25 +678,18 @@ class TestAlarmClockException(ValidationTestCase):
             f.write(home_xml)
 
         provider = InfoProvider()
-        provider.load_data("omega")  # Load Kodi data
+        provider.load_data("omega")
         provider.init_addon(self.test_dir)
 
-        # Build validation index first
-        index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]  # type: ignore[union-attr]
+        index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]
 
-        # Create checker with window IDs
         from libs.validation.ids import ValidationIds as IdCheck
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         issues = checker.check()
 
-        # Check: ID 2012 from control 101 SHOULD be flagged
         normal_issues = [i for i in issues if "2012" in i.get("message", "")]
 
-        # Check: At least one ID 2012 error should exist (from control 101, not from AlarmClock)
-        # The AlarmClock one should be skipped, but normal SetFocus should be caught
         if len(normal_issues) > 0:
-            # Verify it's NOT from the AlarmClock line (which would be around line 7-8)
-            # and IS from the normal SetFocus line (around line 10-11)
             alarmclock_line_issues = [i for i in normal_issues if 6 <= i.get("line", 0) <= 9]
             normal_line_issues = [i for i in normal_issues if i.get("line", 0) >= 10]
 
@@ -796,7 +726,6 @@ class TestAlarmClockException(ValidationTestCase):
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         issues = checker.check()
 
-        # None of these should flag ID 2012 (all use AlarmClock variants)
         control_2012_issues = [i for i in issues if "2012" in i.get("message", "")]
         self.assertEqual(len(control_2012_issues), 0,
                         f"All AlarmClock variants (ALARMCLOCK, alarmclock, AlArMcLoCk) should be detected. Found: {control_2012_issues}")
@@ -824,7 +753,6 @@ class TestAlarmClockException(ValidationTestCase):
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=index)
         issues = checker.check()
 
-        # Should NOT flag ID 2012 even in visible condition
         control_2012_issues = [i for i in issues if "2012" in i.get("message", "")]
         self.assertEqual(len(control_2012_issues), 0,
                         f"AlarmClock in visible should skip validation. Found: {control_2012_issues}")
@@ -852,7 +780,6 @@ class TestAlarmClockException(ValidationTestCase):
         checker = IdCheck(provider.addon, provider.WINDOW_IDS, provider.WINDOW_NAMES, validation_index=provider.get_validation_index())
         issues = checker.check()
 
-        # Both 4321 and 888 should be flagged (no AlarmClock)
         id_4321_issues = [i for i in issues if "4321" in i.get("message", "")]
         id_888_issues = [i for i in issues if "888" in i.get("message", "")]
 
@@ -1127,13 +1054,7 @@ class TestBuiltinControls(unittest.TestCase):
 
 
 class TestNonWindowRootScope(unittest.TestCase):
-    """Control-ID references in non-window files (e.g. Timers.xml) are
-    cross-window and must not be scope-validated.
-
-    Regression: Timers.xml has a <timers> root, not <window>. Its
-    Container(90100) references controls in whatever window is active at
-    runtime, so scope-checking flagged false positives.
-    """
+    """Control id refs outside a <window> root, as in Timers.xml, which skip scope checks."""
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
@@ -1180,7 +1101,7 @@ class TestNonWindowRootScope(unittest.TestCase):
         self.assertEqual(len(flagged), 0, f"Container ref in <timers> root should not be scope-checked. Found: {flagged}")
 
     def test_window_root_still_scope_checked(self):
-        # Same Container ref in a real window IS undefined and should be flagged.
+        """A Container ref in a window file is checked against that window."""
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>

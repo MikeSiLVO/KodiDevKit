@@ -1,6 +1,4 @@
-"""
-Tests that the validation index lists findings in file order, whatever order the threads finish.
-"""
+"""Tests that the index lists findings in file order, whatever order its threads finish."""
 
 import os
 import shutil
@@ -62,7 +60,8 @@ class TestIndexOrder(unittest.TestCase):
         provider.settings = {}
         provider.init_addon(self.test_dir)
         with mock.patch.object(SkinIndex, "_process_window_file", slow_first):
-            index = provider.addon.index_builder.build_validation_index()  # type: ignore[union-attr]
+            builder = provider.addon.index_builder  # type: ignore[union-attr]
+            index = builder.build_validation_index()
 
         refs = [r for r in index["ids_referenced"]["16x9"] if r in ("101", "102", "103")]
         self.assertEqual(refs, ["101", "102", "103"])

@@ -1,14 +1,4 @@
-"""
-Tests for ``utils.extract_expression_at_offset`` — the hover-time extractor
-that supplies the boolean evaluator in ``kodidevkit.py``.
-
-The bug this guards against: Sublime's ``expand_by_class`` is called with
-``[`` and ``]`` in the separator set, so hovering anywhere inside
-``String.IsEqual(ListItem.Label,$LOCALIZE[40211])`` produced
-``String.IsEqual(ListItem.Label,$LOCALIZE`` and that truncated string was
-sent to ``XBMC.GetInfoBooleans``. Real-world expressions are mined from
-``skin.estuary``.
-"""
+"""Tests for extract_expression_at_offset, which finds the condition a hover evaluates."""
 
 from tests.base import KodiDevKitTestCase
 from libs.utils.expressions import extract_expression_at_offset
@@ -23,8 +13,8 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
 
 
     def test_hover_inside_localize_returns_full_expression(self):
+        """Hovering on the id inside $LOCALIZE[] returns the whole condition."""
         line = '<value condition="String.IsEqual(ListItem.Label,$LOCALIZE[40211])">x</value>'
-        # cursor on the digits inside $LOCALIZE[...]
         cursor = self._at_substr(line, "40211")
         self.assertEqual(
             extract_expression_at_offset(line, cursor),
@@ -87,8 +77,7 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         )
 
     def test_grouping_and_or_scopes_to_clause(self):
-        # `[A | B]` — the `|` at top level inside the group is a sub-expression
-        # boundary, so hovering on `music` returns just that clause.
+        """Hovering inside a group returns only the clause under the cursor, bounded by `|`."""
         line = '<visible>[Window.IsActive(home) | Window.IsActive(music)]</visible>'
         cursor = self._at_substr(line, "music")
         self.assertEqual(
@@ -97,8 +86,7 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         )
 
     def test_clause_without_negation_does_not_borrow_one(self):
-        # Cursor on the second clause `Skin.HasSetting(x)` must not pick up the
-        # `!` that belongs to the first clause's operand.
+        """The second clause does not take the `!` of the first clause's operand."""
         line = '<enable>!Window.IsActive(home) + Skin.HasSetting(x)</enable>'
         cursor = self._at_substr(line, "Skin")
         self.assertEqual(
@@ -132,16 +120,13 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         self.assertEqual(extract_expression_at_offset(line, cursor), "ListItem.IsFolder")
 
     def test_compound_and_last_clause_keeps_leading_negation(self):
-        # `!` is a unary prefix that binds to the following operand — hovering
-        # inside `!Skin.HasSetting(x)` must include the `!`, otherwise the
-        # boolean we send to Kodi has the OPPOSITE truth value.
+        """The last clause keeps its leading `!`, or the condition sent to Kodi would invert."""
         line = '<visible>A + !Skin.HasSetting(Disable.Fanart)</visible>'
         cursor = self._at_substr(line, "HasSetting")
         self.assertEqual(extract_expression_at_offset(line, cursor), "!Skin.HasSetting(Disable.Fanart)")
 
     def test_standalone_negation_keeps_the_bang(self):
-        # User-reported regression: !Skin.HasSetting(Disable.Fanart) was being
-        # sent as Skin.HasSetting(Disable.Fanart), inverting the result.
+        """A condition that is one negated item keeps its `!`."""
         line = '<visible>!Skin.HasSetting(Disable.Fanart)</visible>'
         cursor = self._at_substr(line, "HasSetting")
         self.assertEqual(extract_expression_at_offset(line, cursor), "!Skin.HasSetting(Disable.Fanart)")
@@ -157,20 +142,19 @@ class ExtractExpressionAtOffsetTests(KodiDevKitTestCase):
         self.assertEqual(extract_expression_at_offset(line, cursor), "Window.IsActive(music)")
 
     def test_grouping_brackets_define_sub_expression(self):
-        # `[A | B]` is a top-level group — hovering inside scopes to it.
+        """Inside a top-level `[A | B]` group, the `|` still bounds the clause under the cursor."""
         line = '<visible>[Window.IsActive(home) | Window.IsActive(music)] + Skin.HasSetting(x)</visible>'
         cursor = self._at_substr(line, "music")
         self.assertEqual(extract_expression_at_offset(line, cursor), "Window.IsActive(music)")
 
     def test_nested_function_call_does_not_split_at_inner_plus(self):
-        # `+` inside parens is part of an operand (Kodi quirk: not common but
-        # should not be treated as a top-level boundary).
+        """Text inside an info's parentheses stays part of that operand."""
         line = '<visible>String.IsEqual(Foo,Bar) + Skin.HasSetting(x)</visible>'
         cursor = self._at_substr(line, "Foo")
         self.assertEqual(extract_expression_at_offset(line, cursor), "String.IsEqual(Foo,Bar)")
 
     def test_nested_localize_does_not_split_at_inner_brackets(self):
-        # `[`/`]` inside parens are part of `$LOCALIZE[N]`, not boundaries.
+        """The brackets of a $LOCALIZE[] inside parentheses are not group boundaries."""
         line = '<visible>String.IsEqual(Label,$LOCALIZE[40211]) + Skin.HasSetting(x)</visible>'
         cursor = self._at_substr(line, "40211")
         self.assertEqual(
@@ -247,7 +231,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_nested_localize_inside_localize_stays_intact(self):
-        # the closing bracket is found by counting nesting
+        """A $LOCALIZE[] nested in another stays whole in the clause."""
         line = '<v>String.IsEqual(L,$LOCALIZE[$LOCALIZE[40211]])</v>'
         cursor = self._at(line, "40211")
         self.assertEqual(
@@ -275,7 +259,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_double_bang_round_trips(self):
-        # Per Kodi: !!A == A, but we must echo the user's literal text.
+        """Kodi reads !!A as A, but the hover returns the text as written."""
         line = '<v>!!Skin.HasSetting(x)</v>'
         cursor = self._at(line, "HasSetting")
         self.assertEqual(
@@ -284,7 +268,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_bang_with_whitespace_before_operand(self):
-        # whitespace between operators is skipped
+        """Whitespace between `!` and its operand is kept."""
         line = '<v>!  Skin.HasSetting(x)</v>'
         cursor = self._at(line, "HasSetting")
         self.assertEqual(
@@ -321,7 +305,7 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
         )
 
     def test_bang_before_grouping(self):
-        # cursor on A returns the leaf, not the negated group
+        """Inside a negated group, the operand under the cursor comes back without the `!`."""
         line = '<v>![A + B]</v>'
         cursor = self._at(line, "A")
         self.assertEqual(extract_expression_at_offset(line, cursor), "A")
@@ -335,8 +319,6 @@ class KodiGrammarSourceAnchoredTests(KodiDevKitTestCase):
             extract_expression_at_offset(line, cursor),
             "Window.IsActive(home)",
         )
-
-    # Real Estuary patterns
 
     def test_estuary_compound_with_negation_at_end(self):
         line = '<visible>ListItem.IsFolder + String.IsEqual(ListItem.Label,$LOCALIZE[40211]) + String.IsEmpty(ListItem.Art(fanart)) + !Skin.HasSetting(Disable.Fanart)</visible>'

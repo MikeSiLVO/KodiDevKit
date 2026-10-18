@@ -5,7 +5,6 @@ import sys
 import tempfile
 import unittest
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -14,20 +13,18 @@ from libs.infoprovider.provider import InfoProvider
 
 
 class TestFontValidation(unittest.TestCase):
-    """Test suite for font validation before and after refactoring."""
+    """Font check cases, each run on a fresh skin folder."""
 
     def setUp(self):
         """Create temporary skin structure for testing."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.skin_path = self.temp_dir.name
 
-        # Create skin directory structure
         self.xml_dir = os.path.join(self.skin_path, "16x9")
         self.fonts_dir = os.path.join(self.skin_path, "fonts")
         os.makedirs(self.xml_dir, exist_ok=True)
         os.makedirs(self.fonts_dir, exist_ok=True)
 
-        # Create minimal addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="Test">
     <requires>
@@ -103,7 +100,6 @@ class TestFontValidation(unittest.TestCase):
 """
         self.create_fonts_xml(fonts_xml)
 
-        # Create a window that uses the fonts
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -123,8 +119,6 @@ class TestFontValidation(unittest.TestCase):
         provider = self.init_provider()
         issues = provider.check_fonts()
 
-        # Should have no structural issues (only "no issues" or unused fonts if any)
-        # Filter out any non-error messages
         errors = [i for i in issues if "no" not in i["message"].lower() and "unused" not in i["message"].lower()]
         self.assertEqual(len(errors), 0, f"Should have no errors, got: {errors}")
 
@@ -195,7 +189,6 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should detect missing font13
         has_font13_error = any("font13" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_font13_error, "Should detect missing font13")
 
@@ -223,8 +216,6 @@ class TestFontValidation(unittest.TestCase):
 
     def test_missing_font_file(self):
         """Test detection of missing font file."""
-        # Don't create the font file
-
         fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <fonts>
     <fontset id="Default" unicode="true">
@@ -241,13 +232,12 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should detect missing file
         has_missing_file = any("missing.ttf" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_missing_file, "Should detect missing font file")
 
     def test_case_mismatch_font_file(self):
         """Test detection of case mismatch in font filename."""
-        self.create_font_file("Font.ttf")  # Capital F
+        self.create_font_file("Font.ttf")
 
         fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <fonts>
@@ -265,12 +255,6 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Debug output
-        print("\n=== test_case_mismatch_font_file issues ===")
-        for issue in issues:
-            print(f"  {issue}")
-
-        # Should detect case mismatch
         has_case_error = any("case" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_case_error, "Should detect case mismatch in filename")
 
@@ -407,7 +391,6 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should detect invalid size
         has_size_error = any("size" in issue["message"].lower() and "negative" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_size_error, "Should detect invalid font size")
 
@@ -459,7 +442,6 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should detect duplicate
         has_duplicate_error = any("duplicate" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_duplicate_error, "Should detect duplicate font name")
 
@@ -503,7 +485,6 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should detect missing name
         has_name_error = any("missing" in issue["message"].lower() and "name" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_name_error, "Should detect missing font name")
 
@@ -540,12 +521,11 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should detect inconsistency
         has_consistency_error = any("missing font" in issue["message"].lower() and "compared to" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_consistency_error, "Should detect cross-fontset inconsistency")
 
     def test_used_but_undefined_font(self):
-        """Test detection of font used in window but not defined in Fonts.xml."""
+        """Test detection of font used in window but not defined in Font.xml."""
         self.create_font_file("font.ttf")
 
         fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -576,7 +556,6 @@ class TestFontValidation(unittest.TestCase):
         provider = self.init_provider()
         issues = provider.check_fonts()
 
-        # Should detect undefined font usage
         has_undefined_error = any("undefinedfont" in issue["message"].lower() and "not defined" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_undefined_error, "Should detect used but undefined font")
 
@@ -673,12 +652,11 @@ class TestFontValidation(unittest.TestCase):
         provider = self.init_provider()
         issues = provider.check_fonts()
 
-        # Should detect unused font
         has_unused_error = any("unusedfont" in issue["message"].lower() and "unused" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_unused_error, "Should detect defined but unused font")
 
     def test_dynamic_param_values_ignored(self):
-        """Test that $PARAM[...] values are correctly ignored in validation."""
+        """Test that $PARAM[...] values are ignored in validation."""
         self.create_font_file("font.ttf")
 
         fonts_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -697,7 +675,6 @@ class TestFontValidation(unittest.TestCase):
 
         issues = provider.check_fonts()
 
-        # Should NOT flag missing file or invalid size for $PARAM values
         has_false_positive = any(
             "param[fontfile]" in issue["message"].lower() or
             "param[fontsize]" in issue["message"].lower()
@@ -727,7 +704,6 @@ class TestFontValidation(unittest.TestCase):
 """
         self.create_fonts_xml(fonts_xml)
 
-        # Create window that only uses font16, not font13
         window_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
@@ -743,7 +719,6 @@ class TestFontValidation(unittest.TestCase):
         provider = self.init_provider()
         issues = provider.check_fonts()
 
-        # font13 should NOT be flagged as unused (it's required by Kodi)
         font13_unused = any("font13" in issue["message"].lower() and "unused" in issue["message"].lower() for issue in issues)
         self.assertFalse(font13_unused, "font13 should not be flagged as unused (it's a required Kodi font)")
 

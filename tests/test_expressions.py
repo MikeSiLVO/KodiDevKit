@@ -6,7 +6,6 @@ import sys
 import tempfile
 import shutil
 
-# Add parent directory to path for imports
 package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
@@ -24,10 +23,8 @@ class TestNumberExpressions(unittest.TestCase):
         self.provider = InfoProvider()
         self.provider.settings = {}
 
-        # Create basic addon structure
         os.makedirs(os.path.join(self.test_dir, "1080i"))
 
-        # Write addon.xml
         addon_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.test" version="1.0.0" name="Test Skin" provider-name="test">
     <requires>
@@ -40,7 +37,6 @@ class TestNumberExpressions(unittest.TestCase):
         with open(os.path.join(self.test_dir, "addon.xml"), "w", encoding="utf-8") as f:
             f.write(addon_xml)
 
-        # Initialize provider
         self.provider.init_addon(self.test_dir)
 
     def tearDown(self):

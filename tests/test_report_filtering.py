@@ -42,10 +42,10 @@ class TestExportFiltering(unittest.TestCase):
         self.assertNotIn("plain warning", txt)
 
     def test_hide_include_warnings_drops_only_include_warning(self):
+        """Hiding include warnings drops the include warning but keeps the include error."""
         txt = T.generate_text_report(_report(), hide_include_warnings=True)
         self.assertEqual(_count(txt), 3)
         self.assertNotIn("from include 'X'", txt)
-        # Include-sourced *error* is kept.
         self.assertIn("include error", txt)
 
     def test_combined_filters(self):
@@ -55,9 +55,9 @@ class TestExportFiltering(unittest.TestCase):
         self.assertEqual(_count(txt), 2)
 
     def test_filter_note_present_when_filtering(self):
+        """The filter note shows only when something is filtered."""
         txt = T.generate_text_report(_report(), hidden_severities={"warning"})
         self.assertIn("Filters:", txt)
-        # No note when nothing is filtered.
         self.assertNotIn("Filters:", T.generate_text_report(_report()))
 
     def test_issue_visible_predicate(self):
