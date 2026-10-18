@@ -74,12 +74,13 @@ class TestXbt(unittest.TestCase):
         ])
 
     def test_theme_bundle_beside_sources(self):
+        """A theme bundle beside its source images and a bundle Kodi cannot read each get a row."""
         self._write("media/Dark.xbt", _xbt(["icons/a.png"]))
         os.makedirs(os.path.join(self.path, "media", "icons"))
         self._write("media/icons/a.png", b"png")
         self._write("media/icons/b.png", b"png")
         self._write("media/Broken.xbt", b"not a bundle")
-        self.assertEqual(sorted(m for m in self._messages() if ".xbt" in m), [
+        self.assertEqual(sorted(m for m in self._messages() if ".xbt" in m and not m.startswith("Case mismatch")), [
             "Broken.xbt is not a texture bundle Kodi can read",
             "Kodi repo: Dark.xbt ships beside the source images in media/",
         ])

@@ -130,7 +130,9 @@ class ValidationImage:
 
                     elif status == 'case_mismatch':
                         issues.append({
-                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{detail}')",
+                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{detail}'). A repo "
+                                       f"install reads it from Textures.xbt, which ignores case, so only loose "
+                                       f"images fail, where file names are case-sensitive, such as Linux",
                             "file": file_path,
                             "line": line_num,
                             "severity": SEVERITY_WARNING,
