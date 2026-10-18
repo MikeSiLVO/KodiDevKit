@@ -4,16 +4,10 @@ from __future__ import annotations
 
 import os
 import logging
-from lxml import etree as ET
 
 from ..utils.files import folder_entries, miscased_name
 from ..utils.xml import file_needs_expansion, get_root_from_file
-from ..utils.validation import (
-    CallContexts,
-    find_font_line_in_include,
-    resolve_include_content,
-    resolve_param_in_name,
-)
+from ..utils.validation import CallContexts, resolve_param_in_name
 from ..utils.expressions import is_dynamic_expression
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -21,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Kodi's fallback fonts, which count as used
 REQUIRED_FONTS = {"font13"}
+
+# the font files every Kodi install ships in its own media/Fonts
+KODI_FONTS = {"arial.ttf", "teletext.ttf"}
 
 
 def _undefined_font_issue(name, defined, folded, file, line, unloaded=()):
@@ -86,13 +83,7 @@ class ValidationFont:
                 os.path.join(kodi_path, "media", "fonts"),
             ]
 
-        core_files_maps = []
-        for d in core_dirs:
-            try:
-                if os.path.isdir(d):
-                    core_files_maps.append((d, {f.casefold(): f for f in os.listdir(d)}))
-            except Exception:
-                pass
+        core_files_maps = [(d, {f.casefold(): f for f in folder_entries(d)}) for d in core_dirs]
 
         issues = []
 
@@ -151,8 +142,7 @@ class ValidationFont:
                                     if exists:
                                         break
 
-                        core_safe = {"arial.ttf", "teletext.ttf"}
-                        if not exists and base.lower() not in core_safe:
+                        if not exists and base.lower() not in KODI_FONTS:
                             issues.append(row(f"Missing font file '{filename}' for '{name or '?'}'", file_src, fn_line))
 
                         if not base.lower().endswith(".ttf"):
@@ -195,7 +185,7 @@ class ValidationFont:
                             sz_val = int(sz)
                             if sz_val < 0:
                                 issues.append(row(f"Font size must not be negative, got {sz}", f["file"], f["line"]))
-                        except Exception:
+                        except ValueError:
                             issues.append(row(f"Invalid font size '{sz}' for '{nm or '?'}'", f["file"], f["line"]))
 
                     if nm:
@@ -309,23 +299,16 @@ class ValidationFont:
             return out
 
         if self._resolve_include and file_needs_expansion(path):
-            try:
-                root = self._resolve_include(root, folder=folder)
-            except Exception:
-                pass
+            root = self._resolve_include(root, folder=folder)
 
-        def add_font_from_node(fnode, src_file, include_def=None, conditional=False):
+        def add_font_from_node(fnode, src_file):
             nm = (fnode.findtext("name") or "").strip()
             fn = (fnode.findtext("filename") or "").strip()
             sz = (fnode.findtext("size") or "").strip()
             ln = getattr(fnode, "sourceline", 0) or 0
             src_file = fnode.get("_kdk_inc_file") or src_file
-            if include_def and nm:
-                ln = find_font_line_in_include(include_def, nm)
-                src_file = include_def.get("file") or src_file
-            conditional = conditional or fnode.get("_kdk_inc_cond") == "1"
             return {"name": nm, "filename": fn, "size": sz, "file": src_file, "line": ln,
-                    "conditional": conditional}
+                    "conditional": fnode.get("_kdk_inc_cond") == "1"}
 
         for fs in root.findall(".//fontset"):
             fs_id = fs.attrib.get("id") or fs.attrib.get("name") or "fontset"
@@ -333,23 +316,6 @@ class ValidationFont:
             fs_line = getattr(fs, "sourceline", 0) or 0
 
             fonts = [add_font_from_node(f, path) for f in fs.findall("font")]
-
-            for inc_node in fs.findall("include"):
-                inc_name = (inc_node.text or "").strip()
-                if not inc_name:
-                    continue
-                for inc in self.addon.includes.get(folder, []):
-                    if inc.get("type") == "include" and inc.get("name") == inc_name:
-                        content = resolve_include_content(inc, self._resolve_include)
-                        if not content:
-                            continue
-                        try:
-                            cont_root = ET.fromstring(f"<root>{content}</root>")
-                            for f in cont_root.findall(".//font"):
-                                fonts.append(add_font_from_node(
-                                    f, path, include_def=inc, conditional="condition" in inc_node.attrib))
-                        except Exception:
-                            pass
 
             out.append({"id": fs_id, "unicode": unicode_flag, "file": path, "line": fs_line, "fonts": fonts})
         return out
