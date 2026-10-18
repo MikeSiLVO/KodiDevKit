@@ -41,7 +41,8 @@ CATEGORY_DESCRIPTIONS = {
         "by number where its name should be used."
     ),
     "Images": (
-        "<strong>Errors:</strong> Image file not found. Kodi shows nothing. "
+        "<strong>Errors:</strong> Image file not found, so Kodi shows nothing, or a case mismatch on a "
+        "path Textures.xbt never covers, which fails on Linux. "
         "<strong>Warnings:</strong> Case mismatch, or the file exists at a different path. Packed "
         "textures (Textures.xbt) still load with a case mismatch; loose files fail on Linux."
     ),

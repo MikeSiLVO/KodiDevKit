@@ -229,6 +229,19 @@ class TestImageValidation(ValidationTestCase):
         case_issues = [i for i in issues if "case mismatch" in i.get("message", "").lower()]
         self.assertTrue(len(case_issues) > 0, "Should detect case mismatch in image filename")
 
+    def test_case_mismatch_outside_the_bundle_is_an_error(self):
+        """A case mismatch on a special://skin/ path is an error, on a bare path a warning."""
+        os.makedirs(os.path.join(self.test_dir, "extras"), exist_ok=True)
+        for rel in ("media/Button.png", "extras/Back.jpg"):
+            with open(os.path.join(self.test_dir, rel), "wb") as f:
+                f.write(b"\x89PNG\r\n\x1a\n")
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="image"><texture>button.png</texture></control>'
+                    '<control type="image"><texture>special://skin/extras/back.jpg</texture></control>'
+                    '</controls></window>')
+        found = {(i["rule"], i["severity"]) for i in self._build_checker().check() if "ase mismatch" in i["message"]}
+        self.assertEqual(found, {("images.case-mismatch", "warning"), ("images.unbundled-case-mismatch", "error")})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -138,6 +138,18 @@ class ValidationImage:
                             "subject": image_path,
                         })
 
+                    elif status == 'case_mismatch_unbundled':
+                        issues.append({
+                            "message": f"Case mismatch for '{image_path}'{attr_suffix} (actual '{detail}'); this "
+                                       f"path skips Textures.xbt, so it fails where file names are case-sensitive, "
+                                       f"such as Linux",
+                            "file": file_path,
+                            "line": line_num,
+                            "severity": SEVERITY_ERROR,
+                            "rule": "images.unbundled-case-mismatch",
+                            "subject": image_path,
+                        })
+
                     elif status == 'wrong_path':
                         if detail:
                             hint = ", ".join(detail[:5]) if isinstance(detail, list) else detail

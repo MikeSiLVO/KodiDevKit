@@ -44,6 +44,7 @@ RULES = {
     "images.missing": "An image found neither on disk nor in the texture bundle.",
     "images.not-in-sources": "An image only in Textures.xbt, which a Kodi repo build drops.",
     "images.case-mismatch": "An image named in a different case than on disk.",
+    "images.unbundled-case-mismatch": "An image Kodi loads outside Textures.xbt, named in a different case than on disk.",
     "images.wrong-path": "An image at another path than the one Kodi looks in.",
     "ids.undefined-window": "A window id no Kodi or custom window has.",
     "ids.use-name": "A Kodi window referred to by number where its name works.",

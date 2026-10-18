@@ -606,7 +606,7 @@ class SkinIndex:
 
             cf_rel = val_norm.casefold()
             if cf_rel in cf_rel_to_exact:
-                return "case_mismatch", cf_rel_to_exact[cf_rel]
+                return ("case_mismatch" if bundled else "case_mismatch_unbundled"), cf_rel_to_exact[cf_rel]
             if in_xbt:
                 return "packed_only", None
 
