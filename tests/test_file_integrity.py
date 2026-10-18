@@ -95,7 +95,7 @@ class TestFileIntegrity(unittest.TestCase):
         self._put("16x9/a.xml", b"<window/>")
         self._put("16x9/A.xml", b"<window/>")
         rows = sorted((i["severity"], i["message"]) for i in self.issues()
-                      if "BOM" not in i["message"] and "Line Endings" not in i["message"])
+                      if "BOM" not in i["message"] and "line endings" not in i["message"])
         self.assertEqual(rows, [
             ("error", "16x9/A.xml differs from 16x9/a.xml only by case; one overwrites the other on Windows and macOS"),
             ("error", "16x9/a.xml differs from 16x9/A.xml only by case; one overwrites the other on Windows and macOS"),
@@ -120,7 +120,7 @@ class TestFileIntegrity(unittest.TestCase):
         issues = self.issues()
 
         self.assertTrue(
-            any("Home.xml" in i["message"] and "Windows Line Endings" in i["message"] for i in issues),
+            any(i["file"].endswith("Home.xml") and "Windows line endings" in i["message"] for i in issues),
             f"Should flag CRLF in a skin file, got: {issues}",
         )
 
@@ -131,7 +131,7 @@ class TestFileIntegrity(unittest.TestCase):
         issues = self.issues()
 
         self.assertTrue(
-            any("Home.xml" in i["message"] and "BOM" in i["message"] for i in issues),
+            any(i["file"].endswith("Home.xml") and "BOM" in i["message"] for i in issues),
             f"Should flag a BOM in a skin file, got: {issues}",
         )
 
@@ -142,7 +142,7 @@ class TestFileIntegrity(unittest.TestCase):
         issues = self.issues()
 
         self.assertTrue(
-            any("skinshortcuts" in i["message"] and "Windows Line Endings" in i["message"] for i in issues),
+            any("skinshortcuts" in i["file"] and "Windows line endings" in i["message"] for i in issues),
             f"Should flag CRLF in a shipped generated file, got: {issues}",
         )
 

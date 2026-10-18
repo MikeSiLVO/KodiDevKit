@@ -122,8 +122,8 @@ _SUBTYPE_RULES = [
     ("Brackets do not match", "BAD BRACKETS"),
     ("Use 'noop'", "HINT"),
     ("BOM", "BOM"),
-    ("Windows Line Endings", "LINE ENDINGS"),
-    ("MAC Line Endings", "LINE ENDINGS"),
+    ("Windows line endings", "LINE ENDINGS"),
+    ("Mac line endings", "LINE ENDINGS"),
 ]
 
 

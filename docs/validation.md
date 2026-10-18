@@ -223,8 +223,8 @@ When the skin imports an add-on that writes include files at runtime (script.ski
 Checks file encoding, line endings and the files the skin ships.
 
 **Errors:**
-- BOM (Byte Order Mark) detected in any XML file.
-- Windows line endings (`\r\n`) or Mac line endings (`\r`) detected in any file.
+- A BOM (byte order mark) at the start of a `.xml`, `.po`, `.txt`, `.py` or `.md` file.
+- Windows line endings (`\r\n`) or Mac line endings (`\r`) in any of those files.
 - A 16-bit PNG, which TexturePacker cannot pack.
 - Two files whose names differ only by case. One overwrites the other on Windows and macOS.
 

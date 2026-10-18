@@ -43,7 +43,7 @@ class ValidationFileCheck:
         for path, _eol in result:
             if check_bom(path):
                 issues.append({
-                    "message": f"found BOM. File: {os.path.basename(path)}",
+                    "message": "File starts with a UTF-8 BOM, which Kodi repo review rejects; save it without one",
                     "file": path,
                     "line": 1,
                     "severity": SEVERITY_ERROR,
@@ -52,14 +52,14 @@ class ValidationFileCheck:
         for path, eol in result:
             if eol == '\r\n':
                 issues.append({
-                    "message": f"Windows Line Endings detected in {os.path.basename(path)}",
+                    "message": "Windows line endings (CRLF), which Kodi repo review rejects; save the file with LF",
                     "file": path,
                     "line": 0,
                     "severity": SEVERITY_ERROR,
                 })
             elif eol == '\r':
                 issues.append({
-                    "message": f"MAC Line Endings detected in {os.path.basename(path)}",
+                    "message": "Mac line endings (CR), which Kodi repo review rejects; save the file with LF",
                     "file": path,
                     "line": 0,
                     "severity": SEVERITY_ERROR,
