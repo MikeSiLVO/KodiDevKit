@@ -10,17 +10,14 @@ from lxml import etree as ET
 import sublime
 import sublime_plugin
 
-from .libs.utils.files import check_paths, get_sublime_path
+from .libs.utils.files import check_paths
 from .libs.addon.translations import get_po_file
 from .libs.utils.decorators import run_async
 from .libs.utils.expressions import split_top_level_commas
 from .libs.kodi.jsonrpc import kodi
 
-import subprocess
-
 APP_NAME = "Kodi"
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
-SUBLIME_PATH = get_sublime_path()
 
 FILE_ERROR_PATTERN = re.compile(r'File "(.*?)", line (\d*), in .*')
 TUPLE_ERROR_PATTERN = re.compile(r"', \('(.*?)', (\d+), (\d+), ")
@@ -451,8 +448,8 @@ class KodidevkitOpenKodiAddonCommand(sublime_plugin.WindowCommand):
             logging.error("Cannot open addon: userdata_folder not configured")
             return None
         path = os.path.join(kodi.userdata_folder, "addons", self.nodes[index])
-        if SUBLIME_PATH:
-            subprocess.Popen([SUBLIME_PATH, "-n", "-a", path])
+        sublime.run_command("new_window")
+        sublime.active_window().set_project_data({"folders": [{"path": path}]})
 
 
 class ValidationRunner:
@@ -650,16 +647,8 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
 
     def _open_folder_and_notify(self, folder_path, created=False):
         """Open the folder in the system file manager and say it was just created or is empty."""
-        import subprocess
-
         try:
-            plat = sublime.platform()
-            if plat == 'windows':
-                subprocess.Popen(['explorer', folder_path])
-            elif plat == 'osx':
-                subprocess.Popen(['open', folder_path])
-            else:
-                subprocess.Popen(['xdg-open', folder_path])
+            webbrowser.open(folder_path)
 
             if created:
                 sublime.message_dialog(

@@ -88,16 +88,6 @@ def get_platform() -> str:
         return {"Darwin": "osx", "Linux": "linux"}.get(_plat.system(), "windows")
 
 
-def get_sublime_path() -> str | None:
-    """Get the command that starts Sublime Text, or None when it cannot be found."""
-    plat = get_platform()
-    if plat in ("osx", "linux"):
-        return "subl"
-    elif os.path.exists(os.path.join(os.getcwd(), "sublime_text.exe")):
-        return os.path.join(os.getcwd(), "sublime_text.exe")
-    return None
-
-
 def get_absolute_file_paths(directory: str):
     """Get the absolute path of every file under the directory, one at a time."""
     for dirpath, _, filenames in os.walk(directory):
