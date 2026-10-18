@@ -64,6 +64,7 @@ class ValidationMap:
                 anchor = next(iter(definitions + usages), None)
                 if anchor:
                     issues.append(self._issue(
+                        "maps.unsupported",
                         anchor["file"], anchor["line"],
                         f"Skin maps need Kodi 22 (Piers); this skin targets "
                         f"{getattr(self.addon, 'api_version', '?')}",
@@ -141,6 +142,7 @@ class ValidationMap:
             name = definition["name"]
             if not name:
                 issues.append(self._issue(
+                    "maps.no-name",
                     definition["file"], definition["line"],
                     "<map> has no name attribute, so Kodi ignores it",
                 ))
@@ -148,6 +150,7 @@ class ValidationMap:
 
             if name != name.strip():
                 issues.append(self._issue(
+                    "maps.whitespace",
                     definition["file"], definition["line"],
                     f"Map name is padded with whitespace: '{name}'. $MAP[] trims the "
                     "name it looks up, so nothing can reach this map",
@@ -157,6 +160,7 @@ class ValidationMap:
             previous = seen.get(name)
             if previous:
                 issues.append(self._issue(
+                    "maps.duplicate",
                     definition["file"], definition["line"],
                     f"Duplicate map name: {name}. This replaces the definition in "
                     f"{os.path.basename(previous['file'])}:{previous['line']}",
@@ -180,6 +184,7 @@ class ValidationMap:
             key = entry.attrib.get("key")
             if not key:
                 issues.append(self._issue(
+                    "maps.no-key",
                     definition["file"], line,
                     f"<entry> in map '{name}' has no key attribute, so Kodi ignores it",
                     name=name,
@@ -187,21 +192,24 @@ class ValidationMap:
                 continue
             if entry.text is None:
                 issues.append(self._issue(
+                    "maps.no-value",
                     definition["file"], line,
                     f"Entry '{key}' in map '{name}' has no value, so Kodi ignores it",
-                    name=name,
+                    name=name, subject=key,
                 ))
                 continue
             if key in keys:
                 issues.append(self._issue(
+                    "maps.duplicate-key",
                     definition["file"], line,
                     f"Duplicate entry key '{key}' in map '{name}'; the first value wins",
-                    name=name,
+                    name=name, subject=key,
                 ))
             keys.add(key)
 
         if not keys and not definition["ref"]:
             issues.append(self._issue(
+                "maps.no-entries",
                 definition["file"], definition["line"],
                 f"Map '{name}' has no usable entries and no ref, so Kodi skips it",
                 name=name,
@@ -221,6 +229,7 @@ class ValidationMap:
 
             if ref != ref.strip():
                 issues.append(self._issue(
+                    "maps.ref-whitespace",
                     definition["file"], definition["line"],
                     f"Map '{name}' has a ref padded with whitespace: '{ref}'",
                     name=name,
@@ -229,6 +238,7 @@ class ValidationMap:
 
             if ref not in winners:
                 issues.append(self._issue(
+                    "maps.undefined-ref",
                     definition["file"], definition["line"],
                     f"Map '{name}' references a map that is not defined: {ref}",
                     name=name,
@@ -239,6 +249,7 @@ class ValidationMap:
             if cycle and frozenset(cycle) not in reported_cycles:
                 reported_cycles.add(frozenset(cycle))
                 issues.append(self._issue(
+                    "maps.circular-ref",
                     winners[cycle[0]]["file"], winners[cycle[0]]["line"],
                     f"Circular map reference: {' -> '.join(cycle + [cycle[0]])}. "
                     "Kodi aborts the lookup and shows the raw value",
@@ -270,6 +281,7 @@ class ValidationMap:
             args = usage["args"]
             if args is None:
                 issues.append(self._issue(
+                    "maps.bad-brackets",
                     usage["file"], usage["line"],
                     "$MAP[ is missing its closing ']'; Kodi discards the rest of the label",
                 ))
@@ -277,6 +289,7 @@ class ValidationMap:
 
             if len(args) < 2 or not args[0].strip() or not args[1].strip():
                 issues.append(self._issue(
+                    "maps.bad-syntax",
                     usage["file"], usage["line"],
                     "$MAP[] needs both a map name and an infolabel",
                 ))
@@ -295,6 +308,7 @@ class ValidationMap:
 
             if not names & set(winners):
                 issues.append(self._issue(
+                    "maps.undefined",
                     usage["file"], usage["line"],
                     f"Map not defined: {raw_name}",
                     name=raw_name,
@@ -321,6 +335,7 @@ class ValidationMap:
             if name in reachable:
                 continue
             issues.append(self._issue(
+                "maps.unused",
                 definition["file"], definition["line"],
                 f"Unused map: {name}",
                 name=name,
@@ -328,6 +343,7 @@ class ValidationMap:
         return issues
 
     @staticmethod
-    def _issue(file_path, line, message, name=""):
-        """One map error row in the shape the report and quick panel expect."""
-        return create_issue(message, file_path, line, name=name, type="map", severity=SEVERITY_ERROR)
+    def _issue(rule, file_path, line, message, name="", subject=None):
+        """One map error row in the shape the report and quick panel expect, about the map named."""
+        return create_issue(message, file_path, line, name=name, type="map", severity=SEVERITY_ERROR,
+                            rule=rule, subject=name if subject is None else subject)

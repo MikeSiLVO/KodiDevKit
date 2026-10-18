@@ -216,7 +216,8 @@ class CheckerMixin:
         fn = checks.get(check_type)
         if not fn:
             logger.info("[checks] handler missing type=%s", check_type)
-            return [{"message": "Unknown check type", "file": "", "line": 0}]
+            return [{"message": "Unknown check type", "file": "", "line": 0,
+                     "rule": "kdk.unknown-check-type", "subject": check_type}]
         return fn(progress_callback=progress_callback) or []
 
     def get_suppressions(self):
@@ -359,14 +360,17 @@ class CheckerMixin:
 
         return listitems
 
-    def _add_issue(self, listitems, node, message, identifier="", severity=SEVERITY_WARNING):
-        """Add an issue at the node's line; _file_issues fills in the file later."""
+    def _add_issue(self, listitems, node, message, identifier="", severity=SEVERITY_WARNING, *, rule,
+                   subject=None):
+        """Add an issue at the element's line; _file_issues adds the file later."""
         issue = create_issue(
             message=message,
             file="",
             line=node.sourceline,
             type=node.tag,
-            identifier=identifier or node.tag
+            identifier=identifier or node.tag,
+            rule=rule,
+            subject=(identifier or node.tag) if subject is None else subject,
         )
         issue["severity"] = severity
         listitems.append(issue)
@@ -374,13 +378,15 @@ class CheckerMixin:
     def _validate_brackets(self, listitems, node, text):
         """Validate a condition, reporting it if empty or unbalanced; returns whether it passed."""
         if not text:
-            self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR)
+            self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR,
+                            rule="xml.empty-condition")
             return False
         if is_dynamic_expression(text):
             return True
         if not check_brackets(text):
             condition = text.replace("  ", "").replace("\t", "")
-            self._add_issue(listitems, node, f"Brackets do not match: {condition}", condition, severity=SEVERITY_ERROR)
+            self._add_issue(listitems, node, f"Brackets do not match: {condition}", condition, severity=SEVERITY_ERROR,
+                            rule="xml.bad-brackets")
             return False
         return True
 
@@ -393,7 +399,8 @@ class CheckerMixin:
         if value_type == "viewtype":
             problem = viewtype_problem(value)
             if problem:
-                self._add_issue(listitems, node, problem, value, severity=SEVERITY_WARNING)
+                self._add_issue(listitems, node, problem, value, severity=SEVERITY_WARNING,
+                                rule="xml.unknown-viewtype")
             return problem is None
 
         # Kodi lowercases these before comparing
@@ -402,7 +409,8 @@ class CheckerMixin:
             if normalized_value not in ALLOWED_VALUES[value_type]:
                 location = f"{attr_name} attribute" if attr_name else node.tag
                 allowed = ", ".join(sorted(ALLOWED_VALUES[value_type]))
-                self._add_issue(listitems, node, f"invalid value for {location}: {value} (allowed: {allowed})", value, severity=SEVERITY_ERROR)
+                self._add_issue(listitems, node, f"invalid value for {location}: {value} (allowed: {allowed})", value,
+                                severity=SEVERITY_ERROR, rule="xml.invalid-value", subject=attr_name or node.tag)
                 return False
         else:
             if value not in ALLOWED_VALUES[value_type]:
@@ -411,7 +419,8 @@ class CheckerMixin:
                     detail = "must be lowercase"
                 else:
                     detail = "allowed: " + ", ".join(sorted(ALLOWED_VALUES[value_type]))
-                self._add_issue(listitems, node, f"invalid value for {location}: {value} ({detail})", value, severity=SEVERITY_ERROR)
+                self._add_issue(listitems, node, f"invalid value for {location}: {value} ({detail})", value,
+                                severity=SEVERITY_ERROR, rule="xml.invalid-value", subject=attr_name or node.tag)
                 return False
         return True
 
@@ -447,7 +456,7 @@ class CheckerMixin:
                     self._add_issue(
                         listitems, node,
                         f"Variable ${var_name} used in <{location}> has invalid color value: {value_text}",
-                        value_text
+                        value_text, rule="xml.invalid-variable-value", subject=var_name,
                     )
             elif value_type in ["int", "position"]:
                 check_val = value_text.rstrip("%r") if value_type == "position" else value_text
@@ -460,7 +469,7 @@ class CheckerMixin:
                     self._add_issue(
                         listitems, node,
                         f"Variable ${var_name} used in <{location}> has invalid integer value: {value_text}",
-                        value_text
+                        value_text, rule="xml.invalid-variable-value", subject=var_name,
                     )
             elif value_type in ALLOWED_VALUES:
                 is_valid = value_text in ALLOWED_VALUES[value_type]
@@ -469,7 +478,7 @@ class CheckerMixin:
                     self._add_issue(
                         listitems, node,
                         f"Variable ${var_name} used in <{location}> has invalid value: {value_text}",
-                        value_text
+                        value_text, rule="xml.invalid-variable-value", subject=var_name,
                     )
 
             if not is_valid:
@@ -546,7 +555,8 @@ class CheckerMixin:
         message = f"{name} is not a window file in this Kodi release"
         if successor:
             message += f"; {successor} serves that window"
-        return {"message": message, "file": path, "line": 1, "severity": SEVERITY_ERROR}
+        return {"message": message, "file": path, "line": 1, "severity": SEVERITY_ERROR,
+                "rule": "xml.obsolete-window", "subject": ""}
 
     def _imports_runtime_generator(self):
         """Whether addon.xml imports an addon that writes include files at runtime."""
@@ -610,6 +620,8 @@ class CheckerMixin:
                     "message": "invalid control type: %s"
                     % (node.attrib.get("type")),
                     "severity": SEVERITY_ERROR,
+                    "rule": "xml.invalid-control-type",
+                    "subject": node.attrib.get("type"),
                 }
             )
 
@@ -636,6 +648,8 @@ class CheckerMixin:
                         "identifier": subnode.tag,
                         "message": "invalid tag for <%s>: <%s>" % (label, subnode.tag),
                         "severity": SEVERITY_WARNING,
+                        "rule": "xml.invalid-tag",
+                        "subject": subnode.tag,
                     }
                 )
                 continue
@@ -651,7 +665,8 @@ class CheckerMixin:
                 if subnode.tag in NOOP_TAGS:
                     text = (subnode.text or "").strip()
                     if not text and len(subnode) == 0:
-                        self._add_issue(listitems, subnode, f"Use 'noop' for an empty <{subnode.tag}>", severity=SEVERITY_ERROR)
+                        self._add_issue(listitems, subnode, f"Use 'noop' for an empty <{subnode.tag}>", severity=SEVERITY_ERROR,
+                                        rule="xml.empty-action")
 
                 if subnode.tag in BRACKET_TAGS:
                     text = (subnode.text or "").strip()
@@ -672,7 +687,7 @@ class CheckerMixin:
                     seen = seen_singletons.setdefault(parent, set())
                     if tag_low in seen:
                         self._add_issue(listitems, subnode, f"Invalid multiple tags for {parent.tag}: <{subnode.tag}>",
-                                        severity=SEVERITY_ERROR)
+                                        severity=SEVERITY_ERROR, rule="xml.duplicate-tag")
                     else:
                         seen.add(tag_low)
 
@@ -680,7 +695,7 @@ class CheckerMixin:
                 if k == "description":
                     continue
                 if k not in subnodes[subnode.tag]:
-                    self._add_issue(listitems, subnode, f"invalid attribute for <{subnode.tag}>: {k}", k)
+                    self._add_issue(listitems, subnode, f"invalid attribute for <{subnode.tag}>: {k}", k, rule="xml.invalid-attr")
                     continue
                 if is_dynamic_expression(v):
                     value_type = subnodes[subnode.tag].get(k)
@@ -701,12 +716,15 @@ class CheckerMixin:
                     if number_value:
                         vv = number_value
                     if not is_number(vv) and not (self.addon and v in self.addon.get_constants(folder)):
-                        self._add_issue(listitems, subnode, f"invalid integer value for {k}: {v}", v, severity=SEVERITY_ERROR)
+                        self._add_issue(listitems, subnode, f"invalid integer value for {k}: {v}", v, severity=SEVERITY_ERROR,
+                                        rule="xml.invalid-value", subject=k)
                 elif value_type == "color":
                     if getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels() and not is_kodi_hex(v):
-                        self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR)
+                        self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR,
+                                        rule="xml.invalid-color", subject=k)
                 elif not skip_value_checks and value_type == "bool" and attribute_bool_problem(k, v):
-                    self._add_issue(listitems, subnode, attribute_bool_problem(k, v) or "", v, severity=SEVERITY_ERROR)
+                    self._add_issue(listitems, subnode, attribute_bool_problem(k, v) or "", v, severity=SEVERITY_ERROR,
+                                    rule="xml.misread-bool", subject=k)
                 elif not skip_value_checks:
                     self._validate_enum_value(listitems, subnode, v, value_type, attr_name=k)
 

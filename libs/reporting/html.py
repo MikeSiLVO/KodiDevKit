@@ -62,77 +62,10 @@ CATEGORY_DESCRIPTIONS = {
     ),
 }
 
-# Ordered: first match wins
-_SUBTYPE_RULES = [
-    ("Kodi repo:", "REPO RULE"),
-    ("must be named", "CASE MISMATCH"),
-    ("is not an empty", "NOT EMPTY"),
-    ("Missing image", "MISSING"),
-    ("is only in Textures.xbt", "NOT IN SOURCES"),
-    ("Case mismatch for", "CASE MISMATCH"),
-    ("Wrong path", "WRONG PATH"),
-    ("Case mismatch in font", "CASE MISMATCH"),
-    ("not defined in Font.xml", "UNDEFINED"),
-    ("Unused font", "UNUSED"),
-    ("missing font '", "INCONSISTENT"),
-    ("has extra font '", "INCONSISTENT"),
-    ("Duplicate font name", "DUPLICATE"),
-    ("only loads .ttf", "NOT LOADED"),
-    ("font13", "MISSING FONT13"),
-    ("missing required", "MISSING TAG"),
-    ("Obsolete unicode", "OBSOLETE"),
-    ("Missing font file", "MISSING FILE"),
-    ("Missing include file", "MISSING FILE"),
-    ("Label not defined", "UNDEFINED"),
-    ("not translated", "NOT TRANSLATED"),
-    ("missing $INFO[]", "MISSING INFO"),
-    ("Possible addon ID", "ADDON ID"),
-    ("Window ID not defined", "UNDEFINED"),
-    ("Control ID", "UNDEFINED"),
-    ("Please use", "USE NAME"),
-    ("Unused variable", "UNUSED"),
-    ("Unused map", "UNUSED"),
-    ("Duplicate map name", "DUPLICATE"),
-    ("Duplicate entry key", "DUPLICATE"),
-    ("Circular map reference", "CIRCULAR REF"),
-    ("references a map that is not defined", "UNDEFINED REF"),
-    ("has no name attribute", "NO NAME"),
-    ("has no key attribute", "NO KEY"),
-    ("has no value", "NO VALUE"),
-    ("has no usable entries", "NO ENTRIES"),
-    ("padded with whitespace", "WHITESPACE"),
-    ("$MAP[ is missing", "BAD BRACKETS"),
-    ("$MAP[] needs both", "BAD SYNTAX"),
-    ("Skin maps need Kodi", "UNSUPPORTED"),
-    ("not defined", "UNDEFINED"),
-    ("Unused include", "UNUSED"),
-    ("is not a valid child", "INVALID TAG"),
-    ("is not valid for", "INVALID TAG"),
-    ("is not valid inside", "INVALID TAG"),
-    ("invalid tag for", "INVALID TAG"),
-    ("XML parse error", "PARSE ERROR"),
-    ("Invalid multiple tags", "DUPLICATE TAG"),
-    ("Redundant <", "REDUNDANT"),
-    ("invalid attribute for", "INVALID ATTR"),
-    ("invalid value for", "INVALID VALUE"),
-    ("this view has no type", "INVALID VALUE"),
-    ("Invalid color", "INVALID COLOR"),
-    ("invalid integer", "INVALID VALUE"),
-    ("Empty condition", "EMPTY CONDITION"),
-    ("Brackets do not match", "BAD BRACKETS"),
-    ("Use 'noop'", "HINT"),
-    ("BOM", "BOM"),
-    ("Windows line endings", "LINE ENDINGS"),
-    ("Mac line endings", "LINE ENDINGS"),
-]
 
-
-def _classify_subtype(message: str) -> str:
-    """Derive a short subtype tag from the issue message."""
-    for pattern, label in _SUBTYPE_RULES:
-        if pattern in message:
-            return label
-    return ""
+def _rule_pill(issue) -> str:
+    """Pill text for the issue's rule: the problem part of its id, in capitals."""
+    return (issue.get("rule") or "").partition(".")[2].replace("-", " ").upper()
 
 
 def generate_html_report(all_issues, skin_name, skin_path, server_port, output_path=None,
@@ -661,7 +594,7 @@ def _generate_category_section(category, issues, server_port):
 
         sev_class = f"severity-{severity}"
         inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
-        subtype = _classify_subtype(message)
+        subtype = _rule_pill(issue)
         subtype_html = f'<span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
         muted_class, muted_tag, note_html = _muted_parts(issue)
         subtype_html += muted_tag
@@ -755,7 +688,7 @@ def _generate_file_section(file_path, issues, server_port):
 
             sev_class = f"severity-{severity}"
             inc_class = " from-include" if issue.get("include_name") and severity != SEVERITY_ERROR else ""
-            subtype = _classify_subtype(message)
+            subtype = _rule_pill(issue)
             subtype_html = f' <span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
             muted_class, muted_tag, note_html = _muted_parts(issue)
             subtype_html += muted_tag

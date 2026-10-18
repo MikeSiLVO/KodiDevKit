@@ -65,9 +65,10 @@ class Suppressions:
         mute = {"line": written_at or line, "reason": reason}
         self.lines.setdefault((_key(path), line), []).append((categories, mute))
 
-    def add_fault(self, path, line, message):
+    def add_fault(self, path, line, rule, message):
         """Add a warning at the line for a directive that mutes less than it says."""
-        self.faults.append(create_issue(message, file=path, line=line, severity=SEVERITY_WARNING))
+        self.faults.append(create_issue(message, file=path, line=line, severity=SEVERITY_WARNING,
+                                        rule=rule, subject=""))
 
     def faults_in(self, path=None):
         """Warnings for directives that mute less than they say, in the file or in all of them."""
@@ -140,11 +141,11 @@ def scan(paths):
                 reason = (match.group(3) or "").strip()
                 unknown = _unknown(match.group(2))
                 if unknown:
-                    found.add_fault(path, number, f"kdk-ignore names a check that does not exist: "
+                    found.add_fault(path, number, "xml.ignore-unknown-check", f"kdk-ignore names a check that does not exist: "
                                                   f"{', '.join(unknown)}. The checks are {', '.join(CHECKS)}")
                     categories -= {normalize(name) for name in unknown}
                 if match.group(1) and (ALL in categories or not reason):
-                    found.add_fault(path, number, FILE_FAULT)
+                    found.add_fault(path, number, "xml.ignore-file-incomplete", FILE_FAULT)
                 elif not categories:
                     continue
                 elif match.group(1):

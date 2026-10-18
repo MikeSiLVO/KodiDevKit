@@ -47,6 +47,8 @@ class ValidationFileCheck:
                     "file": path,
                     "line": 1,
                     "severity": SEVERITY_ERROR,
+                    "rule": "files.bom",
+                    "subject": "",
                 })
 
         for path, eol in result:
@@ -56,6 +58,8 @@ class ValidationFileCheck:
                     "file": path,
                     "line": 0,
                     "severity": SEVERITY_ERROR,
+                    "rule": "files.line-endings",
+                    "subject": "",
                 })
             elif eol == '\r':
                 issues.append({
@@ -63,6 +67,8 @@ class ValidationFileCheck:
                     "file": path,
                     "line": 0,
                     "severity": SEVERITY_ERROR,
+                    "rule": "files.line-endings",
+                    "subject": "",
                 })
 
         issues.extend(self._sixteen_bit_pngs())
@@ -95,6 +101,8 @@ class ValidationFileCheck:
                             "file": path,
                             "line": 0,
                             "severity": SEVERITY_ERROR,
+                            "rule": "files.sixteen-bit-png",
+                            "subject": "",
                         })
         return issues
 
@@ -103,9 +111,9 @@ class ValidationFileCheck:
         """Files Kodi repo review rejects, plus names that clash on case-insensitive systems."""
         issues = []
 
-        def add(rel, message, severity=SEVERITY_WARNING):
+        def add(rel, rule, message, severity=SEVERITY_WARNING):
             issues.append({"message": message, "file": os.path.join(self.addon.path, rel), "line": 0,
-                           "severity": severity})
+                           "severity": severity, "rule": rule, "subject": ""})
 
         files = shipped_files(self.addon.path)
         by_folded = {}
@@ -114,26 +122,26 @@ class ValidationFileCheck:
             lower = name.lower()
             by_folded.setdefault(rel.casefold(), []).append(rel)
             if executable:
-                add(rel, f"Kodi repo: {name} is marked executable")
+                add(rel, "files.executable", f"Kodi repo: {name} is marked executable")
             if not rel.isascii():
-                add(rel, f"Kodi repo: {rel} has a non-ASCII name")
+                add(rel, "files.non-ascii-name", f"Kodi repo: {rel} has a non-ASCII name")
             if lower.endswith(".py"):
-                add(rel, f"Kodi repo: skins may not ship python scripts ({name})")
+                add(rel, "files.python-script", f"Kodi repo: skins may not ship python scripts ({name})")
             elif rel.lower().startswith("keymaps/") or _is_keymap(os.path.join(self.addon.path, rel)):
-                add(rel, f"Kodi repo: skins may not ship keymaps ({name})")
+                add(rel, "files.keymap", f"Kodi repo: skins may not ship keymaps ({name})")
             if _LEFTOVER.search(name):
-                add(rel, f"Kodi repo: {name} looks like a leftover, not a skin file")
+                add(rel, "files.leftover", f"Kodi repo: {name} looks like a leftover, not a skin file")
         for paths in by_folded.values():
             if len(paths) > 1:
                 for rel in paths:
                     others = ", ".join(p for p in paths if p != rel)
-                    add(rel, f"{rel} differs from {others} only by case; one overwrites the other on Windows "
+                    add(rel, "files.case-clash", f"{rel} differs from {others} only by case; one overwrites the other on Windows "
                              f"and macOS", SEVERITY_ERROR)
         addon_xml = os.path.join(self.addon.path, "addon.xml")
         try:
             with open(addon_xml, encoding="utf-8", errors="replace") as f:
                 if 'point="kodi.context.item"' in f.read():
-                    add("addon.xml", "Kodi repo: skins may not add context menu items (kodi.context.item)")
+                    add("addon.xml", "files.context-item", "Kodi repo: skins may not add context menu items (kodi.context.item)")
         except OSError:
             pass
         return issues

@@ -30,11 +30,13 @@ class ValidationImage:
     def check(self, progress_callback=None):
         """Check bundles and image usages, a row per bad one, or one saying the check cannot run."""
         if not self.addon:
-            return [{"message": "Image checker unavailable (no addon)", "file": "", "line": 0}]
+            return [{"message": "Image checker unavailable (no addon)", "file": "", "line": 0,
+                     "rule": "images.unavailable", "subject": ""}]
 
         index = self._validation_index
         if not index or 'image_files_checked' not in index:
-            return [{"message": "Image validation unavailable (no index)", "file": "", "line": 0}]
+            return [{"message": "Image validation unavailable (no index)", "file": "", "line": 0,
+                     "rule": "images.unavailable", "subject": ""}]
 
         issues = []
         for path in index.get('xbt_beside_sources', []):
@@ -43,6 +45,8 @@ class ValidationImage:
                 "file": path,
                 "line": 0,
                 "severity": SEVERITY_WARNING,
+                "rule": "images.bundle-beside-sources",
+                "subject": "",
             })
         for path in index.get('xbt_unreadable', []):
             issues.append({
@@ -50,6 +54,8 @@ class ValidationImage:
                 "file": path,
                 "line": 0,
                 "severity": SEVERITY_ERROR,
+                "rule": "images.bundle-unreadable",
+                "subject": "",
             })
 
         if progress_callback:
@@ -93,6 +99,8 @@ class ValidationImage:
                             "file": file_path,
                             "line": line_num,
                             "severity": SEVERITY_ERROR,
+                            "rule": "images.not-empty",
+                            "subject": image_path,
                         })
 
                     elif status == 'missing' and self._in_addon_window(file_path, folder):
@@ -104,6 +112,8 @@ class ValidationImage:
                             "file": file_path,
                             "line": line_num,
                             "severity": SEVERITY_ERROR,
+                            "rule": "images.missing",
+                            "subject": image_path,
                         })
 
                     elif status == 'packed_only':
@@ -114,6 +124,8 @@ class ValidationImage:
                             "file": file_path,
                             "line": line_num,
                             "severity": SEVERITY_WARNING,
+                            "rule": "images.not-in-sources",
+                            "subject": image_path,
                         })
 
                     elif status == 'case_mismatch':
@@ -122,6 +134,8 @@ class ValidationImage:
                             "file": file_path,
                             "line": line_num,
                             "severity": SEVERITY_WARNING,
+                            "rule": "images.case-mismatch",
+                            "subject": image_path,
                         })
 
                     elif status == 'wrong_path':
@@ -133,6 +147,8 @@ class ValidationImage:
                                 "file": file_path,
                                 "line": line_num,
                                 "severity": SEVERITY_WARNING,
+                                "rule": "images.wrong-path",
+                                "subject": image_path,
                             })
 
         if progress_callback:

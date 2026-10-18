@@ -55,10 +55,10 @@ class ValidationRepo:
         self.addon = addon
         self.issues = []
 
-    def _add(self, rel, line, message):
+    def _add(self, rel, line, rule, message, subject=""):
         """Record one warning against a file of the addon."""
         self.issues.append({"message": f"Kodi repo: {message}", "file": os.path.join(self.addon.path, rel),
-                            "line": line, "severity": SEVERITY_WARNING})
+                            "line": line, "severity": SEVERITY_WARNING, "rule": rule, "subject": subject})
 
     def check(self, progress_callback=None):
         """Check the addon against the repo rules, one warning per finding."""
@@ -76,7 +76,7 @@ class ValidationRepo:
             self._check_artwork(root)
         self._check_languages()
         for folder in nested_addons(self.addon.path):
-            self._add(folder, 0, f"{folder} is a separate add-on inside this one. The Kodi repo takes one "
+            self._add(folder, 0, "repo.nested-addon", f"{folder} is a separate add-on inside this one. The Kodi repo takes one "
                                  f"add-on per submission; outside the repo this works")
         for rel, _executable in shipped_files(self.addon.path):
             name = rel.rsplit("/", 1)[-1]
@@ -84,7 +84,7 @@ class ValidationRepo:
             if name.startswith(".") or name.lower().endswith(".xbt"):
                 continue
             if "." in name and not WHITELIST.match("." + name.rsplit(".", 1)[1]):
-                self._add(rel, 0, f"{rel} has a file type the repo does not accept")
+                self._add(rel, 0, "repo.file-type", f"{rel} has a file type the repo does not accept")
         if progress_callback:
             progress_callback(f"Complete: {len(self.issues)} repo issues found")
         return self.issues
@@ -93,21 +93,24 @@ class ValidationRepo:
         """Check the version, id, extensions and xbmc.gui import in addon.xml."""
         version = root.get("version")
         if not version or not VERSION.match(version):
-            self._add("addon.xml", root.sourceline, f"version {version!r} is not major.minor.revision (e.g. 1.0.0)")
+            self._add("addon.xml", root.sourceline, "repo.version",
+                      f"version {version!r} is not major.minor.revision (e.g. 1.0.0)", version or "")
         folder = os.path.basename(os.path.normpath(self.addon.path))
         if root.get("id") != folder:
-            self._add("addon.xml", root.sourceline, f"addon id {root.get('id')} does not match folder {folder}")
+            self._add("addon.xml", root.sourceline, "repo.id-mismatch",
+                      f"addon id {root.get('id')} does not match folder {folder}", root.get("id") or "")
         bare = copy.deepcopy(root)
         for ext in list(bare.findall("extension")):
             point = ext.get("point")
             if point not in KNOWN_POINTS:
-                self._add("addon.xml", ext.sourceline, f"{point} is not a valid extension point")
+                self._add("addon.xml", ext.sourceline, "repo.extension-point", f"{point} is not a valid extension point",
+                          point or "")
             elif point in SKIN_SCHEMAS:
                 self._validate(ext, SKIN_SCHEMAS[point])
             bare.remove(ext)
         self._validate(bare, "addon.xsd")
         if not root.findall("extension[@point='xbmc.addon.metadata']"):
-            self._add("addon.xml", root.sourceline, "addon.xml has no xbmc.addon.metadata extension")
+            self._add("addon.xml", root.sourceline, "repo.no-metadata", "addon.xml has no xbmc.addon.metadata extension")
         self._check_release(root)
 
     def _check_release(self, root):
@@ -124,10 +127,10 @@ class ValidationRepo:
         if wanted is None or lowest is None:
             return
         if lowest > self.addon._safe_version_tuple(release["gui_version"]):
-            self._add("addon.xml", node.sourceline, f"xbmc.gui {version} is newer than {name}'s "
+            self._add("addon.xml", node.sourceline, "repo.gui-too-new", f"xbmc.gui {version} is newer than {name}'s "
                                                     f"{release['gui_version']}, so {name} will not load it")
         elif wanted < self.addon._safe_version_tuple(release["gui_abi"]):
-            self._add("addon.xml", node.sourceline, f"xbmc.gui {version} is older than the "
+            self._add("addon.xml", node.sourceline, "repo.gui-too-old", f"xbmc.gui {version} is older than the "
                                                     f"{release['gui_abi']} {name} still accepts, "
                                                     f"so {name} will not load it")
 
@@ -139,7 +142,8 @@ class ValidationRepo:
                 # an empty <assets> tag gets its own plainer message from the artwork check
                 if "/assets/" in (error.path or "") and "The value '' is not accepted" in error.message:
                     continue
-                self._add("addon.xml", error.line, _plain_schema_error(error.message))
+                self._add("addon.xml", error.line, "repo.schema", _plain_schema_error(error.message),
+                          _plain_schema_error(error.message))
 
     def _check_artwork(self, root):
         """Check declared artwork exists and has an accepted type, size and file size."""
@@ -148,25 +152,26 @@ class ValidationRepo:
             fallback = {"icon": "icon.png", "fanart": "fanart.jpg"}.get(kind) if not images else None
             if fallback:
                 if os.path.isfile(os.path.join(self.addon.path, fallback)):
-                    self._add(fallback, 0, f"{fallback} should be declared in addon.xml <assets>")
+                    self._add(fallback, 0, "repo.undeclared-asset", f"{fallback} should be declared in addon.xml <assets>")
                 continue
             for image in images:
                 if not image or not image.strip():
-                    self._add("addon.xml", 0, f"empty <{kind}> tag in <assets>")
+                    self._add("addon.xml", 0, "repo.empty-asset", f"empty <{kind}> tag in <assets>", kind)
                     continue
                 path = os.path.join(self.addon.path, image.strip())
                 if not os.path.isfile(path):
-                    self._add("addon.xml", 0, f"{kind} {image.strip()} does not exist")
+                    self._add("addon.xml", 0, "repo.missing-asset", f"{kind} {image.strip()} does not exist", kind)
                     continue
                 ext = os.path.splitext(path)[1].lower()
                 if ext not in extensions:
-                    self._add(image.strip(), 0, f"{kind} must be {'/'.join(extensions)}, not {ext}")
+                    self._add(image.strip(), 0, "repo.asset-type", f"{kind} must be {'/'.join(extensions)}, not {ext}", kind)
                 dims = dict(get_image_info(path)).get("Dimensions", "")
                 if dims and tuple(int(v) for v in dims.split("x")) not in sizes:
                     allowed = " or ".join(f"{w}x{h}" for w, h in sizes)
-                    self._add(image.strip(), 0, f"{kind} is {dims}, the repo accepts {allowed}")
+                    self._add(image.strip(), 0, "repo.asset-size", f"{kind} is {dims}, the repo accepts {allowed}", kind)
                 if max_kb and os.path.getsize(path) > max_kb * 1024:
-                    self._add(image.strip(), 0, f"{kind} is {os.path.getsize(path) // 1024}KB, over {max_kb}KB")
+                    self._add(image.strip(), 0, "repo.asset-file-size",
+                              f"{kind} is {os.path.getsize(path) // 1024}KB, over {max_kb}KB", kind)
 
     def _check_languages(self):
         """Check language folders use resource.language.<code> and include en_gb, then each po."""
@@ -180,17 +185,17 @@ class ValidationRepo:
                     continue
                 rel = os.path.join(base, folder).replace("\\", "/")
                 if not folder.startswith("resource.language."):
-                    self._add(rel, 0, f"{rel} uses the old language folder layout; use resource.language.<code>")
+                    self._add(rel, 0, "repo.language-layout", f"{rel} uses the old language folder layout; use resource.language.<code>")
                     continue
                 code = folder[len("resource.language."):]
                 if not LANG_CODE.match(code):
-                    self._add(rel, 0, f"{code} is not a valid language code")
+                    self._add(rel, 0, "repo.language-code", f"{code} is not a valid language code", code)
                 found_en_gb |= code.lower() == "en_gb"
                 po = os.path.join(base_path, folder, "strings.po")
                 if os.path.isfile(po):
                     self._check_po(rel + "/strings.po", po)
         if not found_en_gb:
-            self._add("addon.xml", 0, "no resource.language.en_gb folder with the default strings")
+            self._add("addon.xml", 0, "repo.no-en-gb", "no resource.language.en_gb folder with the default strings")
 
     def _check_po(self, rel, path):
         """Check a strings.po is UTF-8, has Kodi's header, no BOM or duplicate ids, and parses."""
@@ -198,24 +203,24 @@ class ValidationRepo:
             with open(path, encoding="utf-8") as f:
                 contents = f.read()
         except UnicodeDecodeError:
-            self._add(rel, 0, f"{rel} is not saved as UTF-8")
+            self._add(rel, 0, "repo.po-encoding", f"{rel} is not saved as UTF-8")
             return
         except OSError:
             return
         first = contents.find('msgctxt "#')
         header = contents[:first] if first != -1 else contents
         if not re.search(r'msgid ""\s+msgstr ""', header):
-            self._add(rel, 1, f'{rel} is missing the msgid "" / msgstr "" header')
+            self._add(rel, 1, "repo.po-header", f'{rel} is missing the msgid "" / msgstr "" header')
         seen = {}
         for number, line in enumerate(contents.splitlines(), 1):
             found = re.match(r'\s*msgctxt\s+"#(\d+)"', line)
             if found and found.group(1) in seen:
-                self._add(rel, number, f"string id {found.group(1)} is defined twice (first on line "
-                                       f"{seen[found.group(1)]})")
+                self._add(rel, number, "repo.po-duplicate-id", f"string id {found.group(1)} is defined twice (first on line "
+                                                               f"{seen[found.group(1)]})", found.group(1))
             elif found:
                 seen[found.group(1)] = number
         if contents.startswith("\ufeff"):
-            self._add(rel, 1, f"{rel} starts with a BOM (byte order mark)")
+            self._add(rel, 1, "repo.po-bom", f"{rel} starts with a BOM (byte order mark)")
             return
         # kodi-addon-checker rewrites comment lines this way before handing the file to polib
         cleaned = "".join(
@@ -228,9 +233,9 @@ class ValidationRepo:
             found = (re.search(r"\(line (?P<line>\d+)\)\s*:\s*(?P<detail>[\s\S]+?)\s*$", str(error))
                      or re.search(r"(?P<detail>Syntax error)[\s\S]+\(line (?P<line>\d+)\)\s*$", str(error)))
             if found:
-                self._add(rel, int(found.group("line")), f"{rel}: {found.group('detail')}")
+                self._add(rel, int(found.group("line")), "repo.po-parse", f"{rel}: {found.group('detail')}")
             else:
-                self._add(rel, 0, f"{rel}: {error}")
+                self._add(rel, 0, "repo.po-parse", f"{rel}: {error}")
 
 
 def _plain_schema_error(message):

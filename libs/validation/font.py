@@ -21,22 +21,21 @@ KODI_FONTS = {"arial.ttf", "teletext.ttf"}
 
 
 def _undefined_font_issue(name, defined, folded, file, line, unloaded=()):
-    """Issue for a used font name not defined exactly, or None when it is."""
+    """Issue for a used font name not defined exactly or never loaded, or None when it is fine."""
     if name.casefold() in unloaded:
-        return {"message": f"Font '{name}' is never loaded: Kodi only loads .ttf fonts",
-                "file": file, "line": line, "severity": SEVERITY_ERROR}
-    if name in defined:
+        rule, message = "fonts.uses-not-loaded", f"Font '{name}' is never loaded: Kodi only loads .ttf fonts"
+    elif name in defined:
         return None
-    if name.lower() in ("-", "noop"):
-        return {"message": f"'{name}' is not an empty font in Kodi; leave the tag out",
-                "file": file, "line": line, "severity": SEVERITY_ERROR}
-    match = folded.get(name.casefold())
-    if match:
+    elif name.lower() in ("-", "noop"):
+        rule, message = "fonts.not-empty", f"'{name}' is not an empty font in Kodi; leave the tag out"
+    elif name.casefold() in folded:
         # Kodi matches font names case-insensitively, repo review requires the exact name
-        message = f"Case mismatch in font name '{name}' (defined as '{match}')"
+        rule = "fonts.name-case-mismatch"
+        message = f"Case mismatch in font name '{name}' (defined as '{folded[name.casefold()]}')"
     else:
-        message = f"Font '{name}' is used but not defined in Font.xml"
-    return {"message": message, "file": file, "line": line, "severity": SEVERITY_ERROR}
+        rule, message = "fonts.undefined", f"Font '{name}' is used but not defined in Font.xml"
+    return {"message": message, "file": file, "line": line, "severity": SEVERITY_ERROR,
+            "rule": rule, "subject": name}
 
 
 class ValidationFont:
@@ -61,8 +60,9 @@ class ValidationFont:
 
     def check(self, progress_callback=None):
         """Check the fonts, a row per bad font, file, fontset or use, or one for a bad Kodi path."""
-        def row(message, file_path="", line=0, severity=SEVERITY_ERROR):
-            return {"message": message, "file": file_path, "line": line, "severity": severity}
+        def row(message, file_path="", line=0, severity=SEVERITY_ERROR, *, rule, subject=""):
+            return {"message": message, "file": file_path, "line": line, "severity": severity,
+                    "rule": rule, "subject": subject}
 
         if not self.addon:
             return []
@@ -72,7 +72,7 @@ class ValidationFont:
             kodi_path = (self.addon.settings.get("kodi_path") or "").strip()
 
         if kodi_path and not os.path.isdir(kodi_path):
-            return [row(f"Kodi path not found: {kodi_path}")]
+            return [row(f"Kodi path not found: {kodi_path}", rule="fonts.kodi-path-missing", subject=kodi_path)]
 
         skin_fonts_dir = os.path.join(self.addon.path, "fonts")
         core_dirs = []
@@ -92,7 +92,7 @@ class ValidationFont:
             actual = miscased_name(folder_path, "Font.xml")
             if actual:
                 issues.append(row(f"{actual} must be named Font.xml; Kodi does not load it on Linux",
-                                  os.path.join(folder_path, actual), 1))
+                                  os.path.join(folder_path, actual), 1, rule="fonts.misnamed-font-xml", subject=actual))
 
         total_fonts = sum(len(items) for items in (self.addon.fonts or {}).values()) if getattr(self.addon, "fonts", None) else 0
         total_folders = len(getattr(self.addon, "xml_folders", []))
@@ -123,7 +123,8 @@ class ValidationFont:
                         exists = actual is not None
 
                         if exists and actual != rel:
-                            issues.append(row(f"Case mismatch in font filename '{filename}' (actual '{actual}'), Kodi still loads it", file_src, fn_line, SEVERITY_WARNING))
+                            issues.append(row(f"Case mismatch in font filename '{filename}' (actual '{actual}'), Kodi still loads it", file_src, fn_line, SEVERITY_WARNING,
+                                              rule="fonts.file-case-mismatch", subject=filename))
 
                         if not exists and core_files_maps:
                             for d, cmap in core_files_maps:
@@ -137,17 +138,20 @@ class ValidationFont:
                                                 file_src,
                                                 fn_line,
                                                 SEVERITY_WARNING,
+                                                rule="fonts.core-file-case-mismatch",
+                                                subject=filename,
                                             )
                                         )
                                     if exists:
                                         break
 
                         if not exists and base.lower() not in KODI_FONTS:
-                            issues.append(row(f"Missing font file '{filename}' for '{name or '?'}'", file_src, fn_line))
+                            issues.append(row(f"Missing font file '{filename}' for '{name or '?'}'", file_src, fn_line,
+                                              rule="fonts.missing-file", subject=filename))
 
                         if not base.lower().endswith(".ttf"):
                             issues.append(row(f"Kodi only loads .ttf fonts, so '{name or '?'}' ({filename}) is never "
-                                              f"loaded", file_src, fn_line))
+                                              f"loaded", file_src, fn_line, rule="fonts.not-loaded", subject=name))
 
         for folder in getattr(self.addon, "xml_folders", []):
             fontsets = self._parse_fontsets(folder)
@@ -157,16 +161,19 @@ class ValidationFont:
             for fs in fontsets:
                 if fs["unicode"]:
                     issues.append(row(f"Obsolete unicode attribute on fontset '{fs['id']}', Kodi ignores it",
-                                      fs["file"], fs["line"], SEVERITY_WARNING))
+                                      fs["file"], fs["line"], SEVERITY_WARNING,
+                                      rule="fonts.obsolete-unicode", subject=fs["id"]))
 
             any_font13 = any(any(f["name"] == "font13" for f in fs["fonts"]) for fs in fontsets)
             if not any_font13:
-                issues.append(row("Missing required default font 'font13'", fontsets[0]["file"], fontsets[0]["line"]))
+                issues.append(row("Missing required default font 'font13'", fontsets[0]["file"], fontsets[0]["line"],
+                                  rule="fonts.missing-font13", subject="font13"))
             else:
                 for fs in fontsets:
                     if not any(f["name"] == "font13" for f in fs["fonts"]):
                         issues.append(row(f"Fontset '{fs['id']}' has no font13, which Kodi uses for any font "
-                                          f"name the fontset lacks", fs["file"], fs["line"], SEVERITY_WARNING))
+                                          f"name the fontset lacks", fs["file"], fs["line"], SEVERITY_WARNING,
+                                          rule="fonts.fontset-missing-font13", subject=fs["id"]))
 
             for fs in fontsets:
                 name_to_locs = {}
@@ -176,17 +183,21 @@ class ValidationFont:
                     sz = (f.get("size") or "").strip()
 
                     if not nm:
-                        issues.append(row("Missing <name> in <font>", f["file"], f["line"]))
+                        issues.append(row("Missing <name> in <font>", f["file"], f["line"],
+                                          rule="fonts.missing-name", subject=fn))
                     if not fn:
-                        issues.append(row(f"Missing <filename> for font '{nm or '?'}'", f["file"], f["line"]))
+                        issues.append(row(f"Missing <filename> for font '{nm or '?'}'", f["file"], f["line"],
+                                          rule="fonts.missing-filename", subject=nm))
 
                     if sz and not is_dynamic_expression(sz):
                         try:
                             sz_val = int(sz)
                             if sz_val < 0:
-                                issues.append(row(f"Font size must not be negative, got {sz}", f["file"], f["line"]))
+                                issues.append(row(f"Font size must not be negative, got {sz}", f["file"], f["line"],
+                                                  rule="fonts.negative-size", subject=nm))
                         except ValueError:
-                            issues.append(row(f"Invalid font size '{sz}' for '{nm or '?'}'", f["file"], f["line"]))
+                            issues.append(row(f"Invalid font size '{sz}' for '{nm or '?'}'", f["file"], f["line"],
+                                              rule="fonts.invalid-size", subject=nm))
 
                     if nm:
                         name_to_locs.setdefault(nm, []).append(f)
@@ -196,7 +207,8 @@ class ValidationFont:
                     first = next((i for i, f in enumerate(copies) if not f["conditional"]), len(copies))
                     if len(copies) - first > 1:
                         for f in copies[first:]:
-                            issues.append(row(f"Duplicate font name '{nm}' within fontset '{fs['id']}'", f["file"], f["line"], SEVERITY_WARNING))
+                            issues.append(row(f"Duplicate font name '{nm}' within fontset '{fs['id']}'", f["file"], f["line"], SEVERITY_WARNING,
+                                              rule="fonts.duplicate", subject=nm))
 
             base = fontsets[0]
             base_names = {f["name"] for f in base["fonts"] if f["name"]}
@@ -205,9 +217,11 @@ class ValidationFont:
                 missing = sorted(base_names - names)
                 extra = sorted(names - base_names)
                 for n in missing:
-                    issues.append(row(f"fontset '{fs['id']}' missing font '{n}' compared to '{base['id']}'", fs["file"], fs["line"], SEVERITY_WARNING))
+                    issues.append(row(f"fontset '{fs['id']}' missing font '{n}' compared to '{base['id']}'", fs["file"], fs["line"], SEVERITY_WARNING,
+                                      rule="fonts.inconsistent-missing", subject=n))
                 for n in extra:
-                    issues.append(row(f"fontset '{fs['id']}' has extra font '{n}' not in '{base['id']}'", fs["file"], fs["line"], SEVERITY_WARNING))
+                    issues.append(row(f"fontset '{fs['id']}' has extra font '{n}' not in '{base['id']}'", fs["file"], fs["line"], SEVERITY_WARNING,
+                                      rule="fonts.inconsistent-extra", subject=n))
 
         if getattr(self.addon, "fonts", None) and self._validation_index:
             for folder in self.addon.xml_folders:
@@ -246,6 +260,8 @@ class ValidationFont:
                             "file": font_info.get('file', ''),
                             "line": font_info.get('line', 0),
                             "severity": SEVERITY_WARNING,
+                            "rule": "fonts.unused",
+                            "subject": font_name,
                         })
 
         # an include pulled into several fontsets reports each of its fonts once per set

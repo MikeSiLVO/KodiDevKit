@@ -140,6 +140,23 @@ def _kept_location(addon, folder, kind, name):
     return path, getattr(node, "sourceline", 0) or 0
 
 
+# the Includes check reports the constants, expressions and defaults it loads beside includes
+_SHADOWED_RULES = {
+    "include": "includes.duplicate",
+    "include without definition": "includes.no-definition",
+    "variable": "variables.duplicate",
+    "constant": "includes.duplicate-constant",
+    "expression": "includes.duplicate-expression",
+    "default": "includes.duplicate-default",
+}
+
+
+_REFERENCE_RULES = {
+    "include": ("includes.undefined", "includes.unused"),
+    "variable": ("variables.undefined", "variables.unused"),
+}
+
+
 def shadowed_issues(addon, folder, kinds):
     """Issues for the definitions of those kinds Kodi drops: later duplicates, bodiless includes."""
     issues = []
@@ -159,8 +176,8 @@ def shadowed_issues(addon, folder, kinds):
                 continue
             where = f" ({os.path.basename(kept[0])}:{kept[1]})" if kept else ""
             message = f"Duplicate {kind} '{name}': Kodi uses the first definition{where}"
-        issues.append(create_issue(message, file=entry["file"], line=entry["line"],
-                                   type=kind, name=name, severity="error"))
+        issues.append(create_issue(message, file=entry["file"], line=entry["line"], type=kind, name=name,
+                                   severity="error", rule=_SHADOWED_RULES[kind], subject=name))
     return issues
 
 
@@ -196,8 +213,8 @@ def reference_issues(addon, folder, kind, refs, definitions, defined=(), skip=No
             message += (
                 f" -> Note: {label} contains $PARAM but doesn't resolve to any defined {kind} "
                 f"in any usage context. Check {kind} definitions and parameter names.")
-        issues.append(create_issue(message, file=ref["file"], line=ref["line"],
-                                   name=name, type=kind, severity="error"))
+        issues.append(create_issue(message, file=ref["file"], line=ref["line"], name=name, type=kind,
+                                   severity="error", rule=_REFERENCE_RULES[kind][0], subject=raw))
 
     for definition in definitions:
         name = definition["name"]
@@ -205,7 +222,7 @@ def reference_issues(addon, folder, kind, refs, definitions, defined=(), skip=No
             continue
         issues.append(create_issue(f"Unused {kind}: {name}", file=definition["file"],
                                    line=definition["line"], name=name, type=kind,
-                                   severity="error"))
+                                   severity="error", rule=_REFERENCE_RULES[kind][1], subject=name))
     return issues
 
 

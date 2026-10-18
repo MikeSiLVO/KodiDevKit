@@ -24,19 +24,19 @@ class ValidationIds:
         self._validation_index = validation_index
 
     def _window_ref_message(self, ref_id, window_ids_in_skin, usage_file):
-        """Problem with a window id reference, or None when it resolves and has no name to use."""
+        """Rule and message for a bad window id reference, or None for a fine one."""
         if ref_id in window_ids_in_skin:
             return None
-        # WindowTranslator reads any id up to 9999 as WINDOW_HOME plus that id
+        # Kodi reads any id up to 9999 as an offset from the home window
         full_id = str(int(ref_id) + 10000) if ref_id.isdigit() and int(ref_id) <= 9999 else ref_id
         if full_id in window_ids_in_skin:
             return None
         if full_id not in self.window_ids:
-            return f"Window ID not defined: {ref_id}"
+            return "ids.undefined-window", f"Window ID not defined: {ref_id}"
         name = self.window_names[self.window_ids.index(full_id)]
         if not name or "script-skinshortcuts-includes.xml" in usage_file.replace("\\", "/").lower():
             return None
-        return f"Window id: Please use {name} instead of {ref_id}"
+        return "ids.use-name", f"Window id: Please use {name} instead of {ref_id}"
 
     def _custom_window_issues(self, folder, custom_windows):
         """Custom windows Kodi refuses to load, or whose id sits outside the reviewed range."""
@@ -45,28 +45,33 @@ class ValidationIds:
         for window_file, window_id in sorted(custom_windows.items()):
             path = os.path.join(self.addon.path, folder, window_file)
             if window_id is None or window_id.startswith("root:"):
-                message = ("Custom window has no id, so Kodi does not load it" if window_id is None
-                           else f"Custom window root is <{window_id[5:]}>, not <window>, so Kodi does not load it")
-                issues.append((path, message, SEVERITY_ERROR))
+                if window_id is None:
+                    issues.append((path, "Custom window has no id, so Kodi does not load it", SEVERITY_ERROR,
+                                   "ids.custom-window-no-id", ""))
+                else:
+                    issues.append((path, f"Custom window root is <{window_id[5:]}>, not <window>, so Kodi does "
+                                         f"not load it", SEVERITY_ERROR, "ids.custom-window-root", window_id[5:]))
                 continue
             by_id.setdefault(window_id, []).append(window_file)
             full_id = str(int(window_id) + 10000)
             if full_id in self.window_ids:
                 name = self.window_names[self.window_ids.index(full_id)] or full_id
                 issues.append((path, f"Custom window id {window_id} is Kodi's {name} window, so Kodi "
-                                     f"does not load it", SEVERITY_ERROR))
+                                     f"does not load it", SEVERITY_ERROR, "ids.custom-window-taken", window_id))
             elif not 1100 <= int(window_id) <= 1199:
-                issues.append((path, f"Custom window id {window_id} is outside 1100-1199", SEVERITY_WARNING))
+                issues.append((path, f"Custom window id {window_id} is outside 1100-1199", SEVERITY_WARNING,
+                               "ids.custom-window-range", window_id))
         for window_id, files in by_id.items():
             for window_file in files if len(files) > 1 else ():
                 others = ", ".join(f for f in files if f != window_file)
                 issues.append((os.path.join(self.addon.path, folder, window_file),
                                f"Custom window id {window_id} is also used by {others}; Kodi loads one",
-                               SEVERITY_ERROR))
-        return [{"message": m, "file": p, "line": 1, "severity": sev} for p, m, sev in issues]
+                               SEVERITY_ERROR, "ids.custom-window-shared", window_id))
+        return [{"message": m, "file": p, "line": 1, "severity": sev, "rule": rule, "subject": subject}
+                for p, m, sev, rule, subject in issues]
 
     def _window_name_message(self, name):
-        """Problem with a window name, or None when Kodi knows it."""
+        """Rule and message for a window name Kodi does not know, or None when it does."""
         key = name.lower()
         if key.endswith(".xml"):
             key = key[:-4]
@@ -76,7 +81,7 @@ class ValidationIds:
             key = key[2:]
         if key.isdigit() or key in {n.lower() for n in self.window_names if n}:
             return None
-        return f"Window name not recognized by Kodi: {name}"
+        return "ids.unknown-window-name", f"Window name not recognized by Kodi: {name}"
 
     def _modeless_files(self, custom, window_files):
         """Window files Kodi may open modeless; addon windows count, since their type is unknown."""
@@ -137,9 +142,9 @@ class ValidationIds:
                 for usage in usages:
                     usage_file = usage.get('file', '')
                     if usage.get('type', 'control') == 'window':
-                        message = self._window_ref_message(ref_id, window_ids_in_skin, usage_file)
+                        found = self._window_ref_message(ref_id, window_ids_in_skin, usage_file)
                     elif usage['type'] == 'window_name':
-                        message = self._window_name_message(ref_id)
+                        found = self._window_name_message(ref_id)
                     elif not ref_id:
                         continue
                     else:
@@ -154,19 +159,21 @@ class ValidationIds:
                         # a dialog leaves the stack before its onunload runs
                         unload_below = usage.get('unload') and usage_name in dialog_files
                         if ref_id not in defined_anywhere:
-                            message = f"Control ID {ref_id} not defined"
+                            found = "ids.undefined-control", f"Control ID {ref_id} not defined"
                         elif (usage.get('context') != 'navigation'
                               and (usage_name in modeless_files or usage.get('after_switch') or unload_below)):
                             # Kodi resolves it in the topmost modal dialog or the active window
                             continue
                         else:
-                            message = f"Control ID {ref_id} not defined in {usage_name}'s scope"
-                    if message:
+                            found = "ids.out-of-scope", f"Control ID {ref_id} not defined in {usage_name}'s scope"
+                    if found:
                         listitems.append({
-                            "message": message,
+                            "message": found[1],
                             "file": usage_file,
                             "line": usage.get('line', 0),
                             "severity": SEVERITY_ERROR,
+                            "rule": found[0],
+                            "subject": ref_id,
                         })
 
         return deduplicate_issues(listitems)

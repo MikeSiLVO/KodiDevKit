@@ -290,6 +290,12 @@
     ]
   },
   {
+    "symbol": "libs/validation/ids.py:ValidationIds._window_ref_message",
+    "kodi": [
+      "xbmc/input/WindowTranslator.cpp:CWindowTranslator::TranslateWindow"
+    ]
+  },
+  {
     "symbol": "libs/validation/ids.py:ValidationIds.check",
     "kodi": [
       "xbmc/guilib/GUIDialog.cpp:CGUIDialog::OnDeinitWindow"

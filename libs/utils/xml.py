@@ -171,6 +171,8 @@ def parse_error_issue(xml_file):
         "file": xml_file,
         "severity": "error",
         "type": "XML",
+        "rule": "xml.parse-error",
+        "subject": "",
     }
 
 

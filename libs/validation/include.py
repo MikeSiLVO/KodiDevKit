@@ -64,17 +64,19 @@ def check_include_file_ref(addon, folder, ref):
         return None
 
     if not is_inside(os.path.join(addon.path, folder, ref), addon.path):
-        message = f"Include file '{ref}' is outside the skin folder, so it never ships with the skin"
+        rule, message = "xml.include-file-outside", f"Include file '{ref}' is outside the skin folder, so it never ships with the skin"
     elif actual:
-        message = f"Case mismatch for '{ref}' (actual '{actual}')"
+        rule, message = "xml.include-file-case-mismatch", f"Case mismatch for '{ref}' (actual '{actual}')"
     else:
-        message = f"Missing include file '{ref}'"
+        rule, message = "xml.missing-include-file", f"Missing include file '{ref}'"
     return {
         'name': ref,
         'identifier': ref,
         'type': 'include',
         'message': message,
         'severity': SEVERITY_ERROR,
+        'rule': rule,
+        'subject': ref,
     }
 
 
@@ -137,6 +139,8 @@ class ValidationInclude:
                     'line': 1,
                     'message': f"{actual} must be named Includes.xml; Kodi does not load it on Linux",
                     'severity': SEVERITY_ERROR,
+                    'rule': "includes.misnamed-includes-xml",
+                    'subject': actual,
                 })
 
             var_refs = []

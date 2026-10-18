@@ -104,6 +104,7 @@ class ValidationLabel:
                     f"Ignore if intentional descriptive text."
                 )
                 updated_item['severity'] = SEVERITY_WARNING
+                updated_item.update(rule="labels.missing-info", subject=label_text)
                 listitems.append(updated_item)
             elif self._is_addon_id(label_text):
                 updated_item = cached_item.copy()
@@ -112,10 +113,12 @@ class ValidationLabel:
                     f"Check if intentional descriptive text or needs translation."
                 )
                 updated_item['severity'] = SEVERITY_WARNING
+                updated_item.update(rule="labels.addon-id", subject=label_text)
                 listitems.append(updated_item)
             else:
                 item = cached_item.copy()
                 item['severity'] = SEVERITY_WARNING
+                item.update(rule="labels.not-translated", subject=label_text)
                 listitems.append(item)
 
         for folder in self.addon.xml_folders:
@@ -144,13 +147,16 @@ class ValidationLabel:
             outside = ref["name"].isdigit() and not 31000 <= int(ref["name"]) <= 31999
             if key not in skin_ids | core_ids:
                 ref["message"] = "Label not defined: %s" % ref["name"]
+                ref["rule"] = "labels.undefined"
             elif skin_range_only and outside and key in skin_ids:
                 effect = "Kodi's own string" if key in core_ids else "nothing"
                 ref["message"] = (f"Skin string {ref['name']} is outside 31000-31999, so Kodi 22 shows "
                                   f"{effect} for it")
+                ref["rule"] = "labels.out-of-range"
             else:
                 continue
             ref["severity"] = SEVERITY_ERROR
+            ref["subject"] = ref["name"]
             listitems.append(ref)
 
         error_count = len(listitems)

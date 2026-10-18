@@ -119,7 +119,7 @@ class XmlInterpreter:
         self.info_names = info_names
         self.expressions = expressions or {}
         self.settled_defaults = settled_defaults or {}
-        self._condition_cache: dict[str, list[tuple[str, str]]] = {}
+        self._condition_cache: dict[str, list[tuple[str, str, str, str]]] = {}
         self.issues: list[dict] = []
 
     def interpret(self, root) -> list[dict]:
@@ -156,7 +156,7 @@ class XmlInterpreter:
             elif tag not in WINDOW_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{tag}> is not a valid child of <window>",
+                    f"<{tag}> is not a valid child of <window>", rule="xml.invalid-tag",
                 )
         self._check_default_control(node)
         for group in node.iter("control"):
@@ -174,7 +174,7 @@ class XmlInterpreter:
             kind = (matches[0].get("type") or "").lower()
             why = ("a group with no control that can take focus" if kind in GROUP_TYPES
                    else f"a {kind}, which can never take focus")
-            self._add_issue(default, SEVERITY_ERROR, f"defaultcontrol {target} is {why}")
+            self._add_issue(default, SEVERITY_ERROR, f"defaultcontrol {target} is {why}", rule="xml.unfocusable-default", subject=target)
 
     def _walk_controls(self, node):
         """Walk the children of <controls>."""
@@ -187,7 +187,7 @@ class XmlInterpreter:
             elif tag not in CONTROLS_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{tag}> is not valid inside <controls> (only <control>)",
+                    f"<{tag}> is not valid inside <controls> (only <control>)", rule="xml.invalid-tag",
                 )
 
     def _walk_coordinates(self, node):
@@ -196,7 +196,7 @@ class XmlInterpreter:
             if child.tag not in COORDINATES_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <coordinates>",
+                    f"<{child.tag}> is not valid inside <coordinates>", rule="xml.invalid-tag",
                 )
 
     def _walk_control(self, node, *, inside_layout: bool):
@@ -205,7 +205,7 @@ class XmlInterpreter:
         control_type = written.lower()
         if written != control_type and "$" not in written:
             self._add_issue(node, SEVERITY_WARNING, f'type="{written}" should be lowercase; Kodi accepts it, '
-                                                    f'but a <default> only matches the exact string')
+                                                    f'but a <default> only matches the exact string', rule="xml.type-case", subject=written)
 
         if control_type in GROUP_TYPES:
             self._walk_group_control(node, control_type, inside_layout=inside_layout)
@@ -234,7 +234,7 @@ class XmlInterpreter:
                 if tag not in valid_layouts:
                     self._add_issue(
                         child, SEVERITY_WARNING,
-                        f"<{tag}> is not valid for <control type=\"{control_type}\">",
+                        f"<{tag}> is not valid for <control type=\"{control_type}\">", rule="xml.invalid-tag",
                     )
                 else:
                     self._walk_layout(child)
@@ -253,7 +253,7 @@ class XmlInterpreter:
             elif tag not in LAYOUT_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{tag}> is not valid inside <{node.tag}> (only <control>)",
+                    f"<{tag}> is not valid inside <{node.tag}> (only <control>)", rule="xml.invalid-tag",
                 )
 
     def _walk_content(self, node):
@@ -262,7 +262,7 @@ class XmlInterpreter:
             if child.tag not in CONTENT_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <content> (only <item>)",
+                    f"<{child.tag}> is not valid inside <content> (only <item>)", rule="xml.invalid-tag",
                 )
 
     def _validate_control_children(self, node, control_type: str, *, inside_layout: bool):
@@ -284,14 +284,14 @@ class XmlInterpreter:
             if tag in _STRUCTURAL_TAGS:
                 if tag == "control" and control_type not in GROUP_TYPES:
                     self._add_issue(child, SEVERITY_WARNING, f"<control> inside <control "
-                                    f"type={control_type}> is ignored; only groups hold controls")
+                                    f"type={control_type}> is ignored; only groups hold controls", rule="xml.nested-control", subject=control_type)
                 continue
 
             if tag not in subnodes:
                 label = f"{node.tag} type={control_type}"
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"invalid tag for <{label}>: <{tag}>",
+                    f"invalid tag for <{label}>: <{tag}>", rule="xml.invalid-tag",
                 )
                 continue
 
@@ -299,7 +299,7 @@ class XmlInterpreter:
                 found = next(p for p in RUNTIME_PREFIXES if p in child.text.casefold())
                 self._add_issue(child, SEVERITY_ERROR, f"<{tag}> takes its text as written: Kodi does "
                                                        f"not expand {found.upper()}] in it, and this copy "
-                                                       f"still overrides any <default> value")
+                                                       f"still overrides any <default> value", rule="xml.literal-tag")
 
             tmpl_val = values.get(tag)
             if child.text and tmpl_val in ("int", "position"):
@@ -312,7 +312,7 @@ class XmlInterpreter:
                 if not text and len(child) == 0:
                     self._add_issue(
                         child, SEVERITY_ERROR,
-                        f"Use 'noop' for an empty <{tag}>",
+                        f"Use 'noop' for an empty <{tag}>", rule="xml.empty-action",
                     )
 
             if tag in BRACKET_TAGS:
@@ -346,7 +346,7 @@ class XmlInterpreter:
                 if attr_name not in subnodes[tag]:
                     self._add_issue(
                         child, SEVERITY_WARNING,
-                        f"invalid attribute for <{tag}>: {attr_name}",
+                        f"invalid attribute for <{tag}>: {attr_name}", rule="xml.invalid-attr", subject=attr_name,
                     )
                     continue
                 if _contains_dynamic(attr_value):
@@ -376,7 +376,7 @@ class XmlInterpreter:
                 continue
             if _same_value(others[0], defaults[0]):
                 self._add_issue(others[0], SEVERITY_WARNING,
-                                f"Redundant <{tag}>: same value as <default type=\"{control_type}\">")
+                                f"Redundant <{tag}>: same value as <default type=\"{control_type}\">", rule="xml.redundant")
 
     def _report_duplicate(self, control, first, later):
         """Report a copy of a read-once tag that Kodi drops because an earlier copy wins."""
@@ -385,13 +385,13 @@ class XmlInterpreter:
         if later.get("_kdk_inc_name") is not None:
             # own value beating an include's is an intended override, like a <default>
             if first_inc is not None or later.get("_kdk_inc_cond") == "1":
-                self._add_issue(later, SEVERITY_WARNING, message)
+                self._add_issue(later, SEVERITY_WARNING, message, rule="xml.duplicate-tag")
         elif first_inc is None:
-            self._add_issue(later, SEVERITY_ERROR, message)
+            self._add_issue(later, SEVERITY_ERROR, message, rule="xml.duplicate-tag")
         elif (later.text or "").strip() == (first.text or "").strip():
-            self._add_issue(later, SEVERITY_WARNING, f"{message}, include '{first_inc}' already sets it")
+            self._add_issue(later, SEVERITY_WARNING, f"{message}, include '{first_inc}' already sets it", rule="xml.duplicate-tag")
         else:
-            self._add_issue(later, SEVERITY_ERROR, f"{message}, ignored because include '{first_inc}' sets it first")
+            self._add_issue(later, SEVERITY_ERROR, f"{message}, ignored because include '{first_inc}' sets it first", rule="xml.duplicate-tag")
 
     def _validate_enum_value(self, node, value: str, value_type: str):
         """Validate an enum value against ALLOWED_VALUES."""
@@ -402,7 +402,7 @@ class XmlInterpreter:
         if value_type == "viewtype":
             problem = viewtype_problem(value)
             if problem:
-                self._add_issue(node, SEVERITY_WARNING, problem)
+                self._add_issue(node, SEVERITY_WARNING, problem, rule="xml.unknown-viewtype", subject=value)
             return
 
         if value_type in CASE_INSENSITIVE_ENUMS:
@@ -410,7 +410,7 @@ class XmlInterpreter:
                 allowed = ", ".join(sorted(ALLOWED_VALUES[value_type]))
                 self._add_issue(
                     node, SEVERITY_ERROR,
-                    f"invalid value for {node.tag}: {value} (allowed: {allowed})",
+                    f"invalid value for {node.tag}: {value} (allowed: {allowed})", rule="xml.invalid-value",
                 )
         else:
             if value not in ALLOWED_VALUES[value_type]:
@@ -420,7 +420,7 @@ class XmlInterpreter:
                     detail = "allowed: " + ", ".join(sorted(ALLOWED_VALUES[value_type]))
                 self._add_issue(
                     node, SEVERITY_ERROR,
-                    f"invalid value for {node.tag}: {value} ({detail})",
+                    f"invalid value for {node.tag}: {value} ({detail})", rule="xml.invalid-value",
                 )
 
     def _validate_label_brackets(self, node):
@@ -429,12 +429,12 @@ class XmlInterpreter:
         if prefix:
             effect = ("Kodi drops the rest of the label" if prefix.rstrip("[") in _LABEL_ENDING
                       else "Kodi shows it as plain text")
-            self._add_issue(node, SEVERITY_ERROR, f"Missing ']' after {prefix} in <{node.tag}>: {effect}")
+            self._add_issue(node, SEVERITY_ERROR, f"Missing ']' after {prefix} in <{node.tag}>: {effect}", rule="xml.unclosed-label")
 
     def _validate_brackets(self, node, text: str):
         """Validate bracket matching in a condition or action, and report an empty one."""
         if not text:
-            self._add_issue(node, SEVERITY_ERROR, f"Empty condition: {node.tag}")
+            self._add_issue(node, SEVERITY_ERROR, f"Empty condition: {node.tag}", rule="xml.empty-condition")
             return
         if _is_dynamic(text):
             return
@@ -442,7 +442,7 @@ class XmlInterpreter:
             condition = text.replace("  ", "").replace("\t", "")
             self._add_issue(
                 node, SEVERITY_ERROR,
-                f"Brackets do not match: {condition}",
+                f"Brackets do not match: {condition}", rule="xml.bad-brackets", subject=condition,
             )
 
     def _validate_window_conditions(self, root):
@@ -473,34 +473,38 @@ class XmlInterpreter:
                 continue
             exp_text, exp_file, exp_line = self.expressions[name]
             exp_found = self._condition_problems(exp_text)
-            for severity, message in exp_found:
-                self._add_issue_at(exp_file, exp_line, "expression", severity, message)
-            if any(m.startswith("Kodi cannot parse") for _, m in exp_found):
+            for severity, message, rule, subject in exp_found:
+                self._add_issue_at(exp_file, exp_line, "expression", severity, message, rule, subject)
+            if any(f[1].startswith("Kodi cannot parse") for f in exp_found):
                 found = [f for f in found if not f[1].startswith("Kodi cannot parse")]
             found = [f for f in found if f not in exp_found]
-        for severity, message in found:
-            self._add_issue(node, severity, message)
+        for severity, message, rule, subject in found:
+            self._add_issue(node, severity, message, rule, subject)
 
-    def _condition_problems(self, text: str) -> list[tuple[str, str]]:
-        """Severity and message per fault in a balanced condition, cached per text; else none."""
+    def _condition_problems(self, text: str) -> list[tuple[str, str, str, str]]:
+        """Severity, message, rule and subject per fault in a balanced condition, cached."""
         if text not in self._condition_cache:
             self._condition_cache[text] = self._read_condition(text)
         return self._condition_cache[text]
 
-    def _read_condition(self, text: str) -> list[tuple[str, str]]:
-        """Read the faults of a balanced condition as severity and message; else none."""
+    def _read_condition(self, text: str) -> list[tuple[str, str, str, str]]:
+        """Read the faults of a balanced condition as severity, message, rule and subject."""
         # unbalanced brackets are already reported by the bracket check
         if not _check_brackets(text):
             return []
         short = text if len(text) <= 60 else text[:60] + "..."
         problem = check_condition(text)
         if problem and problem[0] == STATE_INVALID:
-            if self.runtime_generator and problem[1].startswith("unknown expression"):
+            undefined = problem[1].startswith("unknown expression")
+            rule, subject = ("xml.undefined-expression", problem[1].split()[-1]) if undefined else (
+                "xml.unparseable-condition", text)
+            if self.runtime_generator and undefined:
                 return [(SEVERITY_WARNING, f"Condition uses an {problem[1]}, "
-                                           f"unless a runtime generator defines it: {short}")]
+                                           f"unless a runtime generator defines it: {short}", rule, subject)]
             return [(SEVERITY_ERROR,
-                     f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}")]
-        return [(SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false")
+                     f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}",
+                     rule, subject)]
+        return [(SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false", "xml.unknown-info", operand)
                 for operand in (unknown_infos(text, self.info_names) if self.info_names else [])]
 
     def _validate_number(self, node, name: str, is_attr: bool, value: str, value_type: str):
@@ -516,18 +520,18 @@ class XmlInterpreter:
         if not self._looks_like_unresolved(text):
             # tag text also takes %, r and comma lists that the value types do not describe
             if is_attr:
-                self._add_issue(node, SEVERITY_ERROR, f"invalid integer value for {where}: {text}")
+                self._add_issue(node, SEVERITY_ERROR, f"invalid integer value for {where}: {text}", rule="xml.invalid-value", subject=name)
         elif name not in (SkinInclude.constant_attribs if is_attr else SkinInclude.constant_nodes):
             self._add_issue(node, SEVERITY_ERROR,
-                            f"{where} value {text}: Kodi does not substitute constants in {where}")
+                            f"{where} value {text}: Kodi does not substitute constants in {where}", rule="xml.constant-not-substituted", subject=text)
         elif text in self.constants:
             # a file walked without resolving still carries the name Kodi substitutes
             return
         elif self.runtime_generator:
             self._add_issue(node, SEVERITY_WARNING,
-                            f"{where} value {text} is not a defined constant, unless a runtime generator adds it")
+                            f"{where} value {text} is not a defined constant, unless a runtime generator adds it", rule="xml.undefined-constant", subject=text)
         else:
-            self._add_issue(node, SEVERITY_ERROR, f"{where} value {text} is not a number or a defined constant")
+            self._add_issue(node, SEVERITY_ERROR, f"{where} value {text} is not a number or a defined constant", rule="xml.undefined-constant", subject=text)
 
     @staticmethod
     def _looks_like_unresolved(value: str) -> bool:
@@ -545,10 +549,10 @@ class XmlInterpreter:
             if not _is_kodi_hex(value) and value not in self.color_labels:
                 self._add_issue(
                     node, SEVERITY_ERROR,
-                    f"Invalid color for {attr_name}: {value}",
+                    f"Invalid color for {attr_name}: {value}", rule="xml.invalid-color", subject=attr_name,
                 )
         elif value_type == "bool" and (problem := attribute_bool_problem(attr_name, value)):
-            self._add_issue(node, SEVERITY_ERROR, problem)
+            self._add_issue(node, SEVERITY_ERROR, problem, rule="xml.misread-bool", subject=attr_name)
         elif value_type in ALLOWED_VALUES:
             self._validate_enum_value(node, value, value_type)
 
@@ -558,7 +562,7 @@ class XmlInterpreter:
             if child.tag not in INCLUDES_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <includes>",
+                    f"<{child.tag}> is not valid inside <includes>", rule="xml.invalid-tag",
                 )
             elif child.tag == "variable":
                 self._walk_variable(child)
@@ -580,7 +584,7 @@ class XmlInterpreter:
             if text and text.strip():
                 self._add_issue(
                     anchor, SEVERITY_WARNING,
-                    f"Text outside <definition> in include '{node.get('name')}' is ignored: {text.strip()[:40]}",
+                    f"Text outside <definition> in include '{node.get('name')}' is ignored: {text.strip()[:40]}", rule="xml.text-outside-definition", subject=node.get("name") or "",
                 )
 
     def _walk_default(self, node):
@@ -590,7 +594,7 @@ class XmlInterpreter:
         # controls match their type in any case, but a default is looked up by the exact string
         if written != control_type and "$" not in written:
             self._add_issue(node, SEVERITY_WARNING, f'<default type="{written}"> applies only to controls '
-                                                    f'written type="{written}"; Kodi matches it exactly')
+                                                    f'written type="{written}"; Kodi matches it exactly', rule="xml.default-type-case", subject=written)
         if control_type in self.template_attribs:
             self._validate_control_children(node, control_type, inside_layout=False)
 
@@ -600,7 +604,7 @@ class XmlInterpreter:
             if child.tag not in VARIABLE_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <variable> (only <value>)",
+                    f"<{child.tag}> is not valid inside <variable> (only <value>)", rule="xml.invalid-tag",
                 )
             else:
                 self._validate_label_brackets(child)
@@ -614,7 +618,7 @@ class XmlInterpreter:
             if child.tag not in MAP_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <map> (only <entry>)",
+                    f"<{child.tag}> is not valid inside <map> (only <entry>)", rule="xml.invalid-tag",
                 )
 
     def _walk_fonts(self, node):
@@ -623,7 +627,7 @@ class XmlInterpreter:
             if child.tag not in FONTS_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <fonts> (only <fontset>)",
+                    f"<{child.tag}> is not valid inside <fonts> (only <fontset>)", rule="xml.invalid-tag",
                 )
             else:
                 self._walk_fontset(child)
@@ -634,7 +638,7 @@ class XmlInterpreter:
             if child.tag not in FONTSET_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <fontset> (only <font>)",
+                    f"<{child.tag}> is not valid inside <fontset> (only <font>)", rule="xml.invalid-tag",
                 )
             else:
                 self._walk_font(child)
@@ -645,10 +649,10 @@ class XmlInterpreter:
             if child.tag not in FONT_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
-                    f"<{child.tag}> is not valid inside <font>",
+                    f"<{child.tag}> is not valid inside <font>", rule="xml.invalid-tag",
                 )
 
-    def _add_issue(self, node, severity: str, message: str):
+    def _add_issue(self, node, severity: str, message: str, rule: str, subject: str | None = None):
         """Add an issue, with the call site and source line when it came from an include."""
         call_line = node.get("_kdk_call_line")
         inc_name = node.get("_kdk_inc_name")
@@ -666,6 +670,8 @@ class XmlInterpreter:
             "identifier": node.tag,
             "message": message,
             "severity": severity,
+            "rule": rule,
+            "subject": node.tag if subject is None else subject,
         }
 
         # so the report can link to the line to fix
@@ -681,10 +687,11 @@ class XmlInterpreter:
 
         self.issues.append(issue)
 
-    def _add_issue_at(self, file: str, line: int, tag: str, severity: str, message: str):
+    def _add_issue_at(self, file: str, line: int, tag: str, severity: str, message: str, rule: str,
+                      subject: str):
         """Add an issue at a line in another file, once however many usages lead to it."""
         issue = {"file": file, "line": line, "type": tag, "identifier": tag,
-                 "message": message, "severity": severity}
+                 "message": message, "severity": severity, "rule": rule, "subject": subject}
         if issue not in self.issues:
             self.issues.append(issue)
 
