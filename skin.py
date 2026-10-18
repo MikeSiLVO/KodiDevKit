@@ -12,18 +12,12 @@ from xml.sax.saxutils import escape
 import sublime
 import sublime_plugin
 
+from .libs.infoprovider.provider import INFOS
 from .libs.utils.files import get_addons
 from .libs.sublime.view import get_node_content
 from .libs.utils.decorators import run_async
 
 logger = logging.getLogger("KodiDevKit.skin")
-
-
-def _infos():
-    """Look up the plugin's shared InfoProvider at call time."""
-    from .kodidevkit import INFOS
-    return INFOS
-
 
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
@@ -99,7 +93,7 @@ class _QuickPanelMixin:
 
     def is_visible(self):
         """True when an add-on is loaded."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         return bool(getattr(infos, "addon", None))
@@ -157,7 +151,7 @@ class KodidevkitShowFontRefsCommand(_QuickPanelMixin, sublime_plugin.WindowComma
         file_name = view.file_name()
         if not file_name:
             return None
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -201,7 +195,7 @@ class KodidevkitSearchFileForLabelsCommand(_QuickPanelMixin, sublime_plugin.Wind
         if not path:
             return None
 
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         get_po_files = getattr(infos, "get_po_files", None)
@@ -282,7 +276,7 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
                 logger.warning(f"Unexpected progress_callback signature: {len(args)} args")
 
         try:
-            infos = _infos()
+            infos = INFOS
             if check_type == "file":
                 view = self.window.active_view()
                 if not view:
@@ -338,7 +332,7 @@ class KodidevkitCheckVariablesCommand(_QuickPanelMixin, sublime_plugin.WindowCom
             f"{label}: {len(nodes)} issue{'s' if len(nodes) != 1 else ''} found"
         )
 
-        addon = getattr(_infos(), "addon", None)
+        addon = getattr(INFOS, "addon", None)
         base_dir = getattr(addon, "path", "") or "" if addon is not None else ""
 
         file_count = len({str(i.get("file", "")) for i in nodes if i.get("file")})
@@ -369,7 +363,7 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self):
         """True when an add-on with language files is loaded."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -378,7 +372,7 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
 
     def run(self):
         """Show every label, once per id, in a quick panel."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         get_po_files = getattr(infos, "get_po_files", None)
@@ -399,7 +393,7 @@ class KodidevkitSearchForLabelCommand(sublime_plugin.WindowCommand):
         """Insert the picked label's localize expression at the caret."""
         if index == -1:
             return None
-        infos = _infos()
+        infos = INFOS
         view = self.window.active_view()
         if not view or not infos:
             return None
@@ -419,7 +413,7 @@ class _SearchAndInsertMixin:
 
     def run(self):
         """Show the subclass's list in a quick panel."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         self._items = getattr(infos, self._data_attr, [])
@@ -485,7 +479,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
         """True when the add-on has a media folder."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -493,7 +487,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         """List the media files, previewing each as it is highlighted."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -520,7 +514,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
         if index == 0:
             self.view.run_command("insert", {"characters": self.files[fileindex]})
         elif index == 1:
-            infos = _infos()
+            infos = INFOS
             if not infos:
                 return
             addon = getattr(infos, "addon", None)
@@ -537,7 +531,7 @@ class KodidevkitSearchForImageCommand(sublime_plugin.TextCommand):
     def show_preview(self, index):
         """Preview the highlighted media file in a transient view."""
         if index >= 0:
-            infos = _infos()
+            infos = INFOS
             if not infos:
                 return
             addon = getattr(infos, "addon", None)
@@ -552,7 +546,7 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
         """True when the add-on has fonts."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -560,7 +554,7 @@ class KodidevkitSearchForFontCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         """List the fonts of the current file's xml folder with their size and file."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -607,7 +601,7 @@ class KodidevkitGoToTagCommand(sublime_plugin.WindowCommand):
 
     def run(self):
         """Jump to where the word under the cursor is defined, looked up in its xml folder."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         go_to_tag = getattr(infos, "go_to_tag", None)
@@ -634,7 +628,7 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self):
         """True when the path under the cursor names an existing file of the skin."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -655,7 +649,7 @@ class KodidevkitOpenSkinImageCommand(sublime_plugin.WindowCommand):
     @run_async
     def run(self):
         """Open the image under the cursor in the system's default viewer."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -677,7 +671,7 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
 
     def is_visible(self):
         """True when the text under the cursor looks like a path, in a skin with a media folder."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -691,7 +685,7 @@ class KodidevkitPreviewImageCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         """List the image, or each image in the folder, previewing each as it is highlighted."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -759,7 +753,7 @@ class KodidevkitOpenActiveWindowXmlFromRemoteCommand(sublime_plugin.WindowComman
             self.window.open_file(value)
             return
 
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return
         addon = getattr(infos, "addon", None)
@@ -788,7 +782,7 @@ class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCo
 
     def is_visible(self):
         """True for a skin with more than one xml folder."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -796,7 +790,7 @@ class KodidevkitSwitchXmlFolderCommand(_QuickPanelMixin, sublime_plugin.WindowCo
 
     def run(self):
         """List the xml folders, previewing the same file at the same line in each."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -833,14 +827,14 @@ class KodidevkitShowDependenciesCommand(sublime_plugin.WindowCommand):
     """Command listing the Kodi repo's add-ons for this release, with mirror links."""
     def is_visible(self):
         """True when an add-on is loaded."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         return bool(getattr(infos, "addon", None))
 
     def run(self):
         """List the Kodi repo's add-ons for this release, with their versions."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -862,7 +856,7 @@ class KodidevkitShowDependenciesCommand(sublime_plugin.WindowCommand):
         """Open the picked add-on's page on the Kodi mirror."""
         if index == -1:
             return
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return
         addon = getattr(infos, "addon", None)

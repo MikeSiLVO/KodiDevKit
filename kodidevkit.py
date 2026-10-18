@@ -37,10 +37,9 @@ from .libs.utils.xml import get_root_from_file  # noqa: E402
 from .libs.utils.validation import (  # noqa: E402
     CallContexts, is_runtime_placeholder, resolve_param_in_name)
 from .libs.sublime.view import jump_to_label_declaration  # noqa: E402
-from .libs.infoprovider.provider import InfoProvider  # noqa: E402
+from .libs.infoprovider.provider import INFOS  # noqa: E402
 from .libs.kodi.jsonrpc import kodi  # noqa: E402
 
-INFOS = InfoProvider()
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 

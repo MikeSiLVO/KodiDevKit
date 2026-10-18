@@ -43,3 +43,6 @@ class InfoProvider(LoaderMixin, TooltipMixin, NavigationMixin, CheckerMixin):
             return rows
         return [r for r in rows
                 if not (r.get("include_name") and r.get("severity") != SEVERITY_ERROR)]
+
+
+INFOS = InfoProvider()

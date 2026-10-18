@@ -8,15 +8,11 @@ import logging
 import sublime
 import sublime_plugin
 
+from .libs.infoprovider.provider import INFOS
+
 logger = logging.getLogger("KodiDevKit.language")
 
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
-
-
-def _infos():
-    """Look up the plugin's shared InfoProvider at call time."""
-    from .kodidevkit import INFOS
-    return INFOS
 
 
 class KodidevkitReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
@@ -25,7 +21,7 @@ class KodidevkitReloadKodiLanguageFilesCommand(sublime_plugin.WindowCommand):
     def run(self):
         """Reload the settings, then Kodi's language files and the add-on's."""
         from .libs.kodi.jsonrpc import kodi
-        infos = _infos()
+        infos = INFOS
         if infos:
             load_settings = getattr(infos, "load_settings", None)
             if load_settings:
@@ -43,7 +39,7 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
     def is_visible(self):
         """True when text is selected in Kodi XML or Python and the add-on has language files."""
         scope_name = self.view.scope_name(self.view.sel()[0].b)
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -54,7 +50,7 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         """Offer exact and close label matches, and a new label, in a quick panel."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         get_po_files = getattr(infos, "get_po_files", None)
@@ -99,7 +95,7 @@ class KodidevkitMoveToLanguageFileCommand(sublime_plugin.TextCommand):
         """Create the label or note this file on the picked one, then swap it in for the text."""
         if index == -1:
             return None
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -130,7 +126,7 @@ class KodidevkitReplaceTextCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, label_id):
         """Replace each selection with the label's localize expression, shaped for its scope."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         build_translate_label = getattr(infos, "build_translate_label", None)

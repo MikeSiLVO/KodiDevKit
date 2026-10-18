@@ -11,6 +11,7 @@ import sublime
 import sublime_plugin
 
 from .libs.addon.addon import Addon
+from .libs.infoprovider.provider import INFOS
 from .libs.utils.files import make_archive
 from .libs.utils.decorators import run_async
 from .libs.skin.textures import texturepacker
@@ -21,18 +22,12 @@ logger = logging.getLogger("KodiDevKit.build")
 SETTINGS_FILE = 'kodidevkit.sublime-settings'
 
 
-def _infos():
-    """Look up the plugin's shared InfoProvider at call time."""
-    from .kodidevkit import INFOS
-    return INFOS
-
-
 class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
     """Command building an installable zip of the loaded skin."""
 
     def is_visible(self):
         """True when a skin is loaded."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -40,7 +35,7 @@ class KodidevkitBuildAddonCommand(sublime_plugin.WindowCommand):
 
     def run(self, pack_textures=True):
         """Ask where to save the zip, opening in the add-on folder, named by its id and version."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -78,7 +73,7 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self):
         """True for a skin with a themes folder."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return False
         addon = getattr(infos, "addon", None)
@@ -89,7 +84,7 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
 
     def run(self):
         """Show the skin's themes in a quick panel."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return None
         addon = getattr(infos, "addon", None)
@@ -112,7 +107,7 @@ class KodidevkitBuildThemeCommand(sublime_plugin.WindowCommand):
     @run_async
     def _build_theme_async(self, index: int) -> None:
         """Build the theme's images into media/<theme>.xbt and offer to open the media folder."""
-        infos = _infos()
+        infos = INFOS
         if not infos:
             return
         addon = getattr(infos, "addon", None)
@@ -158,12 +153,12 @@ class KodidevkitBumpVersionCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self):
         """True when an add-on is loaded."""
-        infos = _infos()
+        infos = INFOS
         return bool(infos and getattr(infos, "addon", None))
 
     def run(self):
         """Offer the next versions and a custom one in a quick panel."""
-        infos = _infos()
+        infos = INFOS
         addon = getattr(infos, "addon", None) if infos else None
         if not addon:
             return

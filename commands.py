@@ -506,25 +506,17 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
 
     def run(self):
         """Re-init the project, run every check off the main thread and open the report."""
-        from .libs.infoprovider.provider import InfoProvider
+        from .libs.infoprovider.provider import INFOS as provider
         from .libs.reporting import html as report_generator
         from .libs.reporting import server as report_server
         from .libs.sublime.scratch import ReportProgressView
-
-        settings = {}
-        try:
-            from .kodidevkit import INFOS, KodiDevKit
-            provider = INFOS
-            settings = getattr(KodiDevKit, 'settings', {})
-        except Exception:
-            provider = InfoProvider()
 
         # re-init each run; entries a broken include once left would linger in the maps
         try:
             variables = self.window.extract_variables()
             project_folder = variables.get("folder")
             if project_folder:
-                provider.load_settings(settings or provider.settings)
+                provider.load_settings(sublime.load_settings(SETTINGS_FILE))
                 provider.init_addon(project_folder)
         except Exception:
             pass
@@ -741,7 +733,7 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
     def _open_project_report(self):
         """Open the report in the loaded skin's folder, or say there is none yet."""
         import pathlib
-        from .kodidevkit import INFOS
+        from .libs.infoprovider.provider import INFOS
         from .libs.reporting.html import REPORT_NAME
 
         addon = getattr(INFOS, "addon", None)
