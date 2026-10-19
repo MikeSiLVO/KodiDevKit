@@ -1950,7 +1950,7 @@ class KodiDevKit(sublime_plugin.EventListener):
                 log.debug(
                     "on_post_save: needs_reload=%s | auto_reload_skin=%s | auto_skin_check=%s | file=%s | view_id=%s",
                     needs_reload,
-                    self.settings.get("auto_reload_skin", True),
+                    self.settings.get("auto_reload_skin", False),
                     self.settings.get("auto_skin_check", True),
                     (view.file_name() or "Untitled"),
                     view.id(),
@@ -1958,7 +1958,7 @@ class KodiDevKit(sublime_plugin.EventListener):
 
             window = view.window()
 
-            if needs_reload and window and self.settings.get("auto_reload_skin", True):
+            if needs_reload and window and self.settings.get("auto_reload_skin", False):
                 window.run_command("kodidevkit_execute_builtin", {"builtin": "ReloadSkin()"})
 
             if window and self.settings.get("auto_skin_check", True):
