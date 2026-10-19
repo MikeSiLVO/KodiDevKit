@@ -200,6 +200,7 @@ Validates each window as Kodi loads it, after includes, constants, expressions a
 - Empty action tags that should use `noop` (e.g., `<onclick></onclick>` instead of `<onclick>noop</onclick>`).
 - Empty conditions, and brackets that do not match in a condition or action.
 - A condition Kodi cannot parse, or one naming an info Kodi does not have. Kodi reads both as false. A condition naming an `$EXP` that is not defined counts as unparseable.
+- A `String.*` or `Integer.*` test whose argument names an info Kodi does not have. Kodi reads that argument as empty text or 0, so `String.IsEmpty(ListItem.Lable)` is always true.
 - A dynamic expression such as `$VAR[...]` in a tag that takes its text as written, like `<posx>`. Kodi does not expand it there.
 - A second copy of a tag Kodi reads once. Kodi keeps the first and drops the rest. When one of the copies comes from an include, this is a warning.
 - A `<defaultcontrol>` whose control can never take focus.

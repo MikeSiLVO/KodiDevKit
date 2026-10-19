@@ -254,6 +254,13 @@
     ]
   },
   {
+    "symbol": "libs/utils/infobool.py:unknown_info_arguments",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString",
+      "xbmc/Util.cpp:CUtil::SplitParams"
+    ]
+  },
+  {
     "symbol": "libs/utils/xml.py:param_value",
     "kodi": [
       "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::GetParameters"

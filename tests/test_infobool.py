@@ -207,6 +207,16 @@ class TestInfoNames(unittest.TestCase):
     def test_macros_are_left_alone(self):
         self.assertEqual(self.unknown("$EXP[name] + String.IsEmpty($INFO[ListItem.Label]) + $PARAM[x]"), [])
 
+    def test_string_and_integer_arguments(self):
+        """A String or Integer argument Kodi reads as an info is checked the way an operand is."""
+        self.assertEqual(infobool.unknown_info_arguments(
+            "String.IsEmpty(ListItem.Lable) + String.IsEqual(ListItem.Titel,$LOCALIZE[123])"
+            " + String.IsEqual(ListItem.Label,foo) + Integer.IsGreater(Container.NumItem,-1)"
+            ' + Integer.IsLess(5,ListItem.Year) + String.Contains("ListItem.Label",a)'
+            " + String.StartsWith(Bad,a,b) + Integer.ValueOf(x)", self.names),
+            [("String.IsEmpty", "ListItem.Lable"), ("String.IsEqual", "ListItem.Titel"),
+             ("Integer.IsGreater", "Container.NumItem")])
+
     def test_split_info_keeps_dots_inside_params(self):
         self.assertEqual(infobool.split_info("Window(Home).Property(a.b)"),
                          [("window", "Home"), ("property", "a.b")])

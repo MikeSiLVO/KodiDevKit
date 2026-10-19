@@ -146,6 +146,7 @@ RULES = {
     "xml.unparseable-condition": "A condition Kodi cannot parse, so it always reads false.",
     "xml.undefined-expression": "A $EXP naming no expression.",
     "xml.unknown-info": "An info Kodi does not know, which always reads false.",
+    "xml.unknown-info-argument": "A String or Integer test argument naming an info Kodi does not know, read as empty text or 0.",
     "xml.constant-not-substituted": "A constant name where Kodi does not substitute constants.",
     "xml.undefined-constant": "A value that is neither a number nor a defined constant.",
     "xml.unfocusable-default": "A <defaultcontrol> naming no control that can take focus.",

@@ -378,6 +378,22 @@ class TestConditions(unittest.TestCase):
             "Kodi has no info 'Window.IsVisble(1114)', it always reads false",
         ])
 
+    def test_unknown_info_argument(self):
+        """A String or Integer argument naming no info is read as empty text or 0."""
+        names = {**self.NAMES, "categories": {**self.NAMES["categories"], "string": {"isempty", "isequal"},
+                                              "integer": {"isgreater"}, "listitem": {"label"}}}
+        interp = XmlInterpreter(template_attribs={"button": {"visible": {}}}, template_values={"button": {}},
+                                info_names=names)
+        xml = ('<window><controls><control type="button"><visible>String.IsEmpty(ListItem.Lable)'
+               ' | String.IsEqual(ListItem.Lable,a) | Integer.IsGreater(ListItem.Lable,2)'
+               ' | String.IsEqual(ListItem.Label,a)</visible></control></controls></window>')
+        self.assertEqual([i["message"] for i in interp.interpret(_parse(xml))
+                          if i["rule"] == "xml.unknown-info-argument"], [
+            "Kodi has no info 'ListItem.Lable', so String.IsEmpty always reads true",
+            "Kodi has no info 'ListItem.Lable', so String.IsEqual reads it as empty text",
+            "Kodi has no info 'ListItem.Lable', so Integer.IsGreater reads it as 0",
+        ])
+
     def test_unbalanced_condition_is_left_to_the_bracket_check(self):
         """An unbalanced condition is left to the bracket check, its unknown info unreported."""
         visible = "<visible>[Player.HasVideo | Player.HasVidoe</visible>"

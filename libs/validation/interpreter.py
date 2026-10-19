@@ -52,7 +52,14 @@ from ..utils.expressions import (
 )
 from ..skin.include import SkinInclude
 from ..utils.xml import check_brackets as _check_brackets
-from ..utils.infobool import STATE_INVALID, check_condition, is_known_info, static_value, unknown_infos
+from ..utils.infobool import (
+    STATE_INVALID,
+    check_condition,
+    is_known_info,
+    static_value,
+    unknown_info_arguments,
+    unknown_infos,
+)
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 
 logger = logging.getLogger(__name__)
@@ -508,8 +515,16 @@ class XmlInterpreter:
             return [(SEVERITY_ERROR,
                      f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}",
                      rule, subject)]
-        return [(SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false", "xml.unknown-info", operand)
-                for operand in (unknown_infos(text, self.info_names) if self.info_names else [])]
+        if not self.info_names:
+            return []
+        found = [(SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false", "xml.unknown-info", operand)
+                 for operand in unknown_infos(text, self.info_names)]
+        for test, arg in unknown_info_arguments(text, self.info_names):
+            effect = ("always reads true" if test.lower().endswith(".isempty")
+                      else "reads it as 0" if test.lower().startswith("integer.") else "reads it as empty text")
+            found.append((SEVERITY_ERROR, f"Kodi has no info '{arg}', so {test} {effect}",
+                          "xml.unknown-info-argument", arg))
+        return found
 
     def _validate_number(self, node, name: str, is_attr: bool, value: str, value_type: str):
         """Validate a number field, reporting a leftover name or non-numeric attribute text."""

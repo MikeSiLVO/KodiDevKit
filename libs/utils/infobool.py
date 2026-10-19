@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 import re
 
-from .expressions import expression_references
+from .expressions import expression_references, split_top_level_commas
 
 STATE_TRUE = "true"
 STATE_FALSE = "false"
@@ -267,14 +267,39 @@ def is_known_info(operand: str, names: dict) -> bool:
 _MACRO = re.compile(r"\$[A-Za-z]+\[[^\[\]]*\]")
 
 
-def unknown_infos(condition: str, names: dict) -> list[str]:
-    """Operands Kodi registers as info 0, which always read false; macro ones are left alone."""
+def _blank_macros(condition: str) -> str:
+    """Blank each macro, nested ones included, down to a bare `$`."""
     while True:
         blanked = _MACRO.sub("$", condition)
         if blanked == condition:
-            break
+            return condition
         condition = blanked
-    return [op for op in operands(condition) if "$" not in op and not is_known_info(op, names)]
+
+
+def unknown_infos(condition: str, names: dict) -> list[str]:
+    """Operands Kodi registers as info 0, which always read false; macro ones are left alone."""
+    return [op for op in operands(_blank_macros(condition)) if "$" not in op and not is_known_info(op, names)]
+
+
+def unknown_info_arguments(condition: str, names: dict) -> list[tuple[str, str]]:
+    """Test and argument per String or Integer argument Kodi reads as an info it does not know."""
+    found = []
+    for op in operands(_blank_macros(condition)):
+        parts = split_info(op)
+        if len(parts) != 2 or parts[1][0] not in names["categories"].get(parts[0][0], ()):
+            continue
+        (category, _), (test, params) = parts
+        args = [a[1:-1] if len(a) > 1 and a[0] == a[-1] == '"' else a for a in split_top_level_commas(params)]
+        if category == "string":
+            read = args[:1] if test == "isempty" or len(args) == 2 else []
+        elif category == "integer" and test != "valueof":
+            # a leading number is the value itself, anything else names an info
+            read = [a for a in args[:2] if not re.match(r"-?\d", a)]
+        else:
+            continue
+        found += [(op.split("(", 1)[0].strip(), a) for a in read
+                  if a and "$" not in a and not is_known_info(a, names)]
+    return found
 
 
 def negation_of(condition: str) -> str:
