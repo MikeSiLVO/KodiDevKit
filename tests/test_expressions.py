@@ -1,4 +1,4 @@
-"""Tests for $NUMBER[] parsing and validation, and dynamic expression detection."""
+"""Tests for $NUMBER[] parsing and validation, dynamic expression detection and $INFO[] blocks."""
 
 import unittest
 import os
@@ -11,7 +11,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from libs.infoprovider.provider import InfoProvider
-from libs.utils.expressions import contains_dynamic_expression, extract_number_value
+from libs.utils.expressions import contains_dynamic_expression, extract_number_value, info_blocks
 
 
 class TestNumberExpressions(unittest.TestCase):
@@ -216,6 +216,20 @@ class TestContainsDynamicExpression(unittest.TestCase):
     def test_none_value(self):
         """Test that None values return False."""
         self.assertFalse(contains_dynamic_expression(None))  # type: ignore[arg-type]
+
+
+
+class TestInfoBlocks(unittest.TestCase):
+    """The $INFO[] and $ESCINFO[] blocks Kodi reads in label text."""
+
+    def test_blocks(self):
+        """Nested brackets stay in, every comma splits, and a block inside $VAR[] is not read."""
+        self.assertEqual(info_blocks(
+            "$INFO[ListItem.Label,[COLOR red],[/COLOR]] x $VAR[a,$INFO[Inner]]"
+            " $ESCINFO[Window(Home).Property(a,b)] $INFO[] $INFO[Open"), [
+            ("$INFO", "ListItem.Label", "[COLOR red]"),
+            ("$ESCINFO", "Window(Home).Property(a", "b)"),
+        ])
 
 
 if __name__ == "__main__":

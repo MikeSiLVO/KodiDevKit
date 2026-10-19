@@ -88,6 +88,25 @@ def bracket_body(text: str) -> str:
     return ''
 
 
+_LABEL_FORMATS = re.compile(r"\$(?:ESC)?(?:INFO|VAR|MAP)\[")
+
+
+def info_blocks(text: str) -> list[tuple[str, str, str]]:
+    """Keyword, info name and prefix per $INFO[] or $ESCINFO[] block Kodi reads in label text."""
+    found = []
+    pos = 0
+    while True:
+        match = _LABEL_FORMATS.search(text, pos)
+        if not match:
+            return found
+        body = bracket_body(text[match.end() - 1:])
+        pos = match.end() + len(body) + 1 if body else match.end()
+        if body and "INFO" in match.group(0):
+            # every comma splits, even one inside a param's parentheses
+            params = body.split(",")
+            found.append((match.group(0)[:-1], params[0].strip(), params[1] if len(params) > 1 else ""))
+
+
 def extract_variable_name(text: str) -> str | None:
     """Variable name inside `$VAR[...]` or `$ESCVAR[...]`, or None when `text` is neither."""
     if not isinstance(text, str):

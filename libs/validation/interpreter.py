@@ -48,6 +48,7 @@ from ..utils.expressions import (
     RUNTIME_PREFIXES,
     is_number as _is_number,
     extract_number_value,
+    info_blocks,
     unclosed_label_block,
 )
 from ..skin.include import SkinInclude
@@ -330,6 +331,7 @@ class XmlInterpreter:
             tag_low = tag.lower()
             if tag_low in LABEL_READ_TAGS or tag_low in ("label2", "altlabel"):
                 self._validate_label_brackets(child)
+                self._validate_label_infos(child)
 
             if (
                 len(child) == 0
@@ -441,6 +443,16 @@ class XmlInterpreter:
             effect = ("Kodi drops the rest of the label" if prefix.rstrip("[") in _LABEL_ENDING
                       else "Kodi shows it as plain text")
             self._add_issue(node, SEVERITY_ERROR, f"Missing ']' after {prefix} in <{node.tag}>: {effect}", rule="xml.unclosed-label")
+
+    def _validate_label_infos(self, node):
+        """Report an $INFO[] block naming an info Kodi does not know."""
+        if not self.info_names:
+            return
+        for keyword, name, prefix in info_blocks(node.text or ""):
+            if name and "$" not in name and not is_known_info(name, self.info_names):
+                shows = "shows only its prefix" if prefix else "shows nothing"
+                self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{name}', so {keyword}[{name}] {shows}",
+                                rule="xml.unknown-infolabel", subject=name)
 
     def _validate_brackets(self, node, text: str):
         """Validate bracket matching in a condition or action, and report an empty one."""
@@ -628,6 +640,7 @@ class XmlInterpreter:
                 )
             else:
                 self._validate_label_brackets(child)
+                self._validate_label_infos(child)
                 condition = child.get("condition")
                 if condition:
                     self._validate_condition(child, condition, resolved=False)

@@ -205,6 +205,7 @@ Validates each window as Kodi loads it, after includes, constants, expressions a
 - A second copy of a tag Kodi reads once. Kodi keeps the first and drops the rest. When one of the copies comes from an include, this is a warning.
 - A `<defaultcontrol>` whose control can never take focus.
 - A missing `]` after `$INFO[`, `$LOCALIZE[` and the like.
+- An `$INFO[]` naming an info Kodi does not have, which shows nothing, or only its prefix.
 - XML parse errors. Faults Kodi's parser forgives, such as a bare `&`, are reported at their line.
 - A window file the targeted Kodi release no longer loads.
 

@@ -271,6 +271,35 @@ class TestLabelBrackets(unittest.TestCase):
         self.assertEqual([i["message"] for i in issues],
                          ["Missing ']' after $ESCINFO[ in <value>: Kodi drops the rest of the label"])
 
+class TestLabelInfos(unittest.TestCase):
+    """$INFO[] blocks naming no info, which show nothing or only their prefix."""
+
+    NAMES = {"categories": {"listitem": {"label"}, "window": {"property"}}, "listitem_aliases": set(),
+             "platforms": set(), "players": {}}
+
+    def messages(self, xml):
+        """Messages the tree gets for $INFO[] blocks naming no info."""
+        interp = XmlInterpreter(template_attribs={"label": {"label": {}, "label2": {}}},
+                                template_values={"label": {}}, info_names=self.NAMES)
+        return [i["message"] for i in interp.interpret(_parse(xml)) if i["rule"] == "xml.unknown-infolabel"]
+
+    def test_control_label(self):
+        """Labels are checked; a param, a comma in parentheses or a known info passes."""
+        self.assertEqual(self.messages(
+            '<window><controls><control type="label"><label>$INFO[ListItem.Lable] $INFO[ListItem.Label]</label>'
+            '<label2>$ESCINFO[ListItem.Titel,Title: ] $INFO[Window(Home).Property(a,b)] $INFO[$PARAM[x]]</label2>'
+            '</control></controls></window>'), [
+            "Kodi has no info 'ListItem.Lable', so $INFO[ListItem.Lable] shows nothing",
+            "Kodi has no info 'ListItem.Titel', so $ESCINFO[ListItem.Titel] shows only its prefix",
+        ])
+
+    def test_variable_value(self):
+        """A variable's value is checked the way a label is."""
+        self.assertEqual(self.messages(
+            '<includes><variable name="V"><value>$INFO[Player.Titel]</value></variable></includes>'),
+            ["Kodi has no info 'Player.Titel', so $INFO[Player.Titel] shows nothing"])
+
+
 class TestBoolAttributes(unittest.TestCase):
     """Bool attributes follow the spelling each Kodi reader accepts."""
 
