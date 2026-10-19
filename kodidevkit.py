@@ -699,8 +699,6 @@ class KodiDevKit(sublime_plugin.EventListener):
         self._modified_files = set()
         self._last_phantom_cleanup = 0
 
-        self.settings = KodiDevKit.settings
-
         self.timer = None
         self._prev_selections = {}
 

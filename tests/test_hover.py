@@ -438,5 +438,17 @@ class TestGoToTagKinds(unittest.TestCase):
         self.assertFalse(self.nav.go_to_tag("Logo", "16x9", kinds=("map",)))
 
 
+class TestListenerSettings(unittest.TestCase):
+    """Plugin settings seen by the event listener, which Sublime creates before they load."""
+
+    def test_settings_loaded_after_the_listener_reach_it(self):
+        saved = kodidevkit.KodiDevKit.settings
+        self.addCleanup(setattr, kodidevkit.KodiDevKit, "settings", saved)
+        kodidevkit.KodiDevKit.settings = {}
+        listener = kodidevkit.KodiDevKit()
+        kodidevkit.KodiDevKit.settings = {"auto_reload_skin": False}
+        self.assertFalse(listener.settings.get("auto_reload_skin", True))
+
+
 if __name__ == "__main__":
     unittest.main()
