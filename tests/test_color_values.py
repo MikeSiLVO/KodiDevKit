@@ -1,4 +1,4 @@
-"""Color attributes: hex, a color name, or an info label Kodi reads the color from."""
+"""Color attributes and tags: hex, a color name, or an info label Kodi reads the color from."""
 
 import os
 import sys
@@ -17,7 +17,7 @@ ADDON_XML = ('<addon id="skin.test" version="1.0.0"><requires><import addon="xbm
 
 
 class TestColorValues(unittest.TestCase):
-    """Which colordiffuse values the color check accepts, as written and once resolved."""
+    """Which color values the color check accepts, as written and once resolved."""
 
     def setUp(self):
         """Set up a skin with an empty Includes.xml."""
@@ -47,6 +47,16 @@ class TestColorValues(unittest.TestCase):
         rows = provider.check_file(os.path.join(self.root, "16x9", "Home.xml")) or []
         return [r for r in rows if r["rule"] == "xml.invalid-color"]
 
+    def flagged_tag(self, text):
+        """Invalid-color messages for the <textcolor> of a label."""
+        self.write("16x9/Home.xml", '<window><controls><control type="label">'
+                                    f'<textcolor>{text}</textcolor></control></controls></window>')
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.root)
+        rows = provider.check_file(os.path.join(self.root, "16x9", "Home.xml")) or []
+        return [r["message"] for r in rows if r["rule"] == "xml.invalid-color"]
+
     def test_a_known_info_label_is_a_color(self):
         """A bare info label such as Skin.String(name) passes, as Kodi reads the color from it."""
         self.assertEqual(self.flagged("Skin.String(flat_back)"), [])
@@ -59,6 +69,12 @@ class TestColorValues(unittest.TestCase):
     def test_hex_still_passes(self):
         """An AARRGGBB hex value passes."""
         self.assertEqual(self.flagged("FF00FF00"), [])
+
+    def test_tag_text(self):
+        """Color tag text is checked too, leaving dynamic values and surrounding space alone."""
+        self.assertEqual(self.flagged_tag("notacolor"), ["Invalid color for <textcolor>: notacolor"])
+        for text in (" FF00FF00 ", "Skin.String(flat_back)", "$VAR[TextColor]", "$INFO[Skin.String(x)]"):
+            self.assertEqual(self.flagged_tag(text), [], text)
 
 
 if __name__ == "__main__":

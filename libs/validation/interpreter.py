@@ -312,6 +312,9 @@ class XmlInterpreter:
             tmpl_val = values.get(tag)
             if child.text and tmpl_val in ("int", "position"):
                 self._validate_number(child, tag, False, child.text, tmpl_val)
+            elif child.text and tmpl_val == "color":
+                if not _contains_dynamic(child.text):
+                    self._validate_color(child, f"<{tag}>", tag, child.text.strip())
             elif child.text and tmpl_val:
                 self._validate_enum_value(child, child.text, tmpl_val)
 
@@ -569,6 +572,13 @@ class XmlInterpreter:
         """True when the value reads as a constant name: a letter first, then word characters."""
         return re.match(r"^[A-Za-z_][\w.-]*$", value) is not None and value.lower() != "auto"
 
+    def _validate_color(self, node, where: str, name: str, value: str):
+        """Validate a color, reporting one that is no hex value, color name or info."""
+        if (not _is_kodi_hex(value) and value not in self.color_labels
+                and not (self.info_names and is_known_info(value, self.info_names))):
+            self._add_issue(node, SEVERITY_ERROR, f"Invalid color for {where}: {value}", rule="xml.invalid-color",
+                            subject=name)
+
     def _validate_typed_attr(self, node, attr_name: str, value: str, value_type: str):
         """Validate typed attribute values (int, position, color, bool, enum)."""
         if not (value or "").strip():
@@ -577,12 +587,7 @@ class XmlInterpreter:
         if value_type in ("int", "position"):
             self._validate_number(node, attr_name, True, value, value_type)
         elif value_type == "color":
-            if (not _is_kodi_hex(value) and value not in self.color_labels
-                    and not (self.info_names and is_known_info(value, self.info_names))):
-                self._add_issue(
-                    node, SEVERITY_ERROR,
-                    f"Invalid color for {attr_name}: {value}", rule="xml.invalid-color", subject=attr_name,
-                )
+            self._validate_color(node, attr_name, attr_name, value)
         elif value_type == "bool" and (problem := attribute_bool_problem(attr_name, value)):
             self._add_issue(node, SEVERITY_ERROR, problem, rule="xml.misread-bool", subject=attr_name)
         elif value_type in ALLOWED_VALUES:
