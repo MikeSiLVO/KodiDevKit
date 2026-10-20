@@ -33,6 +33,7 @@ from ..validation.repo import ValidationRepo
 from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan, skin_paths, stamp
 from ..validation.interpreter import XmlInterpreter
+from ..validation.xsp import XspValues, value_sources
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
 from ..validation.constants import (
     BRACKET_TAGS,
@@ -244,6 +245,25 @@ class CheckerMixin:
         if cached is None or cached[0] != files:
             cached = self._suppressions = (files, scan(paths))
         return cached[1]
+
+    def get_value_sources(self):
+        """Get what the skin stores in properties and skin strings, rescanned on a file change."""
+        paths = skin_paths(self.addon)
+        files = stamp(paths)
+        cached = getattr(self, "_value_sources", None)
+        if cached is None or cached[0] != files:
+            cached = self._value_sources = (files, value_sources(paths))
+        return cached[1]
+
+    def _variable_values(self, folder):
+        """Each variable's <value> texts by name, rebuilt for a new map."""
+        variables = getattr(self.addon, "variable_map", {}).get(folder, {})
+        cache = vars(self).setdefault("_variable_cache", {})
+        if folder not in cache or cache[folder][0] is not variables:
+            table = {name: [value.text or "" for value in entry[0].findall("value")]
+                     for name, entry in variables.items()}
+            cache[folder] = (variables, table)
+        return cache[folder][1]
 
     def _reported(self, category, issues):
         """Drop the issues inside a generated file and mark those a `kdk-ignore` comment mutes."""
@@ -539,6 +559,7 @@ class CheckerMixin:
             info_names=self.known_info_names(),
             expressions=self._expression_sources(folder),
             settled_defaults=sk.settled_default_tags(folder),
+            xsp=XspValues(self.get_value_sources(), self._variable_values(folder)),
         )
         issues = interpreter.interpret(walk_root)
 

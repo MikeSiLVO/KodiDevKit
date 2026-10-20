@@ -212,6 +212,21 @@ def split_top_level_commas(text: str) -> list[str]:
     return [p for p in parts if p]
 
 
+_BUILTIN_PATTERNS: dict[tuple[str, ...], re.Pattern] = {}
+
+
+def builtin_calls(text: str, names: tuple[str, ...]):
+    """Yield (name, args) per call of the named builtins, args split on top-level commas."""
+    if names not in _BUILTIN_PATTERNS:
+        _BUILTIN_PATTERNS[names] = re.compile(r"\b(" + "|".join(map(re.escape, names)) + r")\(", re.IGNORECASE)
+    for match in _BUILTIN_PATTERNS[names].finditer(text):
+        depth, end = 1, match.end()
+        while end < len(text) and depth:
+            depth += (text[end] == "(") - (text[end] == ")")
+            end += 1
+        yield match.group(1), split_top_level_commas(text[match.end():end - 1])
+
+
 def expression_references(text: str):
     """Yield (start, end, name) per upper-case `$EXP[` reference, stopping at an unclosed one."""
     pos = 0

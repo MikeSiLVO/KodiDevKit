@@ -207,6 +207,7 @@ Validates each window as Kodi loads it, after includes, constants, expressions a
 - A `<defaultcontrol>` whose control can never take focus.
 - A missing `]` after `$INFO[`, `$LOCALIZE[` and the like.
 - An `$INFO[]` naming an info Kodi does not have, which shows nothing, or only its prefix.
+- A runtime value in an `xsp=` smart playlist filter that is not URL-encoded, such as `%22$INFO[ListItem.Title]%22` or `%5B$ESCINFO[ListItem.Genre]%5D`. A value holding `&` or `|`, such as "Law & Order", empties the list, and `+` turns into a space. `$ESCINFO` escapes quotes but does not URL-encode. Runtime text is an infolabel such as `ListItem.Title`, a skin string typed on the keyboard, or a property the skin sets from either.
 - XML parse errors. Faults Kodi's parser forgives, such as a bare `&`, are reported at their line.
 - A window file the targeted Kodi release no longer loads.
 
@@ -217,8 +218,11 @@ Validates each window as Kodi loads it, after includes, constants, expressions a
 - A `<viewtype>` Kodi does not know, or not in lowercase.
 - Text beside an include's `<definition>`, which Kodi ignores.
 - A `<default type>` written in a case no control uses. Kodi matches it exactly.
+- A runtime value in an `xsp=` filter that comes from outside the skin, such as a list item property a plugin sets, or a property or skin string nothing in the skin sets. It empties the list on the same values unless whatever sets it URL-encodes it.
 
 When the skin imports an add-on that writes include files at runtime (script.skinshortcuts, script.skinvariables), an undefined `$EXP` or constant name is a warning instead, since the add-on may define it.
+
+Numbers, dates and fixed words in an `xsp=` filter, such as `ListItem.Year`, `ListItem.DBID` and `ListItem.DBType`, need no encoding. A property set through script.skinvariables' `get_encoded_string`, or one whose name contains "encoded", is not reported either. That value is URL-encoded, but a `"` or `\` in it still breaks the filter; no form a skin can write carries every character.
 
 `$PARAM[]` works in every tag, since Kodi replaces it while it splices the include.
 

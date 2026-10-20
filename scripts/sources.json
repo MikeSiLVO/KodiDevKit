@@ -469,6 +469,22 @@
     ]
   },
   {
+    "symbol": "libs/validation/xsp.py:XspValues.faults",
+    "kodi": [
+      "xbmc/utils/UrlOptions.cpp:CUrlOptions::AddOptions",
+      "xbmc/URL.cpp:CURL::Decode",
+      "xbmc/playlists/SmartPlayList.cpp:CSmartPlaylist::LoadFromJson"
+    ]
+  },
+  {
+    "symbol": "libs/validation/xsp.py:value_sources",
+    "kodi": [
+      "xbmc/Util.cpp:CUtil::SplitParams",
+      "xbmc/guilib/GUIWindow.cpp:CGUIWindow::GetProperty",
+      "xbmc/interfaces/builtins/SkinBuiltins.cpp:SetString"
+    ]
+  },
+  {
     "symbol": "tests/test_constant_resolution_accuracy.py:<module>",
     "kodi": [
       "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadConstants"

@@ -12,25 +12,8 @@ from ..utils.validation import (
     should_report_progress,
     skinshortcuts_files,
 )
-from ..utils.expressions import bracket_body, split_top_level_commas
+from ..utils.expressions import bracket_body, builtin_calls
 from ..utils.xml import blank_xml_comments
-
-
-_SET_PROPERTY = re.compile(r"\bSetProperty\(", re.IGNORECASE)
-
-
-def _set_property_values(line):
-    """The value argument of each SetProperty call in the given text."""
-    values = []
-    for match in _SET_PROPERTY.finditer(line):
-        depth, end = 1, match.end()
-        while end < len(line) and depth:
-            depth += (line[end] == "(") - (line[end] == ")")
-            end += 1
-        args = split_top_level_commas(line[match.end():end - 1])
-        if len(args) > 1:
-            values.append(args[1])
-    return values
 
 
 class ValidationVariable:
@@ -85,8 +68,8 @@ class ValidationVariable:
                         )
 
                     # add-ons read a variable named in a property value back as $VAR[name]
-                    for value in _set_property_values(line):
-                        for name in value.split("|"):
+                    for _name, args in builtin_calls(line, ("SetProperty",)):
+                        for name in args[1].split("|") if len(args) > 1 else ():
                             if name.strip() in known_variables:
                                 var_refs.append({"line": i, "type": "variable", "file": path,
                                                  "name": name.strip()})
