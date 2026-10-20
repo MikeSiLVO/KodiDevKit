@@ -13,6 +13,7 @@ _EXPRESSION = re.compile(r'\$(ESC)?(INFO|VAR)\[')
 _ENCODER = re.compile(r'get_encoded_string\b.*?\bwindow_prop=([^&"\s,)]+)', re.IGNORECASE)
 _PROPERTY = re.compile(r'window(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
 _SKIN_STRING = re.compile(r'skin\.string\((.+)\)$', re.IGNORECASE)
+_ITEM_PROPERTY = re.compile(r'container\((\d+)\)\.listitem\w*(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
 # characters a URL query or a JSON string cannot carry unencoded
 _UNSAFE = set('&|+"\\')
 
@@ -39,7 +40,7 @@ def _worst(kinds):
 
 
 def value_sources(paths):
-    """Each value the skin stores per property and skin string name, or "encoded" or "keyboard"."""
+    """Each value the skin stores per property, skin string and static item property, by name."""
     sources = {}
     for path in paths:
         root = get_root_from_file(path)
@@ -48,6 +49,11 @@ def value_sources(paths):
         for element in root.iter():
             if not isinstance(element.tag, str):
                 continue
+            if element.tag == "property" and element.get("name") and element.getparent().tag == "item":
+                control = next(element.iterancestors("control"), None)
+                if control is not None and (control.get("id") or "").isdigit():
+                    key = f"item:{control.get('id')}:{element.get('name').casefold()}"
+                    sources.setdefault(key, []).append(element.text or "")
             for text in [element.text or ""] + list(element.attrib.values()):
                 for name, args in builtin_calls(text, ("SetProperty", "Skin.SetString")):
                     if not args or "$" in args[0]:
@@ -103,6 +109,9 @@ class XspValues:
         found = _SKIN_STRING.search(info)
         if found:
             return self._stored_kind("skin:" + found.group(1).strip().casefold(), seen)
+        found = _ITEM_PROPERTY.search(info)
+        if found and f"item:{found.group(1)}:{found.group(2).strip().casefold()}" in self.sources:
+            return self._stored_kind(f"item:{found.group(1)}:{found.group(2).strip().casefold()}", seen)
         found = re.search(r"\.property\((.+)\)$", info, re.IGNORECASE)
         if found:
             return SAFE if _plain(found.group(1)) else UNTRACED

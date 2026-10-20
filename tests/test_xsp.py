@@ -10,7 +10,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from libs.infoprovider.provider import InfoProvider
-from libs.validation.xsp import RAW, UNTRACED, XspValues
+from libs.validation.xsp import RAW, UNTRACED, XspValues, value_sources
 
 PATH = "videodb://movies/titles/?xsp=%7B%22rules%22%3A%7B%22and%22%3A%5B%7B%22field%22%3A%22{field}%22%2C" \
        "%22operator%22%3A%22is%22%2C%22value%22%3A{value}%7D%5D%7D%2C%22type%22%3A%22movies%22%7D"
@@ -62,6 +62,23 @@ class TestXspValues(unittest.TestCase):
                          [("$INFO[Container(9).ListItem.Property(cast.0)]", UNTRACED)])
         self.assertEqual(self.kinds("%5B%22$INFO[Skin.String(search)]%22%5D"),
                          [("$INFO[Skin.String(search)]", UNTRACED)])
+
+    def test_static_item_property_is_traced_through_its_items(self):
+        sources = {"item:9110:dir": ["$INFO[Container(9101).ListItemAbsolute(0).Director]"], "item:9110:kind": ["movies"]}
+        self.assertEqual(self.kinds("%5B%22$INFO[Container(9110).ListItem.Property(dir)]%22%5D", sources),
+                         [("$INFO[Container(9110).ListItem.Property(dir)]", RAW)])
+        self.assertEqual(self.kinds("%5B%22$INFO[Container(9110).ListItem.Property(kind)]%22%5D", sources), [])
+        self.assertEqual(self.kinds("%5B%22$INFO[Container(9200).ListItem.Property(dir)]%22%5D", sources),
+                         [("$INFO[Container(9200).ListItem.Property(dir)]", UNTRACED)])
+
+    def test_scan_reads_static_item_properties(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "Home.xml")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write('<window><controls><control type="list" id="9110"><content>'
+                        '<item><label>a</label><property name="Dir">$INFO[ListItem.Director]</property></item>'
+                        '</content></control></controls></window>')
+            self.assertEqual(value_sources([path]), {"item:9110:dir": ["$INFO[ListItem.Director]"]})
 
     def test_keyboard_skin_string_is_raw(self):
         self.assertEqual(self.kinds("%5B%22$INFO[Skin.String(search)]%22%5D", {"skin:search": ["keyboard"]}),
