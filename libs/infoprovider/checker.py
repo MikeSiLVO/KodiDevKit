@@ -779,9 +779,9 @@ class CheckerMixin:
             resolved_issues = self._check_file_resolved(root, path, folder)
             if resolved_issues:
                 # source-pass issues win on collision
-                seen = {(item["line"], item["message"]) for item in listitems}
+                seen = {(item["line"], item["message"], item.get("include_line")) for item in listitems}
                 for item in resolved_issues:
-                    key = (item["line"], item["message"])
+                    key = (item["line"], item["message"], item.get("include_line"))
                     if key not in seen:
                         listitems.append(item)
                         seen.add(key)

@@ -76,6 +76,19 @@ class TestColorValues(unittest.TestCase):
         for text in (" FF00FF00 ", "Skin.String(flat_back)", "$VAR[TextColor]", "$INFO[Skin.String(x)]"):
             self.assertEqual(self.flagged_tag(text), [], text)
 
+    def test_same_fault_twice_in_one_include(self):
+        """The same bad color in both layouts of one include call is reported at both lines."""
+        layout = '<{0} height="40"><control type="label"><textcolor>notacolor</textcolor></control></{0}>'
+        self.write("16x9/Includes.xml", '<includes>\n<include name="Row">\n<control type="list" id="50">\n'
+                   + layout.format("itemlayout") + "\n" + layout.format("focusedlayout")
+                   + "\n</control>\n</include>\n</includes>")
+        self.write("16x9/Home.xml", '<window><controls><include>Row</include></controls></window>')
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.root)
+        rows = provider.get_check_listitems("general")
+        self.assertEqual(sorted(r["line"] for r in rows if r["rule"] == "xml.invalid-color"), [4, 5])
+
 
 if __name__ == "__main__":
     unittest.main()
