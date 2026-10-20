@@ -453,8 +453,8 @@ class SkinIndex:
         self.skin._include_usages_built = True
 
     def _extract_fonts_from_xml(self, root, path, folder, index):
-        """Extract each static or include $PARAM <font> name, with its include, into the index."""
-        for node in root.xpath(".//font"):
+        """Extract each <font> and <monofont> name, static or include $PARAM, with its include."""
+        for node in root.xpath(".//font | .//monofont"):
             font_name = (node.text or "").strip()
             include = next((a.get('name') for a in node.iterancestors('include') if a.get('name')), None)
             # each call names the font a $PARAM stands for

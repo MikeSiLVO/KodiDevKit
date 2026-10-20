@@ -128,7 +128,7 @@ class SkinResources:
                 yield os.path.relpath(os.path.join(path, filename), media_path).replace("\\", "/")
 
     def get_font_references(self, window_files: Dict[str, List[str]]) -> Optional[Dict[str, List[Dict]]]:
-        """Get every <font> reference per folder as {file, name, line}; None on a parse failure."""
+        """Get every font and monofont use per folder as {file, name, line}; None on bad XML."""
         font_refs = {}
         for folder in self.xml_folders:
             font_refs[folder] = []
@@ -139,7 +139,7 @@ class SkinResources:
                 root = get_root_from_file(path)
                 if root is None:
                     return None
-                for node in root.xpath(".//font"):
+                for node in root.xpath(".//font | .//monofont"):
                     if len(node):
                         continue
                     item = {

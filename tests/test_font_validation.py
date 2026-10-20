@@ -655,6 +655,35 @@ class TestFontValidation(unittest.TestCase):
         has_unused_error = any("unusedfont" in issue["message"].lower() and "unused" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_unused_error, "Should detect defined but unused font")
 
+    def test_monofont_counts_as_a_use(self):
+        """A textbox <monofont> uses its font, and names one that must be defined."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml("""<?xml version="1.0" encoding="UTF-8"?>
+<fonts>
+    <fontset id="Default">
+        <font><name>font13</name><filename>font.ttf</filename><size>13</size></font>
+        <font><name>Mono26</name><filename>font.ttf</filename><size>26</size></font>
+    </fontset>
+</fonts>
+""")
+        self.create_window_xml("""<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="textbox">
+            <font>font13</font>
+            <monofont>Mono26</monofont>
+        </control>
+        <control type="textbox">
+            <font>font13</font>
+            <monofont>Mono99</monofont>
+        </control>
+    </controls>
+</window>
+""")
+        issues = self.init_provider().check_fonts()
+
+        self.assertEqual(sorted((i["rule"], i["subject"]) for i in issues), [("fonts.undefined", "Mono99")])
+
     def test_dynamic_param_values_ignored(self):
         """Test that $PARAM[...] values are ignored in validation."""
         self.create_font_file("font.ttf")

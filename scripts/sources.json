@@ -60,6 +60,12 @@
     ]
   },
   {
+    "symbol": "libs/skin/index.py:SkinIndex._extract_fonts_from_xml",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create"
+    ]
+  },
+  {
     "symbol": "libs/skin/index.py:SkinIndex._extract_id_references_from_xml",
     "kodi": [
       "xbmc/guilib/GUIAction.cpp:CGUIAction::GetNavigation"
