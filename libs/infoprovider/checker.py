@@ -314,7 +314,7 @@ class CheckerMixin:
         return self._reported("IDs", checker.check(progress_callback=progress_callback))
 
     def check_labels(self, progress_callback=None):
-        """Check the skin's labels for undefined or out-of-range ids and untranslated text."""
+        """Check the skin's labels for bad ids, broken strings and untranslated text."""
         if not self.addon:
             return []
 
@@ -332,7 +332,7 @@ class CheckerMixin:
         return self._reported("Kodi Repo", checker.check(progress_callback=progress_callback))
 
     def check_file_integrity(self, progress_callback=None):
-        """Check the skin's files for BOMs, line endings, 16-bit PNGs and rejected file types."""
+        """Check the skin's files for BOMs, line endings, 16-bit PNGs, broken strings, bad types."""
         if not self.addon:
             return []
 

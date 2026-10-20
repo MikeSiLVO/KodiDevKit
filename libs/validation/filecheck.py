@@ -1,4 +1,4 @@
-"""File-level checks: BOM, line endings, 16-bit PNGs, and files Kodi repo review rejects."""
+"""File-level checks: BOM, line endings, 16-bit PNGs, broken strings.po and rejected files."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import logging
 import subprocess
 import sys
 
+from ..addon.translations import strings_po_faults
 from ..utils.files import check_bom, eol_info_from_path_patterns
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -18,7 +19,7 @@ _LEFTOVER = re.compile(r"(?i)(\.(bak|orig|tmp|old|swp|psd|xcf)$|~$|^(thumbs\.db|
 
 
 class ValidationFileCheck:
-    """Checker for BOMs, line endings, 16-bit PNGs and files Kodi repo review rejects."""
+    """Checker for BOMs, line endings, 16-bit PNGs, broken strings.po and rejected files."""
 
     def __init__(self, addon):
         self.addon = addon
@@ -74,6 +75,7 @@ class ValidationFileCheck:
 
         issues.extend(self._sixteen_bit_pngs())
         issues.extend(self._repo_file_issues())
+        issues.extend(self._po_syntax_issues())
 
         if progress_callback:
             progress_callback(f"Complete: {len(issues)} file encoding issues found")
@@ -105,6 +107,26 @@ class ValidationFileCheck:
                             "rule": "files.sixteen-bit-png",
                             "subject": "",
                         })
+        return issues
+
+
+    def _po_syntax_issues(self):
+        """Broken strings.po strings Kodi does not misread; the misread ones are label issues."""
+        issues = []
+        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path):
+            if effect:
+                continue
+            where = f"string {string_id}" if string_id else "the header"
+            if problem == "unclosed":
+                message = (f"A string in {where} does not close on this line, so Weblate and gettext "
+                           f"tools cannot load the file; Kodi still reads it")
+                rule, severity = "files.po-unclosed", SEVERITY_ERROR
+            else:
+                message = (f"Text after the closing quote in {where}, such as an unescaped \", which "
+                           f"msgfmt rejects; Kodi and Weblate still read it")
+                rule, severity = "files.po-trailing-text", SEVERITY_WARNING
+            issues.append({"message": message, "file": path, "line": line, "severity": severity,
+                           "rule": rule, "subject": string_id or ""})
         return issues
 
 

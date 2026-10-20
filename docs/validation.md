@@ -120,6 +120,7 @@ Checks label references and text content in label-like tags (`<label>`, `<label2
 **Errors:**
 - Numeric label ID (`$LOCALIZE[12345]` or bare `12345` in a label tag) not found in any `.po` translation file.
 - A skin string outside 31000-31999. Kodi 22 reads those ids as its own strings.
+- A string in a `strings.po` that does not close, or has text or spaces after its closing quote. Kodi shows it empty, cut short, or in English instead of the translation.
 
 **Warnings:**
 - Hardcoded text that should be in a language file.
@@ -232,6 +233,9 @@ Checks file encoding, line endings and the files the skin ships.
 - Windows line endings (`\r\n`) or Mac line endings (`\r`) in any of those files.
 - A 16-bit PNG, which TexturePacker cannot pack.
 - Two files whose names differ only by case. One overwrites the other on Windows and macOS.
+- A string in a `strings.po` that does not close, even where Kodi never reads it, such as the header. Weblate and gettext tools cannot load the file.
+
+**Warnings:** a `strings.po` line with text after its closing quote, such as an unescaped `"` inside the string. Kodi and Weblate still read it; msgfmt rejects the file.
 
 **Warnings (Kodi repo):** a file marked executable, a non-ASCII file name, Python scripts, keymaps, leftovers such as `.bak` or `Thumbs.db`, and context menu items in `addon.xml`. In a git checkout only the files git tracks count.
 

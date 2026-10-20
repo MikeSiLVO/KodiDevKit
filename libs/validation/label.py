@@ -1,8 +1,9 @@
-"""Checks labels for undefined or out-of-range string ids and text that looks untranslated."""
+"""Checks labels for undefined or out-of-range ids, broken strings and untranslated text."""
 
 import re
 import logging
 
+from ..addon.translations import strings_po_faults
 from ..utils.colors import is_kodi_hex
 from ..utils.infobool import is_known_info
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
@@ -18,6 +19,17 @@ ADDON_ID_PREFIXES = (
 )
 
 _ADDON_ID = re.compile(rf"^({'|'.join(ADDON_ID_PREFIXES)})\.[a-z0-9._-]+$")
+
+_PO_PROBLEMS = {
+    "unclosed": "does not close on this line",
+    "text": "has text after its closing quote on this line",
+    "spaces": "has spaces outside its quotes on this line",
+}
+_PO_EFFECTS = {
+    "empty": "reads it as empty and its labels show nothing",
+    "cut": "shows only the text before this line",
+    "english": "shows the English text in place of this translation",
+}
 
 # names that read the same in every language
 BRAND_NAMES = {
@@ -43,7 +55,7 @@ TECHNICAL_TERMS = {
 
 
 class ValidationLabel:
-    """Checker for undefined or out-of-range label ids and label text that looks untranslated."""
+    """Checker for undefined or out-of-range label ids, broken strings and untranslated text."""
 
     def __init__(self, addon, get_po_files_fn, validation_index=None, info_names=None):
         self.addon = addon
@@ -73,7 +85,7 @@ class ValidationLabel:
         return is_known_info(text, self._info_names)
 
     def check(self, progress_callback=None):
-        """Check labels, one issue row per bad id or text that looks untranslated."""
+        """Check labels, one issue row per bad id, broken string or text that looks untranslated."""
         if not self._validation_index:
             return []
         if progress_callback:
@@ -158,6 +170,15 @@ class ValidationLabel:
             ref["severity"] = SEVERITY_ERROR
             ref["subject"] = ref["name"]
             listitems.append(ref)
+
+        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path):
+            if not effect:
+                continue
+            message = f"String {string_id} {_PO_PROBLEMS[problem]}, so Kodi {_PO_EFFECTS[effect]}"
+            if problem == "unclosed":
+                message += "; Weblate cannot load the file either"
+            listitems.append({"message": message, "file": path, "line": line, "severity": SEVERITY_ERROR,
+                              "rule": "labels.broken-string", "subject": string_id})
 
         error_count = len(listitems)
         if progress_callback:
