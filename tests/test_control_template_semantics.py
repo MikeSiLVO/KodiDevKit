@@ -99,6 +99,22 @@ class TestControlTemplateSemantics(unittest.TestCase):
                                  "invalid attribute for <height>: min, which <control type=list> ignores",
                                  "invalid attribute for <width>: min, which <control type=image> ignores"])
 
+    def test_disabled_slider_textures(self):
+        """Sliderex uses both disabled slider textures; a scrollbar uses neither."""
+        self._assert_clean("""
+<control type="sliderex">
+    <texturesliderbardisabled>bar.png</texturesliderbardisabled>
+    <textureslidernibdisabled>nib.png</textureslidernibdisabled>
+</control>""")
+        for release in ("omega", "piers"):
+            with self.subTest(release=release):
+                issues = self._issues("""
+<control type="scrollbar">
+    <texturesliderbardisabled>bar.png</texturesliderbardisabled>
+    <textureslidernibdisabled>nib.png</textureslidernibdisabled>
+</control>""", release)
+                self.assertEqual([i["rule"] for i in issues], ["xml.invalid-tag", "xml.invalid-tag"])
+
     def test_group_enable(self):
         """A disabled group cannot take focus, so enable is meaningful."""
         self._assert_clean("""

@@ -120,7 +120,6 @@
         <texturesliderbarfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbarfocus>
         <textureslidernib colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernib>
         <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
-        <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibdisabled>
         <orientation>orientation</orientation>
         <showonepage>bool</showonepage>
     </control>
@@ -314,6 +313,8 @@
         <texturesliderbar colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbar>
         <textureslidernib colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernib>
         <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
+        <texturesliderbardisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbardisabled>
+        <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibdisabled>
         <onback condition="condition">builtin</onback>
         <onfocus condition="condition">builtin</onfocus>
         <onunfocus condition="condition">builtin</onunfocus>
