@@ -130,7 +130,7 @@ class SkinIndex:
             for folder, font_list in self.skin.fonts.items():
                 for font_data in font_list:
                     font_name = font_data.get('name', '').strip()
-                    if font_name:
+                    if font_name and font_name not in index['fonts_defined'][folder]:
                         index['fonts_defined'][folder][font_name] = {
                             'file': font_data.get('file', ''),
                             'line': font_data.get('line', 0),

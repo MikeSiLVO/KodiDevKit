@@ -684,6 +684,27 @@ class TestFontValidation(unittest.TestCase):
 
         self.assertEqual(sorted((i["rule"], i["subject"]) for i in issues), [("fonts.undefined", "Mono99")])
 
+    def test_unused_font_points_at_first_definition(self):
+        """An unused font defined in two fontsets is reported where the first one defines it."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml("""<?xml version="1.0" encoding="UTF-8"?>
+<fonts>
+    <fontset id="Default">
+        <font><name>font13</name><filename>font.ttf</filename><size>13</size></font>
+        <font><name>Spare</name><filename>font.ttf</filename><size>20</size></font>
+    </fontset>
+    <fontset id="Arial">
+        <font><name>font13</name><filename>font.ttf</filename><size>13</size></font>
+        <font><name>Spare</name><filename>font.ttf</filename><size>20</size></font>
+    </fontset>
+</fonts>
+""")
+        self.create_window_xml('<?xml version="1.0" encoding="UTF-8"?>\n<window><controls/></window>\n')
+        issues = self.init_provider().check_fonts()
+
+        self.assertEqual([(i["subject"], i["line"]) for i in issues if i["rule"] == "fonts.unused"],
+                         [("Spare", 5)])
+
     def test_dynamic_param_values_ignored(self):
         """Test that $PARAM[...] values are ignored in validation."""
         self.create_font_file("font.ttf")
