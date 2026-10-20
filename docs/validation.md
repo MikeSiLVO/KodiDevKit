@@ -206,7 +206,7 @@ Validates each window as Kodi loads it, after includes, constants, expressions a
 - A second copy of a tag Kodi reads once. Kodi keeps the first and drops the rest. When one of the copies comes from an include, this is a warning.
 - A `<defaultcontrol>` whose control can never take focus.
 - A missing `]` after `$INFO[`, `$LOCALIZE[` and the like.
-- An `$INFO[]` naming an info Kodi does not have, which shows nothing, or only its prefix.
+- An `$INFO[]` naming an info Kodi does not have, which shows nothing, or only its prefix. In an action, or in the second argument of `$MAP[]`, it gives an empty value. The same check covers a static `<content>` item, and a name in `<info>` or `<info2>`, where a label shows its `<label>` instead.
 - A runtime value in an `xsp=` smart playlist filter that is not URL-encoded, such as `%22$INFO[ListItem.Title]%22` or `%5B$ESCINFO[ListItem.Genre]%5D`. A value holding `&` or `|`, such as "Law & Order", empties the list, and `+` turns into a space. `$ESCINFO` escapes quotes but does not URL-encode. Runtime text is an infolabel such as `ListItem.Title`, a skin string typed on the keyboard, or a property the skin sets from either.
 - XML parse errors. Faults Kodi's parser forgives, such as a bare `&`, are reported at their line.
 - A window file the targeted Kodi release no longer loads.

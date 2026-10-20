@@ -95,12 +95,14 @@ POS_TAGS = {
     "depth",
 }
 
+CONTROL_ACTION_TAGS = frozenset({
+    "onup", "ondown", "onleft", "onright", "onnext", "onprev", "onclick", "onback", "onfocus",
+    "onunfocus", "oninfo", "ontextchange", "altclick",
+})
+WINDOW_ACTION_TAGS = frozenset({"onload", "onunload"})
+
 # control tags Kodi reads every copy of, any other only once
-REPEATABLE_TAGS = {
-    "visible", "animation", "include", "description",
-    "onup", "ondown", "onleft", "onright", "onnext", "onprev", "onback", "oninfo",
-    "onclick", "ontextchange", "onfocus", "onunfocus", "altclick",
-}
+REPEATABLE_TAGS = {"visible", "animation", "include", "description"} | CONTROL_ACTION_TAGS
 
 # repeatable per control type; other controls use only the first <label> or <info>
 ALLOWED_MULTI = {

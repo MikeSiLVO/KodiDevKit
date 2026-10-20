@@ -151,7 +151,7 @@ RULES = {
     "xml.unknown-info": "An info Kodi does not know, which always reads false.",
     "xml.xsp-unencoded": "A runtime value in an xsp filter without URL encoding, which & or | breaks.",
     "xml.xsp-untraced": "A runtime value in an xsp filter set outside the skin, maybe not URL-encoded.",
-    "xml.unknown-infolabel": "An $INFO[] naming an info Kodi does not know, which shows nothing or only its prefix.",
+    "xml.unknown-infolabel": "An info Kodi does not know in $INFO[], $MAP[] or <info>, which reads as nothing.",
     "xml.unknown-info-argument": "A String or Integer test argument naming an info Kodi does not know, read as empty text or 0.",
     "xml.constant-not-substituted": "A constant name where Kodi does not substitute constants.",
     "xml.undefined-constant": "A value that is neither a number nor a defined constant.",

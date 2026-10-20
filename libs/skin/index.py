@@ -12,7 +12,7 @@ from ..utils.files import read_xbt_names
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
 from ..utils.expressions import is_dynamic_expression
 from ..utils.validation import normalize_control_id, skinshortcuts_files
-from ..validation.constants import TEXTURE_TAGS
+from ..validation.constants import CONTROL_ACTION_TAGS, TEXTURE_TAGS, WINDOW_ACTION_TAGS
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,6 @@ _LABEL_ATTRS = {"viewtype": ("label",), "fontset": ("idloc",), "label": ("fallba
                 "altlabel": ("fallback",), "hinttext": ("fallback",)}
 _UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
 _NAVIGATION_TAGS = ("onup", "ondown", "onleft", "onright", "onnext", "onprev")
-_ACTION_TAGS = frozenset(_NAVIGATION_TAGS + ("onclick", "onback", "onfocus", "onunfocus", "oninfo", "ontextchange",
-                                             "altclick", "onload", "onunload"))
 # arguments Kodi reads as window names or ids: Window.* conditions, Window(x) and window builtins
 _WINDOW_REFS = re.compile(
     r"\b(?:Window\.(?:IsMedia|Is|IsActive|IsVisible|IsTopmost|IsDialogTopmost|IsModalDialogTopmost"
@@ -804,7 +802,7 @@ class SkinIndex:
                     {'file': path, 'line': getattr(node, 'sourceline', 0) or 0, 'type': 'control',
                      'context': 'navigation'})
 
-        bracket_tags = ["visible", "enable", "usealttexture", "selected"] + sorted(_ACTION_TAGS)
+        bracket_tags = ["visible", "enable", "usealttexture", "selected"] + sorted(CONTROL_ACTION_TAGS | WINDOW_ACTION_TAGS)
         for tag_name in bracket_tags:
             for node in root.xpath(f".//{tag_name}"):
                 text = (node.text or "").strip()

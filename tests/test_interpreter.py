@@ -299,6 +299,49 @@ class TestLabelInfos(unittest.TestCase):
             '<includes><variable name="V"><value>$INFO[Player.Titel]</value></variable></includes>'),
             ["Kodi has no info 'Player.Titel', so $INFO[Player.Titel] shows nothing"])
 
+    def test_actions(self):
+        """A control's actions and a window's onload are checked; the info is empty as they run."""
+        interp = XmlInterpreter(template_attribs={"button": {"onclick": {}, "onfocus": {}}},
+                                template_values={"button": {}}, info_names=self.NAMES)
+        rows = interp.interpret(_parse(
+            '<window><onload>SetProperty(a,$INFO[ListItem.Lable])</onload><controls><control type="button">'
+            '<onclick>SetProperty(b,$INFO[ListItem.Labl])</onclick><onfocus>SetProperty(c,$INFO[ListItem.Label])'
+            '</onfocus></control></controls></window>'))
+        self.assertEqual([i["message"] for i in rows if i["rule"] == "xml.unknown-infolabel"], [
+            "Kodi has no info 'ListItem.Lable', so $INFO[ListItem.Lable] is empty when the action runs",
+            "Kodi has no info 'ListItem.Labl', so $INFO[ListItem.Labl] is empty when the action runs",
+        ])
+
+    def test_static_content_items(self):
+        """A static item's labels, art and properties are read the way a control's label is."""
+        interp = XmlInterpreter(template_attribs={"list": {"content": {}}}, template_values={"list": {}},
+                                info_names=self.NAMES)
+        rows = interp.interpret(_parse(
+            '<window><controls><control type="list"><content><item><label>$INFO[ListItem.Lable]</label>'
+            '<icon>$INFO[ListItem.Label]</icon><property name="p">$INFO[Window.Propperty(x)]</property>'
+            '</item></content></control></controls></window>'))
+        self.assertEqual([i["subject"] for i in rows if i["rule"] == "xml.unknown-infolabel"],
+                         ["ListItem.Lable", "Window.Propperty(x)"])
+
+    def test_map_argument(self):
+        """The info a $MAP[] looks up is checked; the map name is not."""
+        self.assertEqual(self.messages(
+            '<window><controls><control type="label"><label>$MAP[Codes,ListItem.Lable] $MAP[Codes,ListItem.Label]'
+            '</label></control></controls></window>'),
+            ["Kodi has no info 'ListItem.Lable', so $MAP[Codes,ListItem.Lable] maps an empty value"])
+
+    def test_info_tag(self):
+        """A bare name in <info> is checked; a $PARAM or a known info passes."""
+        interp = XmlInterpreter(template_attribs={"label": {"info": {}}}, template_values={"label": {}},
+                                info_names=self.NAMES)
+        rows = interp.interpret(_parse(
+            '<window><controls><control type="label"><info>ListItem.Lable</info></control>'
+            '<control type="label"><info>ListItem.Label</info></control>'
+            '<control type="label"><info>$PARAM[i]</info></control></controls></window>'))
+        self.assertEqual([i["message"] for i in rows if i["rule"] == "xml.unknown-infolabel"],
+                         ["Kodi has no info 'ListItem.Lable', so <info> reads nothing; a label shows its <label> "
+                          "instead"])
+
 
 class TestBoolAttributes(unittest.TestCase):
     """Bool attributes follow the spelling each Kodi reader accepts."""

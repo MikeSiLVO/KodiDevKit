@@ -28,6 +28,8 @@ from .constants import (
     SEVERITY_ERROR,
     SEVERITY_WARNING,
     BRACKET_TAGS,
+    CONTROL_ACTION_TAGS,
+    WINDOW_ACTION_TAGS,
     CONDITION_TAGS,
     LITERAL_TAGS,
     NOOP_TAGS,
@@ -62,6 +64,7 @@ from ..utils.infobool import (
     unknown_infos,
 )
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
+from .skinmap import extract_map_args
 from .xsp import RAW, XspValues
 
 logger = logging.getLogger(__name__)
@@ -166,6 +169,8 @@ class XmlInterpreter:
             elif tag == "include":
                 # an unresolved include here is reported by the unexpanded pass
                 pass
+            elif tag in WINDOW_ACTION_TAGS:
+                self._validate_label_infos(child, action=True)
             elif tag not in WINDOW_CHILDREN:
                 self._add_issue(
                     child, SEVERITY_WARNING,
@@ -277,6 +282,12 @@ class XmlInterpreter:
                     child, SEVERITY_WARNING,
                     f"<{child.tag}> is not valid inside <content> (only <item>)", rule="xml.invalid-tag",
                 )
+                continue
+            for part in child:
+                if part.tag in ("label", "label2", "thumb", "icon", "property"):
+                    self._validate_label_infos(part)
+                elif part.tag == "onclick":
+                    self._validate_label_infos(part, action=True)
 
     def _validate_control_children(self, node, control_type: str, *, inside_layout: bool):
         """Validate each child against the template; flag duplicates and copies of the default."""
@@ -340,6 +351,10 @@ class XmlInterpreter:
             if tag_low in LABEL_READ_TAGS or tag_low in ("label2", "altlabel"):
                 self._validate_label_brackets(child)
                 self._validate_label_infos(child)
+            elif tag_low in CONTROL_ACTION_TAGS:
+                self._validate_label_infos(child, action=True)
+            if tag_low in ("info", "info2"):
+                self._validate_info_tag(child)
 
             if (
                 len(child) == 0
@@ -452,15 +467,32 @@ class XmlInterpreter:
                       else "Kodi shows it as plain text")
             self._add_issue(node, SEVERITY_ERROR, f"Missing ']' after {prefix} in <{node.tag}>: {effect}", rule="xml.unclosed-label")
 
-    def _validate_label_infos(self, node):
-        """Report an $INFO[] block naming an info Kodi does not know."""
+    def _validate_label_infos(self, node, *, action: bool = False):
+        """Report an $INFO[] block or $MAP[] argument naming an info Kodi does not know."""
         if not self.info_names:
             return
-        for keyword, name, prefix in info_blocks(node.text or ""):
+        text = node.text or ""
+        for keyword, name, prefix in info_blocks(text):
             if name and "$" not in name and not is_known_info(name, self.info_names):
-                shows = "shows only its prefix" if prefix else "shows nothing"
+                if action:
+                    shows = "is empty when the action runs"
+                else:
+                    shows = "shows only its prefix" if prefix else "shows nothing"
                 self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{name}', so {keyword}[{name}] {shows}",
                                 rule="xml.unknown-infolabel", subject=name)
+        for found in re.finditer(r"\$(?:ESC)?MAP\[", text):
+            args = extract_map_args(text[found.start():]) or []
+            name = args[1].strip() if len(args) > 1 else ""
+            if name and "$" not in name and not is_known_info(name, self.info_names):
+                self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{name}', so {found.group(0)}{','.join(args)}] "
+                                f"maps an empty value", rule="xml.unknown-infolabel", subject=name)
+
+    def _validate_info_tag(self, node):
+        """Report an <info> or <info2> naming an info Kodi does not know, which reads as nothing."""
+        name = (node.text or "").strip()
+        if self.info_names and name and "$" not in name and not is_known_info(name, self.info_names):
+            self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{name}', so <{node.tag}> reads nothing; a label "
+                            f"shows its <label> instead", rule="xml.unknown-infolabel", subject=name)
 
     def _validate_xsp_values(self, root, xsp: XspValues):
         """Report xsp filter runtime values that lack, or may lack, the URL encoding they need."""
