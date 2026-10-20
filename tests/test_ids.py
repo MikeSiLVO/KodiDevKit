@@ -1052,6 +1052,37 @@ class TestBuiltinControls(unittest.TestCase):
         self.assertTrue(len(id_99999_issues) > 0,
                        "Non-builtin control 99999 should still be flagged as undefined")
 
+    def test_context_menu_runtime_buttons(self):
+        """The buttons Kodi clones from template 1000 count in DialogContextMenu.xml only."""
+        menu_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="image" id="999">
+            <visible>Control.IsVisible(1001) + Control.IsVisible(1012)</visible>
+        </control>
+        <control type="grouplist" id="996"/>
+        <control type="button" id="1000"/>
+    </controls>
+</window>"""
+        home_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="image" id="50">
+            <visible>Control.IsVisible(1012)</visible>
+        </control>
+    </controls>
+</window>"""
+        for name, text in (("DialogContextMenu.xml", menu_xml), ("Home.xml", home_xml)):
+            with open(os.path.join(self.test_dir, "16x9", name), "w", encoding="utf-8") as f:
+                f.write(text)
+
+        provider = InfoProvider()
+        provider.init_addon(self.test_dir)
+        issues = provider.check_ids()
+
+        flagged = sorted((os.path.basename(i["file"]), i["subject"]) for i in issues)
+        self.assertEqual(flagged, [("Home.xml", "1012")])
+
 
 class TestNonWindowRootScope(unittest.TestCase):
     """Control id refs outside a <window> root, as in Timers.xml, which skip scope checks."""

@@ -101,6 +101,7 @@ class SkinIndex:
             'variables_defined': {},
             'images_referenced': {},
             'builtin_controls': self.skin.builtin_controls if hasattr(self.skin, 'builtin_controls') else {},
+            'builtin_ranges': getattr(self.skin, 'builtin_ranges', {}),
             'builtin_filename_map': self.skin.builtin_filename_map if hasattr(self.skin, 'builtin_filename_map') else {},
         }
 

@@ -10,6 +10,15 @@ from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
 
+
+def _in_ranges(ref_id, ranges):
+    """True when the id falls in one of the window's runtime id ranges."""
+    if not ref_id.isdigit():
+        return False
+    number = int(ref_id)
+    return any(low <= number and (high is None or number <= high) for low, high in ranges)
+
+
 class ValidationIds:
     """Checker for undefined ids, core window ids used by number, and windows Kodi will not load."""
 
@@ -125,6 +134,7 @@ class ValidationIds:
             dialog_files = modeless_files | {f for f in window_to_ids if f.lower() in dialog_names} | set(
                 self._validation_index.get('custom_dialog_files', {}).get(folder, set()))
             builtin_controls = self._validation_index.get('builtin_controls', {})
+            builtin_ranges = self._validation_index.get('builtin_ranges', {})
             builtin_filename_map = self._validation_index.get('builtin_filename_map', {})
             defined_anywhere = set(self._validation_index.get('ids_defined', {}).get(folder, {}))
             for ids in window_to_ids.values():
@@ -153,6 +163,7 @@ class ValidationIds:
                         if (usage_name in unscoped
                                 or ref_id in window_to_ids.get(usage_name, set())
                                 or ref_id in builtin_controls.get(window_name, ())
+                                or _in_ranges(ref_id, builtin_ranges.get(window_name, ()))
                                 or (usage.get('context') in ('Control.IsVisible', 'Control.HasFocus')
                                     and ref_id in all_view_ids)):
                             continue

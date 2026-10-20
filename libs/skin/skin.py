@@ -70,7 +70,7 @@ class Skin(Addon):
 
         self.update_include_list()
         self._load_colors_and_fonts()
-        self.builtin_controls, self.builtin_filename_map = self._load_builtin_controls()
+        self.builtin_controls, self.builtin_ranges, self.builtin_filename_map = self._load_builtin_controls()
 
     def _release_from_addon_xml(self) -> str | None:
         """Oldest release whose xbmc.gui version satisfies this skin's import."""
@@ -207,8 +207,9 @@ class Skin(Addon):
         self.fonts, self.font_file = self.resource_loader.load_fonts(self.resolver)
 
     def _load_builtin_controls(self):
-        """Kodi's own control ids per window from the bundled data, plus filename to window name."""
+        """Load Kodi's control ids and runtime ranges per window, plus filename to window name."""
         builtin_controls = {}
+        builtin_ranges = {}
         filename_to_window = {}
 
         try:
@@ -216,12 +217,12 @@ class Skin(Addon):
 
             if not builtin_path.exists():
                 logger.warning("Built-in controls file not found: %s", builtin_path)
-                return builtin_controls, filename_to_window
+                return builtin_controls, builtin_ranges, filename_to_window
 
             root = get_root_from_file(str(builtin_path))
             if root is None:
                 logger.warning("Failed to parse built-in controls file")
-                return builtin_controls, filename_to_window
+                return builtin_controls, builtin_ranges, filename_to_window
 
             for window_elem in root.findall('window'):
                 window_name = window_elem.get('name')
@@ -243,12 +244,17 @@ class Skin(Addon):
                         control_id = normalize_control_id(control_id)
                         builtin_controls[window_name][control_id] = description
 
+                for range_elem in window_elem.findall('range'):
+                    upper = range_elem.get('to')
+                    builtin_ranges.setdefault(window_name, []).append(
+                        (int(range_elem.get('from', 0)), int(upper) if upper else None))
+
             logger.info("Loaded built-in controls for %d windows", len(builtin_controls))
-            return builtin_controls, filename_to_window
+            return builtin_controls, builtin_ranges, filename_to_window
 
         except Exception as e:
             logger.warning("Failed to load built-in controls: %s", e)
-            return builtin_controls, filename_to_window
+            return builtin_controls, builtin_ranges, filename_to_window
 
     def load_xml_folders(self):
         """Read xml folder names from addon.xml's <res folder=...> entries."""

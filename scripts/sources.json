@@ -144,6 +144,13 @@
     ]
   },
   {
+    "symbol": "libs/skin/skin.py:Skin._load_builtin_controls",
+    "kodi": [
+      "xbmc/dialogs/GUIDialogContextMenu.cpp:CGUIDialogContextMenu::SetupButtons",
+      "xbmc/games/controllers/guicontrols/GUIControllerButton.cpp:CGUIControllerButton::CGUIControllerButton"
+    ]
+  },
+  {
     "symbol": "libs/skin/skin.py:Skin._load_constants",
     "kodi": [
       "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::LoadConstants"

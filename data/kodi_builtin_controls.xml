@@ -13,6 +13,7 @@
     - Window names match Kodi's lowercase window identifiers
     - Control IDs are those programmatically created by Kodi's C++ code
     - Skins can reference these IDs without defining them
+    - <range> covers ids Kodi assigns at runtime; without "to" it has no upper bound
 -->
 <builtin_controls>
 
@@ -210,6 +211,7 @@
         <control id="996" description="Grouplist template" />
         <control id="999" description="Background image of the context menu" />
         <control id="1000" description="Button template" />
+        <range from="1001" description="Buttons cloned from the template, one per menu entry" />
     </window>
 
     <window name="extendedprogressdialog" id="10151" xml="DialogExtendedProgressBar.xml">
@@ -433,6 +435,7 @@
         <control id="5" description="List of feature types" />
         <control id="7" description="Button template" />
         <control id="8" description="Settings category label template" />
+        <range from="100" to="799" description="Controller, feature, group and separator controls" />
     </window>
 
 </builtin_controls>
