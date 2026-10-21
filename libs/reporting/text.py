@@ -86,20 +86,20 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
 
         for file_path in sorted(by_file.keys()):
             file_issues = by_file[file_path]
-            lines.append(f"  File: {file_path}")
+            lines.append(f"  File: {file_path}{_muted_count(file_issues)}")
             lines.append(f"  {'-' * 76}")
 
+            by_mute = {}
             for issue in file_issues:
-                line_num = issue.get('line', 0)
-                message = issue.get('message', 'No message')
-                issue_type = issue.get('type', '')
-
-                lines.append(f"    Line {line_num:4d}: {message}")
-                if issue.get("muted"):
-                    lines.append(f"                {muted_note(issue)}")
-                if issue_type:
-                    lines.append(f"                Type: {issue_type}")
-                lines.append("")
+                mute = issue.get("muted")
+                if mute:
+                    by_mute.setdefault((mute["line"], mute.get("reason") or ""), []).append(issue)
+                else:
+                    lines.extend(_row_lines(issue, "    "))
+            for key in sorted(by_mute):
+                lines.append(f"    {muted_note(by_mute[key][0])}")
+                for issue in by_mute[key]:
+                    lines.extend(_row_lines(issue, "      "))
 
     lines.append("")
     lines.append("=" * 80)
@@ -107,6 +107,27 @@ def generate_text_report(report_data, *, hidden_severities: Container[str] = fro
     lines.append("=" * 80)
 
     return '\n'.join(lines)
+
+
+def _row_lines(issue, indent):
+    """Lines for one issue: severity, line and message, then any type, then a blank."""
+    label = issue.get("severity", SEVERITY_WARNING).upper()
+    lines = [f"{indent}{label:<8s} line {issue.get('line', 0):<5d} {issue.get('message', 'No message')}"]
+    if issue.get("type"):
+        lines.append(f"{indent}{' ' * 20}Type: {issue['type']}")
+    lines.append("")
+    return lines
+
+
+def _muted_count(issues):
+    """Heading note counting a file's muted issues per severity; empty when none are muted."""
+    muted = [issue.get("severity", SEVERITY_WARNING) for issue in issues if issue.get("muted")]
+    parts = []
+    for sev in (SEVERITY_ERROR, SEVERITY_WARNING):
+        count = muted.count(sev)
+        if count:
+            parts.append(f"{count} muted {sev}{'s' if count != 1 else ''}")
+    return f"  ({', '.join(parts)})" if parts else ""
 
 
 def _describe_filters(hidden_severities, hide_include_warnings, hide_muted=False):

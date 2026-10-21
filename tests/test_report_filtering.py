@@ -29,7 +29,8 @@ def _report():
 
 
 def _count(txt):
-    return sum(1 for line in txt.splitlines() if line.strip().startswith("Line "))
+    """Count the issue rows in the text report."""
+    return sum(1 for line in txt.splitlines() if line.strip().startswith(("ERROR ", "WARNING ")))
 
 
 class TestExportFiltering(unittest.TestCase):
@@ -132,11 +133,15 @@ def _html(all_issues):
 class TestMutedRows(unittest.TestCase):
     """Muted rows, counted apart in both reports and kept out of the quick panel."""
 
-    def test_text_export_lists_muted_row_with_its_note(self):
-        """The row stays, its note follows it, and the totals count it apart."""
+    def test_text_export_lists_muted_row_under_its_note(self):
+        """The row stays under its note after the counted rows, and the totals count it apart."""
         txt = T.generate_text_report(_muted_report())
         self.assertEqual(_count(txt), 4)
-        self.assertIn("Muted by kdk-ignore at line 10: debug overlay", txt)
+        self.assertIn("File: /skin/16x9/Home.xml  (1 muted warning)", txt)
+        rows = [line.strip() for line in txt.splitlines() if line.strip()]
+        note = rows.index("Muted by kdk-ignore at line 10: debug overlay")
+        self.assertTrue(rows[note - 1].startswith("ERROR    line 13 "))
+        self.assertTrue(rows[note + 1].startswith("WARNING  line 11    plain warning"))
         self.assertIn("Total Issues: 3", txt)
         self.assertIn("Muted: 1", txt)
 
