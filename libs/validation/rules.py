@@ -201,8 +201,6 @@ ADDON_CHECKER = {
 
 # rules the Kodi repo reviewers refuse a skin on, beyond those the add-on checker fails
 REVIEW_BLOCKERS = {"repo.asset-location", "repo.no-screenshot", "repo.too-many-screenshots"}
-
-
-def blocks_submission(rule):
-    """True when the rule's findings block a Kodi repo submission, by the checker or a reviewer."""
-    return ADDON_CHECKER.get(rule) == "problem" or rule in REVIEW_BLOCKERS
+# warnings a Kodi repo submission is still refused on; a parse error is reported as an error already
+BLOCKING_WARNINGS = frozenset(
+    ({rule for rule, level in ADDON_CHECKER.items() if level == "problem"} - {"xml.parse-error"}) | REVIEW_BLOCKERS)

@@ -8,7 +8,7 @@ import re
 
 from ..utils.validation import create_issue
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
-from .rules import blocks_submission
+from .rules import BLOCKING_WARNINGS
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +95,12 @@ class Suppressions:
         return None
 
     def mark(self, category, issues):
-        """Mark the category's muted warnings on copies, with the directive's line and reason."""
+        """Mark the category's muted warnings on copies, except ones blocking a repo submission."""
         if not self:
             return issues
         marked = []
         for issue in issues:
-            if issue.get("severity") == SEVERITY_ERROR or blocks_submission(issue.get("rule")):
+            if issue.get("severity") == SEVERITY_ERROR or issue.get("rule") in BLOCKING_WARNINGS:
                 marked.append(issue)
                 continue
             mute = self.muted(category, issue.get("file"), issue.get("line") or 0)
