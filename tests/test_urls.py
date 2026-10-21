@@ -1,4 +1,4 @@
-"""Runtime values in smart playlist filters: which need URL encoding and which are reported."""
+"""Runtime values in xsp filters and plugin URLs: which need URL encoding and which are reported."""
 
 import os
 import sys
@@ -10,7 +10,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from libs.infoprovider.provider import InfoProvider
-from libs.validation.xsp import RAW, UNTRACED, XspValues, value_sources
+from libs.validation.urls import RAW, UNTRACED, UrlValues, value_sources
 
 PATH = "videodb://movies/titles/?xsp=%7B%22rules%22%3A%7B%22and%22%3A%5B%7B%22field%22%3A%22{field}%22%2C" \
        "%22operator%22%3A%22is%22%2C%22value%22%3A{value}%7D%5D%7D%2C%22type%22%3A%22movies%22%7D"
@@ -21,13 +21,13 @@ def path(value, field="title"):
     return PATH.format(field=field, value=value)
 
 
-class TestXspValues(unittest.TestCase):
+class TestUrlValues(unittest.TestCase):
     """Sorting of each runtime value in a rule's value list into raw, untraced or safe."""
 
     def kinds(self, value, sources=None, variables=None):
-        """The (expression, kind) pairs faults reports once the text is wrapped in a filter."""
-        values = XspValues(sources or {}, variables or {})
-        return [(expression, kind) for expression, _keyword, kind in values.faults(path(value))]
+        """The (expression, kind) pairs xsp_faults reports once the text is wrapped in a filter."""
+        values = UrlValues(sources or {}, variables or {})
+        return [(expression, kind) for expression, _keyword, kind in values.xsp_faults(path(value))]
 
     def test_text_infos_are_raw_in_either_form(self):
         self.assertEqual(self.kinds("%5B%22$INFO[ListItem.Title]%22%5D"), [("$INFO[ListItem.Title]", RAW)])
@@ -91,15 +91,15 @@ class TestXspValues(unittest.TestCase):
 
     def test_only_values_inside_the_value_list_count(self):
         text = "%22value%22%3A%5B%22a%22%5D%2C%22field%22%3A%22$INFO[ListItem.Title]%22"
-        self.assertEqual(list(XspValues({}, {}).faults(text)), [])
+        self.assertEqual(list(UrlValues({}, {}).xsp_faults(text)), [])
 
     def test_plain_json_counts_too(self):
         text = '{"rules":{"and":[{"field":"title","operator":"is","value":["$INFO[ListItem.Title]"]}]}}'
-        self.assertEqual([kind for _e, _k, kind in XspValues({}, {}).faults(text)], [RAW])
+        self.assertEqual([kind for _e, _k, kind in UrlValues({}, {}).xsp_faults(text)], [RAW])
 
 
-class TestXspRows(unittest.TestCase):
-    """Rows from a skin's filters: one error per raw value, one warning per untraced one."""
+class TestUrlRows(unittest.TestCase):
+    """Rows from xsp filters and plugin URLs: errors for raw values, warnings for untraced ones."""
 
     def test_rows(self):
         home = (
@@ -115,6 +115,8 @@ class TestXspRows(unittest.TestCase):
             + '</content></control>'
             '<control type="list" id="52"><content>' + path("%5B$ESCINFO[Window(Home).Property(other)]%5D").replace("&", "&amp;")
             + '</content></control>'
+            '<control type="list" id="53"><content>plugin://plugin.video.x/?query=$INFO[ListItem.Title]</content>'
+            '</control>'
             '</controls></window>')
         files = {
             "addon.xml": '<addon id="skin.t" version="1.0.0"><requires><import addon="xbmc.gui" '
@@ -131,15 +133,71 @@ class TestXspRows(unittest.TestCase):
             provider = InfoProvider()
             provider.settings = {}
             provider.init_addon(skin)
-            rows = [r for r in provider.check_values() if r.get("rule", "").startswith("xml.xsp")]
+            rows = [r for r in provider.check_values() if r.get("rule", "").startswith(("xml.xsp", "xml.plugin"))]
         found = sorted((r["rule"], r["severity"], r["subject"]) for r in rows)
         self.assertEqual(found, [
+            ("xml.plugin-unencoded", "error", "$INFO[ListItem.Title]"),
             ("xml.xsp-unencoded", "error", "$INFO[Window(Home).Property(pick)]"),
             ("xml.xsp-untraced", "warning", "$ESCINFO[Window(Home).Property(other)]"),
         ])
         error = next(r["message"] for r in rows if r["rule"] == "xml.xsp-unencoded")
         self.assertIn("'Law & Order' empties the list", error)
         self.assertIn("URL-encode it first", error)
+
+
+class TestPluginValues(unittest.TestCase):
+    """Runtime values in a plugin URL's query, which the add-on splits on & and decodes."""
+
+    def kinds(self, text, sources=None, variables=None):
+        """The (expression, kind, variable) triples the text gives inside plugin queries."""
+        return [(expression, kind, variable) for expression, _keyword, kind, variable
+                in UrlValues(sources or {}, variables or {}).plugin_faults(text)]
+
+    def test_text_values_are_raw_in_either_form(self):
+        text = "plugin://plugin.video.x/?info=search&query=$INFO[ListItem.Title]&year=$INFO[ListItem.Year]"
+        self.assertEqual(self.kinds(text), [("$INFO[ListItem.Title]", RAW, None)])
+        self.assertEqual(self.kinds("RunPlugin(plugin://plugin.video.x/?q=$ESCINFO[ListItem.Label])"),
+                         [("$ESCINFO[ListItem.Label]", RAW, None)])
+
+    def test_encoded_and_plain_values_pass(self):
+        sources = {"property:titleenc": ["encoded"]}
+        self.assertEqual(self.kinds("plugin://x/?a=$INFO[Window(Home).Property(TitleEnc)]&b=$INFO[ListItem.DBID]",
+                                    sources), [])
+
+    def test_the_encoder_call_takes_the_raw_value(self):
+        text = 'RunPlugin("plugin://script.skinvariables/?info=get_encoded_string&window_prop=E&&$INFO[ListItem.Label]")'
+        self.assertEqual(self.kinds(text), [])
+
+    def test_only_the_query_counts(self):
+        self.assertEqual(self.kinds("plugin://x/$INFO[ListItem.Title]/"), [])
+        self.assertEqual(self.kinds("RunPlugin(plugin://x/?a=b) + $INFO[ListItem.Title]"), [])
+
+    def test_values_set_outside_the_skin_are_untraced(self):
+        self.assertEqual(self.kinds("ActivateWindow(Videos,plugin://x/?a=$INFO[ListItem.Property(cast.0)],return)"),
+                         [("$INFO[ListItem.Property(cast.0)]", UNTRACED, None)])
+
+    def test_variables_holding_pairs_are_scanned_for_their_values(self):
+        variables = {"Defaults": ["nextpage=false&fanarttv=false"], "Pairs": ["&query=$INFO[ListItem.Label]"],
+                     "Title": ["$INFO[ListItem.Title]"], "Genre": ["Action & Adventure"]}
+        self.assertEqual(self.kinds("plugin://p/?info=x&$VAR[Defaults]", variables=variables), [])
+        self.assertEqual(self.kinds("plugin://p/?info=x$VAR[Pairs]", variables=variables),
+                         [("$INFO[ListItem.Label]", RAW, "$VAR[Pairs]")])
+        self.assertEqual(self.kinds("plugin://p/?query=$VAR[Title]", variables=variables),
+                         [("$INFO[ListItem.Title]", RAW, "$VAR[Title]")])
+        self.assertEqual(self.kinds("plugin://p/?genre=$VAR[Genre]", variables=variables),
+                         [("$VAR[Genre]", RAW, None)])
+
+    def test_time_date_and_sort_words_need_no_encoding(self):
+        self.assertEqual(self.kinds("plugin://p/?t=$INFO[System.Time(hh)]&d=$INFO[System.Date]"
+                                    "&s=$INFO[Container.SortMethod]&o=$INFO[Container.SortOrder]"), [])
+
+    def test_a_reload_token_is_never_read_as_data(self):
+        self.assertEqual(self.kinds("plugin://p/?info=x&reload=$INFO[Window(Home).Property(Widgets.Reload)]"), [])
+
+    def test_a_pair_opened_in_an_info_prefix(self):
+        self.assertEqual(self.kinds("plugin://p/?info=search$INFO[ListItem.Label,&query=,]"),
+                         [("$INFO[ListItem.Label,&query=,]", RAW, None)])
+        self.assertEqual(self.kinds("plugin://p/?info=search&$INFO[ListItem.Year,year=,]"), [])
 
 
 if __name__ == "__main__":

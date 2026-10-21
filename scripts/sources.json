@@ -469,7 +469,14 @@
     ]
   },
   {
-    "symbol": "libs/validation/xsp.py:XspValues.faults",
+    "symbol": "libs/validation/urls.py:UrlValues.plugin_faults",
+    "kodi": [
+      "xbmc/URL.cpp:CURL::Parse",
+      "xbmc/interfaces/generic/ScriptRunner.cpp:CScriptRunner::RunScript"
+    ]
+  },
+  {
+    "symbol": "libs/validation/urls.py:UrlValues.xsp_faults",
     "kodi": [
       "xbmc/utils/UrlOptions.cpp:CUrlOptions::AddOptions",
       "xbmc/URL.cpp:CURL::Decode",
@@ -477,7 +484,7 @@
     ]
   },
   {
-    "symbol": "libs/validation/xsp.py:value_sources",
+    "symbol": "libs/validation/urls.py:value_sources",
     "kodi": [
       "xbmc/Util.cpp:CUtil::SplitParams",
       "xbmc/guilib/GUIWindow.cpp:CGUIWindow::GetProperty",

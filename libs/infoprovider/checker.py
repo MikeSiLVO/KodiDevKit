@@ -33,7 +33,7 @@ from ..validation.repo import ValidationRepo
 from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan, skin_paths, stamp
 from ..validation.interpreter import XmlInterpreter
-from ..validation.xsp import XspValues, value_sources
+from ..validation.urls import UrlValues, value_sources
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
 from ..validation.constants import (
     BRACKET_TAGS,
@@ -559,7 +559,7 @@ class CheckerMixin:
             info_names=self.known_info_names(),
             expressions=self._expression_sources(folder),
             settled_defaults=sk.settled_default_tags(folder),
-            xsp=XspValues(self.get_value_sources(), self._variable_values(folder)),
+            urls=UrlValues(self.get_value_sources(), self._variable_values(folder)),
         )
         issues = interpreter.interpret(walk_root)
 

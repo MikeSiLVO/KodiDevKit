@@ -149,6 +149,8 @@ RULES = {
     "xml.unparseable-condition": "A condition Kodi cannot parse, so it always reads false.",
     "xml.undefined-expression": "A $EXP naming no expression.",
     "xml.unknown-info": "An info Kodi does not know, which always reads false.",
+    "xml.plugin-unencoded": "A runtime value in a plugin URL query without URL encoding, which & or + breaks.",
+    "xml.plugin-untraced": "A runtime value in a plugin URL query set outside the skin, maybe not URL-encoded.",
     "xml.xsp-unencoded": "A runtime value in an xsp filter without URL encoding, which & or | breaks.",
     "xml.xsp-untraced": "A runtime value in an xsp filter set outside the skin, maybe not URL-encoded.",
     "xml.unknown-infolabel": "An info Kodi does not know in $INFO[], $MAP[] or <info>, which reads as nothing.",

@@ -65,7 +65,7 @@ from ..utils.infobool import (
 )
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 from .skinmap import extract_map_args
-from .xsp import RAW, XspValues
+from .urls import RAW, UrlValues
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class XmlInterpreter:
         info_names: dict | None = None,
         expressions: dict | None = None,
         settled_defaults: dict | None = None,
-        xsp: XspValues | None = None,
+        urls: UrlValues | None = None,
     ):
         self.template_attribs = template_attribs or {}
         self.template_values = template_values or {}
@@ -132,7 +132,7 @@ class XmlInterpreter:
         self.info_names = info_names
         self.expressions = expressions or {}
         self.settled_defaults = settled_defaults or {}
-        self.xsp = xsp
+        self.urls = urls
         self._condition_cache: dict[str, list[tuple[str, str, str, str]]] = {}
         self.issues: list[dict] = []
 
@@ -153,8 +153,8 @@ class XmlInterpreter:
             self._walk_fonts(root)
         else:
             pass
-        if self.xsp and tag in ("window", "includes"):
-            self._validate_xsp_values(root, self.xsp)
+        if self.urls and tag in ("window", "includes"):
+            self._validate_url_values(root, self.urls)
 
         return self.issues
 
@@ -494,32 +494,46 @@ class XmlInterpreter:
             self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{name}', so <{node.tag}> reads nothing; a label "
                             f"shows its <label> instead", rule="xml.unknown-infolabel", subject=name)
 
-    def _validate_xsp_values(self, root, xsp: XspValues):
-        """Report xsp filter runtime values that lack, or may lack, the URL encoding they need."""
+    def _validate_url_values(self, root, urls: UrlValues):
+        """Report xsp and plugin URL values that lack, or may lack, the URL encoding they need."""
         for node in root.iter():
             if not isinstance(node.tag, str):
                 continue
             reported = set()
             for text in [node.text or ""] + [v for k, v in node.attrib.items() if not k.startswith("_kdk_")]:
-                if "$" not in text or "value" not in text.lower():
+                if "$" not in text:
                     continue
-                for expression, keyword, kind in xsp.faults(text):
-                    if expression in reported:
-                        continue
-                    reported.add(expression)
-                    if kind == RAW:
-                        escaped = keyword.startswith("$ESC")
-                        message = (f"Value {expression} in this xsp filter is not URL-encoded"
-                                   f"{f' ({keyword} only escapes quotes)' if escaped else ''}, so a value such as "
-                                   f"'Law & Order' empties the list, as does one holding "
-                                   f"{'|' if escaped else '| or a quote'}, and + turns into a space; URL-encode it "
-                                   f"first, for example into a window property through a helper script")
-                        self._add_issue(node, SEVERITY_ERROR, message, rule="xml.xsp-unencoded", subject=expression)
-                    else:
-                        message = (f"Value {expression} in this xsp filter comes from outside the skin, so whether "
-                                   f"it is URL-encoded is unknown; if it is not, a value such as 'Law & Order' "
-                                   f"empties the list")
-                        self._add_issue(node, SEVERITY_WARNING, message, rule="xml.xsp-untraced", subject=expression)
+                for expression, keyword, kind in urls.xsp_faults(text):
+                    if ("xsp", expression) not in reported:
+                        reported.add(("xsp", expression))
+                        self._add_url_issue(node, expression, keyword, kind, "xsp")
+                for expression, keyword, kind, variable in urls.plugin_faults(text):
+                    if ("plugin", expression) not in reported:
+                        reported.add(("plugin", expression))
+                        self._add_url_issue(node, expression, keyword, kind, "plugin", variable)
+
+    def _add_url_issue(self, node, expression: str, keyword: str, kind: str, target: str, variable: str | None = None):
+        """Add the error or warning for one runtime value in an xsp filter or a plugin URL."""
+        where = "this xsp filter" if target == "xsp" else "this plugin URL"
+        if variable:
+            where = f"{where}, through {variable},"
+        harm = "empties the list" if target == "xsp" else "reaches the add-on cut short"
+        if kind != RAW:
+            self._add_issue(node, SEVERITY_WARNING, f"Value {expression} in {where} comes from outside the skin, so "
+                            f"whether it is URL-encoded is unknown; if it is not, a value such as 'Law & Order' {harm}",
+                            rule="xml.xsp-untraced" if target == "xsp" else "xml.plugin-untraced", subject=expression)
+            return
+        escaped = keyword.startswith("$ESC")
+        if target == "xsp":
+            note = f" ({keyword} only escapes quotes)" if escaped else ""
+            also = "|" if escaped else "| or a quote"
+        else:
+            note = f" ({keyword} adds quotes the add-on receives as part of the value)" if escaped else ""
+            also = "|"
+        self._add_issue(node, SEVERITY_ERROR, f"Value {expression} in {where} is not URL-encoded{note}, so a value "
+                        f"such as 'Law & Order' {harm}, as does one holding {also}, and + turns into a space; "
+                        f"URL-encode it first, for example into a window property through a helper script",
+                        rule="xml.xsp-unencoded" if target == "xsp" else "xml.plugin-unencoded", subject=expression)
 
     def _validate_brackets(self, node, text: str):
         """Validate bracket matching in a condition or action, and report an empty one."""

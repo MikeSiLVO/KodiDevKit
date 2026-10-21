@@ -1,4 +1,4 @@
-"""Checks runtime values in a smart playlist filter (xsp=) for the URL encoding they need."""
+"""Checks runtime values in xsp filters and plugin URLs for the URL encoding they need."""
 
 from __future__ import annotations
 
@@ -10,6 +10,15 @@ from ..utils.xml import get_root_from_file
 _VALUE_KEY = re.compile(r'(?:%22|")value(?:%22|")\s*(?:%3A|:)', re.IGNORECASE)
 _VALUE_END = re.compile(r'%5D|%7D|[\]}]', re.IGNORECASE)
 _EXPRESSION = re.compile(r'\$(ESC)?(INFO|VAR)\[')
+_PLUGIN_QUERY = re.compile(r'plugin://[^\s"\'?]*\?', re.IGNORECASE)
+_URL_END = re.compile(r'[\s"\',)]')
+# an '&' that starts no key=value pair, or a '|', inside a value
+_DATA_SEPARATOR = re.compile(r'&(?![\w.-]+=)|\|')
+# the key of the last pair a text opens, as in ?key= or &key=
+_PAIR_KEY = re.compile(r'[&?]?([\w.-]*)=[^&?=]*$')
+_BETWEEN_PAIRS = re.compile(r'[&?][^=]*$')
+# a plugin reads these only to change the URL, never as data
+_TOKEN_KEYS = {"reload"}
 _ENCODER = re.compile(r'get_encoded_string\b.*?\bwindow_prop=([^&"\s,)]+)', re.IGNORECASE)
 _PROPERTY = re.compile(r'window(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
 _SKIN_STRING = re.compile(r'skin\.string\((.+)\)$', re.IGNORECASE)
@@ -18,9 +27,10 @@ _ITEM_PROPERTY = re.compile(r'container\((\d+)\)\.listitem\w*(?:\([^)]*\))?\.pro
 _UNSAFE = set('&|+"\\')
 
 _PLAIN_INFOS = frozenset({
-    "content", "currentitem", "dateadded", "dbid", "dbtype", "duration", "episode", "imdbnumber",
+    "content", "currentitem", "date", "dateadded", "dbid", "dbtype", "duration", "episode", "imdbnumber",
     "lastplayed", "numitems", "percentplayed", "playcount", "position", "premiered", "rating",
-    "season", "setid", "top250", "tvshowdbid", "uniqueid", "userrating", "year",
+    "sortmethod", "sortorder",
+    "season", "setid", "time", "top250", "tvshowdbid", "uniqueid", "userrating", "year",
 })
 
 RAW, UNTRACED, SAFE = "raw", "untraced", "safe"
@@ -32,6 +42,12 @@ def _plain(name):
     parts = [part for part in name.lower().split("(", 1)[0].split(".") if not part.isdigit()]
     last = parts[-1] if parts else ""
     return last in _PLAIN_INFOS or last.endswith(("_id", "dbid"))
+
+
+def _url_end(text, pos):
+    """Index where the URL starting before the position ends: a space, quote, comma or ')'."""
+    found = _URL_END.search(text, pos)
+    return found.start() if found else len(text)
 
 
 def _worst(kinds):
@@ -68,15 +84,15 @@ def value_sources(paths):
     return sources
 
 
-class XspValues:
-    """Classifier of the runtime values a skin writes into smart playlist filters."""
+class UrlValues:
+    """Classifier of the runtime values a skin writes into xsp filters and plugin URLs."""
 
     def __init__(self, sources, variables):
         self.sources = sources
         self.variables = variables
         self._kinds = {}
 
-    def faults(self, text):
+    def xsp_faults(self, text):
         """Yield (expression, keyword, kind) per raw or untraced value in a filter's value lists."""
         for key in _VALUE_KEY.finditer(text):
             pos = key.end()
@@ -92,6 +108,42 @@ class XspValues:
                 kind = self._expression_kind(found.group(2), body, frozenset())
                 if kind != SAFE:
                     yield found.group(0) + body + "]", found.group(0)[:-1], kind
+
+    def plugin_faults(self, text):
+        """Yield (expression, keyword, kind, variable) per raw or untraced plugin query value."""
+        for query in _PLUGIN_QUERY.finditer(text):
+            # the encoder's own call takes the raw value it encodes
+            if "get_encoded_string" not in text[query.start():_url_end(text, query.end())]:
+                yield from self._query_faults(text, query.end(), None, None, frozenset())
+
+    def _query_faults(self, text, pos, key, variable, seen):
+        """Faults of query text from the position on: values after '=', pairs a $VAR holds."""
+        while True:
+            found = _EXPRESSION.search(text, pos)
+            if not found or _URL_END.search(text, pos, found.start()):
+                return
+            body = bracket_body(text[found.end() - 1:])
+            if not body:
+                return
+            # an $INFO prefix such as ,&query=, opens its own pair
+            prefix = body.split(",")[1] if found.group(2) == "INFO" and "," in body else ""
+            for span in (text[pos:found.start()], prefix):
+                pair = _PAIR_KEY.search(span)
+                if pair:
+                    key = pair.group(1)
+                elif _BETWEEN_PAIRS.search(span):
+                    key = None
+            pos = found.end() + len(body) + 1
+            expression, keyword, name = found.group(0) + body + "]", found.group(0)[:-1], body.strip()
+            if found.group(2) == "VAR" and name in self.variables and name not in seen:
+                for value in self.variables[name]:
+                    if key and _DATA_SEPARATOR.search(value):
+                        yield expression, keyword, RAW, variable
+                    yield from self._query_faults(value, 0, key, variable or expression, seen | {name})
+            elif key and key.lower() not in _TOKEN_KEYS:
+                kind = self._expression_kind(found.group(2), body, frozenset())
+                if kind != SAFE:
+                    yield expression, keyword, kind, variable
 
     def _expression_kind(self, keyword, body, seen):
         """Kind of one $INFO[] or $VAR[] body: raw text, a source kdk cannot see, or safe."""
@@ -118,7 +170,7 @@ class XspValues:
         return SAFE if _plain(info.rsplit(".", 1)[-1]) else RAW
 
     def _stored_kind(self, key, seen):
-        """Kind of a property or skin string, from every value the skin stores in it."""
+        """Kind of a property, skin string or static item property, from every value it holds."""
         if key in seen:
             return SAFE
         values = self.sources.get(key)
