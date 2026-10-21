@@ -1,4 +1,4 @@
-"""`kdk-ignore` comments, so a skin can mute findings it has already judged."""
+"""`kdk-ignore` comments, which let a skin mute warnings it has already judged."""
 
 from __future__ import annotations
 
@@ -7,7 +7,8 @@ import os
 import re
 
 from ..utils.validation import create_issue
-from .constants import SEVERITY_WARNING
+from .constants import SEVERITY_ERROR, SEVERITY_WARNING
+from .rules import blocks_submission
 
 logger = logging.getLogger(__name__)
 
@@ -94,11 +95,14 @@ class Suppressions:
         return None
 
     def mark(self, category, issues):
-        """Mark the category's muted issues on copies, with the directive's line and reason."""
+        """Mark the category's muted warnings on copies, with the directive's line and reason."""
         if not self:
             return issues
         marked = []
         for issue in issues:
+            if issue.get("severity") == SEVERITY_ERROR or blocks_submission(issue.get("rule")):
+                marked.append(issue)
+                continue
             mute = self.muted(category, issue.get("file"), issue.get("line") or 0)
             marked.append({**issue, "muted": dict(mute)} if mute else issue)
         return marked

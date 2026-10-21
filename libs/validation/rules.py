@@ -198,3 +198,11 @@ ADDON_CHECKER = {
     "repo.version": "problem",
     "xml.parse-error": "problem",
 }
+
+# rules the Kodi repo reviewers refuse a skin on, beyond those the add-on checker fails
+REVIEW_BLOCKERS = {"repo.asset-location", "repo.no-screenshot", "repo.too-many-screenshots"}
+
+
+def blocks_submission(rule):
+    """True when the rule's findings block a Kodi repo submission, by the checker or a reviewer."""
+    return ADDON_CHECKER.get(rule) == "problem" or rule in REVIEW_BLOCKERS

@@ -13,7 +13,7 @@ if package_dir not in sys.path:
 
 from libs.infoprovider.provider import InfoProvider
 from libs.validation import rules
-from libs.validation.rules import ADDON_CHECKER, PREFIXES, RULES
+from libs.validation.rules import ADDON_CHECKER, PREFIXES, REVIEW_BLOCKERS, RULES, blocks_submission
 
 CHECKS = {"check_variables": "Variables", "check_maps": "Maps", "check_includes": "Includes",
           "check_labels": "Labels", "check_fonts": "Fonts", "check_ids": "IDs", "check_images": "Images",
@@ -85,6 +85,12 @@ class TestRules(unittest.TestCase):
         """Each add-on checker level names a registered rule and is a problem or a warning."""
         self.assertLessEqual(set(ADDON_CHECKER), set(RULES))
         self.assertLessEqual(set(ADDON_CHECKER.values()), {"problem", "warning"})
+
+    def test_submission_blockers(self):
+        """Checker problems and reviewer rules block a submission; checker warnings do not."""
+        self.assertLessEqual(REVIEW_BLOCKERS, set(RULES))
+        self.assertEqual([blocks_submission(r) for r in ("repo.schema", "repo.no-screenshot", "repo.file-type",
+                                                         "fonts.undefined")], [True, True, False, False])
 
     def test_every_rule_says_what_it_reports(self):
         """Each description is one line ending in a full stop."""

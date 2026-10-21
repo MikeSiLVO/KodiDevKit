@@ -281,6 +281,16 @@ class TestMarking(unittest.TestCase):
         self.assertEqual(scan([self.path]).mark("Images", issues), issues)
         self.assertNotIn("muted", scan([self.path]).mark("Labels", issues)[1])
 
+    def test_mark_never_mutes_an_error_or_a_blocking_warning(self):
+        """Errors and warnings that block a Kodi repo submission stay unmuted on a covered line."""
+        issues = [{"file": self.path, "line": 2, "message": "e", "severity": "error"},
+                  {"file": self.path, "line": 2, "message": "b", "severity": "warning", "rule": "files.executable"},
+                  {"file": self.path, "line": 2, "message": "w", "severity": "warning", "rule": "labels.not-translated"}]
+
+        marked = scan([self.path]).mark("Labels", issues)
+
+        self.assertEqual([bool(i.get("muted")) for i in marked], [False, False, True])
+
     def test_note_gives_the_reason(self):
         """The note names the directive's line and the skin's reason."""
         note = muted_note({"muted": {"line": 7, "reason": "debug overlay"}})

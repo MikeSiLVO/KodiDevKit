@@ -269,6 +269,8 @@ A comment sharing a line with markup covers that line; a comment on a line of it
 
 Comments are read in the XML files of the skin's resolution folders, such as `xml` or `1080i`. A finding in any other file, `addon.xml` and the language files included, cannot be muted.
 
+A comment mutes warnings only. An error, or a warning that blocks a Kodi repo submission, stays listed and counted on a line the comment covers.
+
 A file-wide comment needs both the checks it covers and a reason. If either is missing, it mutes nothing and is reported as a warning. A name that matches no check is reported as a warning too; the names it got right still apply.
 
 Muted findings stay out of the on-save phantoms, the results views and the quick panels. The HTML report still lists each one, marked muted with the comment's line and reason, and counts them apart from errors and warnings.
