@@ -106,6 +106,7 @@
         <scrollsuffix>label</scrollsuffix>
         <randomize>bool</randomize>
         <resetonlabelchange>bool</resetonlabelchange>
+        <number></number>
     </control>
     <control type="scrollbar" id="int">
         <width max="int">int</width>
@@ -122,6 +123,8 @@
         <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
         <orientation>orientation</orientation>
         <showonepage>bool</showonepage>
+        <texturebg colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturebg>
+        <colordiffuse>color</colordiffuse>
     </control>
     <control type="button" id="int">
         <width min="int" max="int">int</width>
@@ -151,8 +154,6 @@
         <include>common</include>
         <include>button_common</include>
         <include>nav_common</include>
-        <label2>label</label2>
-        <wrapmultiline>bool</wrapmultiline>
         <selectedcolor>color</selectedcolor>
         <onclick condition="condition">builtin</onclick>
         <onback condition="condition">builtin</onback>
@@ -166,8 +167,6 @@
         <include>common</include>
         <colordiffuse>color</colordiffuse>
         <fadetime>int</fadetime>
-        <align>align</align>
-        <aligny>aligny</aligny>
         <texture border="coords" flipy="bool" flipx="bool" background="bool" diffuse="path" colordiffuse="color" fallback="path" infill="bool">path</texture>
         <bordertexture border="coords" colordiffuse="color" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</bordertexture>
         <bordersize>int</bordersize>
@@ -261,8 +260,9 @@
         <textoffsetx>int</textoffsetx>
         <textoffsety>int</textoffsety>
         <reverse>bool</reverse>
-        <pulseonselect>bool</pulseonselect>
         <showonepage>bool</showonepage>
+        <shadowcolor>color</shadowcolor>
+        <angle>int</angle>
     </control>
     <control type="spincontrolex" id="int">
         <width max="int">int</width>
@@ -271,7 +271,6 @@
         <include>nav_common</include>
         <include>button_common</include>
         <spinposx>int</spinposx>
-        <spinposy>int</spinposy>
         <spinwidth>int</spinwidth>
         <spinheight>int</spinheight>
         <reverse>bool</reverse>
@@ -282,25 +281,22 @@
         <textureupdisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureupdisabled>
         <texturedowndisabled colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturedowndisabled>
         <onback condition="condition">builtin</onback>
-        <onfocus condition="condition">builtin</onfocus>
-        <onunfocus condition="condition">builtin</onunfocus>
+        <subtype>subtype</subtype>
     </control>
     <control type="slider" id="int">
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
         <include>nav_common</include>
-        <texturesliderbackground colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbackground>
         <texturesliderbar colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbar>
-        <texturesliderbarfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbarfocus>
         <texturesliderbardisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbardisabled>
         <textureslidernib colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernib>
         <textureslidernibfocus colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibfocus>
         <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibdisabled>
         <info>info</info>
         <action>action</action>
-        <pulseonselect>bool</pulseonselect>
         <orientation>orientation</orientation>
+        <colordiffuse>color</colordiffuse>
     </control>
     <control type="sliderex" id="int">
         <width max="int">int</width>
@@ -316,8 +312,7 @@
         <texturesliderbardisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbardisabled>
         <textureslidernibdisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</textureslidernibdisabled>
         <onback condition="condition">builtin</onback>
-        <onfocus condition="condition">builtin</onfocus>
-        <onunfocus condition="condition">builtin</onunfocus>
+        <info>info</info>
     </control>
     <control type="mover" id="int">
         <width max="int">int</width>
@@ -326,7 +321,7 @@
         <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturefocus>
         <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturenofocus>
         <movingspeed acceleration="int" maxvelocity="int" resettimeout="int" delta="int"></movingspeed>
-        <pulseonselect>bool</pulseonselect>
+        <colordiffuse>color</colordiffuse>
     </control>
     <control type="gamecontroller" id="int">
         <width max="int">int</width>
@@ -339,6 +334,7 @@
         <controllerdiffuse>color</controllerdiffuse>
         <portaddress>label</portaddress>
         <peripherallocation>label</peripherallocation>
+        <info>info</info>
     </control>
     <control type="progress" id="int">
         <width max="int">int</width>
@@ -358,7 +354,6 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
-        <reveal>bool</reveal>
         <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturebg>
         <colordiffuse>color</colordiffuse>
         <lefttexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</lefttexture>
@@ -371,7 +366,6 @@
         <width max="int">int</width>
         <height min="int" max="int">int</height>
         <include>common</include>
-        <colordiffuse>color</colordiffuse>
         <font>font</font>
         <monofont>font</monofont>
         <textcolor>color</textcolor>
@@ -379,7 +373,6 @@
         <disabledcolor>color</disabledcolor>
         <shadowcolor>color</shadowcolor>
         <selectedcolor>color</selectedcolor>
-        <pulseonselect>bool</pulseonselect>
         <pagecontrol>int</pagecontrol>
         <scrolltime tween="tween" easing="easing">int</scrolltime>
         <align>align</align>
@@ -389,6 +382,7 @@
         <autoscroll delay="int" time="int" repeat="int">condition</autoscroll>
         <label fallback="label">label</label>
         <info>label</info>
+        <number></number>
     </control>
     <control type="rss" id="int">
         <width max="int">int</width>
@@ -399,7 +393,6 @@
         <textcolor>color</textcolor>
         <headlinecolor>color</headlinecolor>
         <titlecolor>color</titlecolor>
-        <title>xxx</title>
         <shadowcolor>color</shadowcolor>
         <urlset>int</urlset>
         <tagset>xxx</tagset>
@@ -437,7 +430,7 @@
         <texturefocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturefocus>
         <texturenofocus colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</texturenofocus>
         <movingspeed acceleration="int" maxvelocity="int" resettimeout="int" delta="int"></movingspeed>
-        <pulseonselect>bool</pulseonselect>
+        <colordiffuse>color</colordiffuse>
     </control>
     <control type="edit" id="int">
         <width max="int">int</width>
@@ -469,6 +462,9 @@
         <focusedchannellayout height="int" width="int" condition="condition"></focusedchannellayout>
         <itemlayout height="int" width="int" condition="condition"></itemlayout>
         <focusedlayout height="int" width="int" condition="condition"></focusedlayout>
+        <preloaditems>int</preloaditems>
+        <offsetx>int</offsetx>
+        <offsety>int</offsety>
     </control>
     <control type="list" id="int">
         <include>common</include>
@@ -543,6 +539,7 @@
         <itemlayout width="int" height="int" condition="condition" infoupdate="int"></itemlayout>
         <focusedlayout height="int" width="int" condition="condition" infoupdate="int"></focusedlayout>
         <content sortby="sort" sortorder="order" target="target" limit="int" browse="browse"></content>
+        <defaultcontrol always="bool">int</defaultcontrol>
     </include>
     <include name="nav_common">
         <onup condition="condition">builtin</onup>
@@ -550,8 +547,6 @@
         <onleft condition="condition">builtin</onleft>
         <onright condition="condition">builtin</onright>
         <onback condition="condition">builtin</onback>
-        <onfocus condition="condition">builtin</onfocus>
-        <onunfocus condition="condition">builtin</onunfocus>
         <oninfo condition="condition">builtin</oninfo>
         <onnext condition="condition">builtin</onnext>
         <onprev condition="condition">builtin</onprev>

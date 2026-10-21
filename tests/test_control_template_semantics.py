@@ -115,6 +115,35 @@ class TestControlTemplateSemantics(unittest.TestCase):
 </control>""", release)
                 self.assertEqual([i["rule"] for i in issues], ["xml.invalid-tag", "xml.invalid-tag"])
 
+    def test_focus_actions_only_where_kodi_runs_them(self):
+        """Buttons and lists run focus actions; a group, an edit or a slider ignores them."""
+        self._assert_clean("""
+<control type="button"><onfocus>noop</onfocus><onunfocus>noop</onunfocus></control>
+<control type="list"><onfocus>noop</onfocus><defaultcontrol>2</defaultcontrol></control>""")
+        for release in ("omega", "piers"):
+            with self.subTest(release=release):
+                issues = self._issues("""
+<control type="group"><onfocus>noop</onfocus></control>
+<control type="edit"><onunfocus>noop</onunfocus></control>
+<control type="slider"><onfocus>noop</onfocus></control>""", release)
+                self.assertEqual(sorted(i["subject"] for i in issues), ["onfocus", "onfocus", "onunfocus"])
+
+    def test_pulse_and_diffuse_where_the_control_draws_them(self):
+        """Only buttons use pulseonselect; a slider takes colordiffuse, a textbox does not."""
+        self._assert_clean("""
+<control type="button"><pulseonselect>true</pulseonselect></control>
+<control type="slider"><colordiffuse>FFFFFFFF</colordiffuse><info>Player.Volume</info></control>
+<control type="scrollbar"><colordiffuse>FFFFFFFF</colordiffuse></control>
+<control type="sliderex"><info>Player.Volume</info></control>
+<control type="spincontrolex"><subtype>int</subtype></control>
+<control type="textbox"><number>1</number></control>""")
+        for release in ("omega", "piers"):
+            with self.subTest(release=release):
+                issues = self._issues("""
+<control type="slider"><pulseonselect>true</pulseonselect></control>
+<control type="textbox"><colordiffuse>FFFFFFFF</colordiffuse></control>""", release)
+                self.assertEqual(sorted(i["subject"] for i in issues), ["colordiffuse", "pulseonselect"])
+
     def test_group_enable(self):
         """A disabled group cannot take focus, so enable is meaningful."""
         self._assert_clean("""
