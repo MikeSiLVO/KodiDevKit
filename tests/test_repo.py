@@ -40,11 +40,13 @@ class TestRepo(unittest.TestCase):
     """Each rule in isolation against an otherwise clean skin."""
 
     def setUp(self):
+        """Set up a skin with an icon and a screenshot in resources and an en_gb strings.po."""
         self.temp_dir = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.temp_dir.name, "skin.test")
         os.makedirs(os.path.join(self.path, "16x9"))
         os.makedirs(os.path.join(self.path, "resources"))
         self._write("resources/icon.png", _png(256, 256))
+        self._write("resources/screenshot.png", _png(1920, 1080))
         self._write("language/resource.language.en_gb/strings.po", GOOD_PO)
 
     def tearDown(self):
@@ -56,8 +58,8 @@ class TestRepo(unittest.TestCase):
         with open(path, "wb" if isinstance(data, bytes) else "w", encoding=None if isinstance(data, bytes) else "utf-8") as f:
             f.write(data)
 
-    def _addon(self, version="1.0.0", news="Fixes", assets="<icon>resources/icon.png</icon>", addon_id="skin.test",
-               gui="5.18.0"):
+    def _addon(self, version="1.0.0", news="Fixes", addon_id="skin.test", gui="5.18.0",
+               assets="<icon>resources/icon.png</icon><screenshot>resources/screenshot.png</screenshot>"):
         """Write a skin addon.xml that passes every rule unless a field is overridden."""
         self._write("addon.xml", f'<?xml version="1.0" encoding="UTF-8"?>\n<addon id="{addon_id}" version="{version}" '
                                  f'name="Test" provider-name="me"><requires><import addon="xbmc.gui" version="{gui}"/>'
@@ -100,12 +102,14 @@ class TestRepo(unittest.TestCase):
         self.assertIn("Kodi repo: version 'v1' is not major.minor.revision (e.g. 1.0.0)", self._messages())
 
     def test_artwork(self):
+        """Empty, missing, undeclared, misplaced or wrongly sized artwork is reported."""
         self._write("fanart.jpg", b"\xff\xd8")
         self._write("resources/big.png", _png(300, 300))
         self._addon(assets="<icon>resources/big.png</icon><screenshot>missing.jpg</screenshot><banner/>")
         self.assertEqual(self._messages(), [
             "Kodi repo: empty <banner> tag in <assets>",
             "Kodi repo: fanart.jpg should be declared in addon.xml <assets>",
+            "Kodi repo: fanart.jpg should be in the resources folder",
             "Kodi repo: icon is 300x300, the repo accepts 256x256 or 512x512",
             "Kodi repo: screenshot missing.jpg does not exist",
         ])
@@ -126,6 +130,37 @@ class TestRepo(unittest.TestCase):
             "the repo wants a transparent background",
             "Kodi repo: icon has transparent pixels, the repo wants it solid",
         ])
+
+    def test_skin_screenshots(self):
+        """A skin needs at least one screenshot and at most ten."""
+        self._addon(assets="<icon>resources/icon.png</icon>")
+        self.assertEqual(self._messages(), ["Kodi repo: <assets> lists no <screenshot>, which a skin submission needs"])
+        self._addon(assets="<icon>resources/icon.png</icon>"
+                           + "<screenshot>resources/screenshot.png</screenshot>" * 11)
+        self.assertEqual(self._messages(),
+                         ["Kodi repo: <assets> lists 11 screenshots, over the 10 a skin submission may have"])
+
+    def test_skin_icon_and_fanart_in_resources(self):
+        """A skin keeps a declared icon and fanart in resources."""
+        self._write("icon.png", _png(256, 256))
+        self._write("media/fanart.jpg", b"\xff\xd8")
+        self._addon(assets="<icon>icon.png</icon><fanart>media/fanart.jpg</fanart>"
+                           "<screenshot>resources/screenshot.png</screenshot>")
+        self.assertEqual([m for m in self._messages() if "resources folder" in m], [
+            "Kodi repo: icon.png should be in the resources folder",
+            "Kodi repo: media/fanart.jpg should be in the resources folder",
+        ])
+
+    def test_skin_rules_leave_other_addons_alone(self):
+        """A script needs no screenshot and may keep its icon anywhere."""
+        self._write("icon.png", _png(256, 256))
+        self._write("addon.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<addon id="skin.test" version="1.0.0" '
+                                 'name="Test" provider-name="me"><extension point="xbmc.python.script" library="a.py"/>'
+                                 '<extension point="xbmc.addon.metadata"><summary lang="en_GB">s</summary>'
+                                 '<description lang="en_GB">d</description><platform>all</platform>'
+                                 '<license>GPL-2.0-or-later</license><assets><icon>icon.png</icon></assets>'
+                                 '</extension></addon>')
+        self.assertEqual([m for m in self._messages() if "screenshot" in m or "resources folder" in m], [])
 
     def test_language_rules(self):
         self._addon()

@@ -1,9 +1,10 @@
-"""Kodi repo submission rules that kodi-addon-checker enforces, reported as labeled warnings."""
+"""Kodi repo submission rules from kodi-addon-checker and repo reviewers, as labeled warnings."""
 
 from __future__ import annotations
 
 import copy
 import os
+import posixpath
 import re
 
 from lxml import etree as ET
@@ -35,6 +36,7 @@ ARTWORK = {
     "banner": ((".jpg", ".jpeg", ".png"), ((1000, 185),), None, False),
     "clearlogo": ((".png",), ((400, 155), (800, 310)), None, True),
 }
+MAX_SCREENSHOTS = 10
 # the extension points the checker has schemas for; a skin validates the two it uses
 SKIN_SCHEMAS = {"xbmc.addon.metadata": "matrix_metadata.xsd", "xbmc.gui.skin": "gotham_skin.xsd"}
 KNOWN_POINTS = {
@@ -51,7 +53,7 @@ KNOWN_POINTS = {
 
 
 class ValidationRepo:
-    """Checker for addon.xml, artwork, language files and file types as the repo's CI sees them."""
+    """Checker for addon.xml, artwork, language files and file types by the Kodi repo's rules."""
 
     def __init__(self, addon):
         self.addon = addon
@@ -76,6 +78,8 @@ class ValidationRepo:
         if root is not None:
             self._check_addon_xml(root)
             self._check_artwork(root)
+            if root.find("extension[@point='xbmc.gui.skin']") is not None:
+                self._check_skin_artwork(root)
         self._check_languages()
         for folder in nested_addons(self.addon.path):
             self._add(folder, 0, "repo.nested-addon", f"{folder} is a separate add-on inside this one. The Kodi repo takes one "
@@ -189,6 +193,29 @@ class ValidationRepo:
         elif wanted and not found:
             self._add(rel, 0, "repo.asset-transparency",
                       f"{kind} has no transparent pixels, the repo wants a transparent background", kind)
+
+    def _check_skin_artwork(self, root):
+        """Check the screenshot count and that icon and fanart sit in resources, for reviewers."""
+        screenshots = root.findall("extension/assets/screenshot")
+        if not screenshots:
+            assets = root.find("extension/assets")
+            self._add("addon.xml", (assets if assets is not None else root).sourceline, "repo.no-screenshot",
+                      "<assets> lists no <screenshot>, which a skin submission needs", "screenshot")
+        elif len(screenshots) > MAX_SCREENSHOTS:
+            self._add("addon.xml", screenshots[MAX_SCREENSHOTS].sourceline, "repo.too-many-screenshots",
+                      f"<assets> lists {len(screenshots)} screenshots, over the {MAX_SCREENSHOTS} a skin "
+                      f"submission may have", "screenshot")
+        for kind, fallback in (("icon", "icon.png"), ("fanart", "fanart.jpg")):
+            nodes = root.findall(f"extension/assets/{kind}")
+            if nodes:
+                placed = [("addon.xml", node.sourceline, (node.text or "").strip()) for node in nodes]
+            elif os.path.isfile(os.path.join(self.addon.path, fallback)):
+                placed = [(fallback, 0, fallback)]
+            else:
+                placed = []
+            for rel, line, image in placed:
+                if image and not posixpath.normpath(image.replace("\\", "/")).startswith("resources/"):
+                    self._add(rel, line, "repo.asset-location", f"{image} should be in the resources folder", kind)
 
     def _check_languages(self):
         """Check language folders use resource.language.<code> and include en_gb, then each po."""
