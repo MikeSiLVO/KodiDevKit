@@ -5,10 +5,11 @@ import struct
 import sys
 import tempfile
 import unittest
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from libs.utils.images import get_image_info
+from libs.utils.images import get_image_info, has_transparent_pixels
 
 
 def _png(width, height):
@@ -36,6 +37,99 @@ def _jpeg(width, height, progressive):
     sof = b"\xff\xc2" if progressive else b"\xff\xc0"
     sof += struct.pack(">H", 11) + b"\x08" + struct.pack(">HH", height, width) + b"\x01\x01\x11\x00"
     return b"\xff\xd8" + sof + b"\xff\xd9"
+
+
+ADAM7 = ((0, 0, 8, 8), (4, 0, 8, 8), (0, 4, 4, 8), (2, 0, 4, 4), (0, 2, 2, 4), (1, 0, 2, 2), (0, 1, 1, 2))
+
+
+def _paeth(a, b, c):
+    """Value the Paeth filter predicts a byte from its left, upper and upper-left neighbors."""
+    guess = a + b - c
+    near_a, near_b, near_c = abs(guess - a), abs(guess - b), abs(guess - c)
+    return a if near_a <= near_b and near_a <= near_c else b if near_b <= near_c else c
+
+
+def _scanlines(rows, pixel, filter_type):
+    """Sample bytes encoded as PNG scanlines, all with one filter."""
+    out, prior = b"", bytes(len(rows[0]))
+    for row in rows:
+        line = bytearray([filter_type])
+        for i, value in enumerate(row):
+            left = row[i - pixel] if i >= pixel else 0
+            corner = prior[i - pixel] if i >= pixel else 0
+            guess = (0, left, prior[i], (left + prior[i]) // 2, _paeth(left, prior[i], corner))[filter_type]
+            line.append((value - guess) & 255)
+        out += bytes(line)
+        prior = row
+    return out
+
+
+def _pixels_png(pixels, color=6, depth=8, filter_type=0, interlace=False):
+    """Full PNG of a grid of pixels, each a bytes of its samples."""
+    width, pixel = len(pixels[0]), len(pixels[0][0])
+    if interlace:
+        data = b""
+        for x0, y0, dx, dy in ADAM7:
+            rows = [b"".join(row[x0::dx]) for row in pixels[y0::dy]]
+            if rows and rows[0]:
+                data += _scanlines(rows, pixel, filter_type)
+    else:
+        data = _scanlines([b"".join(row) for row in pixels], pixel, filter_type)
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+
+    ihdr = struct.pack(">IIBBBBB", width, len(pixels), depth, color, 0, 0, int(interlace))
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(data)) + chunk(b"IEND", b"")
+
+
+def _rgba(alpha_at=None, alpha=0, size=9):
+    """A square grid of varied colors, opaque but for one pixel when given."""
+    return [[bytes(((x * 37 + y) & 255, (y * 53) & 255, (x * y) & 255, alpha if (x, y) == alpha_at else 255))
+             for x in range(size)] for y in range(size)]
+
+
+class TestTransparentPixels(unittest.TestCase):
+    """Transparency read the way the add-on checker reads it: alpha of a PNG it opens as RGBA."""
+
+    def setUp(self):
+        """Set up a temp folder for the image files."""
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def _read(self, data):
+        """Write the bytes to a file and read its transparency."""
+        path = os.path.join(self.tmp.name, "a.png")
+        with open(path, "wb") as fh:
+            fh.write(data)
+        return has_transparent_pixels(path)
+
+    def test_every_filter_type_reads_opaque_and_transparent(self):
+        """Each filter type, plain and interlaced, finds a transparent pixel and no false one."""
+        for filter_type in range(5):
+            for interlace in (False, True):
+                with self.subTest(filter_type=filter_type, interlace=interlace):
+                    self.assertIs(self._read(_pixels_png(_rgba(), filter_type=filter_type, interlace=interlace)),
+                                  False)
+                    for spot in ((0, 0), (8, 0), (0, 8), (5, 7), (8, 8)):
+                        grid = _rgba(spot, alpha=254)
+                        self.assertIs(self._read(_pixels_png(grid, filter_type=filter_type, interlace=interlace)),
+                                      True)
+
+    def test_sixteen_bit_alpha_counts_by_its_high_byte(self):
+        """16-bit gray with alpha reads as RGBA, transparent once the alpha's high byte drops."""
+        def gray(alpha):
+            return [[b"\x80\x00" + struct.pack(">H", alpha if (x, y) == (3, 2) else 65535) for x in range(5)]
+                    for y in range(4)]
+        self.assertIs(self._read(_pixels_png(gray(0xFF00), color=4, depth=16, filter_type=4)), False)
+        self.assertIs(self._read(_pixels_png(gray(0xFEFF), color=4, depth=16, filter_type=4)), True)
+
+    def test_images_not_read_as_rgba(self):
+        """8-bit gray with alpha, RGB and other files are not read as RGBA."""
+        self.assertIsNone(self._read(_pixels_png([[b"\x80\x00"] * 3] * 3, color=4)))
+        self.assertIsNone(self._read(_pixels_png([[b"\x80\x80\x80"] * 3] * 3, color=2)))
+        self.assertIsNone(self._read(_jpeg(10, 10, False)))
+        self.assertIsNone(self._read(_png(10, 10)))
 
 
 class TestImageInfo(unittest.TestCase):

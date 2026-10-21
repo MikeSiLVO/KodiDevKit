@@ -21,6 +21,18 @@ def _png(width, height):
             + struct.pack(">I", zlib.crc32(b"IHDR" + ihdr)))
 
 
+def _solid_png(width, height, alpha=255, color=6):
+    """Full PNG of one flat color, RGBA by default or else RGB."""
+    pixel = bytes((10, 20, 30, alpha)) if color == 6 else bytes((10, 20, 30))
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, color, 0, 0, 0)
+    data = zlib.compress((b"\x00" + pixel * width) * height)
+
+    def chunk(kind, body):
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", data) + chunk(b"IEND", b"")
+
+
 GOOD_PO = 'msgid ""\nmsgstr ""\n\nmsgctxt "#31000"\nmsgid "a"\nmsgstr ""\n'
 
 
@@ -96,6 +108,23 @@ class TestRepo(unittest.TestCase):
             "Kodi repo: fanart.jpg should be declared in addon.xml <assets>",
             "Kodi repo: icon is 300x300, the repo accepts 256x256 or 512x512",
             "Kodi repo: screenshot missing.jpg does not exist",
+        ])
+
+    def test_transparency(self):
+        """Icon and screenshot must be solid and a clearlogo transparent; fanart is unchecked."""
+        self._write("resources/icon.png", _solid_png(256, 256, alpha=0))
+        self._write("resources/screenshot.png", _solid_png(1920, 1080))
+        self._write("resources/fanart.png", _solid_png(1280, 720, alpha=0))
+        self._write("resources/clearlogo.png", _solid_png(400, 155))
+        self._write("resources/clearlogo-rgb.png", _solid_png(800, 310, color=2))
+        self._addon(assets="<icon>resources/icon.png</icon><screenshot>resources/screenshot.png</screenshot>"
+                           "<fanart>resources/fanart.png</fanart><clearlogo>resources/clearlogo.png</clearlogo>"
+                           "<clearlogo>resources/clearlogo-rgb.png</clearlogo>")
+        self.assertEqual(self._messages(), [
+            "Kodi repo: clearlogo has no transparent pixels, the repo wants a transparent background",
+            "Kodi repo: clearlogo is not an RGBA PNG, which the add-on checker reads as solid; "
+            "the repo wants a transparent background",
+            "Kodi repo: icon has transparent pixels, the repo wants it solid",
         ])
 
     def test_language_rules(self):

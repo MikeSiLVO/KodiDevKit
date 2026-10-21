@@ -10,7 +10,7 @@ from lxml import etree as ET
 from lxml.etree import XMLSchema
 
 from ..polib.polib import pofile
-from ..utils.images import get_image_info
+from ..utils.images import get_image_info, has_transparent_pixels
 from ..utils.xml import PARSER
 from .constants import SEVERITY_WARNING
 from .filecheck import nested_addons, shipped_files
@@ -27,13 +27,13 @@ LANG_CODE = re.compile(r"^[a-z]{2,3}(?:_[a-zA-Z]{2}(?:@\S+)?)?$")
 WHITELIST = re.compile(
     r"\.?(py|xml|gif|png|jpg|jpeg|md|txt|po|json|markdown|yml|rst|ini|flv|wav|mp4|html|css|lst|pkla|g|"
     r"template|in|cfg|xsd|directory|help|list|mpeg|pls|info|ttf|xsp|theme|yaml|dict|crt|ico)?$", re.I)
-# kodi_addon_checker/check_artwork.py: extensions, sizes, largest file in KB
+# kodi_addon_checker/check_artwork.py: extensions, sizes, largest file in KB, transparency wanted
 ARTWORK = {
-    "icon": ((".png",), ((256, 256), (512, 512)), None),
-    "fanart": ((".jpg", ".jpeg", ".png"), ((1280, 720), (1920, 1080), (3840, 2160)), 1000),
-    "screenshot": ((".jpg", ".jpeg", ".png"), ((1280, 720), (1920, 1080)), 750),
-    "banner": ((".jpg", ".jpeg", ".png"), ((1000, 185),), None),
-    "clearlogo": ((".png",), ((400, 155), (800, 310)), None),
+    "icon": ((".png",), ((256, 256), (512, 512)), None, False),
+    "fanart": ((".jpg", ".jpeg", ".png"), ((1280, 720), (1920, 1080), (3840, 2160)), 1000, None),
+    "screenshot": ((".jpg", ".jpeg", ".png"), ((1280, 720), (1920, 1080)), 750, False),
+    "banner": ((".jpg", ".jpeg", ".png"), ((1000, 185),), None, False),
+    "clearlogo": ((".png",), ((400, 155), (800, 310)), None, True),
 }
 # the extension points the checker has schemas for; a skin validates the two it uses
 SKIN_SCHEMAS = {"xbmc.addon.metadata": "matrix_metadata.xsd", "xbmc.gui.skin": "gotham_skin.xsd"}
@@ -149,8 +149,8 @@ class ValidationRepo:
                           _plain_schema_error(error.message))
 
     def _check_artwork(self, root):
-        """Check declared artwork exists and has an accepted type, size and file size."""
-        for kind, (extensions, sizes, max_kb) in ARTWORK.items():
+        """Check declared artwork exists with an accepted type, size, file size and transparency."""
+        for kind, (extensions, sizes, max_kb, transparent) in ARTWORK.items():
             images = [node.text for node in root.findall(f"extension/assets/{kind}")]
             fallback = {"icon": "icon.png", "fanart": "fanart.jpg"}.get(kind) if not images else None
             if fallback:
@@ -175,6 +175,20 @@ class ValidationRepo:
                 if max_kb and os.path.getsize(path) > max_kb * 1024:
                     self._add(image.strip(), 0, "repo.asset-file-size",
                               f"{kind} is {os.path.getsize(path) // 1024}KB, over {max_kb}KB", kind)
+                if ext == ".png" and transparent is not None:
+                    self._check_transparency(image.strip(), path, kind, transparent)
+
+    def _check_transparency(self, rel, path, kind, wanted):
+        """Check an image is solid or transparent, as the add-on checker wants for that artwork."""
+        found = has_transparent_pixels(path)
+        if found and not wanted:
+            self._add(rel, 0, "repo.asset-transparency", f"{kind} has transparent pixels, the repo wants it solid", kind)
+        elif wanted and found is None:
+            self._add(rel, 0, "repo.asset-transparency", f"{kind} is not an RGBA PNG, which the add-on checker reads "
+                                                         f"as solid; the repo wants a transparent background", kind)
+        elif wanted and not found:
+            self._add(rel, 0, "repo.asset-transparency",
+                      f"{kind} has no transparent pixels, the repo wants a transparent background", kind)
 
     def _check_languages(self):
         """Check language folders use resource.language.<code> and include en_gb, then each po."""

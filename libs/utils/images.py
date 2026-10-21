@@ -6,6 +6,7 @@ import functools
 import os
 import re
 import struct
+import zlib
 from typing import List, Tuple
 
 _InfoList = List[Tuple[str, str]]
@@ -226,3 +227,87 @@ def _is_jpeg_progressive(fh) -> bool:
             fh.seek(seg_len - 2, os.SEEK_CUR)
     finally:
         fh.seek(pos)
+
+
+# PNG color type and bit depth the add-on checker's image reader opens as RGBA, to channel count
+_RGBA_READ = {(6, 8): 4, (6, 16): 4, (4, 16): 2}
+# Adam7 passes as x start, y start, x step, y step
+_ADAM7 = ((0, 0, 8, 8), (4, 0, 8, 8), (0, 4, 4, 8), (2, 0, 4, 4), (0, 2, 2, 4), (1, 0, 2, 2), (0, 1, 1, 2))
+
+
+def has_transparent_pixels(fname: str) -> bool | None:
+    """True when a PNG read as RGBA has any transparent pixel; False if none has, else None."""
+    try:
+        with open(fname, "rb") as fh:
+            if fh.read(8) != b"\x89PNG\r\n\x1a\n":
+                return None
+            header, data = None, []
+            while True:
+                length, kind = struct.unpack(">I4s", fh.read(8))
+                body = fh.read(length + 4)[:length]
+                if kind == b"IHDR":
+                    header = struct.unpack(">IIBBBBB", body)
+                elif kind == b"IDAT":
+                    data.append(body)
+                elif kind == b"IEND":
+                    break
+    except (OSError, struct.error):
+        return None
+    if header is None:
+        return None
+    width, height, depth, color, _, _, interlace = header
+    channels = _RGBA_READ.get((color, depth))
+    if channels is None:
+        return None
+    sample = depth // 8
+    pixel = channels * sample
+    if interlace:
+        passes = [((width - x + dx - 1) // dx, (height - y + dy - 1) // dy) for x, y, dx, dy in _ADAM7]
+    else:
+        passes = [(width, height)]
+    passes = [(w, h) for w, h in passes if w > 0 and h > 0]
+    size = sum(h * (1 + w * pixel) for w, h in passes)
+    try:
+        raw = zlib.decompressobj().decompress(b"".join(data), size)
+    except zlib.error:
+        return None
+    if len(raw) < size:
+        return None
+    pos = 0
+    for w, h in passes:
+        stride = 1 + w * pixel
+        for y in range(h):
+            row = raw[pos:pos + stride]
+            pos += stride
+            if row[0] > 4:
+                return None
+            # high byte of each alpha sample, all an 8-bit reading keeps
+            if row[1 + (channels - 1) * sample::pixel] != _opaque_alphas(row[0], y > 0, w):
+                return True
+    return False
+
+
+@functools.lru_cache(maxsize=16)
+def _opaque_alphas(filter_type: int, below_row: bool, count: int) -> bytes:
+    """Filtered alpha bytes of a row whose pixels, and every one before them, are fully opaque."""
+    up = 255 if below_row else 0
+    first = (255 - _png_predictor(filter_type, 0, up, 0)) & 255
+    rest = (255 - _png_predictor(filter_type, 255, up, up)) & 255
+    return bytes((first,)) + bytes((rest,)) * (count - 1)
+
+
+def _png_predictor(filter_type: int, left: int, up: int, up_left: int) -> int:
+    """Value the PNG filter type predicts a byte from its left, upper and upper-left neighbors."""
+    if filter_type == 1:
+        return left
+    if filter_type == 2:
+        return up
+    if filter_type == 3:
+        return (left + up) // 2
+    if filter_type == 4:
+        guess = left + up - up_left
+        near_left, near_up, near_corner = abs(guess - left), abs(guess - up), abs(guess - up_left)
+        if near_left <= near_up and near_left <= near_corner:
+            return left
+        return up if near_up <= near_corner else up_left
+    return 0

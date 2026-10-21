@@ -250,7 +250,7 @@ Checks file encoding, line endings and the files the skin ships.
 Checks what the Kodi repo's review tooling checks. Every finding is a warning labeled "Kodi repo".
 
 - `addon.xml`: version, id, extension points, the `xbmc.gui` import and its fit with [`kodi_release`](settings.md#validation), and the add-on schema.
-- Artwork named in `addon.xml`: it exists and has an accepted type, size and file size.
+- Artwork named in `addon.xml`: it exists and has an accepted type, size and file size. An icon, screenshot or banner must be solid and a clearlogo needs a transparent background, which the add-on checker only finds in an RGBA PNG.
 - Language folders: named `resource.language.<code>`, with `en_gb` present.
 - Each `strings.po`: UTF-8 without a BOM, Kodi's header, no duplicate ids, and it parses.
 
