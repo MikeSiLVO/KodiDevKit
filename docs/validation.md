@@ -221,6 +221,7 @@ Validates each window as Kodi loads it, after includes, constants, expressions a
 - A `<default type>` written in a case no control uses. Kodi matches it exactly.
 - A runtime value in an `xsp=` filter that comes from outside the skin, such as a list item property a plugin sets, or a property or skin string nothing in the skin sets. It empties the list on the same values unless whatever sets it URL-encodes it.
 - A runtime value in a plugin URL query that comes from outside the skin. It reaches the add-on cut short on the same values unless whatever sets it URL-encodes it.
+- The text typed into an edit control, `$INFO[Control.GetLabel(id).Index(1)]`, in an `xsp=` filter or a plugin URL query. No label form URL-encodes it, so typing "Law & Order" empties the list or reaches the add-on cut short, and `+` turns into a space. Only a helper add-on that encodes it as it is typed avoids that. Written as `$ESCINFO`, it is an error.
 
 When the skin imports an add-on that writes include files at runtime (script.skinshortcuts, script.skinvariables), an undefined `$EXP` or constant name is a warning instead, since the add-on may define it.
 

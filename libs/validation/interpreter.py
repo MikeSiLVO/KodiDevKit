@@ -65,7 +65,7 @@ from ..utils.infobool import (
 )
 from ..utils.colors import is_kodi_hex as _is_kodi_hex
 from .skinmap import extract_map_args
-from .urls import RAW, UrlValues
+from .urls import TYPED, UNTRACED, UrlValues
 
 logger = logging.getLogger(__name__)
 
@@ -518,12 +518,19 @@ class XmlInterpreter:
         if variable:
             where = f"{where}, through {variable},"
         harm = "empties the list" if target == "xsp" else "reaches the add-on cut short"
-        if kind != RAW:
+        escaped = keyword.startswith("$ESC")
+        if kind == TYPED and not escaped:
+            self._add_issue(node, SEVERITY_WARNING, f"Value {expression} in {where} is the text typed into an edit "
+                            f"control, which no skin label can URL-encode, so typing 'Law & Order' {harm} and + "
+                            f"turns into a space; only a helper add-on that encodes it as it is typed avoids that",
+                            rule="xml.xsp-typed-text" if target == "xsp" else "xml.plugin-typed-text",
+                            subject=expression)
+            return
+        if kind == UNTRACED:
             self._add_issue(node, SEVERITY_WARNING, f"Value {expression} in {where} comes from outside the skin, so "
                             f"whether it is URL-encoded is unknown; if it is not, a value such as 'Law & Order' {harm}",
                             rule="xml.xsp-untraced" if target == "xsp" else "xml.plugin-untraced", subject=expression)
             return
-        escaped = keyword.startswith("$ESC")
         if target == "xsp":
             note = f" ({keyword} only escapes quotes)" if escaped else ""
             also = "|" if escaped else "| or a quote"

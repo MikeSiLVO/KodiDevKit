@@ -10,7 +10,7 @@ if package_dir not in sys.path:
     sys.path.insert(0, package_dir)
 
 from libs.infoprovider.provider import InfoProvider
-from libs.validation.urls import RAW, UNTRACED, UrlValues, value_sources
+from libs.validation.urls import RAW, TYPED, UNTRACED, UrlValues, value_sources
 
 PATH = "videodb://movies/titles/?xsp=%7B%22rules%22%3A%7B%22and%22%3A%5B%7B%22field%22%3A%22{field}%22%2C" \
        "%22operator%22%3A%22is%22%2C%22value%22%3A{value}%7D%5D%7D%2C%22type%22%3A%22movies%22%7D"
@@ -99,9 +99,10 @@ class TestUrlValues(unittest.TestCase):
 
 
 class TestUrlRows(unittest.TestCase):
-    """Rows from xsp filters and plugin URLs: errors for raw values, warnings for untraced ones."""
+    """Xsp and plugin URL rows: errors for raw or escaped typed values, warnings for the rest."""
 
     def test_rows(self):
+        """Check the rule, severity and subject of every URL fault in one window."""
         home = (
             '<window><controls>'
             '<control type="button" id="10">'
@@ -117,6 +118,12 @@ class TestUrlRows(unittest.TestCase):
             + '</content></control>'
             '<control type="list" id="53"><content>plugin://plugin.video.x/?query=$INFO[ListItem.Title]</content>'
             '</control>'
+            '<control type="list" id="54"><content>plugin://plugin.program.autocompletion?info=autocomplete'
+            '&amp;id=$INFO[Control.GetLabel(312).Index(1)]</content></control>'
+            '<control type="list" id="55"><content>plugin://plugin.video.x/?q=$ESCINFO[Control.GetLabel(312).Index(1)]'
+            '</content></control>'
+            '<control type="list" id="56"><content>' + path("%5B%22$INFO[Control.GetLabel(9).Index(1)]%22%5D").replace("&", "&amp;")
+            + '</content></control>'
             '</controls></window>')
         files = {
             "addon.xml": '<addon id="skin.t" version="1.0.0"><requires><import addon="xbmc.gui" '
@@ -136,10 +143,15 @@ class TestUrlRows(unittest.TestCase):
             rows = [r for r in provider.check_values() if r.get("rule", "").startswith(("xml.xsp", "xml.plugin"))]
         found = sorted((r["rule"], r["severity"], r["subject"]) for r in rows)
         self.assertEqual(found, [
+            ("xml.plugin-typed-text", "warning", "$INFO[Control.GetLabel(312).Index(1)]"),
+            ("xml.plugin-unencoded", "error", "$ESCINFO[Control.GetLabel(312).Index(1)]"),
             ("xml.plugin-unencoded", "error", "$INFO[ListItem.Title]"),
+            ("xml.xsp-typed-text", "warning", "$INFO[Control.GetLabel(9).Index(1)]"),
             ("xml.xsp-unencoded", "error", "$INFO[Window(Home).Property(pick)]"),
             ("xml.xsp-untraced", "warning", "$ESCINFO[Window(Home).Property(other)]"),
         ])
+        typed = next(r["message"] for r in rows if r["rule"] == "xml.plugin-typed-text")
+        self.assertIn("typing 'Law & Order' reaches the add-on cut short", typed)
         error = next(r["message"] for r in rows if r["rule"] == "xml.xsp-unencoded")
         self.assertIn("'Law & Order' empties the list", error)
         self.assertIn("URL-encode it first", error)
@@ -190,6 +202,14 @@ class TestPluginValues(unittest.TestCase):
     def test_time_date_and_sort_words_need_no_encoding(self):
         self.assertEqual(self.kinds("plugin://p/?t=$INFO[System.Time(hh)]&d=$INFO[System.Date]"
                                     "&s=$INFO[Container.SortMethod]&o=$INFO[Container.SortOrder]"), [])
+
+    def test_edit_control_text_is_typed(self):
+        """An edit control's typed text, read through Index(1), is its own kind."""
+        typed = "$INFO[Control.GetLabel(312).Index(1)]"
+        self.assertEqual(self.kinds(f"plugin://plugin.program.autocompletion?info=autocomplete&id={typed}&limit=8"),
+                         [(typed, TYPED, None)])
+        self.assertEqual(self.kinds("plugin://p/?q=$INFO[Control.GetLabel(312)]"),
+                         [("$INFO[Control.GetLabel(312)]", RAW, None)])
 
     def test_a_reload_token_is_never_read_as_data(self):
         self.assertEqual(self.kinds("plugin://p/?info=x&reload=$INFO[Window(Home).Property(Widgets.Reload)]"), [])

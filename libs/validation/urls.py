@@ -23,6 +23,8 @@ _ENCODER = re.compile(r'get_encoded_string\b.*?\bwindow_prop=([^&"\s,)]+)', re.I
 _PROPERTY = re.compile(r'window(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
 _SKIN_STRING = re.compile(r'skin\.string\((.+)\)$', re.IGNORECASE)
 _ITEM_PROPERTY = re.compile(r'container\((\d+)\)\.listitem\w*(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
+# an edit control's text as typed; no other control answers Index(1)
+_TYPED = re.compile(r'control\.getlabel\(\s*\d+\s*\)\.index\(\s*1\s*\)$', re.IGNORECASE)
 # characters a URL query or a JSON string cannot carry unencoded
 _UNSAFE = set('&|+"\\')
 
@@ -33,8 +35,8 @@ _PLAIN_INFOS = frozenset({
     "season", "setid", "time", "top250", "tvshowdbid", "uniqueid", "userrating", "year",
 })
 
-RAW, UNTRACED, SAFE = "raw", "untraced", "safe"
-_RANK = {SAFE: 0, UNTRACED: 1, RAW: 2}
+RAW, TYPED, UNTRACED, SAFE = "raw", "typed", "untraced", "safe"
+_RANK = {SAFE: 0, UNTRACED: 1, TYPED: 2, RAW: 3}
 
 
 def _plain(name):
@@ -93,7 +95,7 @@ class UrlValues:
         self._kinds = {}
 
     def xsp_faults(self, text):
-        """Yield (expression, keyword, kind) per raw or untraced value in a filter's value lists."""
+        """Yield (expression, keyword, kind) per unsafe value in a filter's value lists."""
         for key in _VALUE_KEY.finditer(text):
             pos = key.end()
             while True:
@@ -110,7 +112,7 @@ class UrlValues:
                     yield found.group(0) + body + "]", found.group(0)[:-1], kind
 
     def plugin_faults(self, text):
-        """Yield (expression, keyword, kind, variable) per raw or untraced plugin query value."""
+        """Yield (expression, keyword, kind, variable) per unsafe plugin query value."""
         for query in _PLUGIN_QUERY.finditer(text):
             # the encoder's own call takes the raw value it encodes
             if "get_encoded_string" not in text[query.start():_url_end(text, query.end())]:
@@ -146,7 +148,7 @@ class UrlValues:
                     yield expression, keyword, kind, variable
 
     def _expression_kind(self, keyword, body, seen):
-        """Kind of one $INFO[] or $VAR[] body: raw text, a source kdk cannot see, or safe."""
+        """Kind of one $INFO[] or $VAR[] body: raw or typed text, an unseen source, or safe."""
         if keyword == "VAR":
             name = body.strip()
             if name in seen or name not in self.variables:
@@ -167,6 +169,8 @@ class UrlValues:
         found = re.search(r"\.property\((.+)\)$", info, re.IGNORECASE)
         if found:
             return SAFE if _plain(found.group(1)) else UNTRACED
+        if _TYPED.search(info):
+            return TYPED
         return SAFE if _plain(info.rsplit(".", 1)[-1]) else RAW
 
     def _stored_kind(self, key, seen):
