@@ -7,6 +7,7 @@ import re
 import time
 from pathlib import Path
 
+from ..utils.expressions import resolve_params_in_text
 from ..utils.files import check_paths, is_inside
 from ..utils.infobool import condition_states
 from ..utils.xml import get_params, get_root_from_file
@@ -28,6 +29,35 @@ logger.propagate = True
 def _same_definition(a, b):
     """Whether two definition elements have the same text and attributes."""
     return b is not None and (a.text or "").strip() == (b.text or "").strip() and dict(a.attrib) == dict(b.attrib)
+
+
+_PARAM_REF = re.compile(r"\$PARAM\[([^,\]]+)")
+
+
+def _param_uses(include_node):
+    """Yield (param, use) per $PARAM in the spliced body; forwards flag a bare $PARAM value."""
+    definition = include_node.find("definition")
+    body = definition if definition is not None else include_node
+    for node in body.iterdescendants():
+        if not isinstance(node.tag, str):
+            continue
+        parent = node.getparent()
+        target = parent.get("content", "") if parent.tag == "include" else ""
+        forward = node.get("name") if node.tag == "param" and target and "$" not in target else None
+        texts = [(None, node.text or "")]
+        texts += [(a, v) for a, v in node.attrib.items() if not a.startswith("_kdk_")]
+        for attr, value in texts:
+            if "$PARAM[" not in value:
+                continue
+            if forward and attr in (None, "value"):
+                use = ("forward", target, forward,
+                       resolve_params_in_text(value)[1] == "SINGLE_UNDEFINED")
+            elif attr is None:
+                use = ("tag", node.tag)
+            else:
+                use = ("attr", attr)
+            for match in _PARAM_REF.finditer(value):
+                yield match.group(1).strip(), use
 
 
 class Skin(Addon):
@@ -109,9 +139,8 @@ class Skin(Addon):
         return self._resource_loader
 
     def _build_include_param_roles(self):
-        """Role of each $PARAM per include body: tag, attribute, forward to a nested call, multi."""
+        """Build each include body's $PARAM roles: tag, attribute, forward to nested call, multi."""
         result = {}
-        param_re = re.compile(r"\$PARAM\[([^,\]]+)")
 
         def mark(roles, pname, new_role):
             existing = roles.get(pname)
@@ -122,38 +151,12 @@ class Skin(Addon):
             else:
                 roles[pname] = "multi"
 
-        def role_for(node):
-            parent = node.getparent() if hasattr(node, "getparent") else None
-            if (node.tag == "param" and parent is not None
-                    and parent.tag == "include" and parent.get("content")):
-                target_inc = parent.get("content")
-                target_param = node.get("name") or ""
-                if target_inc and target_param:
-                    return ("forward", target_inc, target_param)
-            return None
-
         for folder, includes_for_folder in self.include_map.items():
             folder_result = {}
             for inc_name, (inc_node, _defaults, _file) in includes_for_folder.items():
                 roles: dict = {}
-                for node in inc_node.iter():
-                    if node is inc_node:
-                        continue
-                    parent = node.getparent() if hasattr(node, "getparent") else None
-                    if (node.tag == "param" and parent is inc_node):
-                        continue
-                    text = (node.text or "")
-                    if "$PARAM[" in text:
-                        forward_role = role_for(node)
-                        for match in param_re.finditer(text):
-                            pname = match.group(1).strip()
-                            mark(roles, pname, forward_role or ("tag", node.tag))
-                    for attr_name, attr_value in node.attrib.items():
-                        if attr_name.startswith("_kdk_") or "$PARAM[" not in attr_value:
-                            continue
-                        for match in param_re.finditer(attr_value):
-                            pname = match.group(1).strip()
-                            mark(roles, pname, ("attr", attr_name))
+                for pname, use in _param_uses(inc_node):
+                    mark(roles, pname, use[:3])
                 if roles:
                     folder_result[inc_name] = roles
             if folder_result:

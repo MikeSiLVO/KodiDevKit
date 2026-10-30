@@ -157,6 +157,23 @@ class TestIncludeParamRoles(unittest.TestCase):
         role = skin.resolve_param_role("16x9", "WithDefault", "visible")
         self.assertEqual(role, ("tag", "visible"))
 
+    def test_value_attribute_forward_is_followed(self):
+        """A value= forward takes the role the nested include gives the param."""
+        skin, _ = _make_skin("""
+    <include name="Inner">
+        <control type="button">
+            <visible>$PARAM[show]</visible>
+        </control>
+    </include>
+    <include name="Outer">
+        <include content="Inner">
+            <param name="show" value="$PARAM[show]"/>
+        </include>
+    </include>
+""")
+        role = skin.resolve_param_role("16x9", "Outer", "show")
+        self.assertEqual(role, ("tag", "visible"))
+
 
 if __name__ == "__main__":
     unittest.main()
