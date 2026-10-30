@@ -67,7 +67,8 @@ html, body {
     margin: 0;
     padding: 0;
 }
-.mdpopups {
+/* element too: mdpopups' own div.mdpopups rule beats a bare class */
+div.mdpopups {
     border-left: 3px solid #14A9D5;
     border-top: 1px solid #3E4F5A;
     border-right: 1px solid #3E4F5A;
