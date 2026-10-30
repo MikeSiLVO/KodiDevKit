@@ -59,6 +59,7 @@ See [Validation](validation.md) for details on what each validator checks.
 | `tooltip_delay` | int | `200` | Milliseconds before showing hover tooltips. Set to `-1` to disable tooltips entirely. |
 | `tooltip_width` | int | `1000` | Maximum tooltip width in pixels. |
 | `tooltip_height` | int | `400` | Maximum tooltip height in pixels. |
+| `tooltip_include_params` | bool | `true` | List the params an include takes above its source in the include hover. When `false` the source shows its `<param>` declarations instead. |
 
 ## Auto-reload
 

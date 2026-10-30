@@ -74,6 +74,25 @@ class CallingAddon(FakeAddon):
         self._include_usages_built = True
 
 
+class ParamsAddon(FakeAddon):
+    """Fake skin whose only include, Card, has the given param rows."""
+
+    CARD = ET.fromstring('<include name="Card"><param name="width" default="300"/>'
+                         '<definition><label>$PARAM[text]</label></definition></include>')
+
+    def __init__(self, rows):
+        super().__init__({})
+        self.rows = rows
+
+    def return_node(self, keyword, folder=None, kinds=None):
+        """Card under any name."""
+        return {"name": keyword, "content": self.CARD, "type": "include"}
+
+    def include_params(self, folder, include_name):
+        """The rows the fake was built with."""
+        return self.rows
+
+
 class TestEvaluateCondition(unittest.TestCase):
 
     def setUp(self):
@@ -196,6 +215,50 @@ class TestCallVerdicts(unittest.TestCase):
         self.assertIn("NEEDS INCLUDE CONTEXT", body)
         self.assertIn("nothing calls Shelf", body)
         self.assertEqual(self.sent, [])
+
+
+class TestIncludeParamsHeader(unittest.TestCase):
+    """Param header the include hover shows above a source stripped of its declarations."""
+
+    def test_header_lists_params_above_the_source(self):
+        """Captioned rows show default, forwards and unused; the source drops its <param> lines."""
+        kodidevkit.INFOS.addon = ParamsAddon([
+            ("width", "300", False, []),
+            ("text", None, True, []),
+            ("top", None, False, [("Bar", "top", "10")]),
+            ("left", "", False, [("Bar", "left", None)]),
+        ])
+        body = kodidevkit.KodiDevKit.get_formatted_include("Card", FakeView(), kinds=("include",))
+        header, source = (body or "").split('<div class="kdk-rule"></div>')
+        self.assertTrue(header.startswith('<div class="kdk-sub">params</div>'))
+        self.assertIn("<b>width</b> = 300 (unused)", header)
+        self.assertIn("<b>text</b><br>", header)
+        self.assertIn("<b>top</b> -&gt; Bar.top = 10", header)
+        self.assertIn("<b>left</b> = &quot;&quot; -&gt; Bar.left<", header)
+        self.assertNotIn("<param", source)
+        self.assertIn("$PARAM[text]", source)
+        self.assertIsNotNone(ParamsAddon.CARD.find("param"))
+
+    def test_long_default_is_cut_where_the_source_wraps(self):
+        """A default fills its row out to the source's wrap column before it is cut."""
+        kodidevkit.INFOS.addon = ParamsAddon([("label", "a" * 60, True, []), ("visible", "b" * 150, True, [])])
+        body = kodidevkit.KodiDevKit.get_formatted_include("Card", FakeView(), kinds=("include",))
+        self.assertIn(f"<b>label</b> = {'a' * 60}<br>", body or "")
+        row = "visible = " + "b" * (kodidevkit.POPUP_WRAP_COLUMN - 13) + "..."
+        self.assertEqual(len(row), kodidevkit.POPUP_WRAP_COLUMN)
+        self.assertIn(f"<b>visible</b>{row[7:]}</div>", body or "")
+
+    def test_setting_off_shows_the_include_as_written(self):
+        """With the header turned off the source keeps its <param> declarations."""
+        kodidevkit.INFOS.addon = ParamsAddon([("width", "300", False, [])])
+        saved = kodidevkit.KodiDevKit.settings
+        kodidevkit.KodiDevKit.settings = {"tooltip_include_params": False}
+        try:
+            body = kodidevkit.KodiDevKit.get_formatted_include("Card", FakeView(), kinds=("include",))
+        finally:
+            kodidevkit.KodiDevKit.settings = saved
+        self.assertNotIn("kdk-rule", body or "")
+        self.assertIn('<param name="width" default="300"/>', body or "")
 
 
 class TestDiskChanges(unittest.TestCase):

@@ -188,6 +188,14 @@
     "tooltip_width": 1000,
     "tooltip_height": 400,
 
+    /*
+     * Include params header
+     *
+     * When true, the include hover lists the params the include takes above its source.
+     * When false, the source shows its <param> declarations instead.
+     */
+    "tooltip_include_params": true,
+
     //=============================================================================
     // Auto-Reload Settings
     //=============================================================================

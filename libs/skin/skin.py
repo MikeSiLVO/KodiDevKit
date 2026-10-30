@@ -192,6 +192,52 @@ class Skin(Addon):
 
         return role
 
+    def include_params(self, folder, include_name):
+        """Each param the include declares or uses, as (name, default, used directly, forwards)."""
+        entry = self.include_map.get(folder, {}).get(include_name)
+        if entry is None:
+            return []
+        node, defaults, _file = entry
+        uses: dict[str, list] = {}
+        for param, use in _param_uses(node):
+            uses.setdefault(param, []).append(use)
+        for param in defaults:
+            uses.setdefault(param, [])
+        rows = []
+        for param, found in uses.items():
+            default = defaults.get(param)
+            forwards = []
+            for use in found:
+                if use[0] != "forward":
+                    continue
+                _, target, target_param, alone = use
+                # what the target gets when a call leaves the param out; a default passes itself
+                value = None
+                if default is None and alone:
+                    value = self._omitted_value(folder, target, target_param, {(include_name, param)})
+                if (target, target_param, value) not in forwards:
+                    forwards.append((target, target_param, value))
+            direct = any(use[0] != "forward" for use in found)
+            rows.append((param, default, direct, forwards))
+        return rows
+
+    def _omitted_value(self, folder, include_name, param, seen):
+        """Value a param takes when a call omits it; None unless one default reaches every use."""
+        entry = self.include_map.get(folder, {}).get(include_name)
+        if entry is None or (include_name, param) in seen:
+            return None
+        node, defaults, _file = entry
+        if param in defaults:
+            return defaults[param]
+        values = set()
+        for found, use in _param_uses(node):
+            if found != param:
+                continue
+            if use[0] != "forward" or not use[3]:
+                return None
+            values.add(self._omitted_value(folder, use[1], use[2], seen | {(include_name, param)}))
+        return values.pop() if len(values) == 1 else None
+
     def _load_colors_and_fonts(self):
         """Load colors and fonts through the resource reader, dropping the validation index."""
         from ..coredata import kodi_colors_xml

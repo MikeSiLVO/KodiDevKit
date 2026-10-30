@@ -10,7 +10,7 @@ KodiDevKit shows hover tooltips when the cursor rests on recognized content in K
 
 **Colors**: Hovering over a color name shows a swatch and alpha percentage for each definition, with the colors file it comes from. A hex value shows its own swatch.
 
-**Includes and variables**: Hovering over `$VAR[Name]`, `$ESCVAR[Name]`, or `$EXP[Name]` shows a syntax-highlighted preview of the definition content. Inline `<include>IncludeName</include>` tags also show a preview when the cursor is on the name.
+**Includes and variables**: Hovering over `$VAR[Name]`, `$ESCVAR[Name]`, or `$EXP[Name]` shows a syntax-highlighted preview of the definition content. Inline `<include>IncludeName</include>` tags also show a preview when the cursor is on the name. An include's preview lists the params it takes above the source: each default, where it is passed on to another include, and any declared but unused. [`tooltip_include_params`](settings.md#tooltips) turns the list off.
 
 **Maps**: Hovering the map name in `$MAP[Name, InfoLabel]` or `$ESCMAP[...]` previews the `<map>` definition. Hovering the infolabel instead fetches its live value and shows what the map turns it into.
 

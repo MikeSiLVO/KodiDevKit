@@ -10,6 +10,7 @@ import re
 import os
 import html
 from collections import Counter
+from copy import deepcopy
 from bisect import bisect_right
 from urllib.parse import quote, unquote
 
@@ -299,11 +300,40 @@ def _call_verdicts(view, condition, include):
     return body
 
 
-def _shortened(value):
-    """A param value short enough for one popup row, quoted when empty."""
+def _shortened(value, columns=40):
+    """A param value cut to its share of a popup row, quoted when empty."""
     if not value:
         return '""'
-    return value if len(value) <= 40 else value[:37] + "..."
+    return value if len(value) <= columns else value[:columns - 3] + "..."
+
+
+def _params_html(rows):
+    """Captioned header naming each include param: its default, where it is forwarded, if unused."""
+    lines = []
+    for name, default, direct, forwards in rows:
+        targets = [f"-> {target}.{param}" for target, param, _ in forwards]
+        values = [v for v in [default, *(value for _, _, value in forwards)] if v is not None]
+        unused = default is not None and not direct and not forwards
+        fixed = len(" ".join([name, *targets] + ["(unused)"] * unused)) + 3 * len(values)
+        columns = max(10, (POPUP_WRAP_COLUMN - fixed) // max(1, len(values)))
+        parts = [f"<b>{html.escape(name)}</b>"]
+        if default is not None:
+            parts.append(f"= {html.escape(_shortened(default, columns))}")
+        for (_, _, value), text in zip(forwards, targets):
+            shown = "" if value is None else f" = {html.escape(_shortened(value, columns))}"
+            parts.append(f"{html.escape(text)}{shown}")
+        if unused:
+            parts.append("(unused)")
+        lines.append(" ".join(parts))
+    return f'<div class="kdk-sub">params</div><div>{"<br>".join(lines)}</div>'
+
+
+def _without_params(include):
+    """Copy of the include without the <param> declarations the header lists."""
+    stripped = deepcopy(include)
+    for param in stripped.findall("param"):
+        stripped.remove(param)
+    return stripped
 
 
 def _verdict_row(state, detail):
@@ -1606,7 +1636,14 @@ class KodiDevKit(sublime_plugin.EventListener):
         if not node:
             return None
 
-        return KodiDevKit._render_definition(node['content'], view, folder)
+        include_params = getattr(addon, "include_params", None)
+        rows = []
+        if include_params and node.get("type") == "include" and KodiDevKit.settings.get("tooltip_include_params", True):
+            rows = include_params(folder, node["name"])
+        if not rows:
+            return KodiDevKit._render_definition(node['content'], view, folder)
+        source = KodiDevKit._render_definition(_without_params(node['content']), view, folder)
+        return f'{_params_html(rows)}<div class="kdk-rule"></div>{source or ""}'
 
     @staticmethod
     def get_formatted_default(control_type, view):
