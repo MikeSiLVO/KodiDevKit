@@ -1,0 +1,42 @@
+  KodiDevKit 3.3.0
+  =================
+
+  New checks
+  ----------
+  - Info names Kodi does not know: in $INFO[] label text, actions, static
+    <content> items, $MAP[] and <info>, and as a String.* or Integer.*
+    argument.
+  - strings.po strings Kodi shows empty, cut short, or in English.
+  - Runtime values in xsp= filters and plugin:// URLs that are not
+    URL-encoded, an edit control's typed text included.
+  - Invalid colors in tag text such as <textcolor>.
+  - Artwork the add-on checker fails for transparency, the screenshot count,
+    and icon or fanart outside resources.
+  - special://skin/media/ image paths, which a Kodi repo install lacks, and a
+    case mismatch on any special://skin/ image path.
+
+  Improvements
+  ------------
+  Hovering an include lists the params it takes above its source, with each
+  default and where it is passed on. 'tooltip_include_params' turns it off.
+
+  Images are checked in every tag Kodi reads as a texture, and control tags
+  against what each control type reads.
+
+  kdk-ignore mutes warnings only. Errors, and warnings that block a Kodi repo
+  submission, stay listed. The text export groups muted findings under the
+  comment that mutes them.
+
+  Referring to a Kodi window by number is a warning, not an error.
+
+  Fixes
+  -----
+  - Tooltip, phantom and on-save settings take effect. Saving no longer
+    reloads the skin in Kodi unless 'auto_reload_skin' is on.
+  - Hover popup content no longer touches the popup's edge.
+  - The report's file links work when the usual port cannot be used.
+  - Control ids Kodi adds at runtime, such as the context menu's buttons, are
+    no longer undefined.
+  - <monofont> counts as a use of its font, and an unused font is reported at
+    its first definition.
+  - A known info label used as a color is accepted.
