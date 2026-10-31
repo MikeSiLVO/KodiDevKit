@@ -142,7 +142,7 @@ class ResultsDisplayPanel:
 
 
 def enable_file_logging(log_file_path=None):
-    """Enable a rotating DEBUG log file and set the root logger to DEBUG; returns the path."""
+    """Enable one rotating DEBUG log file and set the root logger to DEBUG; returns the path."""
     import os
     from logging.handlers import RotatingFileHandler
 
@@ -168,6 +168,10 @@ def enable_file_logging(log_file_path=None):
     file_handler.setLevel(logging.DEBUG)
 
     logger = logging.getLogger()
+    # plugin_loaded runs again on every plugin reload
+    for old in [h for h in logger.handlers if isinstance(h, RotatingFileHandler)]:
+        logger.removeHandler(old)
+        old.close()
     logger.addHandler(file_handler)
     logger.setLevel(logging.DEBUG)
 

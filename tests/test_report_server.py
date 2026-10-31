@@ -1,17 +1,21 @@
-"""Tests for the report server's port."""
+"""Tests for the report server's port and the plugin's debug log file."""
 
 import importlib
+import logging
 import os
 import socket
 import sys
+import tempfile
 import unittest
 import urllib.request
+from logging.handlers import RotatingFileHandler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import test_hover  # noqa: F401  installs the sublime stubs and the KodiDevKit package
 
 server = importlib.import_module("KodiDevKit.libs.reporting.server")
+sublimelogging = importlib.import_module("KodiDevKit.libs.sublime.logging")
 
 
 class TestServerPort(unittest.TestCase):
@@ -39,6 +43,34 @@ class TestServerPort(unittest.TestCase):
         self.assertNotEqual(port, server._PREFERRED_PORT)
         with urllib.request.urlopen(f"http://localhost:{port}/ping", timeout=5) as reply:
             self.assertEqual(reply.read(), b"OK")
+
+
+class TestFileLogging(unittest.TestCase):
+    """Debug log file the enable_file_logging setting turns on."""
+
+    def setUp(self):
+        """Set up a temp folder for the log and remember the root logger's state."""
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.root = logging.getLogger()
+        self.saved_level = self.root.level
+        self.saved_handlers = list(self.root.handlers)
+
+    def tearDown(self):
+        """Close the handlers the test added, restore the root logger and remove the temp folder."""
+        for handler in self.root.handlers:
+            if handler not in self.saved_handlers:
+                handler.close()
+        self.root.handlers = self.saved_handlers
+        self.root.setLevel(self.saved_level)
+        self.temp_dir.cleanup()
+
+    def test_enabling_again_keeps_one_file_handler(self):
+        """A second call, as on a plugin reload, replaces the file handler instead of adding one."""
+        path = os.path.join(self.temp_dir.name, "debug.log")
+        sublimelogging.enable_file_logging(path)
+        sublimelogging.enable_file_logging(path)
+        handlers = [h for h in self.root.handlers if isinstance(h, RotatingFileHandler)]
+        self.assertEqual(len(handlers), 1)
 
 
 if __name__ == "__main__":
