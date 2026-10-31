@@ -1,4 +1,4 @@
-"""Tests for the text-export filters that mirror the HTML report toggles."""
+"""Tests for the HTML report and the text-export filters that mirror its toggles."""
 
 import os
 import sys
@@ -180,6 +180,22 @@ class TestMutedRows(unittest.TestCase):
         rows = provider.get_check_listitems("variable")
         self.assertNotIn("plain warning", [r["message"] for r in rows])
         self.assertEqual(len(rows), 3)
+
+
+class TestHtmlRows(unittest.TestCase):
+    """Cells and counts the HTML report shows per issue and per file."""
+
+    def test_issue_without_a_type_has_an_empty_type_cell(self):
+        """An issue with no type leaves its type cell blank, without an empty <code> element."""
+        doc = _html({"Kodi Repo": [{"file": "/skin/addon.xml", "line": 3, "message": "m", "severity": "warning"}]})
+        self.assertNotIn("<code></code>", doc)
+
+    def test_file_with_one_issue_says_issue(self):
+        """A file's badge counts one issue in the singular and more in the plural."""
+        doc = _html(_report()["all_issues"])
+        self.assertIn('<span class="badge">4 issues</span>', doc)
+        one = _html({"XML Validation": _report()["all_issues"]["XML Validation"][:1]})
+        self.assertIn('<span class="badge">1 issue</span>', one)
 
 
 if __name__ == "__main__":

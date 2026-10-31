@@ -601,13 +601,14 @@ def _generate_category_section(category, issues, server_port):
         subtype_html = f'<span class="subtype-tag">{html.escape(subtype)}</span>' if subtype else ""
         muted_class, muted_tag, note_html = _muted_parts(issue)
         subtype_html += muted_tag
+        type_html = f"<code>{html.escape(issue_type)}</code>" if issue_type else ""
         issue_rows.append(f"""
                     <tr class="{sev_class}{inc_class}{muted_class}">
                         <td><span class="sev-badge {sev_class}">{html.escape(severity)}</span>{subtype_html}</td>
                         <td>{file_display}</td>
                         <td class="line-number">{line if line else "N/A"}</td>
                         <td>{html.escape(message)}{source_html}{note_html}</td>
-                        <td><code>{html.escape(issue_type)}</code></td>
+                        <td>{type_html}</td>
                     </tr>""")
 
     desc = CATEGORY_DESCRIPTIONS.get(category, "")
@@ -716,13 +717,14 @@ def _generate_file_section(file_path, issues, server_port):
     header_localhost_url = _open_url(server_port, file_path, first_line)
 
     file_link_html = f'<small style="margin-left: 8px;"><a href="{file_link}" class="alt-link" title="Open file: {html.escape(file_path)}">[file]</a></small>' if file_link else ''
+    count = f"{len(issues)} issue" + ("" if len(issues) == 1 else "s")
 
     return f"""
         <div class="file-section">
             <h4>
                 <a href="{header_localhost_url}" class="file-link" target="_blank" title="Open in Sublime Text at line {first_line}">{html.escape(file_name)}</a>
                 {file_link_html}
-                <span class="badge">{len(issues)} issues</span>
+                <span class="badge">{count}</span>
             </h4>
             <div class="file-path"><code>{html.escape(file_path)}</code></div>
             {''.join(category_groups)}
