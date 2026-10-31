@@ -40,6 +40,7 @@ EDITOR_ONLY_TESTS = {
     "run_tests.py", "test_hover.py",
     "test_negation_twin_filter.py", "test_report_filtering.py",
     "test_include_param_roles.py", "test_pystrings.py", "test_report_picker.py", "test_builtin.py",
+    "test_report_server.py",
 }
 
 # --apply skips these files whole; move a divergence into a FRONTEND file where possible

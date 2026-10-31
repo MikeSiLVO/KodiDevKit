@@ -11,7 +11,9 @@ from .text import generate_text_report
 logger = logging.getLogger(__name__)
 
 _server = None
-_server_port = 48273
+# saved reports embed this port and get reopened after Sublime restarts
+_PREFERRED_PORT = 48273
+_server_port = _PREFERRED_PORT
 _report_data = {}
 
 
@@ -166,22 +168,29 @@ def set_report_data(all_issues, skin_name, skin_path, timestamp):
 
 
 def start_server():
-    """Start the HTTP server in a background thread."""
-    global _server
+    """Start the HTTP server in a background thread, on a free port if the usual one is refused."""
+    global _server, _server_port
 
     if _server is not None:
         logger.info("Server already running on port %d", _server_port)
         return _server_port
 
-    try:
-        _server = HTTPServer(('localhost', _server_port), FileOpenHandler)
-        thread = threading.Thread(target=_server.serve_forever, daemon=True)
-        thread.start()
-        logger.info("Report server started on http://localhost:%d", _server_port)
-        return _server_port
-    except Exception as e:
-        logger.error("Failed to start report server: %s", e)
+    server = None
+    for port in (_PREFERRED_PORT, 0):
+        try:
+            server = HTTPServer(('localhost', port), FileOpenHandler)
+            break
+        except Exception as e:
+            logger.error("Report server could not bind port %d: %s", port, e)
+    if server is None:
         return None
+
+    _server = server
+    _server_port = server.server_port
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Report server started on http://localhost:%d", _server_port)
+    return _server_port
 
 
 def stop_server():
