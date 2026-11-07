@@ -1,0 +1,9 @@
+  KodiDevKit 3.3.1
+  =================
+
+  Fixes
+  -----
+  - The labels of a list script.skinvariables fills with get_encoded_string
+    count as URL-encoded in plugin URLs and xsp filters.
+  - Every value in a plugin URL query is checked, not only those before the
+    first space.
