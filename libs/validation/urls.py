@@ -11,7 +11,7 @@ _VALUE_KEY = re.compile(r'(?:%22|")value(?:%22|")\s*(?:%3A|:)', re.IGNORECASE)
 _VALUE_END = re.compile(r'%5D|%7D|[\]}]', re.IGNORECASE)
 _EXPRESSION = re.compile(r'\$(ESC)?(INFO|VAR)\[')
 _PLUGIN_QUERY = re.compile(r'plugin://[^\s"\'?]*\?', re.IGNORECASE)
-_URL_END = re.compile(r'[\s"\',)]')
+_URL_END = re.compile(r'["\',)]')
 # an '&' that starts no key=value pair, or a '|', inside a value
 _DATA_SEPARATOR = re.compile(r'&(?![\w.-]+=)|\|')
 # the key of the last pair a text opens, as in ?key= or &key=
@@ -51,7 +51,7 @@ def _plain(name):
 
 
 def _url_end(text, pos):
-    """Index where the URL starting before the position ends: a space, quote, comma or ')'."""
+    """Index where the URL starting before the position ends: a quote, comma or ')'."""
     found = _URL_END.search(text, pos)
     return found.start() if found else len(text)
 

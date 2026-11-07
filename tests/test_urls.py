@@ -222,6 +222,10 @@ class TestPluginValues(unittest.TestCase):
         text = 'RunPlugin("plugin://script.skinvariables/?info=get_encoded_string&window_prop=E&&$INFO[ListItem.Label]")'
         self.assertEqual(self.kinds(text), [])
 
+    def test_a_space_stays_inside_the_query(self):
+        self.assertEqual(self.kinds("plugin://p/?q=$INFO[ListItem.Artist] $INFO[ListItem.Album] Album"),
+                         [("$INFO[ListItem.Artist]", RAW, None), ("$INFO[ListItem.Album]", RAW, None)])
+
     def test_only_the_query_counts(self):
         self.assertEqual(self.kinds("plugin://x/$INFO[ListItem.Title]/"), [])
         self.assertEqual(self.kinds("RunPlugin(plugin://x/?a=b) + $INFO[ListItem.Title]"), [])
