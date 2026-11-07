@@ -16,9 +16,33 @@ PATH = "videodb://movies/titles/?xsp=%7B%22rules%22%3A%7B%22and%22%3A%5B%7B%22fi
        "%22operator%22%3A%22is%22%2C%22value%22%3A{value}%7D%5D%7D%2C%22type%22%3A%22movies%22%7D"
 
 
+ENCODER = ("plugin://script.skinvariables/?info=get_encoded_string&unencoded_paths=true"
+           "&&$INFO[ListItem.Label]&&$INFO[ListItem.Title]")
+
+
 def path(value, field="title"):
     """An xsp path with a single "is" rule, percent-encoded as skins write it."""
     return PATH.format(field=field, value=value)
+
+
+def url_rows(home, includes="<includes/>"):
+    """The xsp and plugin URL rows a one-window skin with that Home.xml and Includes.xml gives."""
+    files = {
+        "addon.xml": '<addon id="skin.t" version="1.0.0"><requires><import addon="xbmc.gui" '
+                     'version="5.17.0"/></requires><extension point="xbmc.gui.skin">'
+                     '<res folder="16x9" default="true"/></extension></addon>',
+        "16x9/Includes.xml": includes,
+        "16x9/Home.xml": home,
+    }
+    with tempfile.TemporaryDirectory() as skin:
+        for rel, text in files.items():
+            os.makedirs(os.path.dirname(os.path.join(skin, rel)), exist_ok=True)
+            with open(os.path.join(skin, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(skin)
+        return [r for r in provider.check_values() if r.get("rule", "").startswith(("xml.xsp", "xml.plugin"))]
 
 
 class TestUrlValues(unittest.TestCase):
@@ -78,7 +102,17 @@ class TestUrlValues(unittest.TestCase):
                 f.write('<window><controls><control type="list" id="9110"><content>'
                         '<item><label>a</label><property name="Dir">$INFO[ListItem.Director]</property></item>'
                         '</content></control></controls></window>')
-            self.assertEqual(value_sources([path]), {"item:9110:dir": ["$INFO[ListItem.Director]"]})
+            self.assertEqual(value_sources([path]), {"item:9110:dir": ["$INFO[ListItem.Director]"], "content:9110": [""]})
+
+    def test_scan_reads_each_list_path_by_id(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "Home.xml")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write('<window><controls><control type="list" id="4001"><content>'
+                        f'{ENCODER.replace("&", "&amp;")}</content></control>'
+                        '<control type="list"><content>videodb://movies/titles/</content></control>'
+                        '</controls></window>')
+            self.assertEqual(value_sources([path]), {"content:4001": [ENCODER]})
 
     def test_keyboard_skin_string_is_raw(self):
         self.assertEqual(self.kinds("%5B%22$INFO[Skin.String(search)]%22%5D", {"skin:search": ["keyboard"]}),
@@ -102,7 +136,7 @@ class TestUrlRows(unittest.TestCase):
     """Xsp and plugin URL rows: errors for raw or escaped typed values, warnings for the rest."""
 
     def test_rows(self):
-        """Check the rule, severity and subject of every URL fault in one window."""
+        """Test the rule, severity and subject of every URL fault in one window."""
         home = (
             '<window><controls>'
             '<control type="button" id="10">'
@@ -125,22 +159,7 @@ class TestUrlRows(unittest.TestCase):
             '<control type="list" id="56"><content>' + path("%5B%22$INFO[Control.GetLabel(9).Index(1)]%22%5D").replace("&", "&amp;")
             + '</content></control>'
             '</controls></window>')
-        files = {
-            "addon.xml": '<addon id="skin.t" version="1.0.0"><requires><import addon="xbmc.gui" '
-                         'version="5.17.0"/></requires><extension point="xbmc.gui.skin">'
-                         '<res folder="16x9" default="true"/></extension></addon>',
-            "16x9/Includes.xml": "<includes/>",
-            "16x9/Home.xml": home,
-        }
-        with tempfile.TemporaryDirectory() as skin:
-            for rel, text in files.items():
-                os.makedirs(os.path.dirname(os.path.join(skin, rel)), exist_ok=True)
-                with open(os.path.join(skin, rel), "w", encoding="utf-8") as f:
-                    f.write(text)
-            provider = InfoProvider()
-            provider.settings = {}
-            provider.init_addon(skin)
-            rows = [r for r in provider.check_values() if r.get("rule", "").startswith(("xml.xsp", "xml.plugin"))]
+        rows = url_rows(home)
         found = sorted((r["rule"], r["severity"], r["subject"]) for r in rows)
         self.assertEqual(found, [
             ("xml.plugin-typed-text", "warning", "$INFO[Control.GetLabel(312).Index(1)]"),
@@ -155,6 +174,29 @@ class TestUrlRows(unittest.TestCase):
         error = next(r["message"] for r in rows if r["rule"] == "xml.xsp-unencoded")
         self.assertIn("'Law & Order' empties the list", error)
         self.assertIn("URL-encode it first", error)
+
+    def test_encoder_list_labels_in_a_plugin_url(self):
+        """The labels of an encoder list pass through variables unreported."""
+        includes = (
+            '<includes>'
+            '<variable name="Path_Encoded_Label"><value>$INFO[Container(4001).ListItemAbsolute(0).Label]</value></variable>'
+            '<variable name="Path_Raw_Label"><value>$INFO[Container(4002).ListItemAbsolute(0).Label]</value></variable>'
+            '<variable name="Path_Youtube_Query"><value>$VAR[Path_Encoded_Label]</value></variable>'
+            '</includes>')
+        home = (
+            '<window><controls>'
+            '<control type="list" id="4001"><content>' + ENCODER.replace("&", "&amp;") + '</content></control>'
+            '<control type="list" id="4002"><content>videodb://tvshows/titles/</content></control>'
+            '<control type="button" id="10">'
+            '<onclick>ActivateWindow(Videos,plugin://plugin.video.youtube/kodion/search/query/'
+            '?q=$VAR[Path_Youtube_Query],return)</onclick>'
+            '<onclick>ActivateWindow(Videos,plugin://plugin.video.youtube/kodion/search/query/'
+            '?q=$VAR[Path_Raw_Label],return)</onclick>'
+            '</control>'
+            '</controls></window>')
+        rows = url_rows(home, includes)
+        self.assertEqual(sorted((r["rule"], r["subject"]) for r in rows),
+                         [("xml.plugin-unencoded", "$INFO[Container(4002).ListItemAbsolute(0).Label]")])
 
 
 class TestPluginValues(unittest.TestCase):
@@ -198,6 +240,26 @@ class TestPluginValues(unittest.TestCase):
                          [("$INFO[ListItem.Title]", RAW, "$VAR[Title]")])
         self.assertEqual(self.kinds("plugin://p/?genre=$VAR[Genre]", variables=variables),
                          [("$VAR[Genre]", RAW, None)])
+
+    def test_labels_of_an_encoder_list_are_safe(self):
+        """An encoder list holds an encoded label per item."""
+        sources = {"content:4001": [ENCODER]}
+        variables = {"Path_Encoded_Label": ["$INFO[Container(4001).ListItemAbsolute(0).Label]"],
+                     "Path_Youtube_Query": ["$VAR[Path_Encoded_Label]"], "Encoder": [ENCODER]}
+        self.assertEqual(self.kinds("plugin://p/?q=$VAR[Path_Youtube_Query]", sources, variables), [])
+        self.assertEqual(self.kinds("plugin://p/?q=$INFO[Container(4001).ListItem(1).Label]", sources), [])
+        self.assertEqual(self.kinds("plugin://p/?q=$INFO[Container(4001).ListItem.Label]",
+                                    {"content:4001": ["$VAR[Encoder]"]}, variables), [])
+
+    def test_labels_of_other_lists_stay_raw(self):
+        label = "$INFO[Container(4001).ListItemAbsolute(0).Label]"
+        text = f"plugin://p/?q={label}"
+        self.assertEqual(self.kinds(text), [(label, RAW, None)])
+        self.assertEqual(self.kinds(text, {"content:4001": ["videodb://movies/titles/"]}), [(label, RAW, None)])
+        self.assertEqual(self.kinds(text, {"content:4001": [ENCODER, ""]}), [(label, RAW, None)])
+        self.assertEqual(self.kinds(text, {"content:4001": ["$VAR[Missing]"]}), [(label, RAW, None)])
+        self.assertEqual(self.kinds("plugin://p/?q=$INFO[Container(4001).ListItem.Title]", {"content:4001": [ENCODER]}),
+                         [("$INFO[Container(4001).ListItem.Title]", RAW, None)])
 
     def test_time_date_and_sort_words_need_no_encoding(self):
         self.assertEqual(self.kinds("plugin://p/?t=$INFO[System.Time(hh)]&d=$INFO[System.Date]"

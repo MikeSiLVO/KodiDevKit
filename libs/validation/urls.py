@@ -23,6 +23,10 @@ _ENCODER = re.compile(r'get_encoded_string\b.*?\bwindow_prop=([^&"\s,)]+)', re.I
 _PROPERTY = re.compile(r'window(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
 _SKIN_STRING = re.compile(r'skin\.string\((.+)\)$', re.IGNORECASE)
 _ITEM_PROPERTY = re.compile(r'container\((\d+)\)\.listitem\w*(?:\([^)]*\))?\.property\((.+)\)$', re.IGNORECASE)
+_ITEM_LABEL = re.compile(r'container\((\d+)\)\.listitem\w*(?:\([^)]*\))?\.label$', re.IGNORECASE)
+# script.skinvariables fills a list with one item per && path, its label URL-encoded
+_ENCODER_LIST = re.compile(r'\binfo=get_encoded_string\b', re.IGNORECASE)
+_ONLY_VAR = re.compile(r'\s*\$VAR\[([^\]]+)\]\s*$')
 # an edit control's text as typed; no other control answers Index(1)
 _TYPED = re.compile(r'control\.getlabel\(\s*\d+\s*\)\.index\(\s*1\s*\)$', re.IGNORECASE)
 # characters a URL query or a JSON string cannot carry unencoded
@@ -58,7 +62,7 @@ def _worst(kinds):
 
 
 def value_sources(paths):
-    """Each value the skin stores per property, skin string and static item property, by name."""
+    """Each value the skin stores per property, skin string, static item property and list id."""
     sources = {}
     for path in paths:
         root = get_root_from_file(path)
@@ -72,6 +76,11 @@ def value_sources(paths):
                 if control is not None and (control.get("id") or "").isdigit():
                     key = f"item:{control.get('id')}:{element.get('name').casefold()}"
                     sources.setdefault(key, []).append(element.text or "")
+            parent = element.getparent()
+            if element.tag == "content" and parent is not None and parent.tag == "control":
+                control_id = parent.get("id") or ""
+                if control_id.isdigit():
+                    sources.setdefault(f"content:{control_id}", []).append((element.text or "").strip())
             for text in [element.text or ""] + list(element.attrib.values()):
                 for name, args in builtin_calls(text, ("SetProperty", "Skin.SetString")):
                     if not args or "$" in args[0]:
@@ -171,7 +180,24 @@ class UrlValues:
             return SAFE if _plain(found.group(1)) else UNTRACED
         if _TYPED.search(info):
             return TYPED
+        found = _ITEM_LABEL.search(info)
+        if found and self._encoder_list(found.group(1)):
+            return SAFE
         return SAFE if _plain(info.rsplit(".", 1)[-1]) else RAW
+
+    def _encoder_list(self, control_id):
+        """True when lists with the id exist and the encoder fills each one."""
+        paths = self.sources.get(f"content:{control_id}")
+        return bool(paths) and all(self._encoder_path(path, frozenset()) for path in paths)
+
+    def _encoder_path(self, text, seen):
+        """True when a list path calls the encoder, or is only a $VAR whose every value does."""
+        if _ENCODER_LIST.search(text):
+            return True
+        found = _ONLY_VAR.match(text)
+        name = found.group(1).strip() if found else ""
+        values = self.variables.get(name) if name not in seen else None
+        return bool(values) and all(self._encoder_path(value, seen | {name}) for value in values)
 
     def _stored_kind(self, key, seen):
         """Kind of a property, skin string or static item property, from every value it holds."""
