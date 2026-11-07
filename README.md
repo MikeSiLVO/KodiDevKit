@@ -22,8 +22,6 @@ A Sublime Text 4 plugin for Kodi skin and addon development. Provides validation
 
 **Package Control** (recommended): Install Package Control if you don't have it, then open the Command Palette (`Ctrl+Shift+P`), select "Package Control: Install Package", and search for "KodiDevKit".
 
-**Installer**: Download `install.py` from the [latest release](https://github.com/MikeSiLVO/KodiDevKit/releases/latest) and run it with Python. It finds Sublime Text's `Packages` folder and installs the package there; `--uninstall` removes it.
-
 **Manual**: Clone into your Sublime Text `Packages` folder:
 
 ```bash
