@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -149,8 +151,17 @@ def pairs(kdk: Path):
         yield rel, src, kdk / rel
 
 
+def versions(kdk: Path) -> tuple[str, str]:
+    """KodiDevKit's newest messages.json version and kdk's __version__, which release as one."""
+    released = [k for k in json.loads((HERE / "messages.json").read_text(encoding="utf-8")) if k[:1].isdigit()]
+    ours = max(released, key=lambda v: tuple(int(p) for p in v.split(".")))
+    init = (kdk / "src" / "kdk" / "__init__.py").read_text(encoding="utf-8")
+    found = re.search(r'^__version__ = "([^"]+)"', init, re.MULTILINE)
+    return ours, found.group(1) if found else "unknown"
+
+
 def check(kdk: Path) -> int:
-    """Check every mirrored file and print a summary; 1 on drift or a missing file, else 0."""
+    """Check mirror and versions, print a summary; 1 on drift, a missing file or split versions."""
     drifted, missing, exempt_ok, textonly, clean = [], [], 0, 0, 0
     for rel, src, dst in pairs(kdk):
         if not dst.exists():
@@ -175,6 +186,8 @@ def check(kdk: Path) -> int:
 
     print(f"byte-identical: {clean}   logic-identical (text differs): {textonly}   "
           f"declared-divergent: {exempt_ok}   DRIFT: {len(drifted)}   missing: {len(missing)}")
+    ours, theirs = versions(kdk)
+    print(f"version: KodiDevKit {ours}   kdk {theirs}" + ("" if ours == theirs else "   MISMATCH"))
     for rel in missing:
         print(f"  MISSING in kdk: {rel}")
     for rel, names in drifted:
@@ -191,7 +204,7 @@ def check(kdk: Path) -> int:
             print(f"`--apply` will NOT touch {len(manual)} (declared divergent); port by hand "
                   "or widen the entry in EXEMPT: " + ", ".join(manual))
         return 1
-    return 0
+    return int(ours != theirs)
 
 
 def apply(kdk: Path) -> int:
