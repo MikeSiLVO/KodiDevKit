@@ -71,6 +71,21 @@ class TestLoadOrder(_SkinCase):
         node, _ = skin.map_map["16x9"]["M"]
         self.assertEqual(node.find("entry").text, "parent")
 
+    def test_file_reached_twice_loads_once(self):
+        """A file two include files name loads once, its definitions not reported as shadowed."""
+        with open(os.path.join(self.path, "16x9", "Other.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes><include file="Nested.xml"/></includes>')
+        skin = self._skin('<include file="Nested.xml"/><include file="Other.xml"/>',
+                          '<constant name="W">1</constant><include name="I"><control type="label"/></include>')
+        self.assertEqual(skin.shadowed_defs["16x9"], [])
+        self.assertEqual(sum(f.endswith("Nested.xml") for f in skin.include_files["16x9"]), 1)
+
+    def test_files_naming_each_other_load_without_recursing(self):
+        """Two files naming each other each load once, both their constants kept."""
+        skin = self._skin('<include file="Nested.xml"/><constant name="A">1</constant>',
+                          '<include file="Includes.xml"/><constant name="B">2</constant>')
+        self.assertEqual(set(skin.constant_map["16x9"]), {"A", "B"})
+
     def test_include_with_params_and_no_definition_is_dropped(self):
         skin = self._skin('<include name="Bad"><param name="p">1</param><control type="label"/></include>')
         self.assertNotIn("Bad", skin.include_map["16x9"])

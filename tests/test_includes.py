@@ -336,6 +336,8 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         skin.shadowed_defs = {folder: []}
         skin.include_files = {folder: []}
         skin.called_files = {folder: []}
+        skin.file_loads = {folder: {}}
+        skin._loading = []
         skin._resolver = None
         skin.update_includes(inc_path, folder)
         return skin

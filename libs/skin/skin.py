@@ -89,6 +89,10 @@ class Skin(Addon):
         self.shadowed_defs: dict[str, list[dict]] = {}
         # include files loaded under a condition, which Kodi only reads when it holds
         self.conditional_files: dict[str, set[str]] = {}
+        # condition chains each include file loaded under; Kodi loads a file once per settings state
+        self.file_loads: dict[str, dict[str, set[tuple[str, ...]]]] = {}
+        # files whose nested loads are under way, where a loop back stops
+        self._loading: list[str] = []
         # each <default> per type with its include conditions; a setting can swap which one wins
         self.default_loads: dict[str, dict[str, list[tuple[Any, tuple[str, ...]]]]] = {}
         # files include calls name, which Kodi loads once a window resolves the call
@@ -373,6 +377,7 @@ class Skin(Addon):
             self.expression_source_map[folder] = {}
             self.shadowed_defs[folder] = []
             self.conditional_files[folder] = set()
+            self.file_loads[folder] = {}
             self.default_loads[folder] = {}
 
             include_file = check_paths(paths)
@@ -420,12 +425,14 @@ class Skin(Addon):
         queue.extend(called for calls in self.window_calls[folder].values() for called in calls)
         # each load queues the calls in its own bodies
         for called in queue:
-            if called not in self.include_files[folder]:
-                self.update_includes(called, folder)
+            self.update_includes(called, folder)
 
     def update_includes(self, xml_file, folder, conditions=()):
-        """Update maps from an include file and nested ones, noting if conditional; queue calls."""
+        """Update maps from include file tree once per state, marking conditionals; queue calls."""
         xml_file = os.path.normpath(xml_file)
+        loads = self.file_loads[folder].setdefault(xml_file, set())
+        if xml_file in self._loading or () in loads or conditions in loads:
+            return None
         if not os.path.exists(xml_file) or not is_inside(xml_file, self.path):
             logger.info("Could not find include file %s", xml_file)
             return None
@@ -434,6 +441,7 @@ class Skin(Addon):
         if root is None:
             return []
 
+        loads.add(conditions)
         self.include_files[folder].append(xml_file)
         self.called_files.setdefault(folder, []).extend(self._called_files(root, folder))
         if conditions:
@@ -443,7 +451,11 @@ class Skin(Addon):
         self._load_constants(root, folder, xml_file)
         self._load_expressions(root, folder, xml_file)
         self._load_variables(root, folder, xml_file)
-        self._load_includes(root, folder, xml_file, conditions)
+        self._loading.append(xml_file)
+        try:
+            self._load_includes(root, folder, xml_file, conditions)
+        finally:
+            self._loading.pop()
         self._load_maps(root, folder, xml_file)
 
     def _keep_first(self, kind, table, folder, name, node, xml_file, value):
