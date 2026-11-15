@@ -34,6 +34,19 @@ class TestAddonType(unittest.TestCase):
         """A skin importing xbmc.python for a bundled script still loads as a skin."""
         self.assertIs(self._load(META_EXT + SKIN_EXT + SCRIPT_EXT), Skin)
 
+    def test_res_without_folder_reads_the_skin_root(self):
+        """A <res> with no folder attribute loads, its xml read from the add-on root."""
+        with tempfile.TemporaryDirectory() as path:
+            with open(os.path.join(path, "addon.xml"), "w", encoding="utf-8") as f:
+                f.write('<addon id="x" version="1.0.0"><extension point="xbmc.gui.skin">'
+                        '<res width="1280" height="720" default="true"/></extension></addon>')
+            with open(os.path.join(path, "Includes.xml"), "w", encoding="utf-8") as f:
+                f.write('<includes><constant name="W">1</constant></includes>')
+            skin = Addon.by_project(path, {})
+            assert isinstance(skin, Skin)
+            self.assertEqual(skin.xml_folders, [""])
+            self.assertIn("W", skin.constant_map[""])
+
     def test_script_listed_first_is_an_addon(self):
         """An add-on whose first extension is a script loads as a plain add-on."""
         self.assertIs(self._load(SCRIPT_EXT + SKIN_EXT), Addon)

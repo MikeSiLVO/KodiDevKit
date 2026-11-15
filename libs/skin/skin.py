@@ -310,9 +310,9 @@ class Skin(Addon):
             return builtin_controls, builtin_ranges, filename_to_window
 
     def load_xml_folders(self):
-        """Read xml folder names from addon.xml's <res folder=...> entries."""
+        """Load xml folder names from addon.xml's <res> entries, "" (add-on root) for no folder."""
         self.xml_folders = list(dict.fromkeys(
-            node.attrib["folder"] for node in self.root.findall('.//res')
+            node.get("folder", "") for node in self.root.findall('.//res')
         ))
 
     @property
