@@ -52,6 +52,19 @@ class TestParseErrors(unittest.TestCase):
             f.write(text)
         return path
 
+    def test_processing_instruction_in_a_control_is_dropped(self):
+        """A `<?name ?>` in a control leaves no node in the tree and no row with a non-text id."""
+        path = self._write("Home.xml", '<window><controls><control type="button" id="5">'
+                                       '<?editor fold?><posx>1</posx></control></controls></window>')
+        root = xml.get_root_from_file(path)
+        assert root is not None
+        self.assertTrue(all(isinstance(node.tag, str) for node in root.iter()))
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.path)
+        rows = provider.check_file(path) or []
+        self.assertTrue(all(isinstance(r.get("identifier", ""), str) for r in rows))
+
     def test_nested_grouplist_keeps_the_real_error(self):
         path = self._write("Nested.xml", '<window>\n<control type="grouplist">\n<control type="grouplist">\n'
                                          '<onclick>a < b</onclick>\n</control>\n</control>\n</window>')
