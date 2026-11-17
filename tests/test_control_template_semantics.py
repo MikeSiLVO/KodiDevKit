@@ -151,6 +151,19 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <enable>false</enable>
 </control>""")
 
+    def test_enable_on_controls_that_read_it(self):
+        """Controls drawing or focusing by their enable state take it; mover and resize do not."""
+        for release in ("omega", "piers"):
+            with self.subTest(release=release):
+                issues = self._issues("\n".join(
+                    f'<control type="{t}"><enable>Player.Bogus</enable></control>'
+                    for t in ("label", "progress", "ranges", "slider", "spincontrol", "scrollbar", "mover",
+                              "resize")), release)
+                self.assertEqual(sorted((i["rule"], i["message"].split(":")[0]) for i in issues),
+                                 [("xml.invalid-tag", "invalid tag for <control type=mover>"),
+                                  ("xml.invalid-tag", "invalid tag for <control type=resize>")]
+                                 + [("xml.unknown-info", "Kodi has no info 'Player.Bogus', it always reads false")] * 6)
+
     def test_gamecontrollerlist_align(self):
         """Gamecontrollerlist takes the label alignment in its constructor."""
         self._assert_clean("""

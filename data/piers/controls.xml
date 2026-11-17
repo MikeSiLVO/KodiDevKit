@@ -61,6 +61,7 @@
         <width min="int" max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
+        <enable>condition</enable>
         <font>font</font>
         <textcolor>color</textcolor>
         <focusedcolor>color</focusedcolor>
@@ -112,6 +113,7 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
+        <enable>condition</enable>
         <include>nav_common</include>
         <hitrect x="position" y="position" w="position" h="position" bottom="position" right="position"></hitrect>
         <hitrectcolor>color</hitrectcolor>
@@ -241,6 +243,7 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
+        <enable>condition</enable>
         <include>nav_common</include>
         <colordiffuse>color</colordiffuse>
         <textureup colordiffuse="color" flipx="bool" flipy="bool" border="coords" diffuse="path" infill="bool" background="bool">path</textureup>
@@ -287,6 +290,7 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
+        <enable>condition</enable>
         <include>nav_common</include>
         <texturesliderbar colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbar>
         <texturesliderbardisabled colordiffuse="color" border="coords" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</texturesliderbardisabled>
@@ -340,6 +344,7 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
+        <enable>condition</enable>
         <reveal>bool</reveal>
         <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturebg>
         <colordiffuse>color</colordiffuse>
@@ -354,6 +359,7 @@
         <width max="int">int</width>
         <height max="int">int</height>
         <include>common</include>
+        <enable>condition</enable>
         <texturebg colordiffuse="color" border="coords" infill="bool" diffuse="path" flipx="bool" flipy="bool" background="bool">path</texturebg>
         <colordiffuse>color</colordiffuse>
         <lefttexture border="coords" colordiffuse="color" diffuse="path" flipx="bool" flipy="bool" infill="bool" background="bool">path</lefttexture>
