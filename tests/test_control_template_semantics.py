@@ -51,7 +51,7 @@ class TestControlTemplateSemantics(unittest.TestCase):
             '<?xml version="1.0" encoding="UTF-8"?>\n<window>\n<controls>\n' + controls + "\n</controls>\n</window>",
         )
         provider = InfoProvider()
-        provider.settings = {}
+        provider.settings = {"kodi_release": release}
         provider.load_data(release)
         provider.init_addon(self.test_dir)
         return provider.check_values()
@@ -163,6 +163,24 @@ class TestControlTemplateSemantics(unittest.TestCase):
                                  [("xml.invalid-tag", "invalid tag for <control type=mover>"),
                                   ("xml.invalid-tag", "invalid tag for <control type=resize>")]
                                  + [("xml.unknown-info", "Kodi has no info 'Player.Bogus', it always reads false")] * 6)
+
+    def test_position_limits_and_imagepath_attributes(self):
+        """Camera and size limits take % and r; a multiimage imagepath takes flips and infill."""
+        self._assert_clean("""
+<control type="group"><camera x="50%" y="100r" /></control>
+<control type="label">
+    <width min="10%" max="50%">auto</width>
+    <height max="40r">auto</height>
+</control>
+<control type="multiimage">
+    <imagepath flipx="true" flipy="true" border="5" infill="false">x/</imagepath>
+</control>""")
+
+    def test_gamewindow_pixels_on_omega_only(self):
+        """An Omega gamewindow reads <pixels>; a Piers one ignores it."""
+        controls = '<control type="gamewindow"><pixels>$INFO[Player.Art(thumb)]</pixels></control>'
+        self.assertEqual(self._issues(controls, "omega"), [])
+        self.assertEqual([i["rule"] for i in self._issues(controls, "piers")], ["xml.invalid-tag"])
 
     def test_gamecontrollerlist_align(self):
         """Gamecontrollerlist takes the label alignment in its constructor."""
