@@ -5,7 +5,7 @@ import re
 import logging
 from functools import lru_cache
 
-from .expressions import resolve_params_in_text
+from .expressions import PARAM_PATTERN, resolve_params_in_text
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -46,9 +46,6 @@ def create_issue(message, file="", line=0, **kwargs):
     return issue
 
 
-_PARAM_PATTERN = re.compile(r'\$PARAM\[([^\]]+)\]')
-
-
 def resolve_param_in_name(name, param_context=None, cache=None):
     """Resolve $PARAM in a name from the context, emptying unknown ones."""
     if not name or "$PARAM[" not in name:
@@ -66,7 +63,7 @@ def resolve_param_in_name(name, param_context=None, cache=None):
             return param_context[param_name]
         return ''
 
-    resolved = _PARAM_PATTERN.sub(replace_param, name)
+    resolved = PARAM_PATTERN.sub(replace_param, name)
 
     if cache is not None and cache_key is not None:
         cache[cache_key] = resolved
@@ -273,7 +270,7 @@ def merge_include_issues(issues):
         empty_action = _EMPTY_ACTION.match(message)
         line_text = source_line(inc_file, inc_line) if inc_file and inc_line else ""
         # an empty action's $PARAM is the one in its text, not one in its condition
-        param = _PARAM_PATTERN.search(line_text.split(">", 1)[-1] if empty_action else line_text)
+        param = PARAM_PATTERN.search(line_text.split(">", 1)[-1] if empty_action else line_text)
         # a $PARAM value is written at the call site, the line to fix, unless no call passes one
         if not (inc_file and inc_line) or (param and not empty_action):
             result.append(issue)

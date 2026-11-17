@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 from ..utils.files import read_xbt_names
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
-from ..utils.expressions import is_dynamic_expression
+from ..utils.expressions import PARAM_PATTERN, is_dynamic_expression
 from ..utils.validation import normalize_control_id, skinshortcuts_files
 from ..validation.constants import CONTROL_ACTION_TAGS, TEXTURE_TAGS, WINDOW_ACTION_TAGS
 
@@ -22,7 +22,6 @@ _LOCALIZE_PATTERN = re.compile(r"\$LOCALIZE\[\s*(\d+)")
 _LABEL_BLOCK_MARKERS = ("$INFO[", "$VAR[", "$PARAM[", "$NUMBER[", "$ADDON[", "$MAP[")
 _LABEL_ATTRS = {"viewtype": ("label",), "fontset": ("idloc",), "label": ("fallback",), "label2": ("fallback",),
                 "altlabel": ("fallback",), "hinttext": ("fallback",)}
-_UNKNOWN_PARAM = re.compile(r"\$PARAM\[[^\]]*\]")
 _NAVIGATION_TAGS = ("onup", "ondown", "onleft", "onright", "onnext", "onprev")
 # arguments Kodi reads as window names or ids: Window.* conditions, Window(x) and window builtins
 _WINDOW_REFS = re.compile(
@@ -284,7 +283,7 @@ class SkinIndex:
                     expanded_ids = set()
                     for node in resolved.iter('control'):
                         # a param the call never passed is empty in Kodi
-                        ctrl_id = _UNKNOWN_PARAM.sub("", node.get('id') or "")
+                        ctrl_id = PARAM_PATTERN.sub("", node.get('id') or "")
                         if ctrl_id and not is_dynamic_expression(ctrl_id):
                             expanded_ids.add(normalize_control_id(ctrl_id))
                     for node in resolved.iter('item'):

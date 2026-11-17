@@ -12,7 +12,8 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
-_PARAM_PATTERN = re.compile(r"\$PARAM\[\s*(?P<name>[A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
+# Kodi looks up everything to the matching bracket as written: any character, spaces and case kept
+PARAM_PATTERN = re.compile(r"\$PARAM\[(?P<name>(?:[^\[\]]|\[[^\[\]]*\])*)\]")
 _DEFAULT_DYNAMIC_PREFIXES = tuple(
     p.casefold()
     for p in (
@@ -127,8 +128,8 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *
     if not text or not isinstance(text, str) or "$" not in text:
         return text, "NO_PARAMS"
     if not params:
-        if _PARAM_PATTERN.search(text):
-            if _PARAM_PATTERN.fullmatch(text):
+        if PARAM_PATTERN.search(text):
+            if PARAM_PATTERN.fullmatch(text):
                 return text, "SINGLE_UNDEFINED"
             return text, "PARTIAL_RESOLVED"
         return text, "NO_PARAMS"
@@ -146,13 +147,13 @@ def resolve_params_in_text(text: str, params: Optional[dict[str, str]] = None, *
         undefined_params += 1
         return m.group(0)
 
-    result = _PARAM_PATTERN.sub(_sub, text)
+    result = PARAM_PATTERN.sub(_sub, text)
 
     if total_params == 0:
         status = "NO_PARAMS"
     elif undefined_params == 0:
         status = "ALL_RESOLVED"
-    elif undefined_params == 1 and _PARAM_PATTERN.fullmatch(text):
+    elif undefined_params == 1 and PARAM_PATTERN.fullmatch(text):
         status = "SINGLE_UNDEFINED"
     else:
         status = "PARTIAL_RESOLVED"
@@ -376,7 +377,7 @@ def get_param_names_in_context(include_node, xpath_pattern: str) -> set[str]:
             if not match or not isinstance(match, str):
                 continue
 
-            for param_match in _PARAM_PATTERN.finditer(match):
+            for param_match in PARAM_PATTERN.finditer(match):
                 param_name = param_match.group("name")
                 if param_name:
                     param_names.add(param_name)

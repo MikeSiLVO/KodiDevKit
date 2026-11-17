@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-import re
 import time
 from pathlib import Path
 
-from ..utils.expressions import resolve_params_in_text
+from ..utils.expressions import PARAM_PATTERN, resolve_params_in_text
 from ..utils.files import check_paths, is_inside
 from ..utils.infobool import condition_states
 from ..utils.xml import get_params, get_root_from_file
@@ -29,9 +28,6 @@ logger.propagate = True
 def _same_definition(a, b):
     """Whether two definition elements have the same text and attributes."""
     return b is not None and (a.text or "").strip() == (b.text or "").strip() and dict(a.attrib) == dict(b.attrib)
-
-
-_PARAM_REF = re.compile(r"\$PARAM\[([^,\]]+)")
 
 
 def _param_uses(include_node):
@@ -56,8 +52,8 @@ def _param_uses(include_node):
                 use = ("tag", node.tag)
             else:
                 use = ("attr", attr)
-            for match in _PARAM_REF.finditer(value):
-                yield match.group(1).strip(), use
+            for match in PARAM_PATTERN.finditer(value):
+                yield match.group("name"), use
 
 
 class Skin(Addon):

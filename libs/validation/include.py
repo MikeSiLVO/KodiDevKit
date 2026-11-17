@@ -11,6 +11,7 @@ from ..utils.validation import (
     find_includes_in_skinshortcuts_template,
     find_skinshortcuts_template,
     reference_issues,
+    resolve_param_in_name,
     shadowed_issues,
     should_report_progress,
 )
@@ -97,27 +98,6 @@ class ValidationInclude:
 
         return False
 
-    def _resolve_include_name(self, name, params=None):
-        """Resolve $PARAM references in an include name, emptying any left undefined."""
-        if not name or "$PARAM[" not in name:
-            return name
-
-        if params:
-            resolved_name, status = resolve_params_in_text(name, params)
-            if status in ("ALL_RESOLVED", "NO_PARAMS"):
-                return resolved_name
-            name = resolved_name
-
-        param_pattern = re.compile(r"\$PARAM\[\s*(?P<name>[A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
-        param_names = param_pattern.findall(name)
-
-        if param_names:
-            empty_params = {pname: "" for pname in param_names}
-            resolved_name, _ = resolve_params_in_text(name, empty_params)
-            return resolved_name
-
-        return name
-
     def check(self, progress_callback=None):
         """Check for undefined, unused or shadowed includes and a misnamed Includes.xml."""
         total_includes = sum(len(self.addon.include_map.get(f, {})) for f in self.addon.xml_folders)
@@ -162,7 +142,7 @@ class ValidationInclude:
                     if not name:
                         continue
 
-                    resolved_name = self._resolve_include_name(name)
+                    resolved_name = resolve_param_in_name(name)
 
                     # a name made only of $PARAM still counts its values as used
                     if not resolved_name.strip() and "$PARAM[" not in name:
@@ -185,7 +165,7 @@ class ValidationInclude:
                     if not include_name or include_name.startswith("$"):
                         continue
 
-                    resolved_include_name = self._resolve_include_name(include_name)
+                    resolved_include_name = resolve_param_in_name(include_name)
 
                     include_def = None
                     params = None

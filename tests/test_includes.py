@@ -304,6 +304,14 @@ class TestDynamicExpressionUtils(unittest.TestCase):
         self.assertEqual(resolved, "<label>Hello</label>")
         self.assertEqual(status, "ALL_RESOLVED")
 
+    def test_param_name_is_read_as_written(self):
+        """Any character names a param, padding included; a lowercase $param is no reference."""
+        params = {"pos.x": "50", " a ": "padded", "a[1]": "nested"}
+        self.assertEqual(resolve_params_in_text("$PARAM[pos.x]", params), ("50", "ALL_RESOLVED"))
+        self.assertEqual(resolve_params_in_text("$PARAM[ a ]|$PARAM[a[1]]", params)[0], "padded|nested")
+        self.assertEqual(resolve_params_in_text("$PARAM[a]", {" a ": "x"})[1], "SINGLE_UNDEFINED")
+        self.assertEqual(resolve_params_in_text("$param[pos.x]", params)[1], "NO_PARAMS")
+
 
 class TestParamSubstitutionWithSkin(unittest.TestCase):
     """Param substitution and include resolution, covering nested includes and missing params."""
@@ -480,6 +488,28 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         result = self._resolve_and_tostring(skin, window_xml)
 
         self.assertIn("<label>X,Y</label>", result)
+
+    def test_dotted_param_default_names_an_include(self):
+        """An include a dotted param's default names is spliced; a dotted param fills its tag."""
+        skin = self._create_skin_with_includes("""
+            <includes>
+                <include name="Anim.Slide">
+                    <animation effect="fade" time="200">WindowOpen</animation>
+                </include>
+                <include name="Row">
+                    <param name="animation.new" default="Anim.Slide"/>
+                    <param name="pos.x" default="50"/>
+                    <definition>
+                        <control type="button">
+                            <posx>$PARAM[pos.x]</posx>
+                            <include content="$PARAM[animation.new]"/>
+                        </control>
+                    </definition>
+                </include>
+            </includes>""")
+        result = self._resolve_and_tostring(skin, '<window><controls><include content="Row"/></controls></window>')
+        self.assertIn("<posx>50</posx>", result)
+        self.assertIn("WindowOpen", result)
 
     def test_missing_param_stays_literal(self):
         """Test that missing params without defaults stay as $PARAM[...]."""

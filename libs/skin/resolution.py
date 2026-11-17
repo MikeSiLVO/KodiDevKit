@@ -9,6 +9,7 @@ from lxml import etree as ET
 
 from ..utils.expressions import expression_names, flatten_expressions, resolve_params_in_text
 from ..utils.infobool import static_value
+from ..utils.validation import resolve_param_in_name
 from ..utils.xml import get_params
 from ..skin.include import SkinInclude
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
@@ -238,18 +239,7 @@ class SkinResolution:
             call_params = get_params(include_node, "value")
 
             # unknown $PARAM names survive our param pass; Kodi's empties them, so empty for lookup
-            if inc_name and "$PARAM[" in inc_name:
-                resolved_name, status = resolve_params_in_text(inc_name, call_params)
-                if status in ("ALL_RESOLVED", "NO_PARAMS"):
-                    inc_name = resolved_name
-                else:
-                    param_pattern = re.compile(r"\$PARAM\[\s*(?P<name>[A-Za-z0-9_\-]+)\s*\]", re.IGNORECASE)
-                    param_names = param_pattern.findall(resolved_name)
-                    if param_names:
-                        empty_params = {pname: "" for pname in param_names}
-                        inc_name, _ = resolve_params_in_text(resolved_name, empty_params)
-                    else:
-                        inc_name = resolved_name
+            inc_name = resolve_param_in_name(inc_name, call_params)
 
             # cycle check by stamped path; lxml proxy ids are reused
             path_attr = include_node.get("_kdk_inc_path")
