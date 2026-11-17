@@ -9,7 +9,7 @@ from pathlib import Path
 from ..utils.expressions import PARAM_PATTERN, resolve_params_in_text
 from ..utils.files import check_paths, is_inside
 from ..utils.infobool import condition_states
-from ..utils.xml import get_params, get_root_from_file
+from ..utils.xml import comment_only_lines, get_params, get_root_from_file
 from ..utils.validation import normalize_control_id
 from ..addon.addon import Addon
 from .maps import SkinMaps
@@ -23,6 +23,11 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
+
+
+def _has_content(node, commented):
+    """Whether Kodi keeps the definition: it holds an element, text or only comments."""
+    return node.find("*") is not None or bool((node.text or "").strip()) or node.sourceline in commented
 
 
 def _same_definition(a, b):
@@ -443,13 +448,14 @@ class Skin(Addon):
         if conditions:
             self.conditional_files[folder].add(xml_file)
 
-        self._load_defaults(root, folder, xml_file, conditions)
+        commented = comment_only_lines(xml_file)
+        self._load_defaults(root, folder, xml_file, conditions, commented)
         self._load_constants(root, folder, xml_file)
         self._load_expressions(root, folder, xml_file)
-        self._load_variables(root, folder, xml_file)
+        self._load_variables(root, folder, xml_file, commented)
         self._loading.append(xml_file)
         try:
-            self._load_includes(root, folder, xml_file, conditions)
+            self._load_includes(root, folder, xml_file, conditions, commented)
         finally:
             self._loading.pop()
         self._load_maps(root, folder, xml_file)
@@ -465,11 +471,11 @@ class Skin(Addon):
         table[folder][name] = value
         return True
 
-    def _load_defaults(self, root, folder, xml_file, conditions=()):
+    def _load_defaults(self, root, folder, xml_file, conditions=(), commented=frozenset()):
         """Load <default type="X"> entries, the first winning, each recorded with its conditions."""
         for node in root.findall("default"):
             control_type = node.attrib.get("type")
-            if control_type and node.find("*") is not None:
+            if control_type and _has_content(node, commented):
                 self._keep_first("default", self.default_map, folder, control_type, node, xml_file,
                                  (node, xml_file))
                 self.default_loads[folder].setdefault(control_type, []).append((node, conditions))
@@ -507,11 +513,11 @@ class Skin(Addon):
                                     "[" + node.text.strip() + "]"):
                     self.expression_source_map[folder][name] = (xml_file, node.sourceline or 0)
 
-    def _load_variables(self, root, folder, xml_file):
+    def _load_variables(self, root, folder, xml_file, commented=frozenset()):
         """Load <variable name="X"> entries, the first definition winning."""
         for node in root.findall("variable"):
             name = node.attrib.get("name")
-            if name and node.find("*") is not None:
+            if name and _has_content(node, commented):
                 self._keep_first("variable", self.variable_map, folder, name, node, xml_file,
                                  (node, xml_file))
 
@@ -523,11 +529,11 @@ class Skin(Addon):
             if name:
                 self.map_map[folder][name] = (node, xml_file)
 
-    def _load_includes(self, root, folder, xml_file, conditions=()):
+    def _load_includes(self, root, folder, xml_file, conditions=(), commented=frozenset()):
         """Load named includes, the first definition winning, and <include file> ones in place."""
         for node in root.findall("include"):
             name = node.attrib.get("name")
-            if name and node.find("*") is not None:
+            if name and _has_content(node, commented):
                 definition = node.find("definition")
                 params = get_params(node, "default")
                 if node.find("param") is not None and definition is None:

@@ -102,6 +102,19 @@ class TestParamResolution(ValidationTestCase):
         skin = Skin(path=self.skin_dir, settings={})
         self.assertEqual([i["rule"] for i in IncludeCheck(skin).check()], [])
 
+    def test_comment_only_definition_is_defined(self):
+        """An include or variable holding only a comment is defined; an empty one is not."""
+        from tests.base import VariableCheck
+        with open(os.path.join(self.xml_dir, "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes>\n<include name="Later">\n  <!-- filled in later -->\n</include>\n'
+                    '<variable name="Soon"><!-- todo --></variable>\n<include name="Bare"></include>\n</includes>')
+        with open(os.path.join(self.xml_dir, "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><include>Later</include><include>Bare</include>'
+                    '<control type="label"><label>$VAR[Soon]</label></control></controls></window>')
+        skin = Skin(path=self.skin_dir, settings={})
+        issues = IncludeCheck(skin).check() + VariableCheck(skin).check()
+        self.assertEqual([(i["rule"], i["subject"]) for i in issues], [("includes.undefined", "Bare")])
+
     def test_undefined_param_resolves_to_base_name(self):
         """Undefined $PARAM in an include name resolves to the base name."""
         includes_xml = os.path.join(self.xml_dir, "Includes.xml")

@@ -25,6 +25,8 @@ _tag_start_cache = {}
 _ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _START_TAG = re.compile(r"""<[A-Za-z_][\w:.-]*(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*/?>""")
+_COMMENT_ONLY = re.compile(r"""(?P<start><(?P<tag>[A-Za-z_][\w:.-]*)(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*>)"""
+                           r"(?:\s*<!--.*?-->)+\s*</(?P=tag)\s*>", re.DOTALL)
 _NOT_BRACKET = re.compile(r"[^()\[\]]+")
 
 _PARSE_MESSAGES = (
@@ -356,6 +358,16 @@ def get_root_from_file(xml_file):
 def blank_xml_comments(content):
     """Blank out `<!-- ... -->`, keeping every newline."""
     return _COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), content)
+
+
+def comment_only_lines(xml_file):
+    """Source lines of the elements whose only content is comments, which parsing leaves empty."""
+    try:
+        with open(xml_file, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except OSError:
+        return frozenset()
+    return frozenset(text.count("\n", 0, match.end("start")) + 1 for match in _COMMENT_ONLY.finditer(text))
 
 
 def tag_start_line(xml_file, line):
