@@ -71,45 +71,75 @@ def resolve_param_in_name(name, param_context=None, cache=None):
     return resolved
 
 
+def _forwarded(params, outer):
+    """A call's params with $PARAM filled from the outer param set, a lone undefined one dropped."""
+    if not any("$PARAM[" in value for value in params.values()):
+        return params
+    # a lone undefined $PARAM drops the <param>, leaving the include's default
+    return {k: resolve_param_in_name(v, outer) for k, v in params.items()
+            if resolve_params_in_text(v, outer)[1] != "SINGLE_UNDEFINED"}
+
+
 class CallContexts:
-    """Param sets the folder's include calls pass, forwarded $PARAM filled from outer calls."""
+    """Param sets each include of the folder is called with, through forwards and built names."""
 
     def __init__(self, addon, folder):
         if not addon._include_usages_built:
             addon.index_builder.build_include_usages()
         self.usages = addon.include_usages.get(folder, {})
         self._includes = getattr(addon, "include_map", {}).get(folder, {})
-        self._filled = {}
+        self.contexts = self._fill()
 
-    def for_include(self, name, depth=0):
+    def for_include(self, name):
         """Param sets the include is called with, its defaults applied; empty when never called."""
-        if name not in self._filled:
-            self._filled[name] = []
-            defaults = self._includes[name][1] if name in self._includes else {}
-            for usage in self.usages.get(name, []):
-                for context in self.expand(usage, depth):
-                    self._filled[name].append({**defaults, **context})
-        return self._filled[name]
+        return list(self.contexts.get(name, {}).values())
 
-    def expand(self, usage, depth=0):
-        """Expand a call's params per outer param set, dropping a lone undefined $PARAM."""
-        params, outer = usage["params"], usage.get("enclosing")
-        if not outer or depth >= _FORWARD_DEPTH or not any("$PARAM[" in v for v in params.values()):
-            return [params]
-        # a lone undefined $PARAM drops the <param>, leaving the include's default
-        return [{k: resolve_param_in_name(v, context) for k, v in params.items()
-                 if resolve_params_in_text(v, context)[1] != "SINGLE_UNDEFINED"}
-                for context in self.for_include(outer, depth + 1)] or [params]
+    def _add(self, contexts, name, params):
+        """Add the param set a call gives the include, its defaults under it; True when new."""
+        filled = {**self._includes[name][1], **params} if name in self._includes else dict(params)
+        key = frozenset(filled.items())
+        bucket = contexts.setdefault(name, {})
+        if key in bucket:
+            return False
+        bucket[key] = filled
+        return True
+
+    def _fill(self):
+        """Fill each include's param sets from its calls, outer sets filling forwards and names."""
+        contexts = {}
+        inner = []
+        for raw, usages in self.usages.items():
+            for usage in usages:
+                if usage.get("enclosing"):
+                    inner.append((raw, usage))
+                else:
+                    # no param is defined outside an include; every $PARAM there is empty
+                    self._add(contexts, resolve_param_in_name(raw), usage["params"])
+        read = [0] * len(inner)
+        for _ in range(_FILL_PASSES):
+            added = False
+            for i, (raw, usage) in enumerate(inner):
+                # only the param sets the outer include gained since the last pass are new here
+                gained = list(contexts.get(usage["enclosing"], {}).values())[read[i]:]
+                read[i] += len(gained)
+                for outer in gained:
+                    added |= self._add(contexts, resolve_param_in_name(raw, outer),
+                                       _forwarded(usage["params"], outer))
+            if not added:
+                break
+        # a call in an include nothing calls still names what it would pass
+        for raw, usage in inner:
+            if not contexts.get(usage["enclosing"]):
+                self._add(contexts, raw, usage["params"])
+        return contexts
 
 
 def get_all_parameter_contexts(addon, folder):
-    """Get every param set the folder's includes take, defaults applied, forwarded $PARAM filled."""
-    calls = CallContexts(addon, folder)
+    """Get every param set the folder's includes take, defaults applied, forwards filled."""
     seen = set()
     all_contexts = []
-    for name in calls.usages:
-        for context in calls.for_include(name):
-            key = frozenset(context.items())
+    for contexts in CallContexts(addon, folder).contexts.values():
+        for key, context in contexts.items():
             if key not in seen:
                 seen.add(key)
                 all_contexts.append(context)
@@ -117,7 +147,8 @@ def get_all_parameter_contexts(addon, folder):
     return all_contexts
 
 
-_FORWARD_DEPTH = 5
+# a call that keeps growing a value through its own include never settles
+_FILL_PASSES = 25
 
 
 _GENERATED_INCLUDE_FILE = re.compile(r'^script-.*-includes\.xml$', re.I)

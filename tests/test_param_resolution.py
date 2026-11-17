@@ -71,6 +71,37 @@ class TestParamResolution(ValidationTestCase):
         skin = Skin(path=self.skin_dir, settings={})
         self.assertEqual([i["rule"] for i in IncludeCheck(skin).check() + VariableCheck(skin).check()], [])
 
+    def test_default_of_an_include_called_through_a_param_names_a_used_include(self):
+        """An include named by the default of one a $PARAM calls is used, the chain followed."""
+        with open(os.path.join(self.xml_dir, "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes><include name="Row"><param name="include"/>'
+                    '<definition><include content="$PARAM[include]"/></definition></include>'
+                    '<include name="Card_Row"><param name="layout">Card</param>'
+                    '<definition><include content="$PARAM[layout]"/></definition></include>'
+                    '<include name="Card"><control type="label"/></include></includes>')
+        with open(os.path.join(self.xml_dir, "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><include content="Row"><param name="include">Card_Row</param>'
+                    '</include></controls></window>')
+        skin = Skin(path=self.skin_dir, settings={})
+        self.assertEqual([i["rule"] for i in IncludeCheck(skin).check()], [])
+
+    def test_forwarded_value_reaches_a_name_built_below_a_built_call(self):
+        """A value forwarded through a plain call below a built-name call builds a used name."""
+        with open(os.path.join(self.xml_dir, "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes><include name="Template"><param name="side"/><definition>'
+                    '<include content="Side_$PARAM[side]"><param name="pos" value="1"/></include>'
+                    '</definition></include>'
+                    '<include name="Side_Right"><param name="pos"/><definition><include content="Slider">'
+                    '<param name="info" value="W$PARAM[pos]_View"/></include></definition></include>'
+                    '<include name="Slider"><param name="info"/>'
+                    '<definition><include content="Cond_$PARAM[info]"/></definition></include>'
+                    '<include name="Cond_W1_View"><control type="label"/></include></includes>')
+        with open(os.path.join(self.xml_dir, "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><include content="Template"><param name="side" value="Right"/>'
+                    '</include></controls></window>')
+        skin = Skin(path=self.skin_dir, settings={})
+        self.assertEqual([i["rule"] for i in IncludeCheck(skin).check()], [])
+
     def test_undefined_param_resolves_to_base_name(self):
         """Undefined $PARAM in an include name resolves to the base name."""
         includes_xml = os.path.join(self.xml_dir, "Includes.xml")
