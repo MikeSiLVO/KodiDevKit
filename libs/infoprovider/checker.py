@@ -466,7 +466,7 @@ class CheckerMixin:
         return True
 
     def _validate_variable_values(self, listitems, node, var_text, value_type, folder, tag_name=None):
-        """Validate every <value> of the $VAR definition against the tag's value type."""
+        """Validate each $VAR value for the tag's type, reporting misses; True when all pass."""
         var_name = extract_variable_name(var_text)
         if not var_name:
             return True
@@ -483,10 +483,7 @@ class CheckerMixin:
         all_valid = True
         for value_node in value_nodes:
             value_text = (value_node.text or "").strip()
-            if not value_text:
-                continue
-
-            if is_dynamic_expression(value_text):
+            if not value_text or contains_dynamic_expression(value_text):
                 continue
 
             is_valid = True

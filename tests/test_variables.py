@@ -869,6 +869,7 @@ class TestVariableValueValidation(ValidationTestCase):
 <includes>
     <variable name="DynamicColor">
         <value condition="Skin.HasSetting(UseTheme)">$INFO[Skin.String(ThemeColor)]</value>
+        <value condition="Skin.HasSetting(Tint)">CC$INFO[Skin.String(AccentRGB)]</value>
         <value>FFFF0000</value>
     </variable>
 </includes>"""
