@@ -43,9 +43,14 @@ _CONTROL_REFS = (
 _WINDOW_SWITCH = re.compile(r"^\s*(?:Close|Dialog\.Close|ActivateWindow|ReplaceWindow|Action\(\s*(?:back|close"
                             r"|previousmenu)\s*\))\b", re.I)
 
+def is_custom_window_file(name):
+    """True for a file straight in the xml folder named custom*, which Kodi loads as a window."""
+    return not os.path.dirname(name) and name.lower().startswith("custom")
+
+
 def custom_window(root, filename):
     """Ids a custom window answers to and whether it is a modeless dialog; nothing otherwise."""
-    if not filename.lower().startswith("custom") or root.tag.lower() != "window":
+    if not is_custom_window_file(filename) or root.tag.lower() != "window":
         return [], False
     raw = root.get("id")
     if raw is None:
@@ -53,7 +58,6 @@ def custom_window(root, filename):
     kind = root.get("type")
     if kind is None:
         kind = root.findtext("type") or ""
-    # a dialog with <visible> is modeless unless marked modal
     modeless = (kind.strip().lower() == "dialog" and root.find("visible") is not None
                 and (root.get("modality") or "").lower() != "modal")
     raw = (raw or "").strip()
@@ -367,7 +371,7 @@ class SkinIndex:
             name = os.path.relpath(path, os.path.join(self.skin_path, folder))
             window_ids, results['custom_modeless'] = custom_window(root, name)
             results['window_ids'][folder].extend(window_ids)
-            if name.lower().startswith("custom"):
+            if is_custom_window_file(name):
                 results['custom_id'] = window_ids[0] if window_ids else None
                 kind = root.get("type") or root.findtext("type") or ""
                 results['custom_dialog'] = kind.strip().lower() == "dialog"
@@ -383,13 +387,13 @@ class SkinIndex:
                 if inc_name:
                     results['window_includes'].append({'name': inc_name})
 
-            # <item id> counts too, Container().HasFocus() can address it
             for elem in root.iter('control'):
                 ctrl_id = elem.get('id')
                 if ctrl_id:
                     ctrl_id = normalize_control_id(ctrl_id)
                     results['base_ids'].add(ctrl_id)
 
+            # Container().HasFocus() can address an item id
             for item_elem in root.iter('item'):
                 item_id = item_elem.get('id')
                 if item_id:

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
+
+from ..skin.index import is_custom_window_file
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ class ValidationImage:
     def _in_addon_window(self, file_path, folder):
         """True for a window file an addon opens, which also searches the addon's own media."""
         name = os.path.relpath(file_path, os.path.join(self.addon.path, folder)).lower()
-        if not self._kodi_files or name in self._kodi_files or name.startswith("custom"):
+        if not self._kodi_files or name in self._kodi_files or is_custom_window_file(name):
             return False
         index = self._validation_index or {}
         shared = {n.lower() for folder in index.get('include_files', {}).values() for n in folder}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import logging
 
+from ..skin.index import is_custom_window_file
 from ..utils.validation import deduplicate_issues
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -99,7 +100,7 @@ class ValidationIds:
                           if name and wid in self.modeless_ids}
         return {f for f in window_files
                 if f in custom or f.lower() in modeless_names
-                or (f.lower() not in kodi_names and not f.lower().startswith("custom"))}
+                or (f.lower() not in kodi_names and not is_custom_window_file(f))}
 
     def check(self, progress_callback=None):
         """Check id references, window names and custom windows, one issue row per problem."""

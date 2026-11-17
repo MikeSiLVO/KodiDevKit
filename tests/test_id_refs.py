@@ -61,6 +61,13 @@ class TestCustomWindow(unittest.TestCase):
                                        "custom_x.xml"), (["1102", "11102"], True))
         self.assertEqual(custom_window(ET.fromstring('<window id="1103"/>'), "Home.xml"), ([], False))
 
+    def test_only_a_file_in_the_xml_folder_is_custom(self):
+        """A file under a subfolder is no custom window; Kodi reads only the xml folder itself."""
+        self.assertEqual(custom_window(ET.fromstring('<window id="1104"/>'), os.path.join("custom", "Win.xml")),
+                         ([], False))
+        self.assertEqual(custom_window(ET.fromstring('<window id="1105"/>'), os.path.join("sub", "Custom_1.xml")),
+                         ([], False))
+
     def test_modality(self):
         modal = '<window id="1" type="dialog" modality="modal"><visible>true</visible></window>'
         self.assertFalse(custom_window(ET.fromstring(modal), "custom_a.xml")[1])
