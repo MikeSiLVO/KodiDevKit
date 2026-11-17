@@ -237,7 +237,8 @@ class SkinResolution:
             if not inc_name and include_node.text:
                 inc_name = include_node.text.strip()
 
-            call_params = get_params(include_node, "value")
+            # the text form <include>Name</include> takes no params
+            call_params = get_params(include_node, "value") if "content" in include_node.attrib else {}
 
             # unknown $PARAM names survive our param pass; Kodi's empties them, so empty for lookup
             inc_name = resolve_param_in_name(inc_name, call_params)

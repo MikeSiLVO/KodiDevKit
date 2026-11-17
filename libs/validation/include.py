@@ -181,7 +181,7 @@ class ValidationInclude:
                     if not include_def:
                         continue
 
-                    call_params = get_params(include_node, "value")
+                    call_params = get_params(include_node, "value") if "content" in include_node.attrib else {}
 
                     default_params = params if params else {}
                     merged_params = {**default_params, **call_params}

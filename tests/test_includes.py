@@ -511,6 +511,21 @@ class TestParamSubstitutionWithSkin(unittest.TestCase):
         self.assertIn("<posx>50</posx>", result)
         self.assertIn("WindowOpen", result)
 
+    def test_text_form_call_ignores_its_params(self):
+        """An old text-form call passes no params; the definition's default fills its $PARAM."""
+        skin = self._create_skin_with_includes("""
+            <includes>
+                <include name="OldStyle">
+                    <param name="w" default="200"/>
+                    <definition>
+                        <control type="label"><width>$PARAM[w]</width></control>
+                    </definition>
+                </include>
+            </includes>""")
+        result = self._resolve_and_tostring(skin, '<window><controls><include>OldStyle'
+                                                  '<param name="w" value="abc"/></include></controls></window>')
+        self.assertIn("<width>200</width>", result)
+
     def test_missing_param_stays_literal(self):
         """Test that missing params without defaults stay as $PARAM[...]."""
         includes_xml = """
