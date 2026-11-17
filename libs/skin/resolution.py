@@ -12,6 +12,7 @@ from ..utils.infobool import static_value
 from ..utils.validation import resolve_param_in_name
 from ..utils.xml import get_params
 from ..skin.include import SkinInclude
+from ..validation.constants import PARAM_TEXT
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
 
 if TYPE_CHECKING:
@@ -341,10 +342,11 @@ class SkinResolution:
                 parent_node.remove(inserted_node)
 
     def _resolve_params_for_node(self, node, params: dict, include_node=None):
-        """Resolve $PARAM through a subtree, dropping a forwarded <param> left undefined."""
+        """Resolve $PARAM through a subtree, stamping filled parts, dropping an unset forward."""
         if node is None:
             return
 
+        filled = set(node.get("_kdk_param_parts", "").split())
         for attr_name, attr_value in list(node.attrib.items()):
             if "$" not in attr_value:
                 continue
@@ -360,6 +362,8 @@ class SkinResolution:
                 return
 
             node.attrib[attr_name] = resolved
+            if status != "NO_PARAMS":
+                filled.add(attr_name)
 
         if node.text and "$" in node.text:
             resolved, status = resolve_params_in_text(node.text, params)
@@ -372,6 +376,11 @@ class SkinResolution:
                 return
 
             node.text = resolved
+            if status != "NO_PARAMS":
+                filled.add(PARAM_TEXT)
+
+        if filled:
+            node.set("_kdk_param_parts", " ".join(sorted(filled)))
 
         for child in list(node):
             self._resolve_params_for_node(child, params, include_node)

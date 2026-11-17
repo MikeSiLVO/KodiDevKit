@@ -301,8 +301,12 @@ def merge_include_issues(issues):
         line_text = source_line(inc_file, inc_line) if inc_file and inc_line else ""
         # an empty action's $PARAM is the one in its text, not one in its condition
         param = PARAM_PATTERN.search(line_text.split(">", 1)[-1] if empty_action else line_text)
+        from_param = issue.pop("from_param", None)
+        if from_param is None:
+            # a check that names no part of the element goes by any $PARAM on its line
+            from_param = bool(param) and not empty_action
         # a $PARAM value is written at the call site, the line to fix, unless no call passes one
-        if not (inc_file and inc_line) or (param and not empty_action):
+        if not (inc_file and inc_line) or from_param:
             result.append(issue)
             continue
         if param and empty_action:

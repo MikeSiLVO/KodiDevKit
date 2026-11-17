@@ -42,6 +42,7 @@ from .constants import (
     ALLOWED_VALUES,
     CASE_INSENSITIVE_ENUMS,
     INCLUDE_DEFINITION_TAGS,
+    PARAM_TEXT,
 )
 
 from ..utils.expressions import (
@@ -330,7 +331,7 @@ class XmlInterpreter:
                 self._validate_number(child, tag, False, child.text, tmpl_val)
             elif child.text and tmpl_val == "color":
                 if not _contains_dynamic(child.text):
-                    self._validate_color(child, f"<{tag}>", tag, child.text.strip())
+                    self._validate_color(child, f"<{tag}>", tag, child.text.strip(), PARAM_TEXT)
             elif child.text and tmpl_val:
                 self._validate_enum_value(child, child.text, tmpl_val)
 
@@ -429,7 +430,7 @@ class XmlInterpreter:
         else:
             self._add_issue(later, SEVERITY_ERROR, f"{message}, ignored because include '{first_inc}' sets it first", rule="xml.duplicate-tag")
 
-    def _validate_enum_value(self, node, value: str, value_type: str):
+    def _validate_enum_value(self, node, value: str, value_type: str, part: str = PARAM_TEXT):
         """Validate an enum value against ALLOWED_VALUES."""
         if value_type not in ALLOWED_VALUES:
             return
@@ -438,7 +439,8 @@ class XmlInterpreter:
         if value_type == "viewtype":
             problem = viewtype_problem(value)
             if problem:
-                self._add_issue(node, SEVERITY_WARNING, problem, rule="xml.unknown-viewtype", subject=value)
+                self._add_issue(node, SEVERITY_WARNING, problem, rule="xml.unknown-viewtype", subject=value,
+                                part=part)
             return
 
         if value_type in CASE_INSENSITIVE_ENUMS:
@@ -447,6 +449,7 @@ class XmlInterpreter:
                 self._add_issue(
                     node, SEVERITY_ERROR,
                     f"invalid value for {node.tag}: {value} (allowed: {allowed})", rule="xml.invalid-value",
+                    part=part,
                 )
         else:
             if value not in ALLOWED_VALUES[value_type]:
@@ -457,6 +460,7 @@ class XmlInterpreter:
                 self._add_issue(
                     node, SEVERITY_ERROR,
                     f"invalid value for {node.tag}: {value} ({detail})", rule="xml.invalid-value",
+                    part=part,
                 )
 
     def _validate_label_brackets(self, node):
@@ -636,33 +640,38 @@ class XmlInterpreter:
         if not is_attr and name in ("width", "height") and text.lower().startswith("auto"):
             return
         where = name if is_attr else f"<{name}>"
+        part = name if is_attr else PARAM_TEXT
         if not self._looks_like_unresolved(text):
             # tag text also takes %, r and comma lists that the value types do not describe
             if is_attr:
-                self._add_issue(node, SEVERITY_ERROR, f"invalid integer value for {where}: {text}", rule="xml.invalid-value", subject=name)
+                self._add_issue(node, SEVERITY_ERROR, f"invalid integer value for {where}: {text}",
+                                rule="xml.invalid-value", subject=name, part=part)
         elif name not in (SkinInclude.constant_attribs if is_attr else SkinInclude.constant_nodes):
             self._add_issue(node, SEVERITY_ERROR,
-                            f"{where} value {text}: Kodi does not substitute constants in {where}", rule="xml.constant-not-substituted", subject=text)
+                            f"{where} value {text}: Kodi does not substitute constants in {where}",
+                            rule="xml.constant-not-substituted", subject=text, part=part)
         elif text in self.constants:
             # a file walked without resolving still carries the name Kodi substitutes
             return
         elif self.runtime_generator:
             self._add_issue(node, SEVERITY_WARNING,
-                            f"{where} value {text} is not a defined constant, unless a runtime generator adds it", rule="xml.undefined-constant", subject=text)
+                            f"{where} value {text} is not a defined constant, unless a runtime generator adds it",
+                            rule="xml.undefined-constant", subject=text, part=part)
         else:
-            self._add_issue(node, SEVERITY_ERROR, f"{where} value {text} is not a number or a defined constant", rule="xml.undefined-constant", subject=text)
+            self._add_issue(node, SEVERITY_ERROR, f"{where} value {text} is not a number or a defined constant",
+                            rule="xml.undefined-constant", subject=text, part=part)
 
     @staticmethod
     def _looks_like_unresolved(value: str) -> bool:
         """True when the value reads as a constant name: a letter first, then word characters."""
         return re.match(r"^[A-Za-z_][\w.-]*$", value) is not None and value.lower() != "auto"
 
-    def _validate_color(self, node, where: str, name: str, value: str):
+    def _validate_color(self, node, where: str, name: str, value: str, part: str):
         """Validate a color, reporting one that is no hex value, color name or info."""
         if (not _is_kodi_hex(value) and value not in self.color_labels
                 and not (self.info_names and is_known_info(value, self.info_names))):
             self._add_issue(node, SEVERITY_ERROR, f"Invalid color for {where}: {value}", rule="xml.invalid-color",
-                            subject=name)
+                            subject=name, part=part)
 
     def _validate_typed_attr(self, node, attr_name: str, value: str, value_type: str):
         """Validate typed attribute values (int, position, color, bool, enum)."""
@@ -672,11 +681,12 @@ class XmlInterpreter:
         if value_type in ("int", "position"):
             self._validate_number(node, attr_name, True, value, value_type)
         elif value_type == "color":
-            self._validate_color(node, attr_name, attr_name, value)
+            self._validate_color(node, attr_name, attr_name, value, attr_name)
         elif value_type == "bool" and (problem := attribute_bool_problem(attr_name, value)):
-            self._add_issue(node, SEVERITY_ERROR, problem, rule="xml.misread-bool", subject=attr_name)
+            self._add_issue(node, SEVERITY_ERROR, problem, rule="xml.misread-bool", subject=attr_name,
+                            part=attr_name)
         elif value_type in ALLOWED_VALUES:
-            self._validate_enum_value(node, value, value_type)
+            self._validate_enum_value(node, value, value_type, attr_name)
 
     def _walk_includes(self, node):
         """Walk the children of <includes>."""
@@ -775,8 +785,9 @@ class XmlInterpreter:
                     f"<{child.tag}> is not valid inside <font>", rule="xml.invalid-tag",
                 )
 
-    def _add_issue(self, node, severity: str, message: str, rule: str, subject: str | None = None):
-        """Add an issue, with the call site and source line when it came from an include."""
+    def _add_issue(self, node, severity: str, message: str, rule: str, subject: str | None = None,
+                   part: str | None = None):
+        """Add an issue, with call site, source line and param origin for one from an include."""
         call_line = node.get("_kdk_call_line")
         inc_name = node.get("_kdk_inc_name")
         inc_file = node.get("_kdk_inc_file")
@@ -803,6 +814,8 @@ class XmlInterpreter:
             issue["include_line"] = node.sourceline or 0
             if inc_file:
                 issue["include_file"] = inc_file
+            if part is not None:
+                issue["from_param"] = part in node.get("_kdk_param_parts", "").split()
 
         call_file = node.get("_kdk_call_file") or ""
         if call_file:

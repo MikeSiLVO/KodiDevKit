@@ -46,6 +46,14 @@ INCLUDES = """<includes>
 </control>
 </definition>
 </include>
+<include name="Radio">
+<param name="icon" default="off.png"/>
+<definition>
+<control type="radiobutton">
+<textureradiooffdisabled colordiffuse="nocolor">$PARAM[icon]</textureradiooffdisabled>
+</control>
+</definition>
+</include>
 </includes>"""
 
 WINDOW = """<window>
@@ -56,6 +64,7 @@ WINDOW = """<window>
 <include content="Press"/>
 <include content="Scroll"/>
 <include content="Scroll"><param name="jumpbar" value="false"/></include>
+<include content="Radio"/>
 </controls>
 </window>"""
 
@@ -107,6 +116,11 @@ class TestIncludeFaults(unittest.TestCase):
         self.assertEqual(rows, [("Includes.xml", 28, "<onright> is empty where a call passes no onright; "
                                                      "give the onright param a default of noop "
                                                      "(include 'Scroll', in 2 windows)")])
+
+    def test_literal_fault_beside_a_param_is_reported_once_at_its_line(self):
+        """A literal fault on an element whose text a $PARAM fills is one row at the definition."""
+        rows = [r for r in self.rows if "colordiffuse" in r[2]]
+        self.assertEqual(rows, [("Includes.xml", 36, "Invalid color for colordiffuse: nocolor")])
 
     def test_param_fault_stays_at_each_call(self):
         """A fault in a $PARAM value keeps one row per call site."""

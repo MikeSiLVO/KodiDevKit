@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# stands for an element's text among the parts a $PARAM fills; no attribute name holds a '#'
+PARAM_TEXT = "#text"
+
 # text Kodi registers as a boolean condition, besides any `condition` attribute
 CONDITION_TAGS = frozenset({"visible", "enable", "usealttexture", "selected", "expression"})
 
