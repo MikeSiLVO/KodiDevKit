@@ -524,12 +524,11 @@ class SkinIndex:
         def _track(image_path, node, attr=None):
             if not image_path or is_dynamic_expression(image_path):
                 return
-            if image_path.startswith(('special://', 'resource://')) and not image_path.startswith('special://skin/'):
+            # Kodi loads any other URL as written, outside the skin
+            if "://" in image_path and not image_path.startswith('special://skin/'):
                 return
             low = image_path.lower()
-            if any(m in low for m in ('$info[', '$var[', '$escinfo[', '$escvar[',
-                                       '$param[', '$addon[',
-                                       'plugin://', 'http://', 'https://')):
+            if any(m in low for m in ('$info[', '$var[', '$escinfo[', '$escvar[', '$param[', '$addon[')):
                 return
             if image_path not in index['images_referenced'][folder]:
                 index['images_referenced'][folder][image_path] = []

@@ -167,13 +167,15 @@ class TestImageValidation(ValidationTestCase):
                 self.assertNotIn(path_part, msg, f"Should ignore paths with embedded dynamic expressions: {msg}")
 
     def test_url_image_reference_ignored(self):
-        """Test that URL-based image references are ignored."""
+        """An image URL Kodi loads as written is ignored, whatever its scheme."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <window>
     <controls>
         <control type="image">
             <texture>http://example.com/image.png</texture>
         </control>
+        <control type="image"><texture>androidapp://sources/apps/com.app.png</texture></control>
+        <control type="image"><texture>image://DefaultVideo.png/</texture></control>
     </controls>
 </window>"""
         xml_path = os.path.join(self.test_dir, "16x9", "Home.xml")
@@ -183,8 +185,8 @@ class TestImageValidation(ValidationTestCase):
         checker = self._build_checker()
         issues = checker.check()
 
-        url_issues = [i for i in issues if "http://example.com" in i.get("message", "")]
-        self.assertEqual(len(url_issues), 0, "Should ignore URL-based image references")
+        url_issues = [i for i in issues if "://" in i.get("message", "")]
+        self.assertEqual(url_issues, [])
 
     def test_empty_texture_ignored(self):
         """Test that empty texture tags are ignored."""
