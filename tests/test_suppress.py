@@ -420,6 +420,18 @@ class TestSuppressionApplied(unittest.TestCase):
 
         self.assertTrue(_muted(self.labels(), "Player.Playing"))
 
+    def test_row_on_a_tag_spanning_lines_is_at_its_first_line(self):
+        """A row on a start tag spanning lines sits on its first line, muted by a comment above."""
+        self.write_window("Home.xml", (
+            '<window>\n<controls>\n<control type="button">\n'
+            '<!-- kdk-ignore: labels; two lines -->\n<label2\n    fallback="31000">Hello again</label2>\n'
+            '<label2 a="1"\n    b="2">Odd</label2><label>Other</label>\n'
+            '</control>\n</controls>\n</window>\n'
+        ))
+        rows = {r["message"].rsplit(": ", 1)[1]: (r["line"], r.get("muted")) for r in self.labels()}
+        self.assertEqual(rows["Hello again"], (5, {"line": 4, "reason": "two lines"}))
+        self.assertEqual((rows["Odd"][0], rows["Other"][0]), (8, 8))
+
     def test_check_file_marks_muted_rows(self):
         """The file check behind the on-save phantoms marks rows like the full check does."""
         path = self.write_window("Home.xml", (

@@ -4,6 +4,7 @@ import os
 import re
 import time
 import logging
+from bisect import bisect_right
 from lxml import etree as ET
 from lxml.etree import XMLSyntaxError
 
@@ -19,9 +20,11 @@ FILE_PREVIEW_SIZE = 50_000
 last_xml_errors = []
 tolerated_xml_errors = {}
 _xml_parse_cache = {}
+_tag_start_cache = {}
 
 _ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_START_TAG = re.compile(r"""<[A-Za-z_][\w:.-]*(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*/?>""")
 _NOT_BRACKET = re.compile(r"[^()\[\]]+")
 
 _PARSE_MESSAGES = (
@@ -353,6 +356,38 @@ def get_root_from_file(xml_file):
 def blank_xml_comments(content):
     """Blank out `<!-- ... -->`, keeping every newline."""
     return _COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), content)
+
+
+def tag_start_line(xml_file, line):
+    """Opening line of the tag that ends on the line, unless another opens there; else the line."""
+    try:
+        stat = os.stat(xml_file)
+    except OSError:
+        return line
+    key = (stat.st_mtime_ns, stat.st_size)
+    cached = _tag_start_cache.get(xml_file)
+    if cached is None or cached[0] != key:
+        cached = (key, _tag_start_lines(xml_file))
+        _tag_start_cache[xml_file] = cached
+    return cached[1].get(line, line)
+
+
+def _tag_start_lines(xml_file):
+    """First line of each start tag spanning lines, by its last, unless another tag opens there."""
+    try:
+        with open(xml_file, encoding="utf-8", errors="replace") as f:
+            text = blank_xml_comments(f.read())
+    except OSError:
+        return {}
+    newlines = [m.start() for m in re.finditer("\n", text)]
+    spans, opened = {}, set()
+    for match in _START_TAG.finditer(text):
+        first = bisect_right(newlines, match.start()) + 1
+        last = bisect_right(newlines, match.end() - 1) + 1
+        opened.add(first)
+        if last > first:
+            spans[last] = first
+    return {last: first for last, first in spans.items() if last not in opened}
 
 
 def check_brackets(label):

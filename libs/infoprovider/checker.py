@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 import copy
 import logging
-from ..utils.xml import (check_brackets, get_root_from_file, parse_error_issue, tolerated_xml_errors,
-                         tree_needs_expansion)
+from ..utils.xml import (check_brackets, get_root_from_file, parse_error_issue, tag_start_line,
+                         tolerated_xml_errors, tree_needs_expansion)
 from ..utils.expressions import (
     contains_dynamic_expression,
     extract_number_value,
@@ -266,8 +266,15 @@ class CheckerMixin:
         return cache[folder][1]
 
     def _reported(self, category, issues):
-        """Drop the issues inside a generated file and mark those a `kdk-ignore` comment mutes."""
-        issues = [issue for issue in issues if not is_runtime_generated_file(issue.get("file", ""))]
+        """Drop generated-file rows, move rows to their tag's first line, mark kdk-ignore mutes."""
+        kept = []
+        for issue in issues:
+            path, line = issue.get("file") or "", issue.get("line") or 0
+            if is_runtime_generated_file(path):
+                continue
+            first = tag_start_line(path, line) if line and path.lower().endswith(".xml") else line
+            kept.append({**issue, "line": first} if first != line else issue)
+        issues = kept
         if not self.addon or not issues:
             return issues
         return self.get_suppressions().mark(category, issues)
