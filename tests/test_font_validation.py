@@ -446,7 +446,7 @@ class TestFontValidation(unittest.TestCase):
         self.assertTrue(has_duplicate_error, "Should detect duplicate font name")
 
     def test_duplicate_font_name_through_conditional_includes(self):
-        """Copies from conditional includes clash only after a copy that is always there."""
+        """Only copies after the first unconditional one are reported, naming the one Kodi keeps."""
         self.create_font_file("font.ttf")
         font = "<font><name>{}</name><filename>font.ttf</filename><size>13</size></font>"
         self.create_includes_xml(
@@ -463,8 +463,10 @@ class TestFontValidation(unittest.TestCase):
 
         issues = self.init_provider().check_fonts()
 
-        duplicates = {i["message"] for i in issues if i["message"].startswith("Duplicate")}
-        self.assertEqual(duplicates, {"Duplicate font name 'font13' within fontset 'Default'"})
+        duplicates = [(os.path.basename(i["file"]), i["message"]) for i in issues
+                      if i["message"].startswith("Duplicate")]
+        self.assertEqual(duplicates, [("Includes.xml", "Duplicate font name 'font13' within fontset 'Default': "
+                                                       "Kodi uses the first definition (Font.xml:1)")])
 
     def test_missing_font_name(self):
         """Test detection of missing <name> element."""

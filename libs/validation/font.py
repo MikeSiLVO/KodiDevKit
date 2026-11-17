@@ -203,11 +203,16 @@ class ValidationFont:
                         name_to_locs.setdefault(nm, []).append(f)
 
                 for nm, copies in name_to_locs.items():
-                    # a conditional copy never becomes the one Kodi keeps
+                    # a conditional copy may be absent
                     first = next((i for i, f in enumerate(copies) if not f["conditional"]), len(copies))
                     if len(copies) - first > 1:
-                        for f in copies[first:]:
-                            issues.append(row(f"Duplicate font name '{nm}' within fontset '{fs['id']}'", f["file"], f["line"], SEVERITY_WARNING,
+                        kept = copies[first]
+                        # a conditional copy ahead of it may load first when its condition holds
+                        used = (f"the first definition ({os.path.basename(kept['file'])}:{kept['line']})"
+                                if first == 0 else "an earlier definition")
+                        for f in copies[first + 1:]:
+                            issues.append(row(f"Duplicate font name '{nm}' within fontset '{fs['id']}': Kodi uses "
+                                              f"{used}", f["file"], f["line"], SEVERITY_WARNING,
                                               rule="fonts.duplicate", subject=nm))
 
             base = fontsets[0]
