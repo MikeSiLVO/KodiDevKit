@@ -100,9 +100,9 @@ class TestIssue(_Base):
         self.assertIsNone(check_include_file_ref(self.addon, "16x9", "  Includes_Maps.xml  "))
 
     def test_runtime_generated_file_is_not_flagged(self):
-        # script.skinshortcuts writes this at runtime, so it is absent from a shipped skin.
-        self.assertIsNone(
-            check_include_file_ref(self.addon, "16x9", "script-skinshortcuts-includes.xml"))
+        """A file a script writes at runtime, absent from a shipped skin, is not flagged."""
+        for name in ("script-skinshortcuts-includes.xml", "script-skinvariables-skinusers.xml"):
+            self.assertIsNone(check_include_file_ref(self.addon, "16x9", name))
 
     def test_reference_built_from_a_parameter_is_skipped(self):
         self.assertIsNone(check_include_file_ref(self.addon, "16x9", "$PARAM[layout].xml"))

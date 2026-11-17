@@ -10,6 +10,7 @@ from ..utils.validation import (
     deduplicate_issues,
     find_includes_in_skinshortcuts_template,
     find_skinshortcuts_template,
+    is_runtime_generated_file,
     reference_issues,
     resolve_param_in_name,
     shadowed_issues,
@@ -57,7 +58,7 @@ def resolve_include_file(addon, folder, filename):
 def check_include_file_ref(addon, folder, ref):
     """Check an `<include file>` Kodi cannot open, as an issue without the caller's location."""
     ref = (ref or "").strip()
-    if not ref or "$" in ref or RUNTIME_INCLUDE_FILE.match(ref):
+    if not ref or "$" in ref or RUNTIME_INCLUDE_FILE.match(ref) or is_runtime_generated_file(ref):
         return None
 
     path, actual = resolve_include_file(addon, folder, ref)
