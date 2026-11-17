@@ -106,6 +106,8 @@ def _same_value(a, b) -> bool:
 
 # control children read by the loader itself rather than listed per type in controls.xml
 _STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAGS | INCLUDE_DEFINITION_TAGS
+# controls that read <info> as one name; the others read it as $INFO[name,prefix,postfix]
+_SINGLE_INFO_CONTROLS = frozenset({"slider", "sliderex", "progress", "ranges"})
 
 
 class XmlInterpreter:
@@ -495,6 +497,9 @@ class XmlInterpreter:
     def _validate_info_tag(self, node):
         """Report an <info> or <info2> naming an info Kodi does not know, which reads as nothing."""
         name = (node.text or "").strip()
+        parent = node.getparent()
+        if parent is None or parent.get("type") not in _SINGLE_INFO_CONTROLS:
+            name = name.split(",")[0].strip()
         if self.info_names and name and "$" not in name and not is_known_info(name, self.info_names):
             self._add_issue(node, SEVERITY_ERROR, f"Kodi has no info '{name}', so <{node.tag}> reads nothing; a label "
                             f"shows its <label> instead", rule="xml.unknown-infolabel", subject=name)

@@ -342,6 +342,16 @@ class TestLabelInfos(unittest.TestCase):
                          ["Kodi has no info 'ListItem.Lable', so <info> reads nothing; a label shows its <label> "
                           "instead"])
 
+    def test_info_tag_prefix_on_label_only(self):
+        """A label's <info> takes a prefix and postfix after commas; a slider's is one name."""
+        interp = XmlInterpreter(template_attribs={"label": {"info": {}}, "slider": {"info": {}}},
+                                template_values={"label": {}, "slider": {}}, info_names=self.NAMES)
+        rows = interp.interpret(_parse(
+            '<window><controls><control type="label"><info>ListItem.Label,Now: , h</info></control>'
+            '<control type="slider"><info>ListItem.Label,x</info></control></controls></window>'))
+        self.assertEqual([i["subject"] for i in rows if i["rule"] == "xml.unknown-infolabel"],
+                         ["ListItem.Label,x"])
+
 
 class TestBoolAttributes(unittest.TestCase):
     """Bool attributes follow the spelling each Kodi reader accepts."""
