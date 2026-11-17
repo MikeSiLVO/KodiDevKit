@@ -125,6 +125,7 @@ RULES = {
     "repo.too-many-screenshots": "A skin whose <assets> lists more than the 10 screenshots the Kodi repo takes.",
     "repo.language-layout": "A language folder in the old layout, not resource.language.<code>.",
     "repo.language-code": "A language folder whose code is not a valid language code.",
+    "repo.language-case": "A language folder whose name is not all lowercase, which Weblate reads as a second copy.",
     "repo.no-en-gb": "No resource.language.en_gb folder with the default strings.",
     "repo.po-encoding": "A strings.po not saved as UTF-8.",
     "repo.po-header": "A strings.po without the msgid \"\" / msgstr \"\" header.",
@@ -202,7 +203,7 @@ ADDON_CHECKER = {
 }
 
 # rules the Kodi repo reviewers refuse a skin on, beyond those the add-on checker fails
-REVIEW_BLOCKERS = {"repo.asset-location", "repo.no-screenshot", "repo.too-many-screenshots"}
+REVIEW_BLOCKERS = {"repo.asset-location", "repo.no-screenshot", "repo.too-many-screenshots", "repo.language-case"}
 # warnings a Kodi repo submission is still refused on; a parse error is reported as an error already
 BLOCKING_WARNINGS = frozenset(
     ({rule for rule, level in ADDON_CHECKER.items() if level == "problem"} - {"xml.parse-error"}) | REVIEW_BLOCKERS)

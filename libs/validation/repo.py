@@ -234,6 +234,10 @@ class ValidationRepo:
                 code = folder[len("resource.language."):]
                 if not LANG_CODE.match(code):
                     self._add(rel, 0, "repo.language-code", f"{code} is not a valid language code", code)
+                if folder != folder.lower():
+                    self._add(rel, 0, "repo.language-case",
+                              f"{rel} should be {folder.lower()}; Weblate takes both cases for one language "
+                              f"and re-creates the old folder", folder)
                 found_en_gb |= code.lower() == "en_gb"
                 po = os.path.join(base_path, folder, "strings.po")
                 if os.path.isfile(po):

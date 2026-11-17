@@ -90,8 +90,9 @@ class TestRules(unittest.TestCase):
         """Checker problems and reviewer rules kdk warns on are listed; errors are not."""
         self.assertLessEqual(BLOCKING_WARNINGS, set(RULES))
         self.assertEqual([r in BLOCKING_WARNINGS for r in ("repo.schema", "repo.no-screenshot", "files.executable",
-                                                           "repo.file-type", "xml.parse-error", "fonts.undefined")],
-                         [True, True, True, False, False, False])
+                                                           "repo.language-case", "repo.file-type", "xml.parse-error",
+                                                           "fonts.undefined")],
+                         [True, True, True, True, False, False, False])
 
     def test_every_rule_says_what_it_reports(self):
         """Each description is one line ending in a full stop."""

@@ -173,6 +173,19 @@ class TestRepo(unittest.TestCase):
             "Kodi repo: string id 31000 is defined twice (first on line 1)",
         ])
 
+    def test_language_folder_not_in_lowercase(self):
+        """A language folder with an uppercase letter gets one warning naming its lowercase name."""
+        self._addon()
+        self._write("language/resource.language.en_GB/strings.po", GOOD_PO)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.path)
+        rows = [i for i in provider.get_check_listitems("repo") if i.get("rule") == "repo.language-case"]
+        self.assertEqual([(r["subject"], r["message"]) for r in rows], [(
+            "resource.language.en_GB",
+            "Kodi repo: language/resource.language.en_GB should be resource.language.en_gb; Weblate takes both "
+            "cases for one language and re-creates the old folder")])
+
     def test_po_bom_and_a_msgid_without_value_are_reported(self):
         """A BOM reads as the checker reports it, and a msgid with no value is named."""
         self._addon()
