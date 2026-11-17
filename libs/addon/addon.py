@@ -7,7 +7,7 @@ import re
 import logging
 from typing import Any
 
-from ..utils.files import check_paths, is_inside
+from ..utils.files import check_paths, folder_entries, is_inside
 from .translations import create_new_po_file, get_po_file
 from ..utils.xml import get_root_from_file
 from ..polib import polib
@@ -146,7 +146,7 @@ class Addon:
         self.po_files = self.get_po_files(self.lang_path)
 
     def get_po_files(self, folder):
-        """Get the PO files of the configured resource.language.* add-on, no English fallback."""
+        """Get the PO files of the set language folder, en_gb when unset, no English fallback."""
         po_files = []
 
         lang = (self.settings.get("language") or "").strip()
@@ -156,9 +156,11 @@ class Addon:
         if not lang:
             lang = "resource.language.en_gb"
 
+        # Kodi finds the language folder whatever its case
+        lang_folder = next((e for e in folder_entries(folder) if e.casefold() == lang.casefold()), lang)
         path = check_paths([
-            os.path.join(folder, lang, "resources", "strings.po"),
-            os.path.join(folder, lang, "strings.po"),
+            os.path.join(folder, lang_folder, "resources", "strings.po"),
+            os.path.join(folder, lang_folder, "strings.po"),
         ])
         if path:
             po = get_po_file(path)

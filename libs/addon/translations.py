@@ -25,7 +25,7 @@ def strings_po_faults(addon_path, progress=None):
             continue
         for folder in sorted(os.listdir(base_path)):
             path = os.path.join(base_path, folder, "strings.po")
-            if folder.startswith("resource.language.") and os.path.isfile(path):
+            if folder.lower().startswith("resource.language.") and os.path.isfile(path):
                 files.append((folder, path))
     for count, (folder, path) in enumerate(files, 1):
         if progress:

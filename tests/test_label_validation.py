@@ -47,6 +47,18 @@ class TestLabelValidation(ValidationTestCase):
         if os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
 
+    def test_language_folder_found_whatever_its_case(self):
+        """Skin strings in a resource.language.en_GB folder are read, as Kodi finds it on Linux."""
+        po_dir = os.path.join(self.test_dir, "language", "resource.language.en_GB")
+        os.makedirs(po_dir)
+        with open(os.path.join(po_dir, "strings.po"), "w", encoding="utf-8") as f:
+            f.write('msgid ""\nmsgstr ""\n\nmsgctxt "#31000"\nmsgid "Hello"\nmsgstr ""\n')
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="label"><label>31000</label></control></controls></window>')
+        self.provider.init_addon(self.test_dir)
+        undefined = [i for i in self.provider.check_labels() if i.get("rule") == "labels.undefined"]
+        self.assertEqual(undefined, [])
+
     def test_untranslated_label_detected(self):
         """Test detection of untranslated (hardcoded) label text."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
