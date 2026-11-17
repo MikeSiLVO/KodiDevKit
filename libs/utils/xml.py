@@ -24,6 +24,7 @@ _tag_start_cache = {}
 
 _ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_DECLARATION = re.compile(r"<\?xml\s")
 _START_TAG = re.compile(r"""<[A-Za-z_][\w:.-]*(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*/?>""")
 _COMMENT_ONLY = re.compile(r"""(?P<start><(?P<tag>[A-Za-z_][\w:.-]*)(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*>)"""
                            r"(?:\s*<!--.*?-->)+\s*</(?P=tag)\s*>", re.DOTALL)
@@ -106,7 +107,7 @@ def _parse_as_tinyxml(xml_file):
 
 
 def _as_tinyxml(text):
-    """Rewrite the faults Kodi's parser forgives: stray '&' dropped, '<' and ']]>' escaped."""
+    """Rewrite faults Kodi's parser forgives: stray '&', late <?xml dropped; '<', ']]>' escaped."""
     out = []
     lead = re.match(r"\s+(?=<\?xml)", text)
     i = lead.end() if lead else 0
@@ -127,7 +128,11 @@ def _as_tinyxml(text):
             if end == -1:
                 out.append(text[i:])
                 break
-            out.append(text[i:end + len(closer)])
+            piece = text[i:end + len(closer)]
+            # a declaration after anything else would fail the strict parse
+            if _DECLARATION.match(piece) and any(out):
+                piece = "\n" * piece.count("\n")
+            out.append(piece)
             i = end + len(closer)
         elif text[i] == "<":
             i = _copy_tag(text, i, out)

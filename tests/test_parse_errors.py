@@ -93,6 +93,15 @@ class TestParseErrors(unittest.TestCase):
         self.assertEqual(root.find("onclick").sourceline, 4)
         self.assertEqual(xml.parse_error_issue(path)["line"], 1)
 
+    def test_declaration_after_a_newline_or_comment_loads(self):
+        """A blank line or comment before <?xml still loads the file, nodes kept at their lines."""
+        for n, lead in enumerate(("\n", "\r\n\r\n", "<!-- c -->\n")):
+            path = self._write(f"Lead{n}.xml", lead + '<?xml version="1.0" encoding="UTF-8"?>\n<window><a/></window>')
+            root = xml.get_root_from_file(path)
+            assert root is not None, repr(lead)
+            self.assertEqual(root.find("a").sourceline, lead.count("\n") + 2)
+            self.assertTrue(xml.parse_error_issue(path)["message"].startswith("XML parse error: Text before <?xml"))
+
     def test_the_fault_is_the_subject(self):
         """Two different faults in one file are two findings, never one that moved."""
         subjects = []
