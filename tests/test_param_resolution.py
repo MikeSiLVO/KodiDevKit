@@ -56,6 +56,21 @@ class TestParamResolution(ValidationTestCase):
         skin = Skin(path=self.skin_dir, settings={})
         self.assertEqual(CallContexts(skin, "1080i").for_include("Inner"), [{"f": "Base"}, {"f": "pre"}])
 
+    def test_name_filled_by_the_include_default_is_defined(self):
+        """A name built from its include's param default is neither undefined nor unused."""
+        from tests.base import VariableCheck
+        with open(os.path.join(self.xml_dir, "Includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes><include name="Hint"><param name="dir">down</param><param name="kind" default="A"/>'
+                    '<definition><control type="group"><include>Hint_Label_$PARAM[dir]</include>'
+                    '<control type="label"><label>$VAR[Text_$PARAM[kind]]</label></control>'
+                    '</control></definition></include>'
+                    '<include name="Hint_Label_down"><control type="label"/></include>'
+                    '<variable name="Text_A"><value>a</value></variable></includes>')
+        with open(os.path.join(self.xml_dir, "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><include content="Hint"/></controls></window>')
+        skin = Skin(path=self.skin_dir, settings={})
+        self.assertEqual([i["rule"] for i in IncludeCheck(skin).check() + VariableCheck(skin).check()], [])
+
     def test_undefined_param_resolves_to_base_name(self):
         """Undefined $PARAM in an include name resolves to the base name."""
         includes_xml = os.path.join(self.xml_dir, "Includes.xml")

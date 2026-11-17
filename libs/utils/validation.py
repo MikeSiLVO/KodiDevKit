@@ -103,17 +103,16 @@ class CallContexts:
 
 
 def get_all_parameter_contexts(addon, folder):
-    """Get every param set the folder's includes take, filling forwarded $PARAM from outer calls."""
+    """Get every param set the folder's includes take, defaults applied, forwarded $PARAM filled."""
     calls = CallContexts(addon, folder)
     seen = set()
     all_contexts = []
-    for usages in calls.usages.values():
-        for usage in usages:
-            for context in calls.expand(usage):
-                key = frozenset(context.items())
-                if key not in seen:
-                    seen.add(key)
-                    all_contexts.append(context)
+    for name in calls.usages:
+        for context in calls.for_include(name):
+            key = frozenset(context.items())
+            if key not in seen:
+                seen.add(key)
+                all_contexts.append(context)
     all_contexts.append({})
     return all_contexts
 
