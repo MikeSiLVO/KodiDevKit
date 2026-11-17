@@ -655,6 +655,25 @@ class TestFontValidation(unittest.TestCase):
         has_unused_error = any("unusedfont" in issue["message"].lower() and "unused" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_unused_error, "Should detect defined but unused font")
 
+    def test_fonts_in_shortcuts_files_count_as_used(self):
+        """A font used only in a shortcuts includes file or shortcuts template counts as used."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default">'
+                              + "".join(f"<font><name>{n}</name><filename>font.ttf</filename><size>13</size></font>"
+                                        for n in ("font13", "Shipped", "Templated")) + "</fontset></fonts>")
+        self.create_includes_xml('<includes><include file="script-skinshortcuts-includes.xml"/></includes>')
+        with open(os.path.join(self.xml_dir, "script-skinshortcuts-includes.xml"), "w", encoding="utf-8") as f:
+            f.write('<includes><include name="skinshortcuts-mainmenu"><control type="label">'
+                    '<font>Shipped</font></control></include></includes>')
+        os.makedirs(os.path.join(self.skin_path, "shortcuts"))
+        with open(os.path.join(self.skin_path, "shortcuts", "template.xml"), "w", encoding="utf-8") as f:
+            f.write('<template><other include="widget"><control type="label"><font>Templated</font>'
+                    '</control></other></template>')
+        self.create_window_xml('<window><controls><control type="label"><font>font13</font></control>'
+                               '<include>skinshortcuts-mainmenu</include></controls></window>')
+        unused = [i["subject"] for i in self.init_provider().check_fonts() if i.get("rule") == "fonts.unused"]
+        self.assertEqual(unused, [])
+
     def test_monofont_counts_as_a_use(self):
         """A textbox <monofont> uses its font, and names one that must be defined."""
         self.create_font_file("font.ttf")

@@ -7,7 +7,7 @@ import logging
 
 from ..utils.files import folder_entries, miscased_name
 from ..utils.xml import file_needs_expansion, get_root_from_file
-from ..utils.validation import CallContexts, resolve_param_in_name
+from ..utils.validation import CallContexts, resolve_param_in_name, skinshortcuts_files
 from ..utils.expressions import is_dynamic_expression
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -224,10 +224,17 @@ class ValidationFont:
                                       rule="fonts.inconsistent-extra", subject=n))
 
         if getattr(self.addon, "fonts", None) and self._validation_index:
+            shortcut_paths = skinshortcuts_files(self.addon.path)
             for folder in self.addon.xml_folders:
                 fonts_defined = self._validation_index.get('fonts_defined', {}).get(folder, {})
                 fonts_used = self._validation_index.get('fonts_used', {}).get(folder, {})
                 used_names = set()
+                # the shortcuts files and the includes file the script builds from them use fonts
+                generated = os.path.join(self.addon.path, folder, "script-skinshortcuts-includes.xml")
+                for path in shortcut_paths + [generated]:
+                    root = get_root_from_file(path) if os.path.isfile(path) else None
+                    if root is not None:
+                        used_names.update((n.text or "").strip() for n in root.iter("font", "monofont"))
 
                 folded = {n.casefold(): n for n in fonts_defined}
                 calls = None
