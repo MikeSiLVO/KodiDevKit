@@ -4,8 +4,6 @@ import os
 import posixpath
 import re
 
-from lxml import etree as ET
-
 from ..utils.validation import (
     deduplicate_issues,
     find_includes_in_skinshortcuts_template,
@@ -17,7 +15,7 @@ from ..utils.validation import (
     should_report_progress,
 )
 from ..utils.files import folder_entries, is_inside, miscased_name
-from ..utils.xml import PARSER, get_params, get_root_from_file
+from ..utils.xml import get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
 from .constants import SEVERITY_ERROR
 
@@ -211,7 +209,6 @@ class ValidationInclude:
                                 }
                             )
 
-            # parsed fresh: load_fonts() expands the cached root, erasing these <include> tags
             for fname in ("Font.xml", "font.xml"):
                 font_path = os.path.join(self.addon.path, folder, fname)
                 if not os.path.isfile(font_path):
@@ -220,24 +217,22 @@ class ValidationInclude:
                 if progress_callback:
                     progress_callback(f"Checking fontsets in {fname}...")
 
-                try:
-                    root = ET.parse(font_path, PARSER).getroot()
-                except Exception:
+                root = get_root_from_file(font_path)
+                if root is None:
                     continue
 
-                for fontset in root.xpath(".//fontset"):
-                    for inc_node in fontset.xpath(".//include"):
-                        inc_name = (inc_node.text or "").strip()
-                        if not inc_name:
-                            continue
-                        var_refs.append(
-                            {
-                                "line": getattr(inc_node, "sourceline", 0),
-                                "type": "include",
-                                "file": font_path,
-                                "name": inc_name,
-                            }
-                        )
+                for inc_node in root.iter("include"):
+                    inc_name = (inc_node.get("content") or inc_node.text or "").strip()
+                    if not inc_name:
+                        continue
+                    var_refs.append(
+                        {
+                            "line": getattr(inc_node, "sourceline", 0),
+                            "type": "include",
+                            "file": font_path,
+                            "name": inc_name,
+                        }
+                    )
 
             template_path = find_skinshortcuts_template(self.addon.path)
             if template_path:

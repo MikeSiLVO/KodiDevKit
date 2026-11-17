@@ -657,6 +657,28 @@ class TestFontValidation(unittest.TestCase):
         has_unused_error = any("unusedfont" in issue["message"].lower() and "unused" in issue["message"].lower() for issue in issues)
         self.assertTrue(has_unused_error, "Should detect defined but unused font")
 
+    def test_font_xml_includes_resolve_anywhere_and_follow_edits(self):
+        """An include in a <font> supplies its parts; an include edit reaches fonts on reload."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default">'
+                              '<font><name>font13</name><include>File</include><size>13</size></font>'
+                              '<include>More</include></fontset></fonts>')
+        includes = self.create_includes_xml('<includes><include name="File"><filename>font.ttf</filename></include>'
+                                            '<include name="More"><font><name>Big</name><filename>font.ttf'
+                                            '</filename><size>30</size></font></include></includes>')
+        self.create_window_xml('<window><controls><control type="label"><font>font13</font></control>'
+                               '<control type="label"><font>Big</font></control></controls></window>')
+        provider = self.init_provider()
+        addon = provider.addon
+        assert addon is not None
+        self.assertEqual(sorted(f["name"] for f in addon.fonts["16x9"]), ["Big", "font13"])
+        with open(includes, encoding="utf-8") as f:
+            text = f.read()
+        with open(includes, "w", encoding="utf-8") as f:
+            f.write(text.replace("<name>Big</name>", "<name>Huge</name>"))
+        addon.reload(includes)
+        self.assertEqual(sorted(f["name"] for f in addon.fonts["16x9"]), ["Huge", "font13"])
+
     def test_fonts_in_shortcuts_files_count_as_used(self):
         """A font used only in a shortcuts includes file or shortcuts template counts as used."""
         self.create_font_file("font.ttf")

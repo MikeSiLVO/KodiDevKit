@@ -576,7 +576,8 @@ class Skin(Addon):
 
         if includes:
             self.update_include_list()
-        if colors_and_fonts:
+        # Font.xml can splice fonts from include files
+        if colors_and_fonts or includes:
             self._load_colors_and_fonts()
 
     def get_themes(self):

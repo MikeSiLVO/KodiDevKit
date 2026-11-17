@@ -1,5 +1,6 @@
 """Resource loading for Kodi skins: colors, fonts, and media files."""
 
+import copy
 import os
 import logging
 from typing import Dict, List, Generator, Optional, Tuple
@@ -103,9 +104,10 @@ class SkinResources:
                 continue
 
             if file_needs_expansion(font_file) and resolver:
+                # resolved on a copy; the parse cache shares this root with every other reader
+                root = copy.deepcopy(root)
                 try:
-                    for fontset in root.findall("fontset"):
-                        resolver.resolve_includes(fontset, folder)
+                    resolver.resolve(root, folder, source_file=font_file)
                 except Exception as e:
                     logger.debug("Failed to expand includes in Font.xml: %s", e)
 
