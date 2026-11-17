@@ -443,13 +443,14 @@ class XmlInterpreter:
                                 part=part)
             return
 
+        location, subject = (node.tag, None) if part == PARAM_TEXT else (f"{part} attribute", part)
         if value_type in CASE_INSENSITIVE_ENUMS:
             if value.lower() not in ALLOWED_VALUES[value_type]:
                 allowed = ", ".join(sorted(ALLOWED_VALUES[value_type]))
                 self._add_issue(
                     node, SEVERITY_ERROR,
-                    f"invalid value for {node.tag}: {value} (allowed: {allowed})", rule="xml.invalid-value",
-                    part=part,
+                    f"invalid value for {location}: {value} (allowed: {allowed})", rule="xml.invalid-value",
+                    subject=subject, part=part,
                 )
         else:
             if value not in ALLOWED_VALUES[value_type]:
@@ -459,8 +460,8 @@ class XmlInterpreter:
                     detail = "allowed: " + ", ".join(sorted(ALLOWED_VALUES[value_type]))
                 self._add_issue(
                     node, SEVERITY_ERROR,
-                    f"invalid value for {node.tag}: {value} ({detail})", rule="xml.invalid-value",
-                    part=part,
+                    f"invalid value for {location}: {value} ({detail})", rule="xml.invalid-value",
+                    subject=subject, part=part,
                 )
 
     def _validate_label_brackets(self, node):

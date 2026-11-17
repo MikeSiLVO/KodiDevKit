@@ -701,6 +701,15 @@ class TestControlChildValidation(unittest.TestCase):
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
         self.assertEqual(interp.interpret(root), [])
 
+    def test_enum_attribute_row_names_the_attribute(self):
+        """A bad enum attribute value names that attribute, not its tag."""
+        attribs = {"image": {"animation": {"tween": "tween", "easing": "easing"}}}
+        root = _parse('<window><controls><control type="image">'
+                      '<animation tween="quad" easing="out">focus</animation></control></controls></window>')
+        issues = XmlInterpreter(template_attribs=attribs, template_values={"image": {}}).interpret(root)
+        self.assertEqual([(i["subject"], i["message"].split(" (")[0]) for i in issues],
+                         [("tween", "invalid value for tween attribute: quad")])
+
     def test_values_kodi_compares_in_any_case(self):
         """Slider action, spin subtype and aspectratio alignment take any case; <align> does not."""
         attribs = {"slider": {"action": {}}, "spincontrol": {"subtype": {}},
