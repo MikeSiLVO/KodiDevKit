@@ -262,6 +262,13 @@ def should_report_progress(count, total):
     return count % 3 == 0
 
 
+def stage_progress(progress_callback, stage):
+    """Callback reporting a count as "Checking fonts (3/40)...", None without a callback."""
+    if not progress_callback:
+        return None
+    return lambda count, total: progress_callback(f"{stage} ({count}/{total})...")
+
+
 def deduplicate_issues(issues):
     """Deduplicate issues on file, line and message, keeping the first of each."""
     seen = set()

@@ -10,6 +10,7 @@ import sys
 
 from ..addon.translations import strings_po_faults
 from ..utils.files import check_bom, eol_info_from_path_patterns
+from ..utils.validation import stage_progress
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -31,18 +32,21 @@ class ValidationFileCheck:
         if not self.addon:
             return issues
 
+        if progress_callback:
+            progress_callback("Finding text files...")
         # text only: a PNG holding 0D 0A would read as Windows line endings
         result = eol_info_from_path_patterns(
             [self.addon.path],
             recursive=True,
             includes=['.xml', '.po', '.txt', '.py', '.md'],
             excludes=['.svn', '.git'],
+            progress=stage_progress(progress_callback, "Checking line endings"),
         )
 
-        if progress_callback:
-            progress_callback(f"Checking {len(result)} files for BOM and line endings...")
-
-        for path, _eol in result:
+        report = stage_progress(progress_callback, "Checking for a BOM")
+        for count, (path, _eol) in enumerate(result, 1):
+            if report:
+                report(count, len(result))
             if check_bom(path):
                 issues.append({
                     "message": "File starts with a UTF-8 BOM, which Kodi repo review rejects; save it without one",
@@ -73,9 +77,11 @@ class ValidationFileCheck:
                     "subject": "",
                 })
 
-        issues.extend(self._sixteen_bit_pngs())
+        issues.extend(self._sixteen_bit_pngs(stage_progress(progress_callback, "Checking PNG bit depth")))
+        if progress_callback:
+            progress_callback("Checking file names and types...")
         issues.extend(self._repo_file_issues())
-        issues.extend(self._po_syntax_issues())
+        issues.extend(self._po_syntax_issues(stage_progress(progress_callback, "Checking strings.po files")))
 
         if progress_callback:
             progress_callback(f"Complete: {len(issues)} file encoding issues found")
@@ -83,37 +89,37 @@ class ValidationFileCheck:
         return issues
 
 
-    def _sixteen_bit_pngs(self):
+    def _sixteen_bit_pngs(self, progress=None):
         """PNGs TexturePacker would pack whose IHDR says 16 bits per channel."""
         issues = []
-        for folder in ("media", "themes"):
-            for dirpath, _dirs, files in os.walk(os.path.join(self.addon.path, folder)):
-                for name in files:
-                    if not name.lower().endswith(".png"):
-                        continue
-                    path = os.path.join(dirpath, name)
-                    try:
-                        with open(path, "rb") as f:
-                            header = f.read(25)
-                    except OSError:
-                        continue
-                    # bit depth follows the signature and the IHDR length, type, width and height
-                    if len(header) == 25 and header[12:16] == b"IHDR" and header[24] == 16:
-                        issues.append({
-                            "message": f"16-bit PNG {name}: TexturePacker cannot pack it, save it as 8-bit",
-                            "file": path,
-                            "line": 0,
-                            "severity": SEVERITY_ERROR,
-                            "rule": "files.sixteen-bit-png",
-                            "subject": "",
-                        })
+        pngs = [os.path.join(dirpath, name) for folder in ("media", "themes")
+                for dirpath, _dirs, files in os.walk(os.path.join(self.addon.path, folder))
+                for name in files if name.lower().endswith(".png")]
+        for count, path in enumerate(pngs, 1):
+            if progress:
+                progress(count, len(pngs))
+            try:
+                with open(path, "rb") as f:
+                    header = f.read(25)
+            except OSError:
+                continue
+            # bit depth follows the signature and the IHDR length, type, width and height
+            if len(header) == 25 and header[12:16] == b"IHDR" and header[24] == 16:
+                issues.append({
+                    "message": f"16-bit PNG {os.path.basename(path)}: TexturePacker cannot pack it, save it as 8-bit",
+                    "file": path,
+                    "line": 0,
+                    "severity": SEVERITY_ERROR,
+                    "rule": "files.sixteen-bit-png",
+                    "subject": "",
+                })
         return issues
 
 
-    def _po_syntax_issues(self):
+    def _po_syntax_issues(self, progress=None):
         """Broken strings.po strings Kodi does not misread; the misread ones are label issues."""
         issues = []
-        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path):
+        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path, progress):
             if effect:
                 continue
             where = f"string {string_id}" if string_id else "the header"

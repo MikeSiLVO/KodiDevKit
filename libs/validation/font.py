@@ -7,7 +7,7 @@ import logging
 
 from ..utils.files import folder_entries, miscased_name
 from ..utils.xml import file_needs_expansion, get_root_from_file
-from ..utils.validation import CallContexts, resolve_param_in_name, skinshortcuts_files
+from ..utils.validation import CallContexts, resolve_param_in_name, skinshortcuts_files, stage_progress
 from ..utils.expressions import is_dynamic_expression
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -100,9 +100,14 @@ class ValidationFont:
         if progress_callback:
             progress_callback(f"Checking {total_fonts} font definitions in {total_folders} folders...")
 
+        report = stage_progress(progress_callback, "Checking font definitions")
+        checked = 0
         if getattr(self.addon, "fonts", None):
             for folder, items in (self.addon.fonts or {}).items():
                 for it in items:
+                    checked += 1
+                    if report:
+                        report(checked, total_fonts)
                     name = (it.get("name") or "").strip()
                     filename = (it.get("filename") or "").strip()
                     file_src = it.get("file") or "N/A"
@@ -154,6 +159,8 @@ class ValidationFont:
                                               f"loaded", file_src, fn_line, rule="fonts.not-loaded", subject=name))
 
         for folder in getattr(self.addon, "xml_folders", []):
+            if progress_callback:
+                progress_callback(f"Checking the fontsets in {folder or 'the skin root'}...")
             fontsets = self._parse_fontsets(folder)
             if not fontsets:
                 continue
@@ -231,6 +238,8 @@ class ValidationFont:
         if getattr(self.addon, "fonts", None) and self._validation_index:
             shortcut_paths = skinshortcuts_files(self.addon.path)
             for folder in self.addon.xml_folders:
+                if progress_callback:
+                    progress_callback(f"Checking the fonts used in {folder or 'the skin root'}...")
                 fonts_defined = self._validation_index.get('fonts_defined', {}).get(folder, {})
                 fonts_used = self._validation_index.get('fonts_used', {}).get(folder, {})
                 used_names = set()

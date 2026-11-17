@@ -124,22 +124,21 @@ class ValidationProgressView(ProgressScratchView):
         self._current_progress = None
 
     def show_file_progress(self, filename, current, total):
-        """Render progress for file-by-file validation (e.g. 'File 12 of 50')."""
+        """Show progress for file-by-file validation (e.g. 'File 12 of 50')."""
         self._current_progress = ('file', filename, current, total)
 
+        # later updates wait for the spinner, which redraws every 200 ms
         if self._animation_timer is None:
             self._start_animation()
-
-        self._update_display()
+            self._update_display()
 
     def update(self, message):
-        """Show `message` with the animated spinner."""
+        """Show a progress line with the animated spinner."""
         self._current_progress = ('message', message)
 
         if self._animation_timer is None:
             self._start_animation()
-
-        self._update_display()
+            self._update_display()
 
     def _update_display(self):
         """Update the progress display with current state and spinner."""

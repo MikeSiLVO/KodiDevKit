@@ -6,6 +6,7 @@ import logging
 from ..addon.translations import strings_po_faults
 from ..utils.colors import is_kodi_hex
 from ..utils.infobool import is_known_info
+from ..utils.validation import stage_progress
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
@@ -171,7 +172,8 @@ class ValidationLabel:
             ref["subject"] = ref["name"]
             listitems.append(ref)
 
-        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path):
+        po_progress = stage_progress(progress_callback, "Checking strings.po files")
+        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path, po_progress):
             if not effect:
                 continue
             message = f"String {string_id} {_PO_PROBLEMS[problem]}, so Kodi {_PO_EFFECTS[effect]}"

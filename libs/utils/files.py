@@ -8,7 +8,7 @@ import os
 import re
 import time
 import zipfile
-from typing import Optional
+from typing import Callable, Optional
 from urllib.request import urlopen
 from lxml import etree as ET
 
@@ -25,10 +25,10 @@ def eol_info_from_path_patterns(
     *,
     recursive: bool = True,
     includes: list[str] | None = None,
-    excludes: list[str] | None = None
+    excludes: list[str] | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> list[tuple[str, str | None]]:
-    """Line ending of each matching file, or None where it has no newline."""
-    # an exclude matches anywhere in the path, an include matches its end
+    """Each matching file's line ending, None if unreadable or none; reports progress per file."""
     includes = includes or []
     excludes = excludes or []
 
@@ -58,7 +58,9 @@ def eol_info_from_path_patterns(
                 files.append(root_or_file)
 
     out = []
-    for fp in files:
+    for count, fp in enumerate(files, 1):
+        if progress:
+            progress(count, len(files))
         eol = None
         try:
             with open(fp, 'rb') as f:

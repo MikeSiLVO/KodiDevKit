@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from ..utils.files import read_xbt_names
 from ..utils.xml import get_params, get_root_from_file, tree_needs_expansion
 from ..utils.expressions import PARAM_PATTERN, is_dynamic_expression
-from ..utils.validation import normalize_control_id, skinshortcuts_files
+from ..utils.validation import normalize_control_id, skinshortcuts_files, stage_progress
 from ..validation.constants import CONTROL_ACTION_TAGS, TEXTURE_TAGS, WINDOW_ACTION_TAGS
 
 logger = logging.getLogger(__name__)
@@ -257,10 +257,15 @@ class SkinIndex:
         if hasattr(self.skin, 'resolver') and self.skin.resolver:
             if progress_callback:
                 progress_callback("Resolving windows for ID extraction...")
-            resolve_count = 0
+            report = stage_progress(progress_callback, "Resolving windows")
+            total_windows = sum(len(index['window_base_ids'].get(f, {})) for f in self.skin.xml_folders)
+            resolve_count = seen = 0
             for folder in self.skin.xml_folders:
                 window_files = list(index['window_base_ids'].get(folder, {}).keys())
                 for window_file in window_files:
+                    seen += 1
+                    if report:
+                        report(seen, total_windows)
                     path = os.path.join(self.skin.path, folder, window_file)
                     root = get_root_from_file(path)
                     if root is None or window_file in index['non_window_files'][folder]:
@@ -298,9 +303,6 @@ class SkinIndex:
 
                     index['window_expanded_ids'][folder][window_file] = expanded_ids
                     resolve_count += 1
-
-                    if progress_callback and resolve_count % 10 == 0:
-                        progress_callback(f"Resolved {resolve_count} windows...")
 
             logger.info("Resolved %d windows for ID extraction", resolve_count)
         else:

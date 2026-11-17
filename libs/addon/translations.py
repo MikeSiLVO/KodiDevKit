@@ -16,20 +16,24 @@ _FIELD = re.compile(r'(msgctxt|msgid_plural|msgid|msgstr(?:\[\d+\])?)\s+(.*)$')
 _STRING_ID = re.compile(r'msgctxt "#(\d+)')
 
 
-def strings_po_faults(addon_path):
+def strings_po_faults(addon_path, progress=None):
     """Yield (path, line, string id, problem, effect) per broken string in every strings.po."""
+    files = []
     for base in ("language", os.path.join("resources", "language")):
         base_path = os.path.join(addon_path, base)
         if not os.path.isdir(base_path):
             continue
         for folder in sorted(os.listdir(base_path)):
             path = os.path.join(base_path, folder, "strings.po")
-            if not folder.startswith("resource.language.") or not os.path.isfile(path):
-                continue
-            with open(path, encoding="utf-8", errors="replace") as f:
-                text = f.read()
-            for fault in broken_strings(text, folder.lower() == "resource.language.en_gb"):
-                yield (path,) + fault
+            if folder.startswith("resource.language.") and os.path.isfile(path):
+                files.append((folder, path))
+    for count, (folder, path) in enumerate(files, 1):
+        if progress:
+            progress(count, len(files))
+        with open(path, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        for fault in broken_strings(text, folder.lower() == "resource.language.en_gb"):
+            yield (path,) + fault
 
 
 def _string_fault(value):

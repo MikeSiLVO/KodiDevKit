@@ -15,8 +15,7 @@ from ..utils.expressions import (
     is_dynamic_expression,
     is_number,
 )
-from ..utils.validation import (create_issue, deduplicate_issues, is_runtime_generated_file,
-                                merge_include_issues, should_report_progress)
+from ..utils.validation import create_issue, deduplicate_issues, is_runtime_generated_file, merge_include_issues
 from ..addon.translations import get_po_file
 from ..infonames import from_tree
 from ..utils.infobool import info_name_sets, is_known_info, static_value
@@ -388,9 +387,8 @@ class CheckerMixin:
             progress_callback(f"Validating {total_files} XML files...")
 
         for index, path in enumerate(xml_files, 1):
-            if progress_callback and should_report_progress(index, total_files):
-                filename = os.path.basename(path)
-                progress_callback(f"Validating {filename} ({index}/{total_files})...")
+            if progress_callback:
+                progress_callback(f"Validating {os.path.basename(path)} ({index}/{total_files})...")
             result = self._file_issues(path)
             if result:
                 listitems.extend(result)
