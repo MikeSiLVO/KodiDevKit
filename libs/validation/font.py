@@ -117,14 +117,17 @@ class ValidationFont:
                     if filename and not is_dynamic_expression(filename):
                         rel = filename.replace("\\", "/").strip()
 
-                        # a resource:// font lives in another addon
-                        if rel.startswith("resource://"):
+                        base_dir = skin_fonts_dir
+                        if rel.startswith("special://skin/"):
+                            base_dir, rel = self.addon.path, rel[len("special://skin/"):]
+                        elif "://" in rel or rel.startswith("/") or rel[1:3] == ":/":
+                            # full path outside the skin
                             continue
 
                         rel = "/".join(p for p in rel.split("/") if p and p != ".")
                         base = os.path.basename(rel)
 
-                        actual = self._resolve_font_path(skin_fonts_dir, rel)
+                        actual = self._resolve_font_path(base_dir, rel)
                         exists = actual is not None
 
                         if exists and actual != rel:

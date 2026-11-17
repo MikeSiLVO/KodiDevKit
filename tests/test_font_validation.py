@@ -679,6 +679,22 @@ class TestFontValidation(unittest.TestCase):
         addon.reload(includes)
         self.assertEqual(sorted(f["name"] for f in addon.fonts["16x9"]), ["Huge", "font13"])
 
+    def test_full_font_path(self):
+        """A special://skin/ filename resolves from the skin root; other full paths go unchecked."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default">'
+                              '<font><name>font13</name><filename>special://skin/fonts/font.ttf</filename>'
+                              '<size>13</size></font>'
+                              '<font><name>Gone</name><filename>special://skin/fonts/gone.ttf</filename>'
+                              '<size>13</size></font>'
+                              '<font><name>Home</name><filename>special://home/media/Fonts/x.ttf</filename>'
+                              '<size>13</size></font></fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>font13</font></control>'
+                               '<control type="label"><font>Gone</font></control>'
+                               '<control type="label"><font>Home</font></control></controls></window>')
+        missing = [i["subject"] for i in self.init_provider().check_fonts() if i.get("rule") == "fonts.missing-file"]
+        self.assertEqual(missing, ["special://skin/fonts/gone.ttf"])
+
     def test_fonts_in_shortcuts_files_count_as_used(self):
         """A font used only in a shortcuts includes file or shortcuts template counts as used."""
         self.create_font_file("font.ttf")
