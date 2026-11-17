@@ -31,8 +31,9 @@ class TestWindowChildren(unittest.TestCase):
         self.assertNotIn("borderpercent", FONT_CHILDREN)
 
     def test_core_tags_present(self):
+        """The tags Kodi reads on any window are all listed."""
         core = {"controls", "defaultcontrol", "backgroundcolor", "visible",
-                "animation", "zorder", "coordinates", "camera", "depth",
+                "animation", "zorder", "coordinates", "camera", "depth", "hitrect",
                 "onload", "onunload", "include"}
         self.assertTrue(core.issubset(WINDOW_CHILDREN))
 

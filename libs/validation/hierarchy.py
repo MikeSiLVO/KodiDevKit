@@ -13,6 +13,7 @@ WINDOW_CHILDREN = frozenset({
     "coordinates",
     "camera",
     "depth",
+    "hitrect",
     "controls",
     "backgroundcolor",
     "onload",
