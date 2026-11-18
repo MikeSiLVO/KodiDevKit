@@ -100,6 +100,10 @@ class ValidationFont:
         if progress_callback:
             progress_callback(f"Checking {total_fonts} font definitions in {total_folders} folders...")
 
+        root = getattr(self.addon, "root", None)
+        # Kodi also asks each installed resource.font add-on, and the skin's imports get installed
+        font_addons = sorted({i.get("addon") for i in root.iter("import")
+                              if (i.get("addon") or "").startswith("resource.font.")}) if root is not None else []
         report = stage_progress(progress_callback, "Checking font definitions")
         checked = 0
         if getattr(self.addon, "fonts", None):
@@ -153,7 +157,11 @@ class ValidationFont:
                                     if exists:
                                         break
 
-                        if not exists and base.lower() not in KODI_FONTS:
+                        if not exists and base.lower() not in KODI_FONTS and font_addons:
+                            issues.append(row(f"Font file '{filename}' for '{name or '?'}' is not in the skin; Kodi "
+                                              f"looks for it in {', '.join(font_addons)}", file_src, fn_line,
+                                              SEVERITY_WARNING, rule="fonts.missing-file", subject=filename))
+                        elif not exists and base.lower() not in KODI_FONTS:
                             issues.append(row(f"Missing font file '{filename}' for '{name or '?'}'", file_src, fn_line,
                                               rule="fonts.missing-file", subject=filename))
 

@@ -695,6 +695,24 @@ class TestFontValidation(unittest.TestCase):
         missing = [i["subject"] for i in self.init_provider().check_fonts() if i.get("rule") == "fonts.missing-file"]
         self.assertEqual(missing, ["special://skin/fonts/gone.ttf"])
 
+    def test_font_file_from_an_imported_font_addon(self):
+        """A file the skin lacks is a warning naming the imported resource.font add-on Kodi asks."""
+        with open(os.path.join(self.skin_path, "addon.xml"), "w", encoding="utf-8") as f:
+            f.write('<addon id="skin.test" version="1.0.0"><requires><import addon="xbmc.gui" version="5.15.0"/>'
+                    '<import addon="resource.font.robotocjksc" version="0.0.1"/></requires>'
+                    '<extension point="xbmc.gui.skin"><res folder="16x9" default="true"/></extension></addon>')
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default">'
+                              '<font><name>font13</name><filename>font.ttf</filename><size>13</size></font>'
+                              '<font><name>cjk</name><filename>RobotoCJKSC-Regular.ttf</filename><size>13</size>'
+                              '</font></fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>cjk</font></control></controls>'
+                               '</window>')
+        rows = [i for i in self.init_provider().check_fonts() if i.get("rule") == "fonts.missing-file"]
+        self.assertEqual([(r["severity"], r["message"]) for r in rows], [(
+            "warning", "Font file 'RobotoCJKSC-Regular.ttf' for 'cjk' is not in the skin; Kodi looks for it in "
+                       "resource.font.robotocjksc")])
+
     def test_fonts_in_shortcuts_files_count_as_used(self):
         """A font used only in a shortcuts includes file or shortcuts template counts as used."""
         self.create_font_file("font.ttf")
