@@ -488,7 +488,7 @@ class ValidationRunner:
 
 def _report_path(addon_path, skin_name):
     """Path of the skin's report: in its folder, or in the report directory, made if missing."""
-    from .libs.reporting.html import REPORT_NAME
+    from .libs.utils.files import REPORT_NAME
 
     report_dir = sublime.load_settings(SETTINGS_FILE).get('validation_report_directory') or ""
     if not report_dir:
@@ -632,7 +632,7 @@ class KodidevkitShowValidationReportCommand(sublime_plugin.WindowCommand):
 def _report_entry(report_path):
     """Picker entry for a report: skin name from its file name, date from when it was written."""
     from datetime import datetime
-    from .libs.reporting.html import REPORT_NAME
+    from .libs.utils.files import REPORT_NAME
 
     name = os.path.basename(report_path)
     suffix = "_" + REPORT_NAME
@@ -723,7 +723,7 @@ class KodidevkitOpenValidationReportCommand(sublime_plugin.WindowCommand):
         """Open the report in the loaded skin's folder, or say there is none yet."""
         import pathlib
         from .libs.infoprovider.provider import INFOS
-        from .libs.reporting.html import REPORT_NAME
+        from .libs.utils.files import REPORT_NAME
 
         addon = getattr(INFOS, "addon", None)
         if not addon:

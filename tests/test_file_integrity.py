@@ -169,6 +169,33 @@ class TestFileIntegrity(unittest.TestCase):
 
         self.assertEqual(self.issues(), [])
 
+    def test_every_text_file_is_checked(self):
+        """CRLF in any text file, however far in; binary, dot files and the report skipped."""
+        self.write("Home.xml", WINDOW_XML)
+        self._put("LICENSE", b"GPL\r\n")
+        self._put("extras.json", b"{}\r\n")
+        self._put("16x9/Large.XML", b"<!-- x -->\n" * 4000 + b"<window/>\r\n")
+        self._put("media/icon.png", b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+        self._put(".github/workflows/ci.yml", b"on: push\r\n")
+        self._put("validation_report.html", b"<html>\r\n")
+        flagged = sorted(os.path.relpath(i["file"], self.skin_path).replace(os.sep, "/")
+                         for i in self.issues() if i["rule"] == "files.line-endings")
+        self.assertEqual(flagged, ["16x9/Large.XML", "LICENSE", "extras.json"])
+
+    def test_skin_path_naming_git_is_checked(self):
+        """A skin under a folder whose name holds .git is still checked."""
+        parent = os.path.join(self.skin_path, "x.github")
+        os.makedirs(os.path.join(parent, "16x9"))
+        for rel, data in (("addon.xml", ADDON_XML.encode()), ("16x9/Home.xml", WINDOW_XML.encode()),
+                          ("16x9/Includes.xml", b"\xef\xbb\xbf<includes/>\r\n")):
+            with open(os.path.join(parent, rel), "wb") as f:
+                f.write(data)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(parent)
+        rules = sorted(i["rule"] for i in provider.check_file_integrity())
+        self.assertEqual(rules, ["files.bom", "files.line-endings"])
+
 
 if __name__ == "__main__":
     unittest.main()

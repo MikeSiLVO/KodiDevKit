@@ -8,7 +8,7 @@ import os
 import re
 import time
 import zipfile
-from typing import Callable, Optional
+from typing import Optional
 from urllib.request import urlopen
 from lxml import etree as ET
 
@@ -19,63 +19,25 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 logger.propagate = True
 
+REPORT_NAME = "validation_report.html"
 
-def eol_info_from_path_patterns(
-    paths: list[str],
-    *,
-    recursive: bool = True,
-    includes: list[str] | None = None,
-    excludes: list[str] | None = None,
-    progress: Callable[[int, int], None] | None = None,
-) -> list[tuple[str, str | None]]:
-    """Each matching file's line ending, None if unreadable or none; reports progress per file."""
-    includes = includes or []
-    excludes = excludes or []
 
-    def _skip(path):
-        p = path.replace('\\', '/')
-        return (
-            any(x and x in p for x in excludes)
-            or (includes and not any(p.endswith(x) for x in includes))
-        )
-
-    files = []
-    for root_or_file in paths:
-        if os.path.isdir(root_or_file):
-            if recursive:
-                for r, _dirs, fnames in os.walk(root_or_file):
-                    for fn in fnames:
-                        fp = os.path.join(r, fn)
-                        if not _skip(fp):
-                            files.append(fp)
-            else:
-                for fn in os.listdir(root_or_file):
-                    fp = os.path.join(root_or_file, fn)
-                    if os.path.isfile(fp) and not _skip(fp):
-                        files.append(fp)
-        else:
-            if not _skip(root_or_file):
-                files.append(root_or_file)
-
-    out = []
-    for count, fp in enumerate(files, 1):
-        if progress:
-            progress(count, len(files))
-        eol = None
-        try:
-            with open(fp, 'rb') as f:
-                chunk = f.read(1 << 15)
-                if b'\r\n' in chunk:
-                    eol = '\r\n'
-                elif b'\n' in chunk:
-                    eol = '\n'
-                elif b'\r' in chunk:
-                    eol = '\r'
-        except Exception as e:
-            logger.warning(f"Could not read {fp} for EOL detection: {e}")
-            eol = None
-        out.append((fp, eol))
-    return out
+def line_ending(path: str) -> Optional[str]:
+    """Line ending, CRLF if any line uses it; "" for none, None if binary or unreadable."""
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(8000)
+            # a NUL byte marks a binary file, the test git uses
+            if b'\0' in head:
+                return None
+            data = head + f.read()
+    except OSError as e:
+        logger.warning("Could not read %s for its line endings: %s", path, e)
+        return None
+    for eol in ('\r\n', '\n', '\r'):
+        if eol.encode() in data:
+            return eol
+    return ""
 
 
 def get_platform() -> str:

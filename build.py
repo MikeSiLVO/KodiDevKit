@@ -12,10 +12,9 @@ import sublime_plugin
 
 from .libs.addon.addon import Addon
 from .libs.infoprovider.provider import INFOS
-from .libs.utils.files import make_archive
+from .libs.utils.files import REPORT_NAME, make_archive
 from .libs.utils.decorators import run_async
 from .libs.skin.textures import texturepacker
-from .libs.reporting.html import REPORT_NAME
 
 logger = logging.getLogger("KodiDevKit.build")
 

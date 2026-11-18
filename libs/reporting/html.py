@@ -6,10 +6,10 @@ from datetime import datetime
 from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote
+from ..utils.files import REPORT_NAME
 from ..validation.constants import SEVERITY_ERROR, SEVERITY_WARNING
 from ..validation.suppress import muted_note
 
-REPORT_NAME = "validation_report.html"
 
 CATEGORY_DESCRIPTIONS = {
     "Variables": (

@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 from ..addon.translations import strings_po_faults
-from ..utils.files import check_bom, eol_info_from_path_patterns
+from ..utils.files import REPORT_NAME, check_bom, line_ending
 from ..utils.validation import stage_progress
 from .constants import SEVERITY_ERROR, SEVERITY_WARNING
 
@@ -34,19 +34,20 @@ class ValidationFileCheck:
 
         if progress_callback:
             progress_callback("Finding text files...")
-        # text only: a PNG holding 0D 0A would read as Windows line endings
-        result = eol_info_from_path_patterns(
-            [self.addon.path],
-            recursive=True,
-            includes=['.xml', '.po', '.txt', '.py', '.md'],
-            excludes=['.svn', '.git'],
-            progress=stage_progress(progress_callback, "Checking line endings"),
-        )
-
-        report = stage_progress(progress_callback, "Checking for a BOM")
-        for count, (path, _eol) in enumerate(result, 1):
+        # the build zip leaves dot files and the report out
+        files = [rel for rel, _executable in shipped_files(self.addon.path)
+                 if rel != REPORT_NAME and not any(part.startswith(".") for part in rel.split("/"))]
+        report = stage_progress(progress_callback, "Checking line endings and BOMs")
+        result = []
+        for count, rel in enumerate(files, 1):
             if report:
-                report(count, len(result))
+                report(count, len(files))
+            path = os.path.normpath(os.path.join(self.addon.path, rel))
+            eol = line_ending(path)
+            if eol is not None:
+                result.append((path, eol))
+
+        for path, _eol in result:
             if check_bom(path):
                 issues.append({
                     "message": "File starts with a UTF-8 BOM, which Kodi repo review rejects; save it without one",
@@ -141,7 +142,7 @@ class ValidationFileCheck:
         issues = []
 
         def add(rel, rule, message, severity=SEVERITY_WARNING):
-            issues.append({"message": message, "file": os.path.join(self.addon.path, rel), "line": 0,
+            issues.append({"message": message, "file": os.path.normpath(os.path.join(self.addon.path, rel)), "line": 0,
                            "severity": severity, "rule": rule, "subject": ""})
 
         files = shipped_files(self.addon.path)
