@@ -46,6 +46,17 @@ class TestExtraction(unittest.TestCase):
         self.assertEqual(_refs("SendClick(500)"), {"500": "control"})
         self.assertEqual(_refs("SendClick(videos,50)"), {"50": "control"})
 
+    def test_builtin_naming_its_window_reads_the_id_there(self):
+        """SendClick and Control.Message that name a window read the id there, not in this file."""
+        def other_window(text):
+            index = {'ids_referenced': {'f': {}}}
+            SkinIndex._record_id_refs(text, ET.fromstring("<onclick/>"), "Home.xml", "f", index)
+            return [u['after_switch'] for usages in index['ids_referenced']['f'].values() for u in usages]
+        self.assertEqual(other_window("SendClick(10025,8)"), [True])
+        self.assertEqual(other_window("SendClick(8)"), [False])
+        self.assertEqual(other_window("Control.Message(8,moveup,10025)"), [True])
+        self.assertEqual(other_window("Control.Message(8,moveup)"), [False])
+
     def test_window_is_topmost_is_a_window(self):
         self.assertEqual(_refs("Window.IsTopmost(1101)"), {"1101": "window"})
 

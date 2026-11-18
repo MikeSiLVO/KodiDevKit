@@ -28,16 +28,18 @@ _WINDOW_REFS = re.compile(
     r"\b(?:Window\.(?:IsMedia|Is|IsActive|IsVisible|IsTopmost|IsDialogTopmost|IsModalDialogTopmost"
     r"|Previous|Next)\(|Window\((?=[^()]*\)\.)|(?:ActivateWindow|ActivateWindowAndFocus|ReplaceWindow"
     r"|ReplaceWindowAndFocus|Dialog\.Close)\()\s*([^,()\s]+)", re.I)
-# where Kodi reads a control id
+# where Kodi reads a control id, and whether the call names the window it reads it in
 _CONTROL_REFS = (
-    (re.compile(r"\bControl\.(HasFocus|IsVisible|IsEnabled|GetLabel)\(\s*(\d+)\s*\)", re.I), 2),
-    (re.compile(r"\bControlGroup\(\s*(\d+)\s*\)", re.I), 1),
-    (re.compile(r"\bControlGroup\(\s*\d+\s*\)\.HasFocus\(\s*(\d+)\s*\)", re.I), 1),
-    (re.compile(r"\bContainer\(\s*(\d+)\s*\)", re.I), 1),
-    (re.compile(r"\b(?:Control\.(?:Message|Move|ResetGroupList|SetFocus|SetHidden|SetVisible)"
-                r"|SetFocus|PageUp|PageDown)\(\s*(\d+)\s*[,)]", re.I), 1),
-    (re.compile(r"\bSendClick\(\s*(\d+)\s*\)", re.I), 1),
-    (re.compile(r"\bSendClick\(\s*[^,()]+,\s*(\d+)\s*\)", re.I), 1),
+    (re.compile(r"\bControl\.(HasFocus|IsVisible|IsEnabled|GetLabel)\(\s*(\d+)\s*\)", re.I), 2, False),
+    (re.compile(r"\bControlGroup\(\s*(\d+)\s*\)", re.I), 1, False),
+    (re.compile(r"\bControlGroup\(\s*\d+\s*\)\.HasFocus\(\s*(\d+)\s*\)", re.I), 1, False),
+    (re.compile(r"\bContainer\(\s*(\d+)\s*\)", re.I), 1, False),
+    (re.compile(r"\b(?:Control\.(?:Move|ResetGroupList|SetFocus|SetHidden|SetVisible)"
+                r"|SetFocus|PageUp|PageDown)\(\s*(\d+)\s*[,)]", re.I), 1, False),
+    (re.compile(r"\bControl\.Message\(\s*(\d+)\s*(?:,[^,()]*)?\)", re.I), 1, False),
+    (re.compile(r"\bControl\.Message\(\s*(\d+)\s*,[^,()]*,[^,()]+\)", re.I), 1, True),
+    (re.compile(r"\bSendClick\(\s*(\d+)\s*\)", re.I), 1, False),
+    (re.compile(r"\bSendClick\(\s*[^,()]+,\s*(\d+)\s*\)", re.I), 1, True),
 )
 # an action after one of these runs against a different window than the file it sits in
 _WINDOW_SWITCH = re.compile(r"^\s*(?:Close|Dialog\.Close|ActivateWindow|ReplaceWindow|Action\(\s*(?:back|close"
@@ -835,7 +837,7 @@ class SkinIndex:
         if skip_controls:
             return
 
-        for pattern, group in _CONTROL_REFS:
+        for pattern, group, names_window in _CONTROL_REFS:
             for match in pattern.finditer(text):
                 control_id = normalize_control_id(match.group(group))
                 if control_id == "0":
@@ -846,4 +848,4 @@ class SkinIndex:
                         match.group(1).lower())
                 refs.setdefault(control_id, []).append(
                     {'file': path, 'line': line, 'type': 'control', 'context': context,
-                     'after_switch': after_switch, 'unload': unload})
+                     'after_switch': after_switch or names_window, 'unload': unload})
