@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import logging
 
-from ..utils.files import folder_entries, miscased_name
+from ..utils.files import folder_entries, miscased_name, xml_folder_paths
 from ..utils.xml import file_needs_expansion, get_root_from_file
 from ..utils.validation import CallContexts, resolve_param_in_name, skinshortcuts_files, stage_progress
 from ..utils.expressions import is_dynamic_expression
@@ -334,10 +334,8 @@ class ValidationFont:
     def _parse_fontsets(self, folder):
         """Parse the folder's fontsets with their fonts, include-supplied ones too."""
         out = []
-        candidates = [
-            os.path.join(self.addon.path, folder, "Font.xml"),
-            os.path.join(self.addon.path, folder, "font.xml"),
-        ]
+        candidates = xml_folder_paths(self.addon.path, folder, getattr(self.addon, "default_xml_folder", None),
+                                      "Font.xml", "font.xml")
         path = next((p for p in candidates if os.path.isfile(p)), None)
         if not path:
             return out

@@ -5,6 +5,7 @@ import sys
 import shutil
 import tempfile
 import unittest
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -24,6 +25,7 @@ class _Addon:
     def __init__(self, path, xml_folders):
         self.path = path
         self.xml_folders = xml_folders
+        self.default_xml_folder: Optional[str] = None
 
 
 class _Base(unittest.TestCase):
@@ -68,14 +70,17 @@ class TestResolve(_Base):
         self.assertEqual(resolve_include_file(self.addon, "16x9", "sub/Data.xml"), (None, "Sub/Data.xml"))
 
     def test_other_resolution_folder_is_searched(self):
-        # Kodi falls back to the default resolution when the closest one lacks the file.
-        os.makedirs(os.path.join(self.root, "1080i"))
-        other = os.path.join(self.root, "1080i", "Shared.xml")
-        with open(other, "w", encoding="utf8") as f:
-            f.write("<includes/>")
-        self.addon.xml_folders = ["16x9", "1080i"]
+        """A file the folder lacks is opened from the default folder, never from any other one."""
+        for folder in ("1080i", "4x3"):
+            os.makedirs(os.path.join(self.root, folder))
+            with open(os.path.join(self.root, folder, "Shared.xml"), "w", encoding="utf8") as f:
+                f.write("<includes/>")
+        self.addon.xml_folders = ["16x9", "1080i", "4x3"]
+        self.addon.default_xml_folder = "1080i"
         path, _ = resolve_include_file(self.addon, "16x9", "Shared.xml")
-        self.assertEqual(path, other)
+        self.assertEqual(path, os.path.join(self.root, "1080i", "Shared.xml"))
+        self.addon.default_xml_folder = "16x9"
+        self.assertEqual(resolve_include_file(self.addon, "16x9", "Shared.xml"), (None, None))
 
 
 class TestIssue(_Base):
@@ -237,6 +242,38 @@ class TestCheckFileReportsIt(unittest.TestCase):
         provider.settings = {}
         found = [i for i in provider.check_values() if "Case mismatch for" in i["message"]]
         self.assertEqual(len(found), 1)
+
+
+class TestDefaultFolderFallback(unittest.TestCase):
+    """Includes.xml and Font.xml an xml folder lacks, taken from the default folder."""
+
+    def test_second_folder_uses_the_default_folders_files(self):
+        """A 4x3 folder holding only Home.xml reads includes and fonts from the default 720p."""
+        root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        files = {
+            "addon.xml": '<addon id="skin.test" version="1.0.0"><requires><import addon="xbmc.gui" '
+                         'version="5.17.0"/></requires><extension point="xbmc.gui.skin">'
+                         '<res width="1280" height="720" default="true" folder="720p"/>'
+                         '<res width="1024" height="768" folder="4x3"/></extension></addon>',
+            "720p/Includes.xml": '<includes><include name="Btn"><width>200</width></include></includes>',
+            "720p/Font.xml": '<fonts><fontset id="Default"><font><name>font13</name>'
+                             '<filename>a.ttf</filename><size>13</size></font></fontset></fonts>',
+            "720p/Home.xml": '<window><controls><control type="label"><include>Btn</include>'
+                             '<font>font13</font></control></controls></window>',
+            "4x3/Home.xml": '<window><controls><control type="label"><include>Btn</include>'
+                            '<font>font13</font></control></controls></window>',
+            "fonts/a.ttf": "",
+        }
+        for rel, text in files.items():
+            os.makedirs(os.path.dirname(os.path.join(root, rel)), exist_ok=True)
+            with open(os.path.join(root, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(root)
+        rows = provider.check_includes() + provider.check_fonts()
+        self.assertEqual([r["rule"] for r in rows if r["rule"] in ("includes.undefined", "fonts.undefined")], [])
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from ..utils.expressions import PARAM_PATTERN, resolve_params_in_text
-from ..utils.files import check_paths, is_inside
+from ..utils.files import check_paths, is_inside, xml_folder_paths
 from ..utils.infobool import condition_states
 from ..utils.xml import comment_only_lines, get_params, get_root_from_file
 from ..utils.validation import normalize_control_id
@@ -140,7 +140,7 @@ class Skin(Addon):
     def resource_loader(self) -> "SkinResources":
         """The colors, fonts and media reader, built on first use."""
         if self._resource_loader is None:
-            self._resource_loader = SkinResources(self.path, self.xml_folders)
+            self._resource_loader = SkinResources(self.path, self.xml_folders, self.default_xml_folder)
         return self._resource_loader
 
     def _build_include_param_roles(self):
@@ -361,8 +361,7 @@ class Skin(Addon):
 
         for folder in self.xml_folders:
             xml_folder = os.path.join(self.path, folder)
-            paths = [os.path.join(xml_folder, "Includes.xml"),
-                     os.path.join(xml_folder, "includes.xml")]
+            paths = xml_folder_paths(self.path, folder, self.default_xml_folder, "Includes.xml", "includes.xml")
             self.include_files[folder] = []
             self.called_files[folder] = []
 
@@ -409,9 +408,13 @@ class Skin(Addon):
             return []
         # a direct child of <includes> is a load, not a call
         calls = root.xpath("./*//include[@file]" if root.tag == "includes" else ".//include[@file]")
-        folder_path = os.path.join(self.path, folder)
-        return [os.path.normpath(os.path.join(folder_path, node.get("file")))
+        return [os.path.normpath(self._include_file_path(folder, node.get("file")))
                 for node in calls if "$" not in node.get("file")]
+
+    def _include_file_path(self, folder, name):
+        """Path Kodi opens for an include file: the xml folder's own, else the default folder's."""
+        paths = xml_folder_paths(self.path, folder, self.default_xml_folder, name)
+        return check_paths(paths) or paths[-1]
 
     def _load_called_files(self, folder):
         """Load the files the folder's windows and include files call, window calls scanned once."""
@@ -546,7 +549,7 @@ class Skin(Addon):
                                  (node, params, xml_file))
             elif "file" in node.attrib:
                 nested = conditions + ((node.attrib["condition"],) if "condition" in node.attrib else ())
-                self.update_includes(os.path.join(self.path, folder, node.attrib["file"]), folder, nested)
+                self.update_includes(self._include_file_path(folder, node.attrib["file"]), folder, nested)
 
     def reload(self, *paths):
         """Reload the caches edits to the files affect, each once; include usages rebuilt on use."""

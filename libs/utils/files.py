@@ -154,6 +154,12 @@ def check_paths(paths: list[str]) -> Optional[str]:
     return None
 
 
+def xml_folder_paths(skin_path: str, folder: str, default_folder: Optional[str], *names: str) -> list[str]:
+    """Paths of the files in the xml folder, then in the default one, to try in that order."""
+    folders = [folder] + ([default_folder] if default_folder is not None and default_folder != folder else [])
+    return [os.path.join(skin_path, f, name) for f in folders for name in names]
+
+
 def is_inside(path: str, root: str) -> bool:
     """True when the path, links followed, lies within the root folder."""
     root = os.path.realpath(root)

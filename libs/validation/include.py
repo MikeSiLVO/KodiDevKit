@@ -32,7 +32,8 @@ def resolve_include_file(addon, folder, filename):
     """Resolve the path an `<include file>` opens, and the real name when only its case differs."""
     # Kodi opens the joined path with no case fallback; case matters on Linux
     parts = posixpath.normpath(filename).split("/")
-    ordered = [folder] + [f for f in addon.xml_folders if f != folder]
+    default = getattr(addon, "default_xml_folder", None)
+    ordered = [folder] + ([default] if default and default != folder else [])
     near = None
     for name in ordered:
         current = os.path.join(addon.path, name)

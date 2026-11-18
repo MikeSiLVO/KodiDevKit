@@ -6,7 +6,7 @@ import logging
 from typing import Dict, List, Generator, Optional, Tuple
 from lxml import etree as ET
 
-from ..utils.files import check_paths
+from ..utils.files import check_paths, xml_folder_paths
 from ..utils.xml import file_needs_expansion, get_root_from_file
 
 logger = logging.getLogger(__name__)
@@ -47,9 +47,10 @@ def _font_row(node, font_file_path: str) -> Optional[Dict]:
 class SkinResources:
     """Reads a skin's colors, fonts and media file list off disk."""
 
-    def __init__(self, skin_path: str, xml_folders: List[str]):
+    def __init__(self, skin_path: str, xml_folders: List[str], default_folder: Optional[str] = None):
         self.skin_path = skin_path
         self.xml_folders = xml_folders
+        self.default_folder = default_folder
 
     def load_colors(self, system_colors_path: Optional[str] = None) -> Tuple[List[Dict], set]:
         """Load the skin's colors/*.xml then Kodi core's; returns the rows and their name set."""
@@ -89,10 +90,7 @@ class SkinResources:
         font_file = None
 
         for folder in self.xml_folders:
-            paths = [
-                os.path.join(self.skin_path, folder, "Font.xml"),
-                os.path.join(self.skin_path, folder, "font.xml"),
-            ]
+            paths = xml_folder_paths(self.skin_path, folder, self.default_folder, "Font.xml", "font.xml")
             font_file = check_paths(paths)
             if not font_file:
                 continue
