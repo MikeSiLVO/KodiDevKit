@@ -105,6 +105,13 @@ class TestFileIntegrity(unittest.TestCase):
             ("warning", "Kodi repo: skins may not ship python scripts (helper.py)"),
         ])
 
+    def test_keymap_after_many_comments(self):
+        """Dozens of leading comments never hang the check; a keymap behind some is found."""
+        self._put("16x9/Notes.xml", b"<!-- x -->\n" * 45 + b"<window/>")
+        self._put("extras/keys.xml", b"<!-- a -->\n" * 3 + b"<keymap/>")
+        rules = [i["rule"] for i in self.issues() if i["rule"] == "files.keymap"]
+        self.assertEqual(rules, ["files.keymap"])
+
     def test_executable_bit_comes_from_git(self):
         """The mode git records is what a PR ships."""
         import subprocess

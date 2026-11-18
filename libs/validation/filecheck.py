@@ -217,7 +217,7 @@ def _tracked_files(root):
 
 
 def _is_keymap(path):
-    """Whether an xml file's root element is <keymap>."""
+    """Whether an xml file's root element, within its first 512 bytes, is <keymap>."""
     if not path.lower().endswith(".xml"):
         return False
     try:
@@ -225,4 +225,5 @@ def _is_keymap(path):
             head = f.read(512)
     except OSError:
         return False
-    return re.search(rb"^\s*(?:<\?xml[^>]*>\s*)?(?:<!--.*?-->\s*)*<keymap\b", head, re.S) is not None
+    # a comment body stops at its first "-->", else a head of many comments backtracks exponentially
+    return re.search(rb"^\s*(?:<\?xml[^>]*>\s*)?(?:<!--(?:(?!-->).)*-->\s*)*<keymap\b", head, re.S) is not None
