@@ -59,6 +59,19 @@ class TestLabelValidation(ValidationTestCase):
         undefined = [i for i in self.provider.check_labels() if i.get("rule") == "labels.undefined"]
         self.assertEqual(undefined, [])
 
+    def test_label_id_with_surrounding_whitespace(self):
+        """A string id with whitespace around it is still an id."""
+        po_dir = os.path.join(self.test_dir, "language", "resource.language.en_gb")
+        os.makedirs(po_dir)
+        with open(os.path.join(po_dir, "strings.po"), "w", encoding="utf-8") as f:
+            f.write('msgid ""\nmsgstr ""\n\nmsgctxt "#31000"\nmsgid "Hello"\nmsgstr ""\n')
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="label"><label>\n\t31000\n</label></control>'
+                    '<control type="label"><label>\n\t31005\n</label></control></controls></window>')
+        self.provider.init_addon(self.test_dir)
+        undefined = [i["subject"] for i in self.provider.check_labels() if i.get("rule") == "labels.undefined"]
+        self.assertEqual(undefined, ["31005"])
+
     def test_non_ascii_digit_label_is_text(self):
         """A label of a non-ASCII digit is text, not a string id."""
         with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
