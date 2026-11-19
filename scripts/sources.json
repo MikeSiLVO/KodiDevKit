@@ -464,7 +464,8 @@
   {
     "symbol": "libs/validation/label.py:ValidationLabel.check",
     "kodi": [
-      "xbmc/addons/Skin.h:SKIN_STRING_RANGE_START"
+      "xbmc/addons/Skin.h:SKIN_STRING_RANGE_START",
+      "xbmc/resources/LocalizeStrings.cpp:LoadPO"
     ]
   },
   {

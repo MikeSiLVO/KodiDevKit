@@ -152,7 +152,10 @@ class ValidationLabel:
         skin_po = {id(po) for po in getattr(self.addon, "po_files", None) or []}
         skin_ids, core_ids = set(), set()
         for po_file in self._get_po_files():
-            (skin_ids if id(po_file) in skin_po else core_ids).update(entry.msgctxt for entry in po_file)
+            # Kodi stores no English entry whose msgid is empty
+            english = getattr(po_file, "language", "").lower() == "resource.language.en_gb"
+            (skin_ids if id(po_file) in skin_po else core_ids).update(
+                entry.msgctxt for entry in po_file if entry.msgid or not english)
         # Kodi 22 reads a skin's own strings only in 31000-31999
         skin_range_only = getattr(self.addon, "api_version", None) not in (None, "omega")
         for ref in refs:
