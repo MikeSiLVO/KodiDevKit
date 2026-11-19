@@ -458,6 +458,8 @@ class CheckerMixin:
                 location = f"{attr_name} attribute" if attr_name else node.tag
                 if value.lower() in ALLOWED_VALUES[value_type]:
                     detail = "must be lowercase"
+                elif value_type == "sort":
+                    detail = "not a sort method Kodi knows, so the items keep the order the source gives"
                 else:
                     detail = "allowed: " + ", ".join(sorted(ALLOWED_VALUES[value_type]))
                 self._add_issue(listitems, node, f"invalid value for {location}: {value} ({detail})", value,
@@ -510,7 +512,8 @@ class CheckerMixin:
                         value_text, rule="xml.invalid-variable-value", subject=var_name,
                     )
             elif value_type in ALLOWED_VALUES:
-                is_valid = value_text in ALLOWED_VALUES[value_type]
+                read = value_text.lower() if value_type in CASE_INSENSITIVE_ENUMS else value_text
+                is_valid = read in ALLOWED_VALUES[value_type]
                 if not is_valid:
                     location = tag_name if tag_name else node.tag
                     self._add_issue(
@@ -766,10 +769,10 @@ class CheckerMixin:
                             and not is_kodi_hex(v) and not is_known_info(v, self.known_info_names())):
                         self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR,
                                         rule="xml.invalid-color", subject=k)
-                elif not skip_value_checks and value_type == "bool" and attribute_bool_problem(k, v):
+                elif not interpreted and value_type == "bool" and attribute_bool_problem(k, v):
                     self._add_issue(listitems, subnode, attribute_bool_problem(k, v) or "", v, severity=SEVERITY_ERROR,
                                     rule="xml.misread-bool", subject=k)
-                elif not skip_value_checks:
+                elif not interpreted:
                     self._validate_enum_value(listitems, subnode, v, value_type, attr_name=k)
 
                 if not skip_value_checks and k == "condition" and v:

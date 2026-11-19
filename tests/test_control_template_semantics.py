@@ -80,6 +80,25 @@ class TestControlTemplateSemantics(unittest.TestCase):
         self.assertEqual(sorted((r["rule"], r["subject"]) for r in rows), [
             ("xml.constant-not-substituted", "Nope"), ("xml.invalid-value", "width")])
 
+    def test_content_sort_and_browse_values(self):
+        """Sort names and order are exact; browse takes any case, from a $VAR too."""
+        self._write("16x9/Includes.xml", '<includes><variable name="B"><value>Always</value></variable></includes>')
+        rows = self._issues("""
+<control type="list">
+    <content sortby="Title" sortorder="Ascending" browse="ALWAYS">plugin://a</content>
+</control>
+<control type="list"><content sortby="titel" browse="sometimes">plugin://b</content></control>
+<control type="list">
+    <content sortby="title" sortorder="descending" browse="$VAR[B]">plugin://c</content>
+</control>""", "piers")
+        self.assertEqual(sorted(r["message"] for r in rows), [
+            "invalid value for browse attribute: sometimes (allowed: always, auto, never)",
+            "invalid value for sortby attribute: Title (must be lowercase)",
+            "invalid value for sortby attribute: titel (not a sort method Kodi knows, so the items keep the "
+            "order the source gives)",
+            "invalid value for sortorder attribute: Ascending (must be lowercase)",
+        ])
+
     def test_auto_max_on_any_control(self):
         """Every control takes an auto size from max, so max is valid everywhere."""
         self._assert_clean("""

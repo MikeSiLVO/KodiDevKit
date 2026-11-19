@@ -164,11 +164,24 @@ ALLOWED_VALUES = {
         "elastic",
     },
     "easing": {"inout", "in", "out"},
+    "sort": {
+        "album", "albumtype", "artist", "artistyear", "audiochannels", "audiocodec", "audiolanguage",
+        "bitrate", "bpm", "channel", "channelnumber", "clientchannelorder", "country", "date",
+        "dateadded", "datetaken", "drivetype", "episode", "file", "genre", "installdate", "label",
+        "lastplayed", "lastupdated", "lastused", "listeners", "mpaa", "originaldate", "originaltitle",
+        "path", "playcount", "playlist", "productioncode", "programcount", "provider", "random",
+        "rating", "season", "size", "sorttitle", "studio", "subtitlelanguage", "time", "title",
+        "totaldiscs", "totalepisodes", "track", "tvshowstatus", "tvshowtitle", "userpreference",
+        "userrating", "videoaspectratio", "videocodec", "videoresolution", "votes", "watchedepisodes",
+        "year",
+    },
+    "order": {"ascending", "descending"},
+    "browse": {"always", "auto", "never"},
 }
 
 # Kodi compares these case-insensitively
 CASE_INSENSITIVE_ENUMS = {"bool", "orientation", "tween", "easing", "aspect", "aspectalign", "aspectaligny",
-                          "action", "subtype"}
+                          "action", "subtype", "browse"}
 
 SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"

@@ -304,7 +304,9 @@
       "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::Create",
       "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::GetInfoLabels",
       "xbmc/utils/XMLUtils.cpp:XMLUtils::GetBoolean",
-      "xbmc/guilib/VisibleEffect.cpp:CAnimEffect::GetTweener"
+      "xbmc/guilib/VisibleEffect.cpp:CAnimEffect::GetTweener",
+      "xbmc/utils/SortUtils.cpp:SortUtils::SortMethodFromString",
+      "xbmc/guilib/listproviders/DirectoryProvider.cpp:CDirectoryProvider::UpdateBrowse"
     ]
   },
   {
