@@ -78,6 +78,13 @@
     ]
   },
   {
+    "symbol": "libs/skin/index.py:SkinIndex._extract_labels_from_xml",
+    "kodi": [
+      "xbmc/guilib/GUIControlFactory.cpp:CGUIControlFactory::FilterLabel",
+      "xbmc/utils/StringUtils.cpp:StringUtils::IsNaturalNumber"
+    ]
+  },
+  {
     "symbol": "libs/skin/index.py:custom_window",
     "kodi": [
       "xbmc/application/ApplicationSkinHandling.cpp:CApplicationSkinHandling::LoadCustomWindows"

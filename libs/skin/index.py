@@ -498,15 +498,15 @@ class SkinIndex:
 
             text = element.text or ""
             if element.tag in _LABEL_TAGS and text:
-                if text.isdigit():
+                if text.isascii() and text.isdigit():
                     use(text, element, element.tag)
                 else:
                     untranslated(text, element, f"<{element.tag}>")
 
-            # attributes Kodi reads as a string id or as label text (GUIControlFactory FilterLabel)
+            # attributes Kodi reads as a string id or as label text
             for attr in _LABEL_ATTRS.get(element.tag, ()):
                 value = (element.get(attr) or "").strip()
-                if value.isdigit():
+                if value.isascii() and value.isdigit():
                     use(value, element, f"@{attr}")
                 elif value and attr != "idloc":
                     untranslated(value, element, f"attribute {attr}")
