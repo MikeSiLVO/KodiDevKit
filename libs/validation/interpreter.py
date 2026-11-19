@@ -697,6 +697,11 @@ class XmlInterpreter:
                             f'<{node.tag}> has text, so Kodi substitutes constants there and not in {where}; '
                             f'{where}="{text}" reads as 0',
                             rule="xml.constant-not-substituted", subject=text, part=part)
+        elif text in self.constants and text != value:
+            self._add_issue(node, SEVERITY_ERROR,
+                            f"{where} value '{text}' has spaces or line breaks around it; Kodi keeps them, "
+                            f"so it substitutes no constant and reads 0",
+                            rule="xml.undefined-constant", subject=text, part=part)
         elif text in self.constants:
             # a file walked without resolving still carries the name Kodi substitutes
             return

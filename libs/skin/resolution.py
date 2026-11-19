@@ -233,9 +233,8 @@ class SkinResolution:
                 include_node = next(include_node.itersiblings("include"), None)
                 continue
 
-            inc_name = include_node.attrib.get("content")
-            if not inc_name and include_node.text:
-                inc_name = include_node.text.strip()
+            # Kodi keeps the spaces around the name and finds no include for a padded one
+            inc_name = include_node.attrib.get("content") or include_node.text
 
             # the text form <include>Name</include> takes no params
             call_params = get_params(include_node, "value") if "content" in include_node.attrib else {}

@@ -111,6 +111,17 @@ class ValidationInclude:
 
         listitems = []
 
+        def padded(name, path, line):
+            if name == name.strip():
+                return False
+            listitems.append({
+                'name': name.strip(), 'type': 'include', 'file': path, 'line': line,
+                'message': f"Include '{name.strip()}' has spaces or line breaks around its name; "
+                           f"Kodi keeps them and finds no include by that name",
+                'severity': SEVERITY_ERROR, 'rule': "includes.undefined", 'subject': name.strip(),
+            })
+            return True
+
         for folder in self.addon.xml_folders:
             folder_path = os.path.join(self.addon.path, folder)
             actual = miscased_name(folder_path, "Includes.xml")
@@ -141,8 +152,8 @@ class ValidationInclude:
                     continue
 
                 for node in root.xpath(".//include[not(@name)]"):
-                    name = node.get("content") or (node.text or "").strip()
-                    if not name:
+                    name = node.get("content") or node.text or ""
+                    if not name.strip() or padded(name, path, node.sourceline):
                         continue
 
                     resolved_name = resolve_param_in_name(name)
@@ -164,7 +175,7 @@ class ValidationInclude:
                 for include_node in root.iter("include"):
                     if "name" in include_node.attrib or "file" in include_node.attrib:
                         continue
-                    include_name = include_node.get("content") or (include_node.text or "").strip()
+                    include_name = include_node.get("content") or include_node.text or ""
                     if not include_name or include_name.startswith("$"):
                         continue
 
@@ -191,9 +202,10 @@ class ValidationInclude:
                     merged_params = {**default_params, **call_params}
 
                     for inc_tag in include_def.node.findall(".//include"):
-                        inc_name = (inc_tag.text or "").strip()
-                        if not inc_name and inc_tag.get("content"):
-                            inc_name = inc_tag.get("content")
+                        inc_name = inc_tag.text if (inc_tag.text or "").strip() else inc_tag.get("content")
+                        # a padded name is reported where the call is written
+                        if not inc_name or inc_name != inc_name.strip():
+                            continue
 
                         if not inc_name or inc_name.startswith("$INFO") or inc_name.startswith("$VAR"):
                             continue
@@ -226,8 +238,8 @@ class ValidationInclude:
                     continue
 
                 for inc_node in root.iter("include"):
-                    inc_name = (inc_node.get("content") or inc_node.text or "").strip()
-                    if not inc_name:
+                    inc_name = inc_node.get("content") or inc_node.text or ""
+                    if not inc_name.strip() or padded(inc_name, font_path, getattr(inc_node, "sourceline", 0)):
                         continue
                     var_refs.append(
                         {

@@ -133,5 +133,32 @@ class TestIncludeFaults(unittest.TestCase):
         self.assertEqual([(f, line) for f, line, _ in rows], [("Includes.xml", 11)])
 
 
+class TestPaddedNames(unittest.TestCase):
+    """An include or constant name with spaces around it, which Kodi looks up as written."""
+
+    def test_padded_include_and_constant(self):
+        """A padded include call finds nothing, its include unused; a padded constant reads 0."""
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        path = temp_dir.name
+        os.makedirs(os.path.join(path, "16x9"))
+        files = {"addon.xml": ADDON_XML,
+                 "16x9/Includes.xml": '<includes><constant name="W">40</constant>'
+                                      '<include name="Btn"><width>W</width></include></includes>',
+                 "16x9/Home.xml": '<window><controls><control type="label"><include> Btn </include>'
+                                  '<height>\n\tW\n</height><label>x</label></control></controls></window>'}
+        for rel, text in files.items():
+            with open(os.path.join(path, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.load_data("piers")
+        provider.init_addon(path)
+        rows = sorted((r["rule"], r["subject"]) for r in provider.check_includes() + provider.check_values()
+                      if r["rule"].startswith(("includes.", "xml.undefined-constant")))
+        self.assertEqual(rows, [("includes.undefined", "Btn"), ("includes.unused", "Btn"),
+                                ("xml.undefined-constant", "W")])
+
+
 if __name__ == "__main__":
     unittest.main()

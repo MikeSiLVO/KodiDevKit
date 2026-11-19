@@ -385,8 +385,8 @@ class SkinIndex:
             self._extract_images_from_xml(root, path, folder, results)
 
             for elem in root.iter('include'):
-                inc_name = elem.get('content') or (elem.text or '').strip()
-                if inc_name:
+                inc_name = elem.get('content') or elem.text or ''
+                if inc_name.strip():
                     results['window_includes'].append({'name': inc_name})
 
             for elem in root.iter('control'):
@@ -415,7 +415,7 @@ class SkinIndex:
             return None
 
     def build_include_usages(self, progress_callback=None):
-        """Build the list of include calls, each with its params and the include it sits in."""
+        """Build the include calls once, each with its params and the include it sits in."""
         if self.skin._include_usages_built:
             return
 
@@ -440,7 +440,7 @@ class SkinIndex:
                         inc_name = elem.attrib['content']
                         params = get_params(elem, "value")
                     elif elem.text and elem.text.strip():
-                        inc_name = elem.text.strip()
+                        inc_name = elem.text
 
                     if inc_name:
                         if inc_name not in self.skin.include_usages[folder]:
