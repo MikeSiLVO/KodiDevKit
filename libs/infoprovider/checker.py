@@ -753,7 +753,8 @@ class CheckerMixin:
                         continue
                     vv = v.rstrip("%r") if value_type == "position" else v
                     number_value = extract_number_value(v)
-                    if number_value:
+                    # <content> attributes are labels, which expand $NUMBER[]
+                    if number_value and subnode.tag == "content":
                         vv = number_value
                     if not is_number(vv) and not (self.addon and v in self.addon.get_constants(folder)):
                         self._add_issue(listitems, subnode, f"invalid integer value for {k}: {v}", v, severity=SEVERITY_ERROR,

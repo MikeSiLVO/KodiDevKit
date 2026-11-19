@@ -78,6 +78,25 @@ class TestNumberExpressions(unittest.TestCase):
         integer_issues = [i for i in issues if "invalid integer value for limit" in i.get("message", "")]
         self.assertEqual(len(integer_issues), 0, "$NUMBER[25] should be valid integer expression")
 
+    def test_number_in_layout_size(self):
+        """$NUMBER[] in a layout size is invalid; the layout does not expand it."""
+        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="list" id="100">
+            <itemlayout width="$NUMBER[100]" height="40"/>
+        </control>
+    </controls>
+</window>"""
+        xml_path = os.path.join(self.test_dir, "1080i", "Test.xml")
+        with open(xml_path, "w", encoding="utf-8") as f:
+            f.write(xml_content)
+
+        issues = self.provider.check_file(xml_path) or []
+
+        self.assertEqual([i["message"] for i in issues if i.get("rule") == "xml.invalid-value"],
+                         ["invalid integer value for width: $NUMBER[100]"])
+
     def test_number_in_id_attribute(self):
         """Test that $NUMBER[] in id attribute validates correctly."""
         xml_content = """<?xml version="1.0" encoding="UTF-8"?>

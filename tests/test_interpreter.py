@@ -530,6 +530,26 @@ class TestLiteralTags(unittest.TestCase):
             "still overrides any <default> value",
         ])
 
+    def test_number_and_localize_outside_labels(self):
+        """$NUMBER[] and $LOCALIZE[] in a literal tag or a number attribute are reported."""
+        interp = XmlInterpreter(template_attribs={"button": {"width": {}, "height": {}, "label": {},
+                                                             "animation": {"effect": "effect", "time": "int"}}},
+                                template_values={"button": {"width": "int", "height": "int"}})
+        issues = interp.interpret(_parse("""
+        <window><controls><control type="button">
+            <width>$NUMBER[200]</width>
+            <height>$LOCALIZE[31000]</height>
+            <label>$NUMBER[5] $LOCALIZE[31000]</label>
+            <animation effect="fade" time="$NUMBER[200]">Focus</animation>
+        </control></controls></window>"""))
+        self.assertEqual(sorted(i["message"] for i in issues), [
+            '<height> takes its text as written: Kodi does not expand $LOCALIZE[] in it, and this copy '
+            'still overrides any <default> value',
+            '<width> takes its text as written: Kodi does not expand $NUMBER[] in it, and this copy '
+            'still overrides any <default> value',
+            'Kodi expands $NUMBER[] only in labels, so time="$NUMBER[200]" is not a number',
+        ])
+
 class TestIncludesFile(unittest.TestCase):
     """Test <includes> root validation."""
 

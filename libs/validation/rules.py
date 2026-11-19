@@ -143,7 +143,7 @@ RULES = {
     "xml.type-case": "A control type not written in lowercase, which no <default> matches.",
     "xml.default-type-case": "A <default> type not written in lowercase, which only an exact match uses.",
     "xml.nested-control": "A control inside a control that is not a group, which Kodi ignores.",
-    "xml.literal-tag": "$VAR or $INFO in a tag Kodi reads as written.",
+    "xml.literal-tag": "$VAR, $INFO, $NUMBER or another expression in a tag Kodi reads as written.",
     "xml.empty-action": "An empty action tag where Kodi needs noop.",
     "xml.redundant": "A tag repeating what the control type's <default> already sets.",
     "xml.duplicate-tag": "A second copy of a tag Kodi reads once.",

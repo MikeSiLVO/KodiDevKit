@@ -106,6 +106,9 @@ def _same_value(a, b) -> bool:
 
 # control children read by the loader itself rather than listed per type in controls.xml
 _STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAGS | INCLUDE_DEFINITION_TAGS
+
+# label parsing alone expands $LOCALIZE[] and $NUMBER[]
+_LITERAL_PREFIXES = RUNTIME_PREFIXES + ("$localize[", "$number[")
 # controls that read <info> as one name; the others read it as $INFO[name,prefix,postfix]
 _SINGLE_INFO_CONTROLS = frozenset({"slider", "sliderex", "progress", "ranges"})
 
@@ -322,8 +325,8 @@ class XmlInterpreter:
                 )
                 continue
 
-            if tag in LITERAL_TAGS and _contains_dynamic(child.text or "", prefixes=RUNTIME_PREFIXES):
-                found = next(p for p in RUNTIME_PREFIXES if p in child.text.casefold())
+            if tag in LITERAL_TAGS and _contains_dynamic(child.text or "", prefixes=_LITERAL_PREFIXES):
+                found = next(p for p in _LITERAL_PREFIXES if p in child.text.casefold())
                 self._add_issue(child, SEVERITY_ERROR, f"<{tag}> takes its text as written: Kodi does "
                                                        f"not expand {found.upper()}] in it, and this copy "
                                                        f"still overrides any <default> value", rule="xml.literal-tag")
@@ -641,7 +644,7 @@ class XmlInterpreter:
         text = value.strip()
         if not text or _is_number(text.rstrip("%r") if value_type == "position" else text):
             return
-        if _contains_dynamic(text) or extract_number_value(text):
+        if _contains_dynamic(text):
             return
         if not is_attr and name in ("width", "height") and text.lower().startswith("auto"):
             return
@@ -649,7 +652,11 @@ class XmlInterpreter:
         part = name if is_attr else PARAM_TEXT
         if not self._looks_like_unresolved(text):
             # tag text also takes %, r and comma lists that the value types do not describe
-            if is_attr:
+            if is_attr and extract_number_value(text):
+                self._add_issue(node, SEVERITY_ERROR,
+                                f'Kodi expands $NUMBER[] only in labels, so {where}="{text}" is not a number',
+                                rule="xml.invalid-value", subject=name, part=part)
+            elif is_attr:
                 self._add_issue(node, SEVERITY_ERROR, f"invalid integer value for {where}: {text}",
                                 rule="xml.invalid-value", subject=name, part=part)
         elif name not in (SkinInclude.constant_attribs if is_attr else SkinInclude.constant_nodes):
