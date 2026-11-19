@@ -515,6 +515,22 @@ class TestConditions(unittest.TestCase):
                                  '</controls></window>')
         self.assertTrue(any("$INFO[]" in m for m in messages), messages)
 
+    def test_autoscroll_and_allowhiddenfocus(self):
+        """Conditions Kodi reads without expanding $EXP; a defined $EXP there still fails."""
+        interp = XmlInterpreter(template_attribs={"list": {"autoscroll": {"time": "int"},
+                                                           "visible": {"allowhiddenfocus": "condition"}}},
+                                template_values={"list": {}}, info_names=self.NAMES,
+                                expressions={"e": ("[Player.HasVideo]", "Includes.xml", 30)})
+        issues = interp.interpret(_parse("""
+        <window><controls>
+            <control type="list"><autoscroll time="2000">Player.HasVidoe</autoscroll></control>
+            <control type="list"><autoscroll>$EXP[e]</autoscroll>
+                <visible allowhiddenfocus="Player.HasVidoe">Player.HasVideo</visible></control>
+            <control type="list"><autoscroll>true</autoscroll></control>
+        </controls></window>"""))
+        self.assertEqual(sorted((i["line"], i["rule"]) for i in issues), [
+            (3, "xml.unknown-info"), (4, "xml.unparseable-condition"), (5, "xml.unknown-info")])
+
     def test_variable_value_condition(self):
         """An undefined $EXP in a value condition is reported; a defined one's fault goes to it."""
         interp = XmlInterpreter(info_names=self.NAMES, expressions={

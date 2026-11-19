@@ -573,7 +573,7 @@ class XmlInterpreter:
             )
 
     def _validate_window_conditions(self, root):
-        """Validate each condition tag and `condition` attribute Kodi reads in a resolved window."""
+        """Validate each condition tag and attribute Kodi reads in a resolved window."""
         for node in root.iter():
             if not isinstance(node.tag, str):
                 continue
@@ -585,9 +585,27 @@ class XmlInterpreter:
                     continue
             if node.tag in CONDITION_TAGS and node.text and node.text.strip():
                 self._validate_condition(node, node.text, resolved=True)
+            elif node.tag == "autoscroll" and node.text:
+                self._validate_unexpanded_condition(node, node.text, "<autoscroll>")
             condition = node.get("condition")
             if condition:
                 self._validate_condition(node, condition, resolved=True)
+            if node.tag == "visible" and node.get("allowhiddenfocus"):
+                self._validate_unexpanded_condition(node, node.get("allowhiddenfocus"), "allowhiddenfocus")
+
+    def _validate_unexpanded_condition(self, node, condition: str, where: str):
+        """Validate a condition Kodi registers without expanding $EXP; any $EXP is a fault."""
+        text = condition.strip()
+        if not text or "$PARAM" in text.upper():
+            return
+        if "$EXP[" in text:
+            short = text if len(text) <= 60 else text[:60] + "..."
+            self._add_issue(node, SEVERITY_ERROR, f"Kodi does not expand $EXP[] in {where}, so it cannot parse "
+                                                  f"this condition and it always reads false: {short}",
+                            rule="xml.unparseable-condition", subject=text)
+            return
+        for severity, message, rule, subject in self._condition_problems(text):
+            self._add_issue(node, severity, message, rule, subject)
 
     def _validate_condition(self, node, condition: str, *, resolved: bool):
         """Report unparseable conditions and unknown infos, $EXP faults at their definition."""
