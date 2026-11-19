@@ -76,7 +76,7 @@ RULES = {
     "includes.misnamed-includes-xml": "An Includes.xml whose name differs only by case, which Kodi does not load on Linux.",
     "xml.include-file-outside": "An <include file> outside the skin folder, which never ships with it.",
     "xml.include-file-case-mismatch": "An <include file> named in a different case than on disk.",
-    "xml.missing-include-file": "An <include file> naming a file that does not exist.",
+    "xml.missing-include-file": "An <include file> naming a file that does not exist or whose root is not <includes>.",
     "maps.unsupported": "Skin maps in a skin for a Kodi release before 22.",
     "maps.no-name": "A <map> without a name, which Kodi ignores.",
     "maps.whitespace": "A map name padded with whitespace, which no $MAP[] can reach.",

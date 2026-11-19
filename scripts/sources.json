@@ -353,6 +353,12 @@
     ]
   },
   {
+    "symbol": "libs/validation/include.py:check_include_file_ref",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Load_Internal"
+    ]
+  },
+  {
     "symbol": "libs/validation/include.py:resolve_include_file",
     "kodi": [
       "xbmc/addons/Skin.cpp:CSkinInfo::GetSkinPath"

@@ -206,6 +206,20 @@ class TestCheckFileReportsIt(unittest.TestCase):
         ValidationInclude(skin).check()
         self.assertEqual(skin.include_files["16x9"], loaded)
 
+    def test_file_without_includes_root_loads_nothing(self):
+        """An included file whose root is not <includes> defines nothing and is reported."""
+        self._write("Includes.xml", '<includes><include file="NotIncludes.xml"/><include file="Upper.xml"/></includes>')
+        self._write("NotIncludes.xml", '<window><constant name="FromWindow">77</constant></window>')
+        self._write("Upper.xml", '<Includes><constant name="FromUpper">5</constant></Includes>')
+        skin = Skin(path=self.test_dir, settings={})
+        self.assertNotIn("FromWindow", skin.constant_map["16x9"])
+        self.assertIn("FromUpper", skin.constant_map["16x9"])
+        issue = check_include_file_ref(skin, "16x9", "NotIncludes.xml") or {}
+        self.assertEqual((issue.get("rule"), issue.get("message")), (
+            "xml.missing-include-file",
+            "Include file 'NotIncludes.xml' has the root <window>, not <includes>, so Kodi loads nothing from it"))
+        self.assertIsNone(check_include_file_ref(skin, "16x9", "Upper.xml"))
+
     def test_saving_a_window_that_calls_a_new_file_loads_it(self):
         """A window saved with a call naming a file not loaded yet reloads the maps with it."""
         self._write("Includes.xml", "<includes/>")

@@ -55,16 +55,19 @@ def resolve_include_file(addon, folder, filename):
 
 
 def check_include_file_ref(addon, folder, ref):
-    """Check an `<include file>` Kodi cannot open, as an issue without the caller's location."""
+    """Check an `<include file>` Kodi cannot load, as an issue without the caller's location."""
     ref = (ref or "").strip()
     if not ref or "$" in ref or RUNTIME_INCLUDE_FILE.match(ref) or is_runtime_generated_file(ref):
         return None
 
     path, actual = resolve_include_file(addon, folder, ref)
     if path:
-        return None
-
-    if not is_inside(os.path.join(addon.path, folder, ref), addon.path):
+        root = get_root_from_file(path)
+        if root is None or root.tag.lower() == "includes":
+            return None
+        rule, message = ("xml.missing-include-file",
+                         f"Include file '{ref}' has the root <{root.tag}>, not <includes>, so Kodi loads nothing from it")
+    elif not is_inside(os.path.join(addon.path, folder, ref), addon.path):
         rule, message = "xml.include-file-outside", f"Include file '{ref}' is outside the skin folder, so it never ships with the skin"
     elif actual:
         rule, message = "xml.include-file-case-mismatch", f"Case mismatch for '{ref}' (actual '{actual}')"

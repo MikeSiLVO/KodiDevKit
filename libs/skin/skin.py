@@ -442,7 +442,8 @@ class Skin(Addon):
             return None
 
         root = get_root_from_file(xml_file)
-        if root is None:
+        # Kodi ignores the letter case of the <includes> root tag
+        if root is None or root.tag.lower() != "includes":
             return []
 
         loads.add(conditions)
