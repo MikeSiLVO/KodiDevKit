@@ -63,6 +63,7 @@ from ..utils.infobool import (
     check_condition,
     is_known_info,
     static_value,
+    miscounted_string_tests,
     unknown_info_arguments,
     unknown_infos,
 )
@@ -657,6 +658,9 @@ class XmlInterpreter:
             return []
         found = [(SEVERITY_ERROR, f"Kodi has no info '{operand}', it always reads false", "xml.unknown-info", operand)
                  for operand in unknown_infos(text, self.info_names)]
+        for operand, test, count in miscounted_string_tests(text, self.info_names):
+            found.append((SEVERITY_ERROR, f"Kodi reads {test} only with two arguments; with {count} it has no "
+                                          f"info and always reads false", "xml.unknown-info", operand))
         for test, arg in unknown_info_arguments(text, self.info_names):
             effect = ("always reads true" if test.lower().endswith(".isempty")
                       else "reads it as 0" if test.lower().startswith("integer.") else "reads it as empty text")

@@ -268,6 +268,13 @@
     ]
   },
   {
+    "symbol": "libs/utils/infobool.py:miscounted_string_tests",
+    "kodi": [
+      "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString",
+      "xbmc/Util.cpp:CUtil::SplitParams"
+    ]
+  },
+  {
     "symbol": "libs/utils/infobool.py:operands",
     "kodi": [
       "xbmc/interfaces/info/InfoExpression.cpp:InfoExpression::Parse"

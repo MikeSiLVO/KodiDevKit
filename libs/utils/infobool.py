@@ -302,6 +302,45 @@ def unknown_info_arguments(condition: str, names: dict) -> list[tuple[str, str]]
     return found
 
 
+def _param_count(params: str) -> int:
+    """How many params Kodi splits the text into: commas outside quotes and parentheses."""
+    if not params.strip():
+        return 0
+    count, depth, quoted, escaped = 1, 0, False, False
+    for char in params:
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif quoted:
+            quoted = char != '"'
+        elif char == '"':
+            quoted = True
+        elif char == "(":
+            depth += 1
+        elif char == ")" and depth:
+            depth -= 1
+        elif char == "," and not depth:
+            count += 1
+    return count
+
+
+def miscounted_string_tests(condition: str, names: dict) -> list[tuple[str, str, int]]:
+    """Operand, test and count per two-param String test given another count; Kodi reads info 0."""
+    found = []
+    for op in operands(_blank_macros(condition)):
+        parts = split_info(op)
+        if "$" in op or len(parts) != 2 or parts[0][0] != "string":
+            continue
+        (_, _), (test, params) = parts
+        if test == "isempty" or test not in names["categories"].get("string", ()):
+            continue
+        count = _param_count(params)
+        if count != 2:
+            found.append((op, op.split("(", 1)[0].strip(), count))
+    return found
+
+
 def negation_of(condition: str) -> str:
     """The bracketed negation Kodi evaluates alongside `condition`."""
     return f"![{condition}]"

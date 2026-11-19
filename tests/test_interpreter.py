@@ -515,6 +515,21 @@ class TestConditions(unittest.TestCase):
                                  '</controls></window>')
         self.assertTrue(any("$INFO[]" in m for m in messages), messages)
 
+    def test_string_test_without_two_arguments(self):
+        """String.Contains and kin with one or three arguments read false; IsEmpty takes one."""
+        names = {**self.NAMES, "categories": {**self.NAMES["categories"],
+                                              "string": {"isempty", "isequal", "contains"}}}
+        interp = XmlInterpreter(template_attribs={"button": {"visible": {}}}, template_values={"button": {}},
+                                info_names=names)
+        conditions = ["String.Contains(Player.HasVideo,a,Left)", "String.IsEqual(Window(Home).Property(a,b))",
+                      'String.IsEqual(Player.HasVideo,"a,b")', "String.IsEmpty(Player.HasVideo)"]
+        controls = "".join(f'<control type="button"><visible>{c}</visible></control>' for c in conditions)
+        issues = interp.interpret(_parse(f"<window><controls>{controls}</controls></window>"))
+        self.assertEqual(sorted(i["message"] for i in issues), [
+            "Kodi reads String.Contains only with two arguments; with 3 it has no info and always reads false",
+            "Kodi reads String.IsEqual only with two arguments; with 1 it has no info and always reads false",
+        ])
+
     def test_autoscroll_and_allowhiddenfocus(self):
         """Conditions Kodi reads without expanding $EXP; a defined $EXP there still fails."""
         interp = XmlInterpreter(template_attribs={"list": {"autoscroll": {"time": "int"},
