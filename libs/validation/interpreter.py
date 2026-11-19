@@ -50,7 +50,9 @@ from ..utils.expressions import (
     contains_dynamic_expression as _contains_dynamic,
     RUNTIME_PREFIXES,
     is_number as _is_number,
+    expression_names,
     extract_number_value,
+    flatten_expressions,
     info_blocks,
     unclosed_label_block,
 )
@@ -137,6 +139,7 @@ class XmlInterpreter:
         self.constants = constants
         self.info_names = info_names
         self.expressions = expressions or {}
+        self._expression_texts = {name: entry[0] for name, entry in self.expressions.items()}
         self.settled_defaults = settled_defaults or {}
         self.urls = urls
         self._condition_cache: dict[str, list[tuple[str, str, str, str]]] = {}
@@ -589,10 +592,14 @@ class XmlInterpreter:
     def _validate_condition(self, node, condition: str, *, resolved: bool):
         """Report unparseable conditions and unknown infos, $EXP faults at their definition."""
         text = condition.strip()
-        if not text or "$PARAM" in text.upper() or (not resolved and "$EXP[" in text):
+        if not text or "$PARAM" in text.upper():
             return
+        names = (node.get("_kdk_exp") or "").split("\t")
+        if not resolved and "$EXP[" in text:
+            names = list(expression_names(text))
+            text = flatten_expressions(text, self._expression_texts)[0]
         found = self._condition_problems(text)
-        for name in (node.get("_kdk_exp") or "").split("\t") if found else []:
+        for name in names if found else []:
             if name not in self.expressions:
                 continue
             exp_text, exp_file, exp_line = self.expressions[name]

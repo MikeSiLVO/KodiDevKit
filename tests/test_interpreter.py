@@ -516,11 +516,21 @@ class TestConditions(unittest.TestCase):
         self.assertTrue(any("$INFO[]" in m for m in messages), messages)
 
     def test_variable_value_condition(self):
-        self.assertEqual(self.messages("""
+        """An undefined $EXP in a value condition is reported; a defined one's fault goes to it."""
+        interp = XmlInterpreter(info_names=self.NAMES, expressions={
+            "bad": ("[Player.HasVidoe]", "Includes.xml", 30), "good": ("[Player.HasVideo]", "Includes.xml", 40)})
+        issues = interp.interpret(_parse("""
         <includes><variable name="v">
             <value condition="Player.HasVidoe">a</value>
-            <value condition="$EXP[e]">b</value>
-        </variable></includes>"""), ["Kodi has no info 'Player.HasVidoe', it always reads false"])
+            <value condition="$EXP[good] + $EXP[e]">b</value>
+            <value condition="$EXP[bad]">c</value>
+            <value condition="$EXP[good]">d</value>
+        </variable></includes>"""))
+        self.assertEqual(sorted((i["line"], i["rule"], i["subject"]) for i in issues), [
+            (3, "xml.unknown-info", "Player.HasVidoe"),
+            (4, "xml.undefined-expression", "e"),
+            (30, "xml.unknown-info", "Player.HasVidoe"),
+        ])
 
 class TestLiteralTags(unittest.TestCase):
     """Kodi reads sizes, fonts and button textures literally, so no dynamic expression expands."""
