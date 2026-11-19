@@ -72,6 +72,14 @@ class TestControlTemplateSemantics(unittest.TestCase):
     <enable>false</enable>
 </control>""")
 
+    def test_name_in_size_attribute_reported_once(self):
+        """A name in max beside text gets one row; a layout size is still checked."""
+        rows = self._issues("""
+<control type="label"><width min="10" max="Nope">auto</width><label>x</label></control>
+<control type="list"><itemlayout width="Bogus" height="40"/></control>""", "piers")
+        self.assertEqual(sorted((r["rule"], r["subject"]) for r in rows), [
+            ("xml.constant-not-substituted", "Nope"), ("xml.invalid-value", "width")])
+
     def test_auto_max_on_any_control(self):
         """Every control takes an auto size from max, so max is valid everywhere."""
         self._assert_clean("""

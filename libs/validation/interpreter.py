@@ -105,7 +105,7 @@ def _same_value(a, b) -> bool:
 
 
 # control children read by the loader itself rather than listed per type in controls.xml
-_STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAGS | INCLUDE_DEFINITION_TAGS
+STRUCTURAL_TAGS = frozenset({"control", "include", "content"}) | ALL_LAYOUT_TAGS | INCLUDE_DEFINITION_TAGS
 
 # label parsing alone expands $LOCALIZE[] and $NUMBER[]
 _LITERAL_PREFIXES = RUNTIME_PREFIXES + ("$localize[", "$number[")
@@ -311,7 +311,7 @@ class XmlInterpreter:
             # checked at source by _walk_default, else one Defaults.xml error repeats per control
             if (child.get("_kdk_inc_name") or "").startswith("default type="):
                 continue
-            if tag in _STRUCTURAL_TAGS:
+            if tag in STRUCTURAL_TAGS:
                 if tag == "control" and control_type not in GROUP_TYPES:
                     self._add_issue(child, SEVERITY_WARNING, f"<control> inside <control "
                                     f"type={control_type}> is ignored; only groups hold controls", rule="xml.nested-control", subject=control_type)
@@ -570,7 +570,7 @@ class XmlInterpreter:
             )
 
     def _validate_window_conditions(self, root):
-        """Check every condition tag and `condition` attribute in a resolved window."""
+        """Validate each condition tag and `condition` attribute Kodi reads in a resolved window."""
         for node in root.iter():
             if not isinstance(node.tag, str):
                 continue
@@ -578,7 +578,7 @@ class XmlInterpreter:
             if parent is not None and parent.tag == "control":
                 taken = self.template_attribs.get((parent.get("type") or "").lower())
                 # a tag the control does not take is never read, so neither is its condition
-                if taken is not None and node.tag not in taken and node.tag not in _STRUCTURAL_TAGS:
+                if taken is not None and node.tag not in taken and node.tag not in STRUCTURAL_TAGS:
                     continue
             if node.tag in CONDITION_TAGS and node.text and node.text.strip():
                 self._validate_condition(node, node.text, resolved=True)
@@ -662,6 +662,11 @@ class XmlInterpreter:
         elif name not in (SkinInclude.constant_attribs if is_attr else SkinInclude.constant_nodes):
             self._add_issue(node, SEVERITY_ERROR,
                             f"{where} value {text}: Kodi does not substitute constants in {where}",
+                            rule="xml.constant-not-substituted", subject=text, part=part)
+        elif is_attr and SkinInclude.text_takes_constants(node):
+            self._add_issue(node, SEVERITY_ERROR,
+                            f'<{node.tag}> has text, so Kodi substitutes constants there and not in {where}; '
+                            f'{where}="{text}" reads as 0',
                             rule="xml.constant-not-substituted", subject=text, part=part)
         elif text in self.constants:
             # a file walked without resolving still carries the name Kodi substitutes

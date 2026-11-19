@@ -51,6 +51,12 @@
     ]
   },
   {
+    "symbol": "libs/skin/include.py:SkinInclude.text_takes_constants",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveConstants"
+    ]
+  },
+  {
     "symbol": "libs/skin/index.py:<module>",
     "kodi": [
       "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:LocalizeReplacer",

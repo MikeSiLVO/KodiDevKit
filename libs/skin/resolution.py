@@ -171,7 +171,7 @@ class SkinResolution:
         if not constants_for_folder:
             return
 
-        if node.text and node.tag in SkinInclude.constant_nodes:
+        if SkinInclude.text_takes_constants(node):
             node.text = self._resolve_constant_value(node.text, constants_for_folder)
         else:
             for attr_name in SkinInclude.constant_attribs.intersection(node.attrib):

@@ -31,7 +31,7 @@ from ..validation.filecheck import ValidationFileCheck
 from ..validation.repo import ValidationRepo
 from ..validation.include import check_include_file_ref
 from ..validation.suppress import scan, skin_paths, stamp
-from ..validation.interpreter import XmlInterpreter
+from ..validation.interpreter import STRUCTURAL_TAGS, XmlInterpreter
 from ..validation.urls import UrlValues, value_sources
 from ..validation.hierarchy import ALL_LAYOUT_TAGS
 from ..validation.constants import (
@@ -747,7 +747,9 @@ class CheckerMixin:
                 if (v or "").strip() == "" and k in ("target", "sortby", "sortorder", "limit"):
                     continue
                 value_type = subnodes[subnode.tag][k]
-                if value_type in ["int", "position"]:
+                # the resolved pass checks every typed child but the structural ones
+                interpreted = skip_value_checks and subnode.tag not in STRUCTURAL_TAGS
+                if value_type in ["int", "position"] and not interpreted:
                     # a layout falls back to the container size for a non-numeric size
                     if subnode.tag in ALL_LAYOUT_TAGS and v == "auto":
                         continue

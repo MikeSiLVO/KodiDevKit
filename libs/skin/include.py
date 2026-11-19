@@ -27,6 +27,12 @@ class SkinInclude(dict):
     exp_nodes = frozenset({"enable", "selected", "usealttexture", "visible"})
     exp_attribs = frozenset({"condition"})
 
+    @staticmethod
+    def text_takes_constants(node) -> bool:
+        """True when Kodi substitutes constants in the element's text and not its attributes."""
+        # Kodi's parser keeps no text node made only of whitespace
+        return node.tag in SkinInclude.constant_nodes and bool((node.text or "").strip())
+
     def __init__(self, node, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.node = node

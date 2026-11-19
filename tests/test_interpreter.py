@@ -398,6 +398,18 @@ class TestNumberFields(unittest.TestCase):
         self.assertIn(("warning", "<width> value MainWidth is not a defined constant, unless a runtime "
                                   "generator adds it"), self._messages(runtime=True))
 
+    def test_attribute_beside_text(self):
+        """A constant in a min or max attribute stays a name when its size tag has text."""
+        interp = XmlInterpreter(template_attribs={"label": {"width": {"min": "position", "max": "position"}}},
+                                template_values={"label": {"width": "int"}}, constants={"W"})
+        messages = [i["message"] for i in interp.interpret(_parse("""
+        <window><controls>
+            <control type="label"><width min="10" max="W">auto</width></control>
+            <control type="label"><width max="W">  </width></control>
+        </controls></window>"""))]
+        self.assertEqual(messages, ['<width> has text, so Kodi substitutes constants there and not in max; '
+                                    'max="W" reads as 0'])
+
 class TestDefaultType(unittest.TestCase):
     """A default is matched by its exact type string."""
 
