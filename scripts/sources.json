@@ -157,6 +157,12 @@
     ]
   },
   {
+    "symbol": "libs/skin/resources.py:SkinResources.load_fonts",
+    "kodi": [
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFontsFromFile"
+    ]
+  },
+  {
     "symbol": "libs/skin/skin.py:Skin.__init__",
     "kodi": [
       "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes"

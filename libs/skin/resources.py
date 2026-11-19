@@ -109,7 +109,8 @@ class SkinResources:
                 except Exception as e:
                     logger.debug("Failed to expand includes in Font.xml: %s", e)
 
-            fontsets = root.findall("fontset")
+            # Kodi loads no fontset without an id
+            fontsets = [fs for fs in root.findall("fontset") if fs.get("id")]
             if not fontsets:
                 continue
 

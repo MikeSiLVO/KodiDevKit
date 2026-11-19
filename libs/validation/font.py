@@ -20,12 +20,15 @@ REQUIRED_FONTS = {"font13"}
 KODI_FONTS = {"arial.ttf", "teletext.ttf"}
 
 
-def _undefined_font_issue(name, defined, folded, file, line, unloaded=()):
+def _undefined_font_issue(name, defined, folded, file, line, unloaded=(), idless=()):
     """Issue for a used font name not defined exactly or never loaded, or None when it is fine."""
     if name.casefold() in unloaded:
         rule, message = "fonts.uses-not-loaded", f"Font '{name}' is never loaded: Kodi only loads .ttf fonts"
     elif name in defined:
         return None
+    elif name.casefold() in idless:
+        rule, message = "fonts.uses-not-loaded", (f"Font '{name}' is never loaded: it is only in a <fontset> "
+                                                  f"without an id, which Kodi never loads")
     elif name.lower() in ("-", "noop"):
         rule, message = "fonts.not-empty", f"'{name}' is not an empty font in Kodi; leave the tag out"
     elif name.casefold() in folded:
@@ -169,10 +172,18 @@ class ValidationFont:
                             issues.append(row(f"Kodi only loads .ttf fonts, so '{name or '?'}' ({filename}) is never "
                                               f"loaded", file_src, fn_line, rule="fonts.not-loaded", subject=name))
 
+        idless = {}
         for folder in getattr(self.addon, "xml_folders", []):
             if progress_callback:
                 progress_callback(f"Checking the fontsets in {folder or 'the skin root'}...")
-            fontsets = self._parse_fontsets(folder)
+            fontsets = []
+            for fs in self._parse_fontsets(folder):
+                if fs["id"]:
+                    fontsets.append(fs)
+                    continue
+                issues.append(row("<fontset> has no id, so Kodi never loads it or its fonts", fs["file"],
+                                  fs["line"], rule="fonts.not-loaded", subject="fontset"))
+                idless.setdefault(folder, set()).update(f["name"].casefold() for f in fs["fonts"] if f["name"])
             if not fontsets:
                 continue
 
@@ -281,7 +292,7 @@ class ValidationFont:
                             continue
                         issue = _undefined_font_issue(name, fonts_defined, folded,
                                                       usage.get('file', ''), usage.get('line', 0),
-                                                      self._unloaded_fonts(folder))
+                                                      self._unloaded_fonts(folder), idless.get(folder, ()))
                         if issue:
                             issues.append(issue)
 
@@ -356,8 +367,8 @@ class ValidationFont:
             return {"name": nm, "filename": fn, "size": sz, "file": src_file, "line": ln,
                     "conditional": fnode.get("_kdk_inc_cond") == "1"}
 
-        for fs in root.findall(".//fontset"):
-            fs_id = fs.attrib.get("id") or fs.attrib.get("name") or "fontset"
+        for fs in root.findall("fontset"):
+            fs_id = fs.get("id") or ""
             unicode_flag = "unicode" in fs.attrib
             fs_line = getattr(fs, "sourceline", 0) or 0
 

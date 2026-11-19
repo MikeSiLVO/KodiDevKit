@@ -607,6 +607,18 @@ class TestFontValidation(unittest.TestCase):
         messages = [i["message"] for i in self.init_provider().check_fonts()]
         self.assertIn("Kodi only loads .ttf fonts, so 'font13' (Plain) is never loaded", messages)
 
+    def test_fontset_without_id_is_never_loaded(self):
+        """A fontset with no id is an error, and so is a use of a font only it defines."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml('<fonts><fontset id="Default"><font><name>font13</name><filename>font.ttf'
+                              '</filename></font></fontset><fontset name="Alt"><font><name>font13</name>'
+                              '<filename>font.ttf</filename></font><font><name>onlyhere</name>'
+                              '<filename>font.ttf</filename></font></fontset></fonts>')
+        self.create_window_xml('<window><controls><control type="label"><font>onlyhere</font>'
+                               '</control></controls></window>')
+        rows = sorted((i["rule"], i["subject"]) for i in self.init_provider().check_fonts())
+        self.assertEqual(rows, [("fonts.not-loaded", "fontset"), ("fonts.uses-not-loaded", "onlyhere")])
+
     def test_fontset_without_font13_says_what_it_costs(self):
         """A fontset lacking font13 while another has it gets a warning naming the fallback."""
         self.create_font_file("font.ttf")
