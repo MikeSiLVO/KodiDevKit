@@ -490,7 +490,8 @@ class CheckerMixin:
 
             is_valid = True
             if value_type == "color" and getattr(self.addon, "type", None) == "skin":
-                is_valid = value_text in self.get_color_labels() or is_kodi_hex(value_text)
+                is_valid = (value_text in self.get_color_labels() or value_text in self.addon.theme_colors
+                            or is_kodi_hex(value_text))
                 if not is_valid:
                     location = tag_name if tag_name else node.tag
                     self._add_issue(
@@ -559,6 +560,7 @@ class CheckerMixin:
             template_values=self.template_values,
             file_path=path,
             color_labels=self.get_color_labels(),
+            theme_colors=self.addon.theme_colors if self.addon else frozenset(),
             runtime_generator=self._imports_runtime_generator(),
             constants=set(self.addon.get_constants(folder)) if self.addon else set(),
             info_names=self.known_info_names(),
@@ -766,6 +768,7 @@ class CheckerMixin:
                                         rule="xml.invalid-value", subject=k)
                 elif value_type == "color":
                     if (getattr(self.addon, "type", None) == "skin" and v not in self.get_color_labels()
+                            and v not in self.addon.theme_colors
                             and not is_kodi_hex(v) and not is_known_info(v, self.known_info_names())):
                         self._add_issue(listitems, subnode, f"Invalid color for {k}: {v}", v, severity=SEVERITY_ERROR,
                                         rule="xml.invalid-color", subject=k)

@@ -257,7 +257,7 @@ class Skin(Addon):
                 kodi_path = None
 
         system_colors = kodi_colors_xml(self, kodi_path)
-        self.colors, self.color_labels = self.resource_loader.load_colors(system_colors)
+        self.colors, self.color_labels, self.theme_colors = self.resource_loader.load_colors(system_colors)
         self.fonts, self.font_file = self.resource_loader.load_fonts(self.resolver)
 
     def _load_builtin_controls(self):

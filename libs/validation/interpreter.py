@@ -131,11 +131,13 @@ class XmlInterpreter:
         expressions: dict | None = None,
         settled_defaults: dict | None = None,
         urls: UrlValues | None = None,
+        theme_colors: set | frozenset = frozenset(),
     ):
         self.template_attribs = template_attribs or {}
         self.template_values = template_values or {}
         self.file_path = file_path
         self.color_labels = color_labels or set()
+        self.theme_colors = theme_colors
         self.runtime_generator = runtime_generator
         self.constants = constants
         self.info_names = info_names
@@ -725,9 +727,16 @@ class XmlInterpreter:
         return re.match(r"^[A-Za-z_][\w.-]*$", value) is not None and value.lower() != "auto"
 
     def _validate_color(self, node, where: str, name: str, value: str, part: str):
-        """Validate a color, reporting one that is no hex value, color name or info."""
-        if (not _is_kodi_hex(value) and value not in self.color_labels
-                and not (self.info_names and is_known_info(value, self.info_names))):
+        """Validate a color, reporting one that is no hex value, default theme color or info."""
+        if (_is_kodi_hex(value) or value in self.color_labels
+                or (self.info_names and is_known_info(value, self.info_names))):
+            return
+        if value in self.theme_colors:
+            self._add_issue(node, SEVERITY_WARNING, f"Color '{value}' for {where} is only in a theme's colors file, "
+                                                    f"not colors/defaults.xml, so the default theme shows it "
+                                                    f"transparent", rule="xml.theme-only-color", subject=value,
+                            part=part)
+        else:
             self._add_issue(node, SEVERITY_ERROR, f"Invalid color for {where}: {value}", rule="xml.invalid-color",
                             subject=name, part=part)
 

@@ -6,24 +6,30 @@ import logging
 from typing import Dict, List, Generator, Optional, Tuple
 from lxml import etree as ET
 
-from ..utils.files import check_paths, xml_folder_paths
+from ..utils.files import check_paths, folder_entries, miscased_name, xml_folder_paths
 from ..utils.xml import file_needs_expansion, get_root_from_file
 
 logger = logging.getLogger(__name__)
 
 
 def _read_colors(file_path: str) -> Optional[List[Dict]]:
-    """Read one colors file into rows of name, line, value and file; None when unparseable."""
+    """Read colors file into name, line, value, file rows; None if unparseable or not <colors>."""
     root = get_root_from_file(file_path)
-    if root is None:
+    if root is None or root.tag != "colors":
         logger.info("Invalid color file: %s", file_path)
         return None
+    # Kodi skips a color without a name or a value
     return [{
         "name": node.attrib.get("name"),
         "line": getattr(node, "sourceline", None),
         "content": (node.text or "").strip(),
         "file": file_path,
-    } for node in root.findall("color")]
+    } for node in root.findall("color") if node.get("name") and node.text]
+
+
+def _on_disk(folder: str, name: str) -> Optional[str]:
+    """Find the exact entry on disk, else one differing only by case; None if neither."""
+    return name if name in folder_entries(folder) else miscased_name(folder, name)
 
 
 def _font_row(node, font_file_path: str) -> Optional[Dict]:
@@ -52,21 +58,29 @@ class SkinResources:
         self.xml_folders = xml_folders
         self.default_folder = default_folder
 
-    def load_colors(self, system_colors_path: Optional[str] = None) -> Tuple[List[Dict], set]:
-        """Load the skin's colors/*.xml then Kodi core's; returns the rows and their name set."""
+    def load_colors(self, system_colors_path: Optional[str] = None) -> Tuple[List[Dict], set, set]:
+        """Load colors/*.xml and Kodi core's: rows, names every theme has, theme-only names."""
         colors = []
+        theme_names = set()
+        default_path = None
 
-        if self.skin_path:
-            color_dir = os.path.join(self.skin_path, "colors")
-            if os.path.isdir(color_dir):
-                for name in sorted(os.listdir(color_dir)):
-                    if not name.lower().endswith(".xml"):
-                        continue
-                    file_path = os.path.join(color_dir, name)
-                    rows = _read_colors(file_path)
-                    if rows is not None:
-                        colors.extend(rows)
-                        logger.info("found color file %s including %d colors", file_path, len(rows))
+        # Kodi finds colors/defaults.xml in any case, the exact name first
+        folder = _on_disk(self.skin_path, "colors") if self.skin_path else None
+        color_dir = os.path.join(self.skin_path, folder) if folder else ""
+        if color_dir and os.path.isdir(color_dir):
+            default = _on_disk(color_dir, "defaults.xml")
+            default_path = os.path.join(color_dir, default) if default else None
+            for name in sorted(os.listdir(color_dir)):
+                if not name.lower().endswith(".xml"):
+                    continue
+                file_path = os.path.join(color_dir, name)
+                rows = _read_colors(file_path)
+                if rows is not None:
+                    colors.extend(rows)
+                    # the default theme loads defaults.xml and no other skin colors file
+                    if file_path != default_path:
+                        theme_names.update(row["name"] for row in rows)
+                    logger.info("found color file %s including %d colors", file_path, len(rows))
 
         if system_colors_path and os.path.isfile(system_colors_path):
             rows = _read_colors(system_colors_path)
@@ -80,9 +94,9 @@ class SkinResources:
         if not colors:
             logger.info("No color file found in skin or system paths")
 
-        color_labels = {c["name"] for c in colors if c.get("name")}
+        color_labels = {c["name"] for c in colors if c["file"] in (default_path, system_colors_path)}
 
-        return colors, color_labels
+        return colors, color_labels, theme_names - color_labels
 
     def load_fonts(self, resolver=None) -> Tuple[Dict[str, List[Dict]], Optional[str]]:
         """Load each folder's Font.xml, includes expanded; returns fonts per folder, last file."""

@@ -89,6 +89,38 @@ class TestColorValues(unittest.TestCase):
         rows = provider.get_check_listitems("general")
         self.assertEqual(sorted(r["line"] for r in rows if r["rule"] == "xml.invalid-color"), [4, 5])
 
+    def test_colors_the_default_theme_loads(self):
+        """defaults.xml names pass, theme-only ones warn; a bad root or empty value defines none."""
+        os.makedirs(os.path.join(self.root, "colors"))
+        self.write("colors/defaults.xml", '<colors><color name="Base">FFFFFFFF</color>'
+                                          '<color name="Empty"></color></colors>')
+        self.write("colors/Blue.xml", '<colors><color name="Base">FF0000FF</color>'
+                                      '<color name="OnlyBlue">FF0000FF</color></colors>')
+        self.write("colors/Odd.xml", '<colours><color name="WrongRoot">FF0000FF</color></colours>')
+        self.write("16x9/Home.xml", '<window><controls><control type="label"><textcolor>Base</textcolor>'
+                                    '<focusedcolor>OnlyBlue</focusedcolor><disabledcolor>Empty</disabledcolor>'
+                                    '<shadowcolor>WrongRoot</shadowcolor></control></controls></window>')
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.root)
+        rows = provider.check_file(os.path.join(self.root, "16x9", "Home.xml")) or []
+        self.assertEqual(sorted((r["rule"], r["subject"]) for r in rows if "color" in r["rule"]), [
+            ("xml.invalid-color", "disabledcolor"), ("xml.invalid-color", "shadowcolor"),
+            ("xml.theme-only-color", "OnlyBlue")])
+
+    def test_defaults_file_in_any_case(self):
+        """Colors/Defaults.xml is the default theme's file; a name in it is not theme-only."""
+        os.makedirs(os.path.join(self.root, "Colors"))
+        self.write("Colors/Defaults.xml", '<colors><color name="Base">FFFFFFFF</color></colors>')
+        self.write("Colors/Blue.xml", '<colors><color name="Base">FF0000FF</color></colors>')
+        self.write("16x9/Home.xml", '<window><controls><control type="label"><textcolor>Base</textcolor>'
+                                    '</control></controls></window>')
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(self.root)
+        rows = provider.check_file(os.path.join(self.root, "16x9", "Home.xml")) or []
+        self.assertEqual([r["rule"] for r in rows if "color" in r["rule"]], [])
+
 
 if __name__ == "__main__":
     unittest.main()

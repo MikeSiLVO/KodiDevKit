@@ -137,6 +137,7 @@ RULES = {
     "xml.invalid-attr": "An attribute Kodi does not read on that tag.",
     "xml.invalid-value": "A value outside what Kodi accepts for that tag or attribute.",
     "xml.invalid-color": "A color that is neither AARRGGBB hex nor a defined color name.",
+    "xml.theme-only-color": "A color name only a theme's colors file defines, which the default theme shows transparent.",
     "xml.misread-bool": "A bool attribute spelled in a way Kodi reads differently than meant.",
     "xml.unknown-viewtype": "A <viewtype> Kodi does not know, which leaves the view without a type.",
     "xml.invalid-control-type": "A control type Kodi does not know.",

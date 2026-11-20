@@ -169,6 +169,13 @@
     ]
   },
   {
+    "symbol": "libs/skin/resources.py:SkinResources.load_colors",
+    "kodi": [
+      "xbmc/guilib/GUIColorManager.cpp:CGUIColorManager::Load",
+      "xbmc/guilib/GUIColorManager.cpp:CGUIColorManager::LoadXML"
+    ]
+  },
+  {
     "symbol": "libs/skin/resources.py:SkinResources.load_fonts",
     "kodi": [
       "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFontsFromFile"

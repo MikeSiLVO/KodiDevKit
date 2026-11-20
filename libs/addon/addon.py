@@ -37,6 +37,7 @@ class Addon:
         self.po_files = []
         self.colors = []
         self.color_labels = set()
+        self.theme_colors = set()
         self.fonts = {}
         self.xml_folders = []
         self.window_files = {}
