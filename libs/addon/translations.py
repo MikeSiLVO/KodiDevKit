@@ -17,7 +17,7 @@ _STRING_ID = re.compile(r'msgctxt "#(\d+)')
 
 
 def strings_po_faults(addon_path, progress=None):
-    """Yield (path, line, string id, problem, effect) per broken string in every strings.po."""
+    """Yield (path, line, id, problem, effect) per broken string or header in every strings.po."""
     files = []
     for base in ("language", os.path.join("resources", "language")):
         base_path = os.path.join(addon_path, base)
@@ -32,6 +32,9 @@ def strings_po_faults(addon_path, progress=None):
             progress(count, len(files))
         with open(path, encoding="utf-8", errors="replace") as f:
             text = f.read()
+        line = header_fault(text)
+        if line:
+            yield path, line, None, "header", "unloaded"
         for fault in broken_strings(text, folder.lower() == "resource.language.en_gb"):
             yield (path,) + fault
 
@@ -55,32 +58,54 @@ def _string_fault(value):
         i = len(value) - len(following)
 
 
-def broken_strings(text, source):
-    """Yield (line, string id, problem, Kodi's effect or None) per broken field in the text."""
+def _entries(text):
+    """Yield each entry as (line number, line) pairs, cut only at an empty line, line ends as LF."""
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     entry = []
     for number, line in enumerate(lines + [""], 1):
         if line:
             entry.append((number, line))
             continue
-        yield from _entry_faults(entry, source)
+        if entry:
+            yield entry
         entry = []
 
 
+def broken_strings(text, source):
+    """Yield (line, string id, problem, Kodi's effect or None) per broken field in the text."""
+    for entry in _entries(text):
+        yield from _entry_faults(entry, source)
+
+
+def header_fault(text):
+    """Line where Kodi refuses the file: a string id or plural in the first entry with a msgid."""
+    for entry in _entries(text):
+        if any(line.startswith("msgid ") for _, line in entry):
+            return next((number for number, line in entry
+                         if _STRING_ID.match(line) or line.startswith("msgid_plural ")), None)
+    return None
+
+
 def _entry_faults(entry, source):
-    """Faults of one blank-line-separated entry, each field reported at its first bad line."""
+    """Faults of one empty-line-separated entry, each field reported at its first bad line."""
     string_id = None
-    fields = []
+    fields, current = [], None
     for number, line in entry:
         found = _STRING_ID.match(line)
-        if found:
+        if found and string_id is None:
             string_id = found.group(1)
+        elif found:
+            # Kodi keeps the first string id of an entry and never loads a later one
+            yield number, found.group(1), "merged", "empty" if source else "english"
         found = _FIELD.match(line)
         if found:
-            # Kodi takes the text after exactly one space as the string
-            fields.append((found.group(1), [(number, found.group(2), line[len(found.group(1)) + 1:])]))
-        elif line.startswith('"') and fields:
-            fields[-1][1].append((number, line, line))
+            # Kodi reads the first copy of a field; the text after exactly one space is the string
+            current = None if any(name == found.group(1) for name, _ in fields) else (
+                found.group(1), [(number, found.group(2), line[len(found.group(1)) + 1:])])
+            if current:
+                fields.append(current)
+        elif line.startswith('"') and current:
+            current[1].append((number, line, line))
     # Kodi reads msgid for the source language, msgstr and msgid for a translation
     wanted = ("msgid",) if source else ("msgid", "msgstr")
     for name, parts in fields:

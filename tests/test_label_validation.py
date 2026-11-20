@@ -86,6 +86,31 @@ class TestLabelValidation(ValidationTestCase):
         undefined = [i["subject"] for i in self.provider.check_labels() if i.get("rule") == "labels.undefined"]
         self.assertEqual(undefined, ["31001"])
 
+    def _po_rows(self, po_text):
+        """Undefined and broken-string rows for a skin using 31000 and 31001 with the strings.po."""
+        po_dir = os.path.join(self.test_dir, "language", "resource.language.en_gb")
+        os.makedirs(po_dir)
+        with open(os.path.join(po_dir, "strings.po"), "w", encoding="utf-8") as f:
+            f.write(po_text)
+        with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:
+            f.write('<window><controls><control type="label"><label>31000</label></control>'
+                    '<control type="label"><label>31001</label></control></controls></window>')
+        self.provider.init_addon(self.test_dir)
+        return sorted((i["rule"], i["subject"]) for i in self.provider.check_labels()
+                      if i.get("rule") in ("labels.undefined", "labels.broken-string"))
+
+    def test_entries_without_an_empty_line_between(self):
+        """A second string in one entry, even past a line of spaces, is never loaded."""
+        rows = self._po_rows('msgid ""\nmsgstr ""\n\nmsgctxt "#31000"\nmsgid "A"\nmsgstr ""\n  \n'
+                             'msgctxt "#31001"\nmsgid "B"\nmsgstr ""\n')
+        self.assertEqual(rows, [("labels.broken-string", "31001"), ("labels.undefined", "31001")])
+
+    def test_strings_before_the_header(self):
+        """A file whose first entry is a string is refused whole, every id in it undefined."""
+        rows = self._po_rows('msgctxt "#31000"\nmsgid "A"\nmsgstr ""\n\nmsgctxt "#31001"\nmsgid "B"\nmsgstr ""\n')
+        self.assertEqual(rows, [("labels.broken-string", "resource.language.en_gb"),
+                                ("labels.undefined", "31000"), ("labels.undefined", "31001")])
+
     def test_non_ascii_digit_label_is_text(self):
         """A label of a non-ASCII digit is text, not a string id."""
         with open(os.path.join(self.test_dir, "16x9", "Home.xml"), "w", encoding="utf-8") as f:

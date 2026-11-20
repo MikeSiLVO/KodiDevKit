@@ -12,6 +12,18 @@
     ]
   },
   {
+    "symbol": "libs/addon/translations.py:broken_strings",
+    "kodi": [
+      "xbmc/utils/POUtils.cpp:CPODocument::GetNextEntry"
+    ]
+  },
+  {
+    "symbol": "libs/addon/translations.py:header_fault",
+    "kodi": [
+      "xbmc/utils/POUtils.cpp:CPODocument::LoadFile"
+    ]
+  },
+  {
     "symbol": "libs/infonames.py:<module>",
     "kodi": [
       "xbmc/GUIInfoManager.cpp:CGUIInfoManager::TranslateSingleString"

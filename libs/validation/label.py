@@ -1,5 +1,6 @@
 """Checks labels for undefined or out-of-range ids, broken strings and untranslated text."""
 
+import os
 import re
 import logging
 
@@ -25,6 +26,7 @@ _PO_PROBLEMS = {
     "unclosed": "does not close on this line",
     "text": "has text after its closing quote on this line",
     "spaces": "has spaces outside its quotes on this line",
+    "merged": "follows the string above it with no empty line between them",
 }
 _PO_EFFECTS = {
     "empty": "reads it as empty and its labels show nothing",
@@ -86,7 +88,7 @@ class ValidationLabel:
         return is_known_info(text, self._info_names)
 
     def check(self, progress_callback=None):
-        """Check labels, one issue row per bad id, broken string or text that looks untranslated."""
+        """Check labels, a row per bad id, broken string or file, or text looking untranslated."""
         if not self._validation_index:
             return []
         if progress_callback:
@@ -149,13 +151,22 @@ class ValidationLabel:
         if progress_callback:
             progress_callback(f"Checking {len(refs)} label references against translation files...")
 
+        po_progress = stage_progress(progress_callback, "Checking strings.po files")
+        faults = [(path, line, string_id, problem, effect) for path, line, string_id, problem, effect
+                  in strings_po_faults(self.addon.path, po_progress) if effect]
+        unloaded = {(os.path.normcase(os.path.abspath(path)), string_id) for path, _, string_id, _, effect
+                    in faults if effect in ("empty", "unloaded")}
         skin_po = {id(po) for po in getattr(self.addon, "po_files", None) or []}
         skin_ids, core_ids = set(), set()
         for po_file in self._get_po_files():
             # Kodi stores no English entry whose msgid is empty
             english = getattr(po_file, "language", "").lower() == "resource.language.en_gb"
+            fpath = os.path.normcase(os.path.abspath(po_file.fpath or ""))
+            if (fpath, None) in unloaded:
+                continue
             (skin_ids if id(po_file) in skin_po else core_ids).update(
-                entry.msgctxt for entry in po_file if entry.msgid or not english)
+                entry.msgctxt for entry in po_file
+                if (entry.msgid or not english) and (fpath, entry.msgctxt.lstrip("#")) not in unloaded)
         # Kodi 22 reads a skin's own strings only in 31000-31999
         skin_range_only = getattr(self.addon, "api_version", None) not in (None, "omega")
         for ref in refs:
@@ -175,9 +186,12 @@ class ValidationLabel:
             ref["subject"] = ref["name"]
             listitems.append(ref)
 
-        po_progress = stage_progress(progress_callback, "Checking strings.po files")
-        for path, line, string_id, problem, effect in strings_po_faults(self.addon.path, po_progress):
-            if not effect:
+        for path, line, string_id, problem, effect in faults:
+            if problem == "header":
+                listitems.append({"message": "A string comes before any msgid \"\" header, so Kodi loads none "
+                                             "of this strings.po", "file": path, "line": line,
+                                  "severity": SEVERITY_ERROR, "rule": "labels.broken-string",
+                                  "subject": os.path.basename(os.path.dirname(path))})
                 continue
             message = f"String {string_id} {_PO_PROBLEMS[problem]}, so Kodi {_PO_EFFECTS[effect]}"
             if problem == "unclosed":

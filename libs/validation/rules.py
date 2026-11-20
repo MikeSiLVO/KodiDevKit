@@ -62,7 +62,7 @@ RULES = {
     "labels.not-translated": "Label text written in place of a string id.",
     "labels.undefined": "A string id no strings.po defines.",
     "labels.out-of-range": "A skin string id outside 31000-31999, which Kodi 22 does not read.",
-    "labels.broken-string": "A strings.po string Kodi reads empty, cut short, or in English.",
+    "labels.broken-string": "A strings.po string Kodi reads empty, cut short, or in English, or a file it loads none of.",
     "includes.undefined": "An include call naming no include definition.",
     "includes.unused": "An include definition nothing calls.",
     "includes.duplicate": "A later include of a name already defined; Kodi uses the first.",
