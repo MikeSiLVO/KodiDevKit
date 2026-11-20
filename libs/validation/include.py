@@ -17,6 +17,7 @@ from ..utils.validation import (
 from ..utils.files import folder_entries, is_inside, miscased_name
 from ..utils.xml import get_params, get_root_from_file
 from ..utils.expressions import resolve_params_in_text
+from ..utils.infobool import static_value
 from .constants import SEVERITY_ERROR
 
 RUNTIME_INCLUDE_PATTERNS = [
@@ -101,8 +102,45 @@ class ValidationInclude:
 
         return False
 
+    def _cycle_issues(self, folder):
+        """Issues for includes that reach themselves through calls, which Kodi expands forever."""
+        includes = self.addon.include_map.get(folder, {})
+        calls = {}
+        for name, (node, _params, file_path) in includes.items():
+            body = node.find("definition")
+            calls[name] = [
+                (callee, call.sourceline or 0, file_path)
+                for call in (body if body is not None else node).iter("include")
+                for callee in [call.get("content") or call.text or ""]
+                if callee in includes and "name" not in call.attrib
+                # a param in the condition can leave it empty in the nested copy, ending the loop
+                and "$PARAM[" not in (call.get("condition") or "")
+                and static_value(call.get("condition") or "true") is not False]
+        issues, seen, done = [], set(), set()
+
+        def visit(name, path):
+            for callee, line, file_path in calls[name]:
+                if callee in path:
+                    loop = path[path.index(callee):] + [callee]
+                    if frozenset(loop) not in seen:
+                        seen.add(frozenset(loop))
+                        issues.append({
+                            'name': callee, 'type': 'include', 'file': file_path, 'line': line,
+                            'message': f"Include '{callee}' reaches itself ({' > '.join(loop)}), so Kodi "
+                                       f"never finishes loading a window that uses it",
+                            'severity': SEVERITY_ERROR, 'rule': "includes.cycle", 'subject': " > ".join(loop),
+                        })
+                elif callee not in done:
+                    visit(callee, path + [callee])
+            done.add(name)
+
+        for name in includes:
+            if name not in done:
+                visit(name, [name])
+        return issues
+
     def check(self, progress_callback=None):
-        """Check for undefined, unused or shadowed includes and a misnamed Includes.xml."""
+        """Check for undefined, unused, shadowed or looping includes and a misnamed Includes.xml."""
         total_includes = sum(len(self.addon.include_map.get(f, {})) for f in self.addon.xml_folders)
         total_files = sum(len(self.addon.window_files.get(f, [])) for f in self.addon.xml_folders)
 
@@ -282,6 +320,7 @@ class ValidationInclude:
             listitems.extend(shadowed_issues(
                 self.addon, folder,
                 ("include", "include without definition", "constant", "expression", "default")))
+            listitems.extend(self._cycle_issues(folder))
 
         undefined_count = len([i for i in listitems if "not defined" in i.get("message", "")])
         unused_count = len([i for i in listitems if "Unused" in i.get("message", "")])

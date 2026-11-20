@@ -163,6 +163,34 @@ class TestEmptyIncludeCondition(unittest.TestCase):
                                  "Include call 'Cond' has an empty condition, so Kodi never splices it")])
 
 
+class TestIncludeCycles(unittest.TestCase):
+    """An include that reaches itself, which Kodi expands without end."""
+
+    def test_cycles(self):
+        """Each loop is reported once; a loop a param condition or a false one ends is not."""
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        path = temp_dir.name
+        os.makedirs(os.path.join(path, "16x9"))
+        includes = ('<includes><include name="Self"><include>Self</include></include>'
+                    '<include name="Ping"><include>Pong</include></include>'
+                    '<include name="Pong"><include>Ping</include></include>'
+                    '<include name="Tree"><include content="Tree" condition="$PARAM[deeper]"/></include>'
+                    '<include name="Off"><include condition="false">Off</include></include></includes>')
+        files = {"addon.xml": ADDON_XML, "16x9/Includes.xml": includes,
+                 "16x9/Home.xml": '<window><controls><control type="group"><include>Self</include>'
+                                  '<include>Ping</include><include>Tree</include><include>Off</include>'
+                                  '</control></controls></window>'}
+        for rel, text in files.items():
+            with open(os.path.join(path, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.init_addon(path)
+        self.assertEqual(sorted(r["subject"] for r in provider.check_includes() if r["rule"] == "includes.cycle"),
+                         ["Ping > Pong > Ping", "Self > Self"])
+
+
 class TestPaddedNames(unittest.TestCase):
     """An include or constant name with spaces around it, which Kodi looks up as written."""
 

@@ -374,6 +374,12 @@
     ]
   },
   {
+    "symbol": "libs/validation/include.py:ValidationInclude._cycle_issues",
+    "kodi": [
+      "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::ResolveIncludes"
+    ]
+  },
+  {
     "symbol": "libs/validation/include.py:check_include_file_ref",
     "kodi": [
       "xbmc/guilib/GUIIncludes.cpp:CGUIIncludes::Load_Internal"

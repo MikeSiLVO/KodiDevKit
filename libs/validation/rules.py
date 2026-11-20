@@ -67,6 +67,7 @@ RULES = {
     "includes.unused": "An include definition nothing calls.",
     "includes.duplicate": "A later include of a name already defined; Kodi uses the first.",
     "includes.no-definition": "An include with <param> but no <definition>, which Kodi ignores.",
+    "includes.cycle": "An include that reaches itself through its calls, which Kodi expands without end.",
     "includes.duplicate-constant": "A later constant of a name already defined; Kodi uses the first.",
     "includes.duplicate-expression": "A later expression of a name already defined; Kodi uses the first.",
     "includes.duplicate-default": "A later <default> for a control type already given one; Kodi uses the first.",
