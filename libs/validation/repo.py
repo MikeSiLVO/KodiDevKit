@@ -218,8 +218,9 @@ class ValidationRepo:
                     self._add(rel, line, "repo.asset-location", f"{image} should be in the resources folder", kind)
 
     def _check_languages(self):
-        """Check language folders use resource.language.<code> and include en_gb, then each po."""
-        found_en_gb = False
+        """Check language folder names, en_gb (under language/ for a skin) and each strings.po."""
+        found_en_gb, stray_en_gb = False, None
+        skin = getattr(self.addon, "type", None) == "skin"
         for base in ("language", os.path.join("resources", "language")):
             base_path = os.path.join(self.addon.path, base)
             if not os.path.isdir(base_path):
@@ -238,11 +239,18 @@ class ValidationRepo:
                     self._add(rel, 0, "repo.language-case",
                               f"{rel} should be {folder.lower()}; Weblate takes both cases for one language "
                               f"and re-creates the old folder", folder)
-                found_en_gb |= code.lower() == "en_gb"
+                if code.lower() == "en_gb" and skin and base != "language":
+                    stray_en_gb = rel
+                else:
+                    found_en_gb |= code.lower() == "en_gb"
                 po = os.path.join(base_path, folder, "strings.po")
                 if os.path.isfile(po):
                     self._check_po(rel + "/strings.po", po)
-        if not found_en_gb:
+        if not found_en_gb and stray_en_gb:
+            self._add("addon.xml", 0, "repo.no-en-gb",
+                      f"no language/resource.language.en_gb folder; Kodi reads a skin's strings from language/, "
+                      f"so the ones in {stray_en_gb} are lost on Kodi 21 and after a skin reload on Kodi 22")
+        elif not found_en_gb:
             self._add("addon.xml", 0, "repo.no-en-gb", "no resource.language.en_gb folder with the default strings")
 
     def _check_po(self, rel, path):

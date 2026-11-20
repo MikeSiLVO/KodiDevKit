@@ -126,7 +126,7 @@ RULES = {
     "repo.language-layout": "A language folder in the old layout, not resource.language.<code>.",
     "repo.language-code": "A language folder whose code is not a valid language code.",
     "repo.language-case": "A language folder whose name is not all lowercase, which Weblate reads as a second copy.",
-    "repo.no-en-gb": "No resource.language.en_gb folder with the default strings.",
+    "repo.no-en-gb": "No resource.language.en_gb folder with the default strings, or for a skin, none under language/.",
     "repo.po-encoding": "A strings.po not saved as UTF-8.",
     "repo.po-header": "A strings.po without the msgid \"\" / msgstr \"\" header.",
     "repo.po-duplicate-id": "A string id defined twice in one strings.po.",

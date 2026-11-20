@@ -186,6 +186,17 @@ class TestRepo(unittest.TestCase):
             "Kodi repo: language/resource.language.en_GB should be resource.language.en_gb; Weblate takes both "
             "cases for one language and re-creates the old folder")])
 
+    def test_skin_strings_only_under_resources(self):
+        """A skin with en_gb strings only in resources/language gets the en_gb warning naming it."""
+        import shutil
+        self._addon()
+        shutil.rmtree(os.path.join(self.path, "language"))
+        self._write("resources/language/resource.language.en_gb/strings.po", GOOD_PO)
+        self.assertEqual([m for m in self._messages() if "en_gb" in m], [
+            "Kodi repo: no language/resource.language.en_gb folder; Kodi reads a skin's strings from language/, "
+            "so the ones in resources/language/resource.language.en_gb are lost on Kodi 21 and after a skin "
+            "reload on Kodi 22"])
+
     def test_po_bom_and_a_msgid_without_value_are_reported(self):
         """A BOM reads as the checker reports it, and a msgid with no value is named."""
         self._addon()

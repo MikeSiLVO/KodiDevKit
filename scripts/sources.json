@@ -496,6 +496,12 @@
     ]
   },
   {
+    "symbol": "libs/validation/repo.py:ValidationRepo._check_languages",
+    "kodi": [
+      "xbmc/application/ApplicationSkinHandling.cpp:CApplicationSkinHandling::LoadSkin"
+    ]
+  },
+  {
     "symbol": "libs/validation/skinmap.py:<module>",
     "kodi": [
       "xbmc/guilib/guiinfo/GUIInfoLabel.cpp:CGUIInfoLabel::Parse",
