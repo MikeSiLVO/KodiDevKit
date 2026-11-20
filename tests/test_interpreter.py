@@ -443,11 +443,12 @@ class TestConditions(unittest.TestCase):
              "platforms": set(), "players": {}}
 
     def messages(self, xml, runtime_generator=False):
+        """Messages for conditions that read false, are empty or need a runtime generator."""
         interp = XmlInterpreter(template_attribs={"button": {"visible": {}}, "label": {}},
                                 template_values={"button": {}, "label": {}}, info_names=self.NAMES,
                                 runtime_generator=runtime_generator)
         return sorted(i["message"] for i in interp.interpret(_parse(xml)) if "reads false" in i["message"]
-                      or "runtime generator" in i["message"])
+                      or "runtime generator" in i["message"] or "none were written" in i["message"])
 
     def test_tag_the_control_ignores(self):
         self.assertEqual(self.messages(
@@ -455,11 +456,15 @@ class TestConditions(unittest.TestCase):
             '</controls></window>'), [])
 
     def test_expression_from_runtime_generator(self):
+        """Undefined $EXP warns with generator, else empties condition; negated, it reads false."""
         xml = '<window><controls><control type="button"><visible>$EXP[gen]</visible></control></controls></window>'
         self.assertEqual(self.messages(xml, runtime_generator=True),
                          ["Condition uses an unknown expression gen, unless a runtime generator defines it: $EXP[gen]"])
         self.assertEqual(self.messages(xml), [
-            "Kodi cannot parse this condition (unknown expression gen), it always reads false: $EXP[gen]"])
+            "Kodi drops the undefined expression gen, so this condition is empty, as if none were written: "
+            "$EXP[gen]"])
+        self.assertEqual(self.messages(xml.replace("$EXP[gen]", "!$EXP[gen]")), [
+            "Kodi cannot parse this condition (unknown expression gen), it always reads false: !$EXP[gen]"])
 
     def test_window_conditions(self):
         self.assertEqual(self.messages("""

@@ -659,6 +659,9 @@ class XmlInterpreter:
             if self.runtime_generator and undefined:
                 return [(SEVERITY_WARNING, f"Condition uses an {problem[1]}, "
                                            f"unless a runtime generator defines it: {short}", rule, subject)]
+            if undefined and text.strip() == f"$EXP[{subject}]":
+                return [(SEVERITY_ERROR, f"Kodi drops the undefined expression {subject}, so this condition is "
+                                         f"empty, as if none were written: {short}", rule, subject)]
             return [(SEVERITY_ERROR,
                      f"Kodi cannot parse this condition ({problem[1]}), it always reads false: {short}",
                      rule, subject)]
