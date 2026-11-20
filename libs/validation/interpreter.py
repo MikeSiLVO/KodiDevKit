@@ -593,6 +593,12 @@ class XmlInterpreter:
                 self._validate_condition(node, condition, resolved=True)
             if node.tag == "visible" and node.get("allowhiddenfocus"):
                 self._validate_unexpanded_condition(node, node.get("allowhiddenfocus"), "allowhiddenfocus")
+            # a param emptying the condition lets a call opt out; written empty, the call is dead
+            if (node.tag == "include" and condition is not None and not condition.strip()
+                    and "condition" not in node.get("_kdk_param_parts", "").split()):
+                name = (node.get("content") or node.text or "").strip()
+                self._add_issue(node, SEVERITY_ERROR, f"Include call '{name}' has an empty condition, so Kodi "
+                                                      f"never splices it", rule="xml.empty-condition", subject=name)
 
     def _validate_unexpanded_condition(self, node, condition: str, where: str):
         """Validate a condition Kodi registers without expanding $EXP; any $EXP is a fault."""

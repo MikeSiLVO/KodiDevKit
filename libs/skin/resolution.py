@@ -229,7 +229,9 @@ class SkinResolution:
         include_node = node.find("include")
         while include_node is not None:
             condition = include_node.get("condition")
-            if condition and static_value(condition) is False:
+            # Kodi empties an unknown $PARAM, and an empty condition never splices the include
+            if condition is not None and (not resolve_param_in_name(condition).strip()
+                                          or static_value(condition) is False):
                 include_node = next(include_node.itersiblings("include"), None)
                 continue
 
