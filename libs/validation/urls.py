@@ -14,9 +14,6 @@ _PLUGIN_QUERY = re.compile(r'plugin://[^\s"\'?]*\?', re.IGNORECASE)
 _URL_END = re.compile(r'["\',)]')
 # an '&' that starts no key=value pair, or a '|', inside a value
 _DATA_SEPARATOR = re.compile(r'&(?![\w.-]+=)|\|')
-# the key of the last pair a text opens, as in ?key= or &key=
-_PAIR_KEY = re.compile(r'[&?]?([\w.-]*)=[^&?=]*$')
-_BETWEEN_PAIRS = re.compile(r'[&?][^=]*$')
 # a plugin reads these only to change the URL, never as data
 _TOKEN_KEYS = {"reload"}
 _ENCODER = re.compile(r'get_encoded_string\b.*?\bwindow_prop=([^&"\s,)]+)', re.IGNORECASE)
@@ -41,6 +38,23 @@ _PLAIN_INFOS = frozenset({
 
 RAW, TYPED, UNTRACED, SAFE = "raw", "typed", "untraced", "safe"
 _RANK = {SAFE: 0, UNTRACED: 1, TYPED: 2, RAW: 3}
+
+
+def _pair_key(span):
+    """Key of the last pair the text opens, as in ?key= or &key=; None when it leaves none open."""
+    equals = span.rfind("=")
+    if equals < 0 or "&" in span[equals + 1:] or "?" in span[equals + 1:]:
+        return None
+    start = equals
+    while start and (span[start - 1].isalnum() or span[start - 1] in "_.-"):
+        start -= 1
+    return span[start:equals]
+
+
+def _between_pairs(span):
+    """True when the text ends past an '&' or '?' with no '=' after it."""
+    last = max(span.rfind("&"), span.rfind("?"))
+    return last >= 0 and "=" not in span[last + 1:]
 
 
 def _plain(name):
@@ -139,10 +153,10 @@ class UrlValues:
             # an $INFO prefix such as ,&query=, opens its own pair
             prefix = body.split(",")[1] if found.group(2) == "INFO" and "," in body else ""
             for span in (text[pos:found.start()], prefix):
-                pair = _PAIR_KEY.search(span)
-                if pair:
-                    key = pair.group(1)
-                elif _BETWEEN_PAIRS.search(span):
+                pair_key = _pair_key(span)
+                if pair_key is not None:
+                    key = pair_key
+                elif _between_pairs(span):
                     key = None
             pos = found.end() + len(body) + 1
             expression, keyword, name = found.group(0) + body + "]", found.group(0)[:-1], body.strip()
