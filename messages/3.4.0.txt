@@ -1,0 +1,44 @@
+  KodiDevKit 3.4.0
+  =================
+
+  New checks
+  ----------
+  - String.IsEqual, Contains, StartsWith and EndsWith with other than two
+    arguments, which Kodi always reads as false.
+  - An include that includes itself, which Kodi never finishes loading.
+  - A color only a theme's colors file defines; the default theme shows it
+    transparent.
+  - $NUMBER and $LOCALIZE where Kodi does not expand them, and a constant in
+    a min or max attribute beside size text.
+  - Conditions in <autoscroll>, allowhiddenfocus and variable values.
+  - sortby, sortorder and browse values on <content>.
+  - Padded include and constant names, an include call written with an empty
+    condition, an include file without an <includes> root, and a fontset
+    without an id.
+  - strings.po entries with no empty line between them, a strings.po whose
+    first entry is a string, an English string with an empty msgid, and skin
+    strings kept only in resources/language.
+  - Line endings and BOMs in every shipped text file, not only .xml, .po,
+    .txt, .py and .md.
+
+  Fewer false reports
+  -------------------
+  - $PARAM names with dots, nested param defaults and include names built
+    from params.
+  - Comment-only includes and variables, fonts only the shortcuts files use,
+    fonts from an imported resource.font add-on, special://skin fonts and
+    images written as URLs.
+  - Includes.xml, include files and Font.xml from the default xml folder.
+  - SendClick and Control.Message ids are checked in the window they name.
+  - <enable>, <hitrect>, multiimage flipx, flipy and infill, and a
+    label-style <info> with a prefix and postfix.
+  - Rows land on the first line of a tag that spans lines, where a
+    kdk-ignore comment above it applies.
+  - A duplicated font reports only the copy Kodi drops.
+
+  Fixes
+  -----
+  - The file check and skin loading no longer hang on files with long runs
+    of comments.
+  - A label made of a superscript digit no longer stops the label check.
+  - Progress shows each file, window and font as it is checked.
