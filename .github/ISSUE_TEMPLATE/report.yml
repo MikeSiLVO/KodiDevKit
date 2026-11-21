@@ -1,0 +1,81 @@
+name: Wrong or missed report
+description: A check reports something that isn't a problem, or misses one that is
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One report per rule, please. The rule id is in the report row, and in the detail pane of the kdk GUI.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched existing issues and this isn't a duplicate
+          required: true
+        - label: "I'm on the latest version of KodiDevKit"
+          required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What's wrong
+      options:
+        - It reports something that isn't a problem
+        - It misses a problem
+    validations:
+      required: true
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Where you saw it
+      options:
+        - KodiDevKit in Sublime Text
+        - kdk command line
+        - kdk GUI
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 3.4.0
+    validations:
+      required: true
+  - type: input
+    id: release
+    attributes:
+      label: Kodi release it checked as
+      placeholder: e.g. Piers
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      description: Leave it empty for a missed problem.
+      placeholder: e.g. xml.unknown-info
+  - type: input
+    id: location
+    attributes:
+      label: File and line
+      placeholder: e.g. 16x9/Includes.xml line 433
+    validations:
+      required: true
+  - type: textarea
+    id: xml
+    attributes:
+      label: The XML
+      description: The tag it flagged, or should have flagged, with a few lines around it. For an include, variable or expression, paste its definition too.
+      render: xml
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it's wrong
+      description: What Kodi does with this XML, and what the check should say instead
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Skin or add-on link
+      description: A public repo or download, if there is one

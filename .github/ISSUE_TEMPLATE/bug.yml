@@ -1,0 +1,57 @@
+name: Bug report
+description: "KodiDevKit crashes, hangs or misbehaves"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If a check reports something that isn't a problem, or misses one that is, use the "Wrong or missed report" form instead.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched existing issues and this isn't a duplicate
+          required: true
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Where it happened
+      options:
+        - KodiDevKit in Sublime Text
+        - kdk command line
+        - kdk GUI
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 3.4.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. Windows 11, Ubuntu 24.04, macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What went wrong, and what you expected instead. Paste any error message or traceback.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Name the skin or add-on it happened on, with a link if it's public.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
