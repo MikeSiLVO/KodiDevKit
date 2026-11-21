@@ -26,8 +26,9 @@ _ENTITY = re.compile(r"&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);")
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _DECLARATION = re.compile(r"<\?xml\s")
 _START_TAG = re.compile(r"""<[A-Za-z_][\w:.-]*(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*/?>""")
+# a comment body stops at its first "-->", or one match runs on into the next element
 _COMMENT_ONLY = re.compile(r"""(?P<start><(?P<tag>[A-Za-z_][\w:.-]*)(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*>)"""
-                           r"(?:\s*<!--.*?-->)+\s*</(?P=tag)\s*>", re.DOTALL)
+                           r"(?:\s*<!--(?:(?!-->).)*-->)+\s*</(?P=tag)\s*>", re.DOTALL)
 _NOT_BRACKET = re.compile(r"[^()\[\]]+")
 
 _PARSE_MESSAGES = (

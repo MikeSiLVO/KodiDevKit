@@ -102,6 +102,19 @@ class TestParseErrors(unittest.TestCase):
             self.assertEqual(root.find("a").sourceline, lead.count("\n") + 2)
             self.assertTrue(xml.parse_error_issue(path)["message"].startswith("XML parse error: Text before <?xml"))
 
+    def test_comment_only_elements(self):
+        """Only an element of just comments counts, in any tag layout or line ending."""
+        path = self._write("Includes.xml", '<includes><include name="A">' + "<!-- c -->\n" * 60
+                           + '<width>1</width></include>\n<include name="B"><!-- only --></include></includes>')
+        self.assertEqual(xml.comment_only_lines(path), frozenset({62}))
+        lines = ["<includes>", "<include", "    name='D' type=\"x\"", "    ><!--",
+                 "    <label>old</label> -- note", "    -->", "    <!-- second -->", "</include >",
+                 '<include name="E"><!-- a -->text</include>', '<include name="F"/>', '<include name="G"></include>',
+                 '<include name="H"><include name="H"><!-- inner --></include></include>', "</includes>"]
+        for newline in ("\n", "\r\n"):
+            path = self._write("Shapes.xml", newline.join(lines))
+            self.assertEqual(xml.comment_only_lines(path), frozenset({4, 12}), repr(newline))
+
     def test_the_fault_is_the_subject(self):
         """Two different faults in one file are two findings, never one that moved."""
         subjects = []
