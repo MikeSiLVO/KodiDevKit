@@ -185,6 +185,9 @@ CASE_INSENSITIVE_ENUMS = {"bool", "orientation", "tween", "easing", "aspect", "a
 
 SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"
+SEVERITY_HINT = "hint"
+
+EMPTY_VISIBLE = "<visible> is empty, so Kodi always shows the control; remove it, or give it a condition"
 
 __all__ = [
     'BRACKET_TAGS',
@@ -203,6 +206,8 @@ __all__ = [
     'CASE_INSENSITIVE_ENUMS',
     'SEVERITY_ERROR',
     'SEVERITY_WARNING',
+    'SEVERITY_HINT',
+    'EMPTY_VISIBLE',
 ]
 
 

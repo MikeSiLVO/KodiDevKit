@@ -48,6 +48,8 @@ from ..validation.constants import (
     CASE_INSENSITIVE_ENUMS,
     SEVERITY_ERROR,
     SEVERITY_WARNING,
+    SEVERITY_HINT,
+    EMPTY_VISIBLE,
 )
 
 from typing import Any
@@ -419,8 +421,11 @@ class CheckerMixin:
     def _validate_brackets(self, listitems, node, text):
         """Validate a condition, reporting it if empty or unbalanced; returns whether it passed."""
         if not text:
-            self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR,
-                            rule="xml.empty-condition")
+            if node.tag == "visible":
+                self._add_issue(listitems, node, EMPTY_VISIBLE, severity=SEVERITY_HINT, rule="xml.empty-condition")
+            else:
+                self._add_issue(listitems, node, f"Empty condition: {node.tag}", severity=SEVERITY_ERROR,
+                                rule="xml.empty-condition")
             return False
         if is_dynamic_expression(text):
             return True

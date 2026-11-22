@@ -4,7 +4,7 @@ import unittest
 from lxml import etree as ET
 
 from libs.validation.interpreter import XmlInterpreter
-from libs.validation.constants import SEVERITY_WARNING, SEVERITY_ERROR
+from libs.validation.constants import SEVERITY_WARNING, SEVERITY_ERROR, SEVERITY_HINT
 
 
 def _parse(xml_str: str):
@@ -855,21 +855,25 @@ class TestControlChildValidation(unittest.TestCase):
         self.assertEqual(interp.interpret(root), [])
 
     def test_empty_condition(self):
-        attribs = {"button": {"visible": {}}}
+        """An empty <visible> is a hint, the control always shows; other empty conditions error."""
+        attribs = {"button": {"visible": {}, "enable": {}}}
         values = {"button": {}}
         root = _parse("""
         <window>
             <controls>
                 <control type="button">
                     <visible></visible>
+                    <enable></enable>
                 </control>
             </controls>
         </window>
         """)
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
-        issues = interp.interpret(root)
-        errors = [i for i in issues if i["severity"] == SEVERITY_ERROR]
-        self.assertTrue(any("Empty condition" in e["message"] for e in errors))
+        rows = sorted((i["severity"], i["message"]) for i in interp.interpret(root)
+                      if i["rule"] == "xml.empty-condition")
+        self.assertEqual(rows, [(SEVERITY_ERROR, "Empty condition: enable"),
+                                (SEVERITY_HINT, "<visible> is empty, so Kodi always shows the control; "
+                                                "remove it, or give it a condition")])
 
     def test_singleton_enforcement(self):
         attribs = {"button": {"enable": {}}}

@@ -162,6 +162,28 @@ class TestEmptyIncludeCondition(unittest.TestCase):
         self.assertEqual(rows, [("Home.xml", "xml.empty-condition",
                                  "Include call 'Cond' has an empty condition, so Kodi never splices it")])
 
+    def test_visible_a_param_empties_is_a_hint(self):
+        """An optional visible param the call leaves out empties <visible>, which is only a hint."""
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        path = temp_dir.name
+        os.makedirs(os.path.join(path, "16x9"))
+        files = {"addon.xml": ADDON_XML,
+                 "16x9/Includes.xml": '<includes><include name="Logo"><param name="visible" />'
+                                      '<definition><control type="image"><texture>logo.png</texture>'
+                                      '<visible>$PARAM[visible]</visible></control></definition></include>'
+                                      '</includes>',
+                 "16x9/Home.xml": '<window><controls><include content="Logo"/></controls></window>'}
+        for rel, text in files.items():
+            with open(os.path.join(path, rel), "w", encoding="utf-8") as f:
+                f.write(text)
+        provider = InfoProvider()
+        provider.settings = {}
+        provider.load_data("piers")
+        provider.init_addon(path)
+        rows = [r["severity"] for r in provider.check_values() if r["rule"] == "xml.empty-condition"]
+        self.assertEqual(rows, ["hint"])
+
 
 class TestIncludeCycles(unittest.TestCase):
     """An include that reaches itself, which Kodi expands without end."""

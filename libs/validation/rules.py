@@ -151,7 +151,7 @@ RULES = {
     "xml.duplicate-tag": "A second copy of a tag Kodi reads once.",
     "xml.include-duplicate-tag": "An include's copy of a read-once tag Kodi never reads, or an own copy that repeats the include's value.",
     "xml.unclosed-label": "A $INFO[, $LOCALIZE[ or similar block missing its closing ']'.",
-    "xml.empty-condition": "A condition tag or attribute with no condition; an include call with an empty one is never spliced.",
+    "xml.empty-condition": "A condition tag or attribute with no condition; an include call with an empty one is never spliced, and a control with an empty <visible> always shows.",
     "xml.bad-brackets": "A condition or action whose brackets do not match.",
     "xml.unparseable-condition": "A condition Kodi cannot parse, so it always reads false.",
     "xml.undefined-expression": "A $EXP naming no expression.",

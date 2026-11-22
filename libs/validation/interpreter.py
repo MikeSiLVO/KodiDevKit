@@ -27,6 +27,8 @@ from .hierarchy import (
 from .constants import (
     SEVERITY_ERROR,
     SEVERITY_WARNING,
+    SEVERITY_HINT,
+    EMPTY_VISIBLE,
     BRACKET_TAGS,
     CONTROL_ACTION_TAGS,
     WINDOW_ACTION_TAGS,
@@ -564,7 +566,10 @@ class XmlInterpreter:
     def _validate_brackets(self, node, text: str):
         """Validate bracket matching in a condition or action, and report an empty one."""
         if not text:
-            self._add_issue(node, SEVERITY_ERROR, f"Empty condition: {node.tag}", rule="xml.empty-condition")
+            if node.tag == "visible":
+                self._add_issue(node, SEVERITY_HINT, EMPTY_VISIBLE, rule="xml.empty-condition")
+            else:
+                self._add_issue(node, SEVERITY_ERROR, f"Empty condition: {node.tag}", rule="xml.empty-condition")
             return
         if _is_dynamic(text):
             return
