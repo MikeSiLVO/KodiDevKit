@@ -197,19 +197,20 @@ def _nested(files):
 
 
 def _tracked_files(root):
-    """Relative paths with their executable bit: git's index in a checkout, else the folder."""
-    if os.path.exists(os.path.join(root, ".git")):
-        try:
-            # a skin's .git/config can name an fsmonitor command, which ls-files would run
-            cmd = ["git", "-c", "core.fsmonitor=false", "-C", root, "ls-files", "-s", "-z"]
-            # on Windows a console program opens a window that takes focus from the editor
-            out = subprocess.run(cmd, capture_output=True, check=True,
-                                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-                                 ).stdout.decode("utf-8", "replace")
-            # a PR ships what git tracks, with the mode git records
-            return [(entry.split("\t", 1)[1], entry.startswith("100755")) for entry in out.split("\0") if "\t" in entry]
-        except (OSError, subprocess.CalledProcessError):
-            pass
+    """Relative paths with their executable bit: git's index when it tracks any, else the folder."""
+    try:
+        # a checkout's .git/config can name an fsmonitor command, which ls-files would run
+        cmd = ["git", "-c", "core.fsmonitor=false", "-C", root, "ls-files", "-s", "-z"]
+        # on Windows a console program opens a window that takes focus from the editor
+        out = subprocess.run(cmd, capture_output=True, check=True,
+                             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                             ).stdout.decode("utf-8", "replace")
+        # a PR ships what git tracks, with the mode git records
+        tracked = [(entry.split("\t", 1)[1], entry.startswith("100755")) for entry in out.split("\0") if "\t" in entry]
+        if tracked:
+            return tracked
+    except (OSError, subprocess.CalledProcessError):
+        pass
     files = []
     for dirpath, dirs, names in os.walk(root):
         dirs[:] = [d for d in dirs if d != ".git"]

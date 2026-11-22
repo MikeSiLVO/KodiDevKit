@@ -120,6 +120,28 @@ class TestFileIntegrity(unittest.TestCase):
             subprocess.run(["git", "-C", self.skin_path, *args], check=True, capture_output=True)
         self.assertIn("Kodi repo: Home.xml is marked executable", [i["message"] for i in self.issues()])
 
+    def test_executable_bit_from_a_parent_checkout(self):
+        """A skin inside a larger checkout, as in a repo-skins clone, gets the mode git records."""
+        import shutil
+        import subprocess
+        self._put("16x9/Home.xml", b"<window/>")
+        repo = tempfile.TemporaryDirectory()
+        self.addCleanup(repo.cleanup)
+        skin = os.path.join(repo.name, "skin.test")
+        shutil.copytree(self.skin_path, skin)
+        for args in (["init", "-q"], ["add", "-A"], ["update-index", "--chmod=+x", "skin.test/16x9/Home.xml"]):
+            subprocess.run(["git", "-C", repo.name, *args], check=True, capture_output=True)
+        self.skin_path = skin
+        self.assertIn("Kodi repo: Home.xml is marked executable", [i["message"] for i in self.issues()])
+
+    def test_skin_untracked_in_a_checkout_is_read_from_the_folder(self):
+        """A skin inside a checkout that does not track it is read from the folder, not as empty."""
+        import subprocess
+        self._put("helper.py", b"x = 1\n")
+        subprocess.run(["git", "-C", self.skin_path, "init", "-q"], check=True, capture_output=True)
+        self.assertIn("Kodi repo: skins may not ship python scripts (helper.py)",
+                      [i["message"] for i in self.issues()])
+
     @unittest.skipIf(os.name == "nt", "the fsmonitor command is a shell line")
     def test_fsmonitor_command_in_the_skin_repo_never_runs(self):
         """Reading git's index never runs a command the skin's .git/config names for fsmonitor."""
