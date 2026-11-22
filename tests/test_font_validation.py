@@ -214,14 +214,14 @@ class TestFontValidation(unittest.TestCase):
         self.assertTrue(has_font13_error, "Should detect missing font13")
 
     def test_unicode_attribute_obsolete(self):
-        """A unicode attribute is a warning, and leaving it out is fine."""
+        """A unicode attribute is a hint, and leaving it out is fine."""
         self.create_font_file("font.ttf")
         font = "<font><name>font13</name><filename>font.ttf</filename><size>13</size></font>"
         self.create_fonts_xml(f'<fonts><fontset id="A" unicode="true">{font}</fontset>'
                               f'<fontset id="B">{font}</fontset></fonts>')
         issues = [i for i in self.init_provider().check_fonts() if "unicode" in i["message"].lower()]
         self.assertEqual([(i["message"], i["severity"]) for i in issues],
-                         [("Obsolete unicode attribute on fontset 'A', Kodi ignores it", "warning")])
+                         [("Obsolete unicode attribute on fontset 'A', Kodi ignores it", "hint")])
 
     def test_missing_size_keeps_font(self):
         """A font without <size> is defined, since Kodi defaults the size to 20."""

@@ -10,7 +10,7 @@ from ..utils.files import folder_entries, miscased_name, xml_folder_paths
 from ..utils.xml import file_needs_expansion, get_root_from_file
 from ..utils.validation import CallContexts, resolve_param_in_name, skinshortcuts_files, stage_progress
 from ..utils.expressions import is_dynamic_expression
-from .constants import SEVERITY_ERROR, SEVERITY_WARNING
+from .constants import SEVERITY_ERROR, SEVERITY_HINT, SEVERITY_WARNING
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +191,7 @@ class ValidationFont:
             for fs in fontsets:
                 if fs["unicode"]:
                     issues.append(row(f"Obsolete unicode attribute on fontset '{fs['id']}', Kodi ignores it",
-                                      fs["file"], fs["line"], SEVERITY_WARNING,
+                                      fs["file"], fs["line"], SEVERITY_HINT,
                                       rule="fonts.obsolete-unicode", subject=fs["id"]))
 
             any_font13 = any(any(f["name"] == "font13" for f in fs["fonts"]) for fs in fontsets)

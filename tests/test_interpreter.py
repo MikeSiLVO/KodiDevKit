@@ -960,6 +960,7 @@ class TestControlChildValidation(unittest.TestCase):
         ])
 
     def test_own_tag_repeating_default_is_redundant(self):
+        """A control's own tag matching its type's default is a hint; an include's copy is not."""
         attribs = {"label": {"aligny": {}, "height": {}, "font": {}, "width": {}}}
         values = {"label": {}}
         dflt = '_kdk_inc_name="default type=label" _kdk_call_line="3"'
@@ -979,9 +980,11 @@ class TestControlChildValidation(unittest.TestCase):
         </window>
         """)
         interp = XmlInterpreter(template_attribs=attribs, template_values=values)
-        messages = [i["message"] for i in interp.interpret(root)]
+        issues = interp.interpret(root)
+        messages = [i["message"] for i in issues]
         self.assertIn('Redundant <aligny>: same value as <default type="label">', messages)
         self.assertFalse([m for m in messages if "Redundant <height>" in m or "Redundant <font>" in m])
+        self.assertEqual({i["severity"] for i in issues if i["rule"] == "xml.redundant"}, {SEVERITY_HINT})
 
     def test_tag_whose_default_changes_with_a_setting_is_kept(self):
         """A tag whose default changes with a setting is kept; a settled one is still redundant."""

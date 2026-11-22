@@ -422,7 +422,7 @@ class XmlInterpreter:
             if settled is not None and tag not in settled:
                 continue
             if _same_value(others[0], defaults[0]):
-                self._add_issue(others[0], SEVERITY_WARNING,
+                self._add_issue(others[0], SEVERITY_HINT,
                                 f"Redundant <{tag}>: same value as <default type=\"{control_type}\">", rule="xml.redundant")
 
     def _report_duplicate(self, control, first, later):
