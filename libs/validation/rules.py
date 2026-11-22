@@ -32,7 +32,7 @@ RULES = {
     "fonts.missing-name": "A <font> without a <name>.",
     "fonts.missing-filename": "A <font> without a <filename>.",
     "fonts.negative-size": "A font size below zero.",
-    "fonts.invalid-size": "A font size that is not a number.",
+    "fonts.invalid-size": "A font size that is not a whole number; Kodi keeps any whole number it starts with.",
     "fonts.duplicate": "A font name defined twice in one fontset.",
     "fonts.inconsistent-missing": "A font the first fontset defines and this one lacks.",
     "fonts.inconsistent-extra": "A font this fontset defines and the first one lacks.",

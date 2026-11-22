@@ -343,6 +343,13 @@
     ]
   },
   {
+    "symbol": "libs/validation/font.py:ValidationFont.check",
+    "kodi": [
+      "xbmc/utils/XMLUtils.cpp:XMLUtils::GetInt",
+      "xbmc/guilib/GUIFontManager.cpp:GUIFontManager::LoadFonts"
+    ]
+  },
+  {
     "symbol": "libs/validation/hierarchy.py:<module>",
     "kodi": [
       "xbmc/guilib/GUIWindow.cpp:CGUIWindow::Load",

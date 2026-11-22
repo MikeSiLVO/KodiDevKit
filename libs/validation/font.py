@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import logging
+import re
 
 from ..utils.files import folder_entries, miscased_name, xml_folder_paths
 from ..utils.xml import file_needs_expansion, get_root_from_file
@@ -219,14 +220,18 @@ class ValidationFont:
                                           rule="fonts.missing-filename", subject=nm))
 
                     if sz and not is_dynamic_expression(sz):
-                        try:
-                            sz_val = int(sz)
-                            if sz_val < 0:
-                                issues.append(row(f"Font size must not be negative, got {sz}", f["file"], f["line"],
-                                                  rule="fonts.negative-size", subject=nm))
-                        except ValueError:
+                        # Kodi takes the whole number the size starts with and ignores the rest
+                        lead = re.match(r"\s*[+-]?\d+", sz)
+                        if not lead:
                             issues.append(row(f"Invalid font size '{sz}' for '{nm or '?'}'", f["file"], f["line"],
                                               rule="fonts.invalid-size", subject=nm))
+                        elif int(lead.group()) < 0:
+                            issues.append(row(f"Font size must not be negative, got {sz}", f["file"], f["line"],
+                                              rule="fonts.negative-size", subject=nm))
+                        elif lead.group().strip() != sz.strip():
+                            issues.append(row(f"Font size '{sz}' for '{nm or '?'}' is read as {int(lead.group())}; "
+                                              f"Kodi uses whole sizes only, so write a whole number", f["file"],
+                                              f["line"], SEVERITY_WARNING, rule="fonts.invalid-size", subject=nm))
 
                     if nm:
                         name_to_locs.setdefault(nm, []).append(f)

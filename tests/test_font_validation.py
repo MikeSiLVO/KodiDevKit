@@ -122,6 +122,27 @@ class TestFontValidation(unittest.TestCase):
         errors = [i for i in issues if "no" not in i["message"].lower() and "unused" not in i["message"].lower()]
         self.assertEqual(len(errors), 0, f"Should have no errors, got: {errors}")
 
+    def test_fractional_size_warns_and_a_word_is_an_error(self):
+        """A size like 26.5 warns that Kodi reads 26; a size with no number is an error."""
+        self.create_font_file("font.ttf")
+        self.create_fonts_xml("""<fonts><fontset id="Default">
+<font><name>half</name><filename>font.ttf</filename><size>26.5</size></font>
+<font><name>word</name><filename>font.ttf</filename><size>big</size></font>
+<font><name>whole</name><filename>font.ttf</filename><size>26</size></font>
+</fontset></fonts>""")
+        self.create_window_xml("""<window><controls>
+<control type="label"><font>half</font></control>
+<control type="label"><font>word</font></control>
+<control type="label"><font>whole</font></control>
+</controls></window>""")
+
+        rows = {r["subject"]: r for r in self.init_provider().check_fonts() if r["rule"] == "fonts.invalid-size"}
+
+        self.assertEqual(sorted(rows), ["half", "word"])
+        self.assertEqual(rows["half"]["severity"], "warning")
+        self.assertIn("is read as 26", rows["half"]["message"])
+        self.assertEqual(rows["word"]["severity"], "error")
+
     def test_param_font_in_an_include_resolves_per_call(self):
         """A $PARAM font name is checked as each call fills it; the fonts it names count as used."""
         self.create_font_file("font.ttf")
