@@ -530,7 +530,8 @@ class SkinIndex:
             if "://" in image_path and not image_path.startswith('special://skin/'):
                 return
             low = image_path.lower()
-            if any(m in low for m in ('$info[', '$var[', '$escinfo[', '$escvar[', '$param[', '$addon[')):
+            if any(m in low for m in ('$info[', '$var[', '$escinfo[', '$escvar[', '$param[', '$addon[',
+                                      '$localize[', '$number[')):
                 return
             if image_path not in index['images_referenced'][folder]:
                 index['images_referenced'][folder][image_path] = []

@@ -166,6 +166,30 @@ class TestImageValidation(ValidationTestCase):
             for path_part in dynamic_paths:
                 self.assertNotIn(path_part, msg, f"Should ignore paths with embedded dynamic expressions: {msg}")
 
+    def test_replaced_image_value_ignored(self):
+        """An icon or texture holding $LOCALIZE or $NUMBER is ignored; Kodi replaces both first."""
+        home_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <controls>
+        <control type="list">
+            <content>
+                <item><label>Forecast</label><icon>$LOCALIZE[31909]</icon></item>
+            </content>
+        </control>
+        <control type="image">
+            <texture>flags/$NUMBER[5].png</texture>
+        </control>
+    </controls>
+</window>"""
+        xml_path = os.path.join(self.test_dir, "16x9", "Home.xml")
+        with open(xml_path, "w", encoding="utf-8") as f:
+            f.write(home_xml)
+
+        issues = self._build_checker().check()
+
+        messages = [i.get("message", "") for i in issues]
+        self.assertFalse([m for m in messages if "$LOCALIZE" in m or "$NUMBER" in m], messages)
+
     def test_url_image_reference_ignored(self):
         """An image URL Kodi loads as written is ignored, whatever its scheme."""
         home_xml = """<?xml version="1.0" encoding="UTF-8"?>
