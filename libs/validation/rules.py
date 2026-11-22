@@ -74,7 +74,7 @@ RULES = {
     "variables.undefined": "A $VAR naming no variable.",
     "variables.unused": "A variable nothing uses.",
     "variables.duplicate": "A later variable of a name already defined; Kodi uses the first.",
-    "includes.misnamed-includes-xml": "An Includes.xml whose name differs only by case, which Kodi does not load on Linux.",
+    "includes.misnamed-includes-xml": "An Includes.xml outside the default xml folder whose name differs only by case, which Kodi skips on Linux.",
     "xml.include-file-outside": "An <include file> outside the skin folder, which never ships with it.",
     "xml.include-file-case-mismatch": "An <include file> named in a different case than on disk.",
     "xml.missing-include-file": "An <include file> naming a file that does not exist or whose root is not <includes>.",

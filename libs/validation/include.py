@@ -160,16 +160,23 @@ class ValidationInclude:
             })
             return True
 
+        default = getattr(self.addon, "default_xml_folder", None)
         for folder in self.addon.xml_folders:
             folder_path = os.path.join(self.addon.path, folder)
             actual = miscased_name(folder_path, "Includes.xml")
-            if actual:
+            # Kodi opens the default folder's copy whatever its case
+            if actual and folder != default:
+                if default is None:
+                    effect = "Kodi does not load it on Linux"
+                else:
+                    fallback = f"the {default} folder's" if default else "the add-on root's"
+                    effect = f"on Linux Kodi loads {fallback} Includes.xml in its place"
                 listitems.append({
                     'name': actual,
                     'type': 'include',
                     'file': os.path.join(folder_path, actual),
                     'line': 1,
-                    'message': f"{actual} must be named Includes.xml; Kodi does not load it on Linux",
+                    'message': f"{actual} must be named Includes.xml; {effect}",
                     'severity': SEVERITY_ERROR,
                     'rule': "includes.misnamed-includes-xml",
                     'subject': actual,
